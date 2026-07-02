@@ -40,6 +40,8 @@ class Article(ArticleBase, table=True):
 class ArticlePublic(ArticleBase):
     id: int
     created_at: datetime | None = None
+    like_count: int = 0
+    liked_by_me: bool = False
 
 
 class ArticlesPublic(SQLModel):
