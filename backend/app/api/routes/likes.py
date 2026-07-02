@@ -1,6 +1,7 @@
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy import func
 from sqlmodel import col, select
 
 from app.api.deps import CurrentUser, SessionDep
@@ -39,15 +40,27 @@ def unlike_article(
 
 @router.get("/me/liked-articles", response_model=ArticlesPublic)
 def read_liked_articles(session: SessionDep, current_user: CurrentUser) -> Any:
+    like_counts_subq = (
+        select(ArticleLike.article_id, func.count().label("like_count"))
+        .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        .subquery()
+    )
+    like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
+
     statement = (
-        select(Article)
+        select(Article, like_count_expr.label("like_count"))
         .join(ArticleLike, col(ArticleLike.article_id) == col(Article.id))
+        .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
         .where(ArticleLike.user_id == current_user.id)
         .order_by(col(ArticleLike.created_at).desc())
     )
-    articles = session.exec(statement).all()
+    rows = session.exec(statement).all()
 
-    return ArticlesPublic(
-        data=[ArticlePublic.model_validate(a) for a in articles],
-        count=len(articles),
-    )
+    data = []
+    for article, like_count in rows:
+        pub = ArticlePublic.model_validate(article)
+        pub.like_count = like_count
+        pub.liked_by_me = True
+        data.append(pub)
+
+    return ArticlesPublic(data=data, count=len(data))

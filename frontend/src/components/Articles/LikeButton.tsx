@@ -50,13 +50,32 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
         : LikesService.likeArticle({ articleId: article.id }),
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["articles"] })
-      const previous = queryClient.getQueriesData<ArticlesPublic>({
-        queryKey: ["articles"],
-      })
+      await queryClient.cancelQueries({ queryKey: ["liked-articles"] })
+      const previous = [
+        ...queryClient.getQueriesData<ArticlesPublic>({
+          queryKey: ["articles"],
+        }),
+        ...queryClient.getQueriesData<ArticlesPublic>({
+          queryKey: ["liked-articles"],
+        }),
+      ]
       queryClient.setQueriesData<ArticlesPublic>(
         { queryKey: ["articles"] },
         (old) => patchArticle(old, article.id, !liked, liked ? -1 : 1),
       )
+      if (liked) {
+        queryClient.setQueriesData<ArticlesPublic>(
+          { queryKey: ["liked-articles"] },
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  data: old.data.filter((a) => a.id !== article.id),
+                  count: Math.max(0, old.count - 1),
+                }
+              : old,
+        )
+      }
       return { previous }
     },
     onError: (err, _vars, context) => {
@@ -67,6 +86,7 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["articles"] })
+      queryClient.invalidateQueries({ queryKey: ["liked-articles"] })
     },
   })
 
