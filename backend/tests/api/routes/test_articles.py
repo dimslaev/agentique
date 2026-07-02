@@ -147,9 +147,7 @@ def test_read_articles_liked_by_me_true_only_for_liked(
     liked = create_random_article(db, score=9, published_at=now)
     unliked = create_random_article(db, score=9, published_at=now)
 
-    r = client.put(
-        f"{ARTICLES_URL}/{liked.id}/like", headers=normal_user_token_headers
-    )
+    r = client.put(f"{ARTICLES_URL}/{liked.id}/like", headers=normal_user_token_headers)
     assert r.status_code == 200
 
     r = client.get(
@@ -187,9 +185,7 @@ def test_read_articles_valid_token_unknown_user_treated_as_anonymous(
         assert article["liked_by_me"] is False
 
 
-def test_read_articles_sort_likes_desc(
-    client: TestClient, db: Session
-) -> None:
+def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
     now = datetime.now(UTC)
     low_score_more_likes = create_random_article(db, score=3, published_at=now)
     high_score_no_likes = create_random_article(db, score=9, published_at=now)
@@ -202,13 +198,9 @@ def test_read_articles_sort_likes_desc(
     ]
     for headers in headers_list:
         client.put(f"{ARTICLES_URL}/{low_score_more_likes.id}/like", headers=headers)
-    client.put(
-        f"{ARTICLES_URL}/{tied_score_a.id}/like", headers=headers_list[0]
-    )
+    client.put(f"{ARTICLES_URL}/{tied_score_a.id}/like", headers=headers_list[0])
 
-    r = client.get(
-        f"{ARTICLES_URL}/", params={"sort": "likes-desc", "limit": 50}
-    )
+    r = client.get(f"{ARTICLES_URL}/", params={"sort": "likes-desc", "limit": 50})
     data = r.json()["data"]
     ids = [a["id"] for a in data]
 

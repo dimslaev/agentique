@@ -11,9 +11,7 @@ from app.core.config import settings
 from app.models import TokenPayload, User
 
 
-def get_current_user_optional(
-    request: Request, session: SessionDep
-) -> User | None:
+def get_current_user_optional(request: Request, session: SessionDep) -> User | None:
     authorization = request.headers.get("Authorization")
     if not authorization or not authorization.lower().startswith("bearer "):
         return None
@@ -24,7 +22,7 @@ def get_current_user_optional(
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
-    except (InvalidTokenError, ValidationError):
+    except InvalidTokenError, ValidationError:
         return None
 
     user = session.get(User, token_data.sub)

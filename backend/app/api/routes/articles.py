@@ -47,7 +47,7 @@ def _liked_article_ids(session: SessionDep, user_id: Any) -> set[int]:
 def _like_counts_subquery() -> Any:
     return (
         select(ArticleLike.article_id, func.count().label("like_count"))
-        .group_by(ArticleLike.article_id)
+        .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         .subquery()
     )
 
@@ -72,45 +72,43 @@ def read_articles(
     else:
         since_dt = datetime.now(UTC) - timedelta(days=30)
 
-    statement = (
-        select(Article)
-        .where(Article.score.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
-        .where(col(Article.published_at) >= since_dt)
-    )
-
+    conditions = [
+        Article.score.is_not(None),  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
+        col(Article.published_at) >= since_dt,
+    ]
     if min_score is not None:
-        statement = statement.where(Article.score >= min_score)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
+        conditions.append(Article.score >= min_score)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
     if kind is not None:
-        statement = statement.where(Article.kind == kind)
+        conditions.append(Article.kind == kind)
     if category is not None:
-        statement = statement.where(
+        conditions.append(
             cast(Article.categories, JSONB).contains([category])  # type: ignore[arg-type]
         )
 
-    count_statement = select(func.count()).select_from(statement.subquery())
+    count_statement = select(func.count()).select_from(Article).where(*conditions)
     count = session.exec(count_statement).one()
 
     like_counts_subq = _like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
-    statement = statement.add_columns(like_count_expr.label("like_count")).outerjoin(
-        like_counts_subq, like_counts_subq.c.article_id == Article.id
+    joined_statement = (
+        select(Article, like_count_expr.label("like_count"))
+        .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
+        .where(*conditions)
     )
 
     if sort == "published_at-desc":
-        statement = statement.order_by(col(Article.published_at).desc())
+        joined_statement = joined_statement.order_by(col(Article.published_at).desc())
     elif sort == "likes-desc":
-        statement = statement.order_by(
+        joined_statement = joined_statement.order_by(
             like_count_expr.desc(), col(Article.score).desc()
         )
     else:
-        statement = statement.order_by(col(Article.score).desc())
-    statement = statement.limit(limit)
+        joined_statement = joined_statement.order_by(col(Article.score).desc())
+    joined_statement = joined_statement.limit(limit)
 
-    rows = session.execute(statement).all()
+    rows = session.exec(joined_statement).all()
 
-    liked_ids = (
-        _liked_article_ids(session, current_user.id) if current_user else set()
-    )
+    liked_ids = _liked_article_ids(session, current_user.id) if current_user else set()
 
     data = []
     for article, like_count in rows:
@@ -143,11 +141,9 @@ def search_articles(
         .limit(limit)
     )
 
-    rows = session.execute(statement).all()
+    rows = session.exec(statement).all()
 
-    liked_ids = (
-        _liked_article_ids(session, current_user.id) if current_user else set()
-    )
+    liked_ids = _liked_article_ids(session, current_user.id) if current_user else set()
 
     data = []
     for article, like_count in rows:

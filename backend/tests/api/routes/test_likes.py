@@ -89,9 +89,7 @@ def test_like_nonexistent_article_404(
     )
     assert r.status_code == 404
 
-    rows = db.exec(
-        select(ArticleLike).where(ArticleLike.article_id == 999999999)
-    ).all()
+    rows = db.exec(select(ArticleLike).where(ArticleLike.article_id == 999999999)).all()
     assert len(rows) == 0
 
 
