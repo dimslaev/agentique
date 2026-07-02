@@ -1,3 +1,4 @@
+import uuid
 from datetime import UTC, datetime
 
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
@@ -44,6 +45,13 @@ class ArticlePublic(ArticleBase):
 class ArticlesPublic(SQLModel):
     data: list[ArticlePublic]
     count: int
+
+
+class ArticleLike(SQLModel, table=True):
+    __tablename__ = "article_like"
+    user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True)
+    article_id: int = Field(foreign_key="article.id", primary_key=True)
+    created_at: datetime = Field(default_factory=get_datetime_utc)
 
 
 class ScoredUrl(SQLModel, table=True):
