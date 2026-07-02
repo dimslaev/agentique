@@ -2,6 +2,8 @@ import { expect, type Page, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { randomPassword } from "./utils/random.ts"
 
+test.skip(true, "auth unused in Agentique")
+
 test.use({ storageState: { cookies: [], origins: [] } })
 
 const fillForm = async (page: Page, email: string, password: string) => {

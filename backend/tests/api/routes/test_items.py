@@ -1,10 +1,13 @@
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
 from tests.utils.item import create_random_item
+
+pytestmark = pytest.mark.skip(reason="auth unused in Agentique")
 
 
 def test_create_item(

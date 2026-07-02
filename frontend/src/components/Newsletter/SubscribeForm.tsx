@@ -92,6 +92,7 @@ export function SubscribeForm() {
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+            noValidate
             className="flex flex-col gap-5"
           >
             <FormField

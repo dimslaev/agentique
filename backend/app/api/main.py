@@ -11,5 +11,5 @@ api_router.include_router(items.router)
 api_router.include_router(articles.router)
 
 
-if settings.ENVIRONMENT == "local":
+if settings.ENVIRONMENT == "development":
     api_router.include_router(private.router)

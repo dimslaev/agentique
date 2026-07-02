@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, JSON
+from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
+from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import Field, SQLModel
 
 

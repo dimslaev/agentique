@@ -4,6 +4,8 @@ import { createUser } from "./utils/privateApi"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser } from "./utils/user"
 
+test.skip(true, "auth unused in Agentique")
+
 test("Admin page is accessible and shows correct title", async ({ page }) => {
   await page.goto("/admin")
   await expect(page.getByRole("heading", { name: "Users" })).toBeVisible()

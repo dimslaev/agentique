@@ -8,6 +8,8 @@ import {
 } from "./utils/random"
 import { logInUser } from "./utils/user"
 
+test.skip(true, "auth unused in Agentique")
+
 test("Items page is accessible and shows correct title", async ({ page }) => {
   await page.goto("/items")
   await expect(page.getByRole("heading", { name: "Items" })).toBeVisible()

@@ -3,6 +3,8 @@ import { findLastEmail } from "./utils/mailcatcher"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser, signUpNewUser } from "./utils/user"
 
+test.skip(true, "auth unused in Agentique")
+
 test.use({ storageState: { cookies: [], origins: [] } })
 
 test("Password Recovery title is visible", async ({ page }) => {

@@ -59,6 +59,24 @@ jobs:
         run: uv sync --all-packages
       - name: Install frontend dependencies
         run: bun ci
+      - name: Create .env for CI
+        run: |
+          cat > .env << 'EOF'
+          DOMAIN=localhost
+          STACK_NAME=agentique-ci
+          DOCKER_IMAGE_BACKEND=agentique-backend
+          DOCKER_IMAGE_FRONTEND=agentique-frontend
+          PROJECT_NAME=Agentique
+          ENVIRONMENT=development
+          FRONTEND_HOST=http://localhost:5173
+          SECRET_KEY=ci-test-secret-key-not-for-production
+          FIRST_SUPERUSER=admin@example.com
+          FIRST_SUPERUSER_PASSWORD=ci-test-password
+          POSTGRES_SERVER=localhost
+          POSTGRES_DB=app
+          POSTGRES_USER=postgres
+          POSTGRES_PASSWORD=ci-test-password
+          EOF
       - name: Run prek - pre-commit
         id: precommit
         run: uv run prek run --from-ref origin/${GITHUB_BASE_REF} --to-ref HEAD --show-diff-on-failure

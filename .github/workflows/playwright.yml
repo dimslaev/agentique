@@ -69,7 +69,24 @@ jobs:
         # Before upgrading uv version, make sure astral-sh/setup-uv knows its checksum.
         # See: https://github.com/astral-sh/setup-uv/issues/851#issuecomment-4282017837
         version: "0.11.18"
-    - run: touch .env
+    - name: Create .env for CI
+      run: |
+        cat > .env << 'EOF'
+        DOMAIN=localhost
+        STACK_NAME=agentique-ci
+        DOCKER_IMAGE_BACKEND=agentique-backend
+        DOCKER_IMAGE_FRONTEND=agentique-frontend
+        PROJECT_NAME=Agentique
+        ENVIRONMENT=development
+        FRONTEND_HOST=http://localhost:5173
+        SECRET_KEY=ci-test-secret-key-not-for-production
+        FIRST_SUPERUSER=admin@example.com
+        FIRST_SUPERUSER_PASSWORD=ci-test-password
+        POSTGRES_SERVER=localhost
+        POSTGRES_DB=app
+        POSTGRES_USER=postgres
+        POSTGRES_PASSWORD=ci-test-password
+        EOF
     - run: uv sync
       working-directory: backend
     - run: bun ci

@@ -51,18 +51,22 @@ export function ArticlesList() {
   return (
     <div className="relative">
       {articles.length === 0 ? (
-        <div className="py-12 text-sm text-muted-foreground">
+        <div
+          data-testid="articles-empty"
+          className="py-12 text-sm text-muted-foreground"
+        >
           No articles found.
         </div>
       ) : (
         <ul
+          data-testid="articles-list"
           className={cn(
             "divide-y divide-border/40 transition-opacity duration-200",
             isFetching && "opacity-50",
           )}
         >
           {articles.map((article: ArticlePublic) => (
-            <li key={article.id} className="py-5">
+            <li key={article.id} data-testid="article-row" className="py-5">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
                 <span>{article.source}</span>
                 {article.score != null && (

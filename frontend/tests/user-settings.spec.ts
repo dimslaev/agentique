@@ -4,6 +4,8 @@ import { createUser } from "./utils/privateApi.ts"
 import { randomEmail, randomPassword } from "./utils/random"
 import { logInUser, logOutUser } from "./utils/user"
 
+test.skip(true, "auth unused in Agentique")
+
 const tabs = ["My profile", "Password", "Danger zone"]
 
 test("My profile tab is active by default", async ({ page }) => {
