@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-07-06 — first-party analytics tracker
+
+- `backend/app/models_agentique.py` — new `AnalyticsEvent` table (`analytics_event`, nullable `user_id` FK, JSON `props`, indexed event/path/visitor_id/created_at) + `AnalyticsEventCreate` request model.
+- `backend/app/api/routes/analytics.py` — new: `POST /analytics/collect`, public, `CurrentUserOptional` attaches user when authed, returns 204. Truncates strings to 2048.
+- `backend/app/alembic/versions/a7b8c9d0e1f2_add_analytics_event_table.py` — new migration (head → a7b8c9d0e1f2).
+- `backend/app/api/main.py` — upstream. Mounts `analytics.router`. Low conflict risk.
+- `backend/tests/conftest.py` — upstream. Teardown deletes `analytics_event` before users (non-cascading `user_id` FK). Low conflict risk.
+- `backend/tests/api/routes/test_analytics.py` — new: anonymous/authed collect, default event, custom props, truncation.
+- `frontend/src/lib/analytics.ts` — new: `trackPageview`/`trackEvent` POST to backend via `fetch` (keepalive), persists anon `visitor_id` in localStorage, works logged-out, swallows errors. No generated-client change (plain fetch).
+- `frontend/src/main.tsx` — upstream. `router.subscribe("onResolved", ...)` fires a pageview per SPA navigation. Low conflict risk.
+
+---
+
 ## 2026-07-06 — pipeline health check
 
 - `backend/pipeline/health.py` — new: per-run stats capture, dead-man's-switch, arithmetic anomaly detection (fetched-0/yield-drop/errors), HTTP probe, Resend alert. Reads config from `os.environ` (not `settings`) to stay decoupled.

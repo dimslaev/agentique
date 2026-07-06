@@ -11,6 +11,7 @@ import { ApiError, OpenAPI } from "./client"
 import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
+import { trackPageview } from "./lib/analytics"
 import { routeTree } from "./routeTree.gen"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL
@@ -59,6 +60,11 @@ declare module "@tanstack/react-router" {
     router: typeof router
   }
 }
+
+// First-party analytics: log a pageview on every SPA navigation.
+router.subscribe("onResolved", ({ toLocation }) => {
+  trackPageview(toLocation.pathname + toLocation.searchStr)
+})
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
