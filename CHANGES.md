@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-06 — pipeline health check
+
+- `backend/pipeline/health.py` — new: per-run stats capture, dead-man's-switch, arithmetic anomaly detection (fetched-0/yield-drop/errors), HTTP probe, Resend alert. Reads config from `os.environ` (not `settings`) to stay decoupled.
+- `backend/pipeline/run.py` — `run_pipeline()` now takes a `RunStats`, wraps each source in try/except (one source failing no longer sinks the rest), and `__main__` runs liveness → pipeline → record → verify. Agentique-owned file.
+- `backend/app/models_agentique.py` — new `PipelineRun` table (JSONB `sources` funnel counts).
+- `backend/app/alembic/versions/f1a2b3c4d5e6_add_pipeline_run_table.py` — new migration (head → f1a2b3c4d5e6).
+- `compose.yml` — `pipeline` service env: added `PROJECT_NAME`, `RESEND_API_KEY`, `EMAILS_FROM_EMAIL`, `PIPELINE_ALERT_EMAIL` (verifier email needs them; `.env` is empty on the VPS so vars must be in the `environment:` block). Low conflict risk.
+- `.github/workflows/deploy-production.yml` — added optional `PIPELINE_ALERT_EMAIL` env (falls back to `EMAILS_FROM_EMAIL`). Low conflict risk.
+
 ## 2026-07-05
 
 - `frontend/src/main.tsx` — `currentUser` query `onError` clears token and redirects to `/login` on `400/401/403/404`; sets `retry=false` for immediate redirect.

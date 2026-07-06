@@ -74,6 +74,8 @@ jobs:
       EMAILS_FROM_EMAIL: ${{ secrets.EMAILS_FROM_EMAIL }}
       RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
       RESEND_AUDIENCE_ID: ${{ secrets.RESEND_AUDIENCE_ID }}
+      # Optional: where pipeline health alerts go. Falls back to EMAILS_FROM_EMAIL if unset.
+      PIPELINE_ALERT_EMAIL: ${{ secrets.PIPELINE_ALERT_EMAIL }}
       POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
       POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
