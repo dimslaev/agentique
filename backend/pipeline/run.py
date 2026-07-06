@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import sys
-import time
 from datetime import UTC, datetime, timedelta
 
 from model2vec import StaticModel
@@ -13,6 +12,12 @@ from sqlmodel import Session, create_engine, select
 from app.models_agentique import Article, ScoredUrl
 from baml_client.sync_client import b
 from baml_client.types import ArticleInput, ExistingArticle
+from pipeline.health import (
+    RunStats,
+    check_liveness,
+    record_run,
+    verify_run,
+)
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.extract_content import re_extract_full_content
 from pipeline.sources.hn import fetch_hn
@@ -70,27 +75,45 @@ def _to_baml_input(a: dict) -> ArticleInput:
     )
 
 
-def run_pipeline() -> None:
+def run_pipeline(stats: RunStats) -> None:
     log("=== Pipeline start ===")
-    start = time.time()
 
     with Session(_engine) as session:
         for src in SOURCES:
-            log(f"\n=== Processing {src['label']} ===")
+            label = src["label"]
+            log(f"\n=== Processing {label} ===")
+            s = stats.source(label)
 
-            fetched = _fetch_source(src["fetcher"], src["label"])
-            fresh = _filter_known_urls(session, fetched, src["label"])
-            alive = _filter_dead_domains(fresh, src["label"])
-            unique = _dedup_semantic(session, alive, src["label"])
-            scored = _score_articles(session, unique)
-            inserted = _insert_articles(session, scored)
-            _improve_titles(session, inserted)
-            with_content = _extract_full_content(session, inserted)
-            processed = _summarize_and_categorize(session, with_content)
-            _embed_articles(session, processed)
+            try:
+                fetched = _fetch_source(src["fetcher"], label)
+                s.fetched = len(fetched)
 
-    elapsed = f"{time.time() - start:.1f}"
-    log(f"=== Pipeline complete in {elapsed}s ===")
+                fresh = _filter_known_urls(session, fetched, label)
+                s.filtered_known = s.fetched - len(fresh)
+
+                alive = _filter_dead_domains(fresh, label)
+                s.filtered_dead = len(fresh) - len(alive)
+
+                unique = _dedup_semantic(session, alive, label)
+                s.deduped = len(alive) - len(unique)
+
+                scored = _score_articles(session, unique)
+                s.below_threshold = len(unique) - len(scored)
+
+                inserted = _insert_articles(session, scored)
+                s.inserted = len(inserted)
+
+                _improve_titles(session, inserted)
+                with_content = _extract_full_content(session, inserted)
+                processed = _summarize_and_categorize(session, with_content)
+                _embed_articles(session, processed)
+            except Exception as e:
+                # One source failing must not sink the others — record and move on.
+                s.errors.append(f"{type(e).__name__}: {e}")
+                log(f"  !! {label} failed: {e}")
+                session.rollback()
+
+    log("=== Pipeline complete ===")
 
 
 # ─── Step 01 ────────────────────────────────────────────────────────────────
@@ -450,10 +473,29 @@ def _embed_articles(session: Session, items: list[dict]) -> None:
 # ─── CLI ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    # Dead-man's-switch: did last night's run die silently? (best-effort)
     try:
-        run_pipeline()
-        sys.exit(0)
+        with Session(_engine) as session:
+            check_liveness(session)
     except Exception as e:
+        print(f"Liveness check failed: {e}", file=sys.stderr)
+
+    stats = RunStats()
+    crashed: Exception | None = None
+    try:
+        run_pipeline(stats)
+    except Exception as e:
+        crashed = e
         print(f"Pipeline failed: {e}", file=sys.stderr)
-        raise
-        sys.exit(1)
+
+    stats.finish(ok=crashed is None)
+
+    # Record stats + run the verifier. Best-effort: never flips the exit code.
+    try:
+        with Session(_engine) as session:
+            record_run(session, stats)
+            verify_run(session, stats)
+    except Exception as e:
+        print(f"Health recording/verify failed: {e}", file=sys.stderr)
+
+    sys.exit(1 if crashed else 0)

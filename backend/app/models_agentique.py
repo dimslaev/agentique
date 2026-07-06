@@ -62,6 +62,27 @@ class ScoredUrl(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_datetime_utc)
 
 
+class PipelineRun(SQLModel, table=True):
+    """One row per nightly pipeline run — the numeric record the verifier reasons over."""
+
+    __tablename__ = "pipeline_run"
+    id: int | None = Field(default=None, primary_key=True)
+    started_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    finished_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    duration_ms: int | None = None
+    ok: bool = Field(default=False)
+    # per-source funnel counts: [{source, fetched, filtered_known, ..., inserted, errors}]
+    sources: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+
+
 class NewsletterSubscriber(SQLModel, table=True):
     __tablename__ = "newsletter_subscriber"
     email: str = Field(primary_key=True)

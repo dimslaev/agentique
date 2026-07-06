@@ -209,6 +209,11 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY}
       - RESIDENTIAL_PROXY_URL=${RESIDENTIAL_PROXY_URL}
+      # Pipeline health alerts (verifier emails via Resend)
+      - PROJECT_NAME=${PROJECT_NAME}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
+      - PIPELINE_ALERT_EMAIL=${PIPELINE_ALERT_EMAIL:-}
     command: supercronic -no-reap /app/backend/pipeline/crontab
 
 volumes:
