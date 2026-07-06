@@ -69,18 +69,14 @@ def test_collect_attaches_user_when_authenticated(
     )
     assert r.status_code == 204
 
-    user = db.exec(
-        select(User).where(User.email == settings.EMAIL_TEST_USER)
-    ).first()
+    user = db.exec(select(User).where(User.email == settings.EMAIL_TEST_USER)).first()
     assert user is not None
     event = _latest_event(db, "known-1")
     assert event is not None
     assert event.user_id == user.id
 
 
-def test_collect_truncates_oversized_strings(
-    client: TestClient, db: Session
-) -> None:
+def test_collect_truncates_oversized_strings(client: TestClient, db: Session) -> None:
     long_path = "/" + "x" * 5000
     r = client.post(
         f"{settings.API_V1_STR}/analytics/collect",

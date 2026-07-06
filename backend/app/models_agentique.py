@@ -100,9 +100,7 @@ class AnalyticsEvent(SQLModel, table=True):
     user_id: uuid.UUID | None = Field(default=None, foreign_key="user.id")
     user_agent: str | None = None
     # arbitrary metadata for custom events
-    props: dict = Field(
-        default_factory=dict, sa_column=Column(JSON, nullable=False)
-    )
+    props: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         index=True,
