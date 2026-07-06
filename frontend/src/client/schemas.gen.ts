@@ -41,6 +41,7 @@ export const AnalyticsEventCreateSchema = {
             title: 'Visitor Id'
         },
         props: {
+            additionalProperties: true,
             type: 'object',
             title: 'Props'
         }
