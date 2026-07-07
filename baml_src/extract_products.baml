@@ -13,7 +13,7 @@ class NewsletterProduct {
 }
 
 function ExtractProducts(newsletterText: string) -> NewsletterProduct[] {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You extract the AI/tech products, tools, models, and launches that a newsletter is reporting on. Work only from the text; never invent products that are not mentioned.

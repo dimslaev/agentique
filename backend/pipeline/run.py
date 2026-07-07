@@ -19,6 +19,7 @@ from pipeline.health import (
     verify_run,
 )
 from pipeline.sources.ainews import fetch_ai_news
+from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.extract_content import re_extract_full_content
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.substack import fetch_substack
@@ -59,6 +60,7 @@ def _embed(text: str) -> list[float]:
 
 SOURCES = [
     {"label": "Hacker News", "fetcher": fetch_hn},
+    {"label": "Newsletter", "fetcher": fetch_newsletter},
     {"label": "AI News", "fetcher": fetch_ai_news},
     {"label": "Substack", "fetcher": fetch_substack},
 ]
