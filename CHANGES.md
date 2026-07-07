@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-07-07 — newsletter + RSS pipeline sources
+
+- `backend/pyproject.toml` — `imap-tools` dependency.
+- New files: `backend/pipeline/sources/email.py` (IMAP newsletter source, wired into `SOURCES`), `backend/pipeline/sources/rss.py` (generic multi-feed RSS source, not wired in — mirrors original TS, which also had it disabled).
+
 ## 2026-07-06 — first-party analytics tracker
 
 - `backend/app/models_agentique.py` — new `AnalyticsEvent` table (`analytics_event`, nullable `user_id` FK, JSON `props`, indexed event/path/visitor_id/created_at) + `AnalyticsEventCreate` request model.

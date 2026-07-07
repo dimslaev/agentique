@@ -75,6 +75,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "feedparser" },
     { name = "httpx" },
+    { name = "imap-tools" },
     { name = "jinja2" },
     { name = "model2vec" },
     { name = "pgvector" },
@@ -111,6 +112,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.138.1,<1.0.0" },
     { name = "feedparser", specifier = ">=6.0.0" },
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
+    { name = "imap-tools", specifier = ">=1.5.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "model2vec", specifier = ">=0.4.0" },
     { name = "pgvector", specifier = ">=0.3.0" },
@@ -825,6 +827,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/63/9496c57188a2ee585e0f1db071d75089a11e98aa86eb99d9d7618fc1edce/idna-3.18.tar.gz", hash = "sha256:ffb385a7e039654cef1ab9ef32c6fafe283c0c0467bba1d9029738ce4a14a848", size = 196711, upload-time = "2026-06-02T14:34:07.794Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1e/5e/d4e9f1a599fb8e573b7b87160658329fbf28d19eac2718f51fc3def3aa5a/idna-3.18-py3-none-any.whl", hash = "sha256:7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2", size = 65455, upload-time = "2026-06-02T14:34:06.319Z" },
+]
+
+[[package]]
+name = "imap-tools"
+version = "1.13.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/cb/76d8697739439be6dd0261db5a27c945fb6a43e054f2d2e90283be502058/imap_tools-1.13.0.tar.gz", hash = "sha256:0da0d72c921a724cba09b959bad9bfaf60bca537a697e69a076fdf607ef5775c", size = 47683, upload-time = "2026-05-12T07:14:54.488Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/a8/0f58c13d2660d5fc8f808ce8b46828d2941752ec21e4015bde99c08b37d7/imap_tools-1.13.0-py3-none-any.whl", hash = "sha256:656c37beba22ab2929b73c07d0ca397ae8805b670d390b1127723e3335244e6d", size = 35849, upload-time = "2026-05-12T07:14:52.669Z" },
 ]
 
 [[package]]
