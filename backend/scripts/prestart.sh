@@ -12,6 +12,9 @@ alembic upgrade head
 # Create initial data in DB
 python app/initial_data.py
 
+# Load the tag vocabulary (all environments; the pipeline requires it)
+python -m app.seed_tags
+
 # Seed sample articles for local/CI (module also self-guards on production)
 if [ "$ENVIRONMENT" != "production" ]; then
     python -m app.seed_articles

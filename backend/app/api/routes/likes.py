@@ -4,8 +4,9 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import func
 from sqlmodel import col, select
 
+from app.api.article_view import build_rows, like_counts_subquery
 from app.api.deps import CurrentUser, SessionDep
-from app.models_agentique import Article, ArticleLike, ArticlePublic, ArticlesPublic
+from app.models_agentique import Article, ArticleLike, ArticlesPublic, Publisher
 
 router = APIRouter(tags=["likes"])
 
@@ -40,27 +41,21 @@ def unlike_article(
 
 @router.get("/me/liked-articles", response_model=ArticlesPublic)
 def read_liked_articles(session: SessionDep, current_user: CurrentUser) -> Any:
-    like_counts_subq = (
-        select(ArticleLike.article_id, func.count().label("like_count"))
-        .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        .subquery()
-    )
+    like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
 
     statement = (
-        select(Article, like_count_expr.label("like_count"))
+        select(Article, Publisher, like_count_expr.label("like_count"))
         .join(ArticleLike, col(ArticleLike.article_id) == col(Article.id))
+        .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
         .where(ArticleLike.user_id == current_user.id)
         .order_by(col(ArticleLike.created_at).desc(), col(Article.id).desc())
     )
     rows = session.exec(statement).all()
 
-    data = []
-    for article, like_count in rows:
-        pub = ArticlePublic.model_validate(article)
-        pub.like_count = like_count
-        pub.liked_by_me = True
-        data.append(pub)
+    # every row here is liked by definition
+    liked_ids = {a.id for a, _, _ in rows if a.id is not None}
+    data = build_rows(session, list(rows), liked_ids)
 
     return ArticlesPublic(data=data, count=len(data))

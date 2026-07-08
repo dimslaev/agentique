@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 
+from app.models_agentique import ArticleKind
+
 SCORE_THRESHOLD = 76
 PROMPT_CONTENT_CAP = 1500
 
@@ -37,24 +39,23 @@ def github_repo_from_content(content: str) -> str | None:
     return f"https://github.com/{owner}/{repo}"
 
 
-def kind_from_url(url: str) -> str | None:
+def kind_from_url(url: str) -> ArticleKind | None:
+    """Deterministic ArticleKind from a URL host, or None if inconclusive."""
     try:
         from urllib.parse import urlparse
 
         host = urlparse(url).hostname or ""
         host = host.removeprefix("www.")
         if host in ("github.com", "gitlab.com"):
-            return "repo"
+            return ArticleKind.repo
         if host in ("huggingface.co", "hf.co"):
-            return "model"
+            return ArticleKind.model
         if host in ("arxiv.org", "ar5iv.labs.arxiv.org"):
-            return "paper"
+            return ArticleKind.paper
     except Exception:
         pass
     return None
 
 
-TRUST_BY_SOURCE: dict[str, str] = {
-    "Hacker News": "high",
-    "AI News": "high",
-}
+# TRUST_BY_SOURCE removed under the new schema: per-article trust now comes from
+# Publisher.trust (resolved via pipeline.publishers), not a hard-coded map.

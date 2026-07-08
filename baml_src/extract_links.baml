@@ -5,7 +5,7 @@ class ExtractedLink {
 }
 
 function ExtractLinks(emailHtml: string) -> ExtractedLink[] {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a precise link extraction engine. You parse newsletter HTML and identify external article links while filtering out tracking, admin, and promotional URLs.

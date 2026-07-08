@@ -10,18 +10,20 @@ export type AnalyticsEventCreate = {
     };
 };
 
+export type ArticleKind = 'blog' | 'product' | 'announcement' | 'repo' | 'paper' | 'model';
+
 export type ArticlePublic = {
-    title: string;
-    source: string;
-    source_type: string;
-    url?: (string | null);
-    published_at?: (string | null);
-    score?: (number | null);
-    summary?: (string | null);
-    categories?: Array<(string)>;
-    kind?: (string | null);
     id: number;
+    title: string;
+    url: string;
+    summary?: (string | null);
+    score: number;
+    kind: ArticleKind;
+    categories?: Array<Category>;
+    published_at?: (string | null);
     created_at?: (string | null);
+    publisher: PublisherPublic;
+    tags?: Array<TagPublic>;
     like_count?: number;
     liked_by_me?: boolean;
 };
@@ -39,6 +41,8 @@ export type Body_login_login_access_token = {
     client_id?: (string | null);
     client_secret?: (string | null);
 };
+
+export type Category = 'dev' | 'models' | 'research';
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -92,6 +96,21 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type PublisherKind = 'individual' | 'company' | 'community' | 'media';
+
+export type PublisherPublic = {
+    id: number;
+    slug: string;
+    name: string;
+    kind: PublisherKind;
+    image?: (string | null);
+};
+
+export type TagPublic = {
+    slug: string;
+    name: string;
 };
 
 export type Token = {
@@ -168,6 +187,7 @@ export type ArticlesReadArticlesData = {
     minScore?: (number | null);
     since?: (string | null);
     sort?: string;
+    tag?: (string | null);
 };
 
 export type ArticlesReadArticlesResponse = (ArticlesPublic);

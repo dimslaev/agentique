@@ -84,13 +84,18 @@ def _fetch_source(source: dict) -> list[dict]:
         return []
 
 
-def fetch_substack() -> list[dict]:
-    import json
-    import pathlib
+def fetch_feeds(sources: list[dict]) -> list[dict]:
+    """Fetch a list of RSS/substack feeds in parallel.
 
-    sources_path = pathlib.Path(__file__).parent / "substack-sources.json"
-    with open(sources_path) as f:
-        sources: list[dict] = json.load(f)
+    ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
+    from the DB (active publishers with rss/substack links) via
+    ``pipeline.publishers.feed_sources_from_db``. All items are stamped
+    ``source_type="rss"``; the caller resolves each ``source`` name to a
+    Publisher row.
+    """
+    if not sources:
+        log("Feeds: no active feed publishers")
+        return []
 
     articles: list[dict] = []
     with ThreadPoolExecutor(max_workers=10) as executor:
@@ -101,5 +106,21 @@ def fetch_substack() -> list[dict]:
             except Exception:
                 pass
 
-    log(f"Substack: {len(articles)} articles")
+    log(f"Feeds: {len(articles)} articles")
     return articles
+
+
+def fetch_substack() -> list[dict]:
+    """DEPRECATED seed-only path — reads the checked-in substack-sources.json.
+
+    The runtime now reads feeds from the DB (see ``fetch_feeds`` +
+    ``feed_sources_from_db``). This is kept only as a one-time seed reference
+    and is no longer wired into the pipeline SOURCES.
+    """
+    import json
+    import pathlib
+
+    sources_path = pathlib.Path(__file__).parent / "substack-sources.json"
+    with open(sources_path) as f:
+        sources: list[dict] = json.load(f)
+    return fetch_feeds(sources)

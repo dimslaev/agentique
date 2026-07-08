@@ -13,15 +13,23 @@ const RESPONSE_SHAPE = `{
     {
       "id": 1,
       "title": "string",
-      "source": "string",
-      "source_type": "string",
-      "url": "string | null",
+      "url": "string",
       "published_at": "ISO datetime | null",
-      "score": "integer | null",
+      "score": "integer",
       "summary": "string | null",
       "categories": ["string"],
-      "kind": "string | null",
-      "created_at": "ISO datetime | null"
+      "kind": "string",
+      "created_at": "ISO datetime | null",
+      "publisher": {
+        "id": 1,
+        "slug": "string",
+        "name": "string",
+        "kind": "individual | company | community | media",
+        "image": "string | null"
+      },
+      "tags": [{ "slug": "string", "name": "string" }],
+      "like_count": "integer",
+      "liked_by_me": "boolean"
     }
   ],
   "count": "integer"
@@ -61,9 +69,11 @@ function DevelopersPage() {
               description:
                 "repo | paper | model | blog | product | announcement · optional",
             },
+            { name: "tag", description: "tag slug · optional" },
             {
               name: "sort",
-              description: "score-desc (default) | published_at-desc",
+              description:
+                "score-desc (default) | published_at-desc | likes-desc",
             },
           ]}
         />

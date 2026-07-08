@@ -55,6 +55,15 @@ type_map = {
     "types.SummarizeAndCategorizeResult": types.SummarizeAndCategorizeResult,
     "stream_types.SummarizeAndCategorizeResult": stream_types.SummarizeAndCategorizeResult,
 
+    "types.TagAssignment": types.TagAssignment,
+    "stream_types.TagAssignment": stream_types.TagAssignment,
+
+    "types.TagInput": types.TagInput,
+    "stream_types.TagInput": stream_types.TagInput,
+
+    "types.TagOption": types.TagOption,
+    "stream_types.TagOption": stream_types.TagOption,
+
     "types.TitleFix": types.TitleFix,
     "stream_types.TitleFix": stream_types.TitleFix,
 

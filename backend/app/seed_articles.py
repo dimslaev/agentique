@@ -1,23 +1,45 @@
+import logging
 import math
 import random
 from datetime import UTC, datetime, timedelta
 
-from sqlmodel import Session, delete
+from sqlalchemy import func
+from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.core.db import engine
-from app.models_agentique import Article, ArticleLike
+from app.models_agentique import (
+    Article,
+    ArticleKind,
+    ArticleTag,
+    Category,
+    Publisher,
+    PublisherKind,
+    Tag,
+    TrustLevel,
+)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Fixed seed so local dev, CI, and the Playwright stack all get the same 50 rows.
 SEED = 20260701
 
-CATEGORIES = ["models", "dev", "research"]
-KINDS = ["repo", "paper", "model", "blog", "product", "announcement"]
-SOURCE_TYPES = ["aiNews", "rss", "hackerNews"]
-SOURCES = ["AI News", "Hacker News", "The Batch", "Import AI", "Latent Space"]
+CATEGORIES = list(Category)
+KINDS = list(ArticleKind)
 
 EMBEDDING_DIM = 256
 ARTICLE_COUNT = 50
+
+# Mirrors the real publisher mix: a couple of companies, a community aggregator,
+# and some individual/media newsletters.
+SAMPLE_PUBLISHERS = [
+    ("ai-news", "AI News", PublisherKind.media, TrustLevel.medium),
+    ("hacker-news", "Hacker News", PublisherKind.community, TrustLevel.medium),
+    ("the-batch", "The Batch", PublisherKind.media, TrustLevel.high),
+    ("import-ai", "Import AI", PublisherKind.individual, TrustLevel.high),
+    ("latent-space", "Latent Space", PublisherKind.individual, TrustLevel.medium),
+]
 
 
 def _normalized_embedding(rng: random.Random) -> list[float]:
@@ -39,7 +61,22 @@ def _published_at(rng: random.Random, index: int) -> datetime:
         return now - timedelta(days=rng.uniform(31, 40))
 
 
-def make_sample_articles() -> list[Article]:
+def make_sample_publishers() -> list[Publisher]:
+    return [
+        Publisher(
+            slug=slug,
+            name=name,
+            kind=kind,
+            trust=trust,
+            description=f"{name} — sample publisher.",
+            image=f"https://example.com/publishers/{slug}.png",
+            links={},
+        )
+        for slug, name, kind, trust in SAMPLE_PUBLISHERS
+    ]
+
+
+def make_sample_articles(publisher_ids: list[int]) -> list[Article]:
     rng = random.Random(SEED)
     articles = []
     for i in range(ARTICLE_COUNT):
@@ -47,8 +84,7 @@ def make_sample_articles() -> list[Article]:
         articles.append(
             Article(
                 title=f"Sample article {i + 1}",
-                source=rng.choice(SOURCES),
-                source_type=rng.choice(SOURCE_TYPES),
+                publisher_id=rng.choice(publisher_ids),
                 url=f"https://example.com/articles/{i + 1}",
                 published_at=_published_at(rng, i),
                 score=rng.randint(1, 10),
@@ -62,18 +98,47 @@ def make_sample_articles() -> list[Article]:
     return articles
 
 
+def make_sample_article_tags(
+    article_ids: list[int], tag_ids: list[int]
+) -> list[ArticleTag]:
+    """1–3 tags per article, drawn from whatever `seed_tags` loaded."""
+    if not tag_ids:
+        return []
+    rng = random.Random(SEED)
+    return [
+        ArticleTag(article_id=article_id, tag_id=tag_id)
+        for article_id in article_ids
+        for tag_id in rng.sample(tag_ids, k=min(rng.randint(1, 3), len(tag_ids)))
+    ]
+
+
 def seed(session: Session) -> None:
-    # article_like FK-references article, so clear it before wiping articles.
-    session.exec(delete(ArticleLike))
-    session.exec(delete(Article))
-    session.add_all(make_sample_articles())
+    # Only ever populate an empty table. prestart runs this on every stack start,
+    # and a local DB loaded from the real dump must survive that.
+    existing = session.exec(select(func.count()).select_from(Article)).one()
+    if existing:
+        logger.info("%s articles already present, skipping seed", existing)
+        return
+
+    publishers = make_sample_publishers()
+    session.add_all(publishers)
+    session.commit()
+    publisher_ids = [p.id for p in publishers if p.id is not None]
+
+    articles = make_sample_articles(publisher_ids)
+    session.add_all(articles)
+    session.commit()
+    article_ids = [a.id for a in articles if a.id is not None]
+
+    tag_ids = [t.id for t in session.exec(select(Tag)).all() if t.id is not None]
+    session.add_all(make_sample_article_tags(article_ids, tag_ids))
     session.commit()
 
 
 def main() -> None:
     if settings.ENVIRONMENT == "production":
         raise RuntimeError(
-            "Refusing to run seed_articles in production; it wipes the articles table."
+            "Refusing to run seed_articles in production; it inserts sample data."
         )
     with Session(engine) as session:
         seed(session)

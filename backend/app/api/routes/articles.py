@@ -8,9 +8,20 @@ from sqlalchemy import cast, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import col, select
 
+from app.api.article_view import (
+    build_rows,
+    like_counts_subquery,
+    liked_article_ids,
+)
 from app.api.deps import SessionDep
 from app.api.deps_agentique import CurrentUserOptional
-from app.models_agentique import Article, ArticleLike, ArticlePublic, ArticlesPublic
+from app.models_agentique import (
+    Article,
+    ArticlesPublic,
+    ArticleTag,
+    Publisher,
+    Tag,
+)
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -36,22 +47,6 @@ def _embed(text: str) -> list[float]:  # pragma: no cover
     return vec.tolist()
 
 
-def _liked_article_ids(session: SessionDep, user_id: Any) -> set[int]:
-    return set(
-        session.exec(
-            select(ArticleLike.article_id).where(ArticleLike.user_id == user_id)
-        ).all()
-    )
-
-
-def _like_counts_subquery() -> Any:
-    return (
-        select(ArticleLike.article_id, func.count().label("like_count"))
-        .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        .subquery()
-    )
-
-
 @router.get("/", response_model=ArticlesPublic)
 def read_articles(
     session: SessionDep,
@@ -61,6 +56,7 @@ def read_articles(
     min_score: int | None = Query(default=None, ge=1, le=10),
     category: str | None = None,
     kind: str | None = None,
+    tag: str | None = None,
     sort: str = Query(default="score-desc"),
 ) -> Any:
     since_dt: datetime
@@ -72,10 +68,7 @@ def read_articles(
     else:
         since_dt = datetime.now(UTC) - timedelta(days=30)
 
-    conditions = [
-        Article.score.is_not(None),  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
-        col(Article.published_at) >= since_dt,
-    ]
+    conditions = [col(Article.published_at) >= since_dt]
     if min_score is not None:
         conditions.append(Article.score >= min_score)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
     if kind is not None:
@@ -84,14 +77,23 @@ def read_articles(
         conditions.append(
             cast(Article.categories, JSONB).contains([category])  # type: ignore[arg-type]
         )
+    if tag is not None:
+        conditions.append(
+            col(Article.id).in_(
+                select(ArticleTag.article_id)
+                .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
+                .where(Tag.slug == tag)
+            )
+        )
 
     count_statement = select(func.count()).select_from(Article).where(*conditions)
     count = session.exec(count_statement).one()
 
-    like_counts_subq = _like_counts_subquery()
+    like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
     joined_statement = (
-        select(Article, like_count_expr.label("like_count"))
+        select(Article, Publisher, like_count_expr.label("like_count"))
+        .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
         .where(*conditions)
     )
@@ -111,17 +113,9 @@ def read_articles(
     joined_statement = joined_statement.limit(limit)
 
     rows = session.exec(joined_statement).all()
+    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
 
-    liked_ids = _liked_article_ids(session, current_user.id) if current_user else set()
-
-    data = []
-    for article, like_count in rows:
-        pub = ArticlePublic.model_validate(article)
-        pub.like_count = like_count
-        pub.liked_by_me = article.id in liked_ids
-        data.append(pub)
-
-    return ArticlesPublic(data=data, count=count)
+    return ArticlesPublic(data=build_rows(session, list(rows), liked_ids), count=count)
 
 
 @router.get("/search", response_model=ArticlesPublic)
@@ -133,13 +127,13 @@ def search_articles(
 ) -> Any:
     query_vec = _embed(q)
 
-    like_counts_subq = _like_counts_subquery()
+    like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
 
     statement = (
-        select(Article, like_count_expr.label("like_count"))
+        select(Article, Publisher, like_count_expr.label("like_count"))
+        .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
-        .where(Article.score.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
         .where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
         .order_by(
             cast(Article.embedding, Vector(256)).cosine_distance(query_vec),
@@ -149,16 +143,9 @@ def search_articles(
     )
 
     rows = session.exec(statement).all()
+    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
 
-    liked_ids = _liked_article_ids(session, current_user.id) if current_user else set()
-
-    data = []
-    for article, like_count in rows:
-        pub = ArticlePublic.model_validate(article)
-        pub.like_count = like_count
-        pub.liked_by_me = article.id in liked_ids
-        data.append(pub)
-
+    data = build_rows(session, list(rows), liked_ids)
     return ArticlesPublic(data=data, count=len(data))
 
 
