@@ -9,27 +9,38 @@ from datetime import UTC, datetime, timedelta
 from model2vec import StaticModel
 from sqlmodel import Session, create_engine, select
 
-from app.models_agentique import Article, ScoredUrl
+from app.models_agentique import (
+    Article,
+    ArticleKind,
+    Category,
+    Publisher,
+    ScoredUrl,
+)
 from baml_client.sync_client import b
-from baml_client.types import ArticleInput, ExistingArticle
+from baml_client.types import ArticleInput, ExistingArticle, TagInput
 from pipeline.health import (
     RunStats,
     check_liveness,
     record_run,
     verify_run,
 )
+from pipeline.publishers import (
+    PublisherResolver,
+    channel_for,
+    feed_sources_from_db,
+)
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.extract_content import re_extract_full_content
 from pipeline.sources.hn import fetch_hn
-from pipeline.sources.substack import fetch_substack
+from pipeline.sources.substack import fetch_feeds
 from pipeline.steps import (
     PROMPT_CONTENT_CAP,
     SCORE_THRESHOLD,
-    TRUST_BY_SOURCE,
     github_repo_from_content,
     kind_from_url,
 )
+from pipeline.tags import validate_tags, write_article_tags
 from pipeline.utils import log, sanitize_llm_text, strip_title_wrappers, wait_ms
 
 
@@ -58,22 +69,31 @@ def _embed(text: str) -> list[float]:
     return _get_model().encode([text])[0].tolist()
 
 
-SOURCES = [
-    {"label": "Hacker News", "fetcher": fetch_hn},
-    {"label": "Newsletter", "fetcher": fetch_newsletter},
-    {"label": "AI News", "fetcher": fetch_ai_news},
-    {"label": "Substack", "fetcher": fetch_substack},
-]
+def _build_sources(session: Session) -> list[dict]:
+    """Assemble the run's sources. Aggregator channels (HN, AI News) and the
+    IMAP newsletter source keep their fetchers; RSS/substack feeds are now
+    DB-driven — one "Feeds" source that polls every active feed publisher.
+    """
+    return [
+        {"label": "Hacker News", "fetcher": fetch_hn},
+        {"label": "Newsletter", "fetcher": fetch_newsletter},
+        {"label": "AI News", "fetcher": fetch_ai_news},
+        {
+            "label": "Feeds",
+            "fetcher": lambda: fetch_feeds(feed_sources_from_db(session)),
+        },
+    ]
 
 
 def _to_baml_input(a: dict) -> ArticleInput:
-    """Build a BAML ArticleInput from a fetched-article dict (snippet capped at 200)."""
+    """Build a BAML ArticleInput from a fetched-article dict (snippet capped at
+    200). ``trust`` is stamped by _resolve_publishers from Publisher.trust."""
     return ArticleInput(
         url=a["url"],
         title=a["title"],
         source=a["source"],
         snippet=a.get("content", "")[:200] if a.get("content") else None,
-        trust=TRUST_BY_SOURCE.get(a["source"]),
+        trust=a.get("trust"),
     )
 
 
@@ -81,7 +101,10 @@ def run_pipeline(stats: RunStats) -> None:
     log("=== Pipeline start ===")
 
     with Session(_engine) as session:
-        for src in SOURCES:
+        resolver = PublisherResolver(session=session)
+        tag_cache: dict[str, int] = {}
+
+        for src in _build_sources(session):
             label = src["label"]
             log(f"\n=== Processing {label} ===")
             s = stats.source(label)
@@ -89,6 +112,8 @@ def run_pipeline(stats: RunStats) -> None:
             try:
                 fetched = _fetch_source(src["fetcher"], label)
                 s.fetched = len(fetched)
+
+                _resolve_publishers(fetched, resolver)
 
                 fresh = _filter_known_urls(session, fetched, label)
                 s.filtered_known = s.fetched - len(fresh)
@@ -108,6 +133,7 @@ def run_pipeline(stats: RunStats) -> None:
                 _improve_titles(session, inserted)
                 with_content = _extract_full_content(session, inserted)
                 processed = _summarize_and_categorize(session, with_content)
+                _assign_tags(session, processed, tag_cache)
                 _embed_articles(session, processed)
             except Exception as e:
                 # One source failing must not sink the others — record and move on.
@@ -115,7 +141,30 @@ def run_pipeline(stats: RunStats) -> None:
                 log(f"  !! {label} failed: {e}")
                 session.rollback()
 
+        if resolver.quarantined:
+            log(
+                f"\n{len(resolver.quarantined)} publisher(s) quarantined this run: "
+                f"{', '.join(resolver.quarantined)}"
+            )
+
     log("=== Pipeline complete ===")
+
+
+# ─── Step 01b: publisher resolution ───────────────────────────────────────────
+
+
+def _resolve_publishers(articles: list[dict], resolver: PublisherResolver) -> None:
+    """Stamp each fetched item in place with publisher_id, trust, and channel.
+
+    publisher_id / trust come from the Publisher row (resolved by source name,
+    auto-quarantined if unknown); channel is deterministic from source_type.
+    Runs right after fetch so trust is available to the scoring/dedup BAML calls.
+    """
+    for a in articles:
+        publisher = resolver.resolve(a["source"])
+        a["publisher_id"] = publisher.id
+        a["trust"] = publisher.trust.value
+        a["channel"] = channel_for(a.get("source_type", "rss"))
 
 
 # ─── Step 01 ────────────────────────────────────────────────────────────────
@@ -212,9 +261,21 @@ def _dedup_semantic(session: Session, articles: list[dict], label: str) -> list[
 
     log(f"  Deduplicating against {len(recent_db)} recent DB articles...")
 
+    # Publisher name is only used for display in the dedup prompt. Resolve the
+    # ids in one query so ExistingArticle.source stays populated post-refactor.
+    pub_ids = {art.publisher_id for art in recent_db}
+    pub_names = {
+        p.id: p.name
+        for p in session.exec(select(Publisher).where(Publisher.id.in_(pub_ids))).all()
+    }
+
     new_inputs = [_to_baml_input(a) for a in articles]
     existing_inputs = [
-        ExistingArticle(url=str(art.url), title=art.title, source=art.source)
+        ExistingArticle(
+            url=str(art.url),
+            title=art.title,
+            source=pub_names.get(art.publisher_id, ""),
+        )
         for art in recent_db
     ]
 
@@ -256,6 +317,9 @@ def _score_articles(session: Session, articles: list[dict]) -> list[dict]:
     scored = []
     for a in articles:
         score = score_by_url.get(a["url"], 0)
+        # TODO(new-schema): hard-coded per-source score bonus. Once publishers
+        # carry a boost/weight field this should read from the Publisher row
+        # (a["trust"] is already available) instead of matching a name string.
         if a["source"] == "Ben's Bites":
             score = min(score + 10, 100)
         scored.append({**a, "score": score})
@@ -304,8 +368,8 @@ def _insert_articles(session: Session, scored: list[dict]) -> list[dict]:
 
         article = Article(
             title=item["title"],
-            source=item["source"],
-            source_type=item["source_type"],
+            publisher_id=item["publisher_id"],
+            channel=item["channel"],
             url=item["url"],
             published_at=pub_at,
             score=item["score"],
@@ -386,6 +450,28 @@ def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
 # ─── Step 08 ────────────────────────────────────────────────────────────────
 
 
+def _to_categories(baml_categories) -> list[Category]:
+    """Map BAML ArticleCategory enum values -> Category enum, dropping unknowns."""
+    out: list[Category] = []
+    for c in baml_categories:
+        value = getattr(c, "value", c)
+        try:
+            out.append(Category(str(value).lower()))
+        except ValueError:
+            log(f"  Dropped unknown category {value!r}")
+    return out
+
+
+def _to_kind(baml_kind) -> ArticleKind | None:
+    """Map a BAML ArticleKind enum value -> models ArticleKind enum."""
+    value = getattr(baml_kind, "value", baml_kind)
+    try:
+        return ArticleKind(str(value).lower())
+    except ValueError:
+        log(f"  Dropped unknown kind {value!r}")
+        return None
+
+
 def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]:
     if not items:
         return []
@@ -397,8 +483,9 @@ def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]
         art_id = item["id"]
         full_content = item.get("full_content", "")
         summary = ""
-        categories: list[str] = []
-        kind: str | None = kind_from_url(item["url"])
+        categories: list[Category] = []
+        # kind_from_url returns an ArticleKind (or None if inconclusive).
+        kind: ArticleKind | None = kind_from_url(item["url"])
 
         try:
             if full_content:
@@ -406,17 +493,17 @@ def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]
                     item["title"], full_content[:PROMPT_CONTENT_CAP]
                 )
                 summary = sanitize_llm_text(result.summary or "")
-                categories = [c.lower() for c in result.categories]
+                categories = _to_categories(result.categories)
                 if not kind:
-                    kind = result.kind.value.lower()
-                if kind == "blog" and github_repo_from_content(full_content):
-                    kind = "repo"
+                    kind = _to_kind(result.kind)
+                if kind == ArticleKind.blog and github_repo_from_content(full_content):
+                    kind = ArticleKind.repo
             else:
                 result = b.CategorizeOnly(item["title"])
-                categories = [c.lower() for c in result.categories]
+                categories = _to_categories(result.categories)
                 if not kind:
                     kr = b.ClassifyKind(item["title"], item["url"], None)
-                    kind = kr.kind.value.lower()
+                    kind = _to_kind(kr.kind)
         except Exception as e:
             log(f"  Summarize/categorize failed for #{art_id}: {e}")
 
@@ -442,6 +529,48 @@ def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]
     session.commit()
     log("  Done summarizing and categorizing")
     return processed
+
+
+# ─── Step 08b: tag assignment (the main new LLM step) ─────────────────────────
+
+
+TAG_BATCH = 10
+
+
+def _assign_tags(
+    session: Session, items: list[dict], tag_cache: dict[str, int]
+) -> None:
+    """Assign 1-3 tags per article from the fixed vocabulary and write Tag /
+    ArticleTag rows. Batched by article id; output is validated against the
+    slug set and off-list tags are dropped (see pipeline.tags)."""
+    if not items:
+        return
+
+    log(f"  Assigning tags to {len(items)} articles...")
+
+    for i in range(0, len(items), TAG_BATCH):
+        batch = items[i : i + TAG_BATCH]
+        inputs = [
+            TagInput(
+                articleId=it["id"],
+                title=it["title"],
+                summary=it.get("summary") or None,
+            )
+            for it in batch
+        ]
+        try:
+            assignments = b.AssignTags(inputs)
+        except Exception as e:
+            log(f"  Tag assignment failed for batch {i // TAG_BATCH + 1}: {e}")
+            continue
+
+        for a in assignments:
+            slugs = validate_tags(list(a.tags))
+            write_article_tags(session, a.articleId, slugs, tag_cache)
+        wait_ms(1000)
+
+    session.commit()
+    log("  Done assigning tags")
 
 
 # ─── Step 09 ────────────────────────────────────────────────────────────────
