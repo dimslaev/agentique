@@ -1,0 +1,257 @@
+{
+  "note": "db articles come from .ignored/agentique-new.sql (article table). That table only stores rows that already passed SCORE_THRESHOLD=76, so every db row is a positive. The synthetic rows are hand-written negatives that exercise the STEP 1 scope check in score.baml; they have no gpt-oss baseline score, only an expected keep/drop label.",
+  "score_threshold": 76,
+  "batch_size": 5,
+  "articles": [
+    {
+      "url": "http://www.scroll.ai/",
+      "title": "Scroll AI platform builds enterprise‑grade assistants using existing knowledge bases",
+      "source": "The Rundown AI",
+      "snippet": "Experience example agentsLVMH IntelligenceAnalystBuilt from hundreds of public disclosuresand brand materials. Ask anything aboutthe group, its maisons, and its strategy.By Evan CalderBuffetBotExcepti",
+      "trust": "medium",
+      "baseline_score": 79,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://blog.cloudflare.com/ai-code-review/",
+      "title": "Orchestrating AI code review at scale",
+      "source": "Hacker News",
+      "snippet": "2026-04-2019 min readCode review is a fantastic mechanism for catching bugs and sharing knowledge, but it is also one of the most reliable ways to bottleneck an engineering team. A merge request sits ",
+      "trust": "medium",
+      "baseline_score": 79,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://claude.com/product/claude-code",
+      "title": "Claude Code: Upload small files for AI‑assisted coding and debugging",
+      "source": "Superhuman",
+      "snippet": "⏺ I'll refactor the permission request components to share common UI elements and behavior by creating a BasePermissionRequest component. Let me start by examining the existing permission request comp",
+      "trust": "medium",
+      "baseline_score": 78,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://github.com/andrewyng/aisuite/blob/main/examples/agents/world_weather_dashboard.ipynb",
+      "title": "World Weather Dashboard Notebook",
+      "source": "The Batch",
+      "snippet": "AI CODE CREATIONGitHub CopilotWrite better code with AIGitHub SparkBuild and deploy intelligent appsGitHub ModelsManage and compare promptsMCP RegistryNewIntegrate external toolsDEVELOPER WORKFLOWSAct",
+      "trust": "high",
+      "baseline_score": 80,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://vettedconsumer.com/quant-picker/",
+      "title": "Quant Picker - which GGUF file fits your model and machine",
+      "source": "Hacker News",
+      "snippet": "Pick your model and your machine — get the exact quant to download, the file size, and how much context you'll have left. How to read the tableIt balances three things at once: quality (more bits = be",
+      "trust": "medium",
+      "baseline_score": 83,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://lumalabs.ai/api",
+      "title": "Uni 1.1 - Luma Labs image generation API",
+      "source": "The Rundown AI",
+      "snippet": "PlansBuild it. Scale it.BuildDrop in to any stack. No custom infra. No waitlist. Everything you need to evaluate. No retry tax.Start BuildingTwo endpoints. Generate. Modify.Up to nine references per g",
+      "trust": "medium",
+      "baseline_score": 85,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://z.ai/blog/glm-5.2",
+      "title": "Z.ai GLM-5.2: 1M-token context, reasoning controls, coding support",
+      "source": "TLDR",
+      "snippet": "Z.ai large language model with 1 million‑token context window, reasoning controls and long‑horizon coding support",
+      "trust": "medium",
+      "baseline_score": 85,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://blog.google/innovation-and-ai/products/gemini-app/generate-files-in-gemini/",
+      "title": "Gemini Generates Files in Chat",
+      "source": "There's An AI For That",
+      "snippet": "It just got easier to turn your best ideas into downloadable and ready-to-share files. With just a prompt, Gemini can now create PDFs, Microsoft Word and Excel, Google Docs, Sheets, Slides and more di",
+      "trust": "medium",
+      "baseline_score": 85,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://threadreaderapp.com/thread/2062548860308730061.html",
+      "title": "Anthropic releases Claude Oceanus checkpoint for red team testing",
+      "source": "TLDR",
+      "snippet": "Did Thread Reader help you today? Support us! We are indie developers! This site is made by just two indie developers on a laptop doing marketing, support and development! Read more about the story. B",
+      "trust": "medium",
+      "baseline_score": 87,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://www.producthunt.com/products/grok-3",
+      "title": "xAI Grok API for Generating Images",
+      "source": "The Frontier by Product Hunt",
+      "snippet": "xAI’s Grok platform introduces an API for generating images.",
+      "trust": "high",
+      "baseline_score": 90,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://www.anthropic.com/news/claude-opus-4-8",
+      "title": "Claude Opus upgraded to version 4.8 with benchmark improvements",
+      "source": "Hacker News",
+      "snippet": "We’re upgrading Claude Opus to a new version: Claude Opus 4.8. It builds on Opus 4.7 with improvements across benchmarks, and is a more effective collaborator. It’s available today for the same price.",
+      "trust": "medium",
+      "baseline_score": 86,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://www.anthropic.com/news/claude-sonnet-5",
+      "title": "Claude Sonnet 5: More agentic model with planning and tool use",
+      "source": "Hacker News",
+      "snippet": "Introducing Claude Sonnet 5 Claude Sonnet 5 is built to be the most agentic Sonnet model yet. It can make plans, use tools like browsers and terminals, and run autonomously at a level that, just a few",
+      "trust": "medium",
+      "baseline_score": 89,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://app.therundown.ai/guides/run-your-own-coding-agent-on-your-laptop-for-free",
+      "title": "Guide: Run a Local Coding LLM with Ollama for Free",
+      "source": "The Rundown AI",
+      "snippet": "A step‑by‑step guide to download a local coding LLM with Ollama and run it for free inside tools like Claude Code or Codex.",
+      "trust": "medium",
+      "baseline_score": 93,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://github.com/makerchecker/MakerChecker",
+      "title": "Enforce deny‑by‑default, approvals, and audit trail for AI agents",
+      "source": "Hacker News",
+      "snippet": "Deny-by-default enforcement, human approvals, and a cryptographically signed audit trail — so your agent runs only what it's granted and provably can't approve its own work. Your agents keep running i",
+      "trust": "medium",
+      "baseline_score": 93,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://bit.simone.computer",
+      "title": "Bit: An LLM in the browser that only answers yes or no",
+      "source": "Hacker News",
+      "snippet": null,
+      "trust": "medium",
+      "baseline_score": 94,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://aiblewmymind.substack.com/p/ai-operating-system-claude-code",
+      "title": "Create a No‑Code Cloud AI Operating System using Claude Code",
+      "source": "AI blew my mind",
+      "snippet": "Most AI operating systems are built for developers. This one isn't. It runs in the cloud, no code, and does the non technical work you keep putting off. Copy my starter kit and build yours tonight.",
+      "trust": "medium",
+      "baseline_score": 93,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://qwen.ai/blog?id=65f766fc2dcba7905c1cb69cc4cab90e94126bf4&from=research.latest-advancements-list",
+      "title": "Qwen3‑Omni Multimodal Model Adds Audio to Text, Image, Video",
+      "source": "The Batch",
+      "snippet": "Qwen3‑Omni extends the Qwen3 series with audio capabilities alongside text, image, and video.",
+      "trust": "high",
+      "baseline_score": 100,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://vitalik.eth.limo/general/2026/04/02/secure_llms.html",
+      "title": "Secure self‑hosted LLM setup warns of prompt‑modifying agents",
+      "source": "TLDR",
+      "snippet": "Dark Mode Toggle 2026 Apr 02 See all posts My self-sovereign / local / private / secure LLM setup, April 2026 Warning: please do not simply copy the tools and techniques described in this post, and as",
+      "trust": "medium",
+      "baseline_score": 100,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://cohere.com/blog/transcribe",
+      "title": "Cohere releases Transcribe, 2B‑parameter open‑source ASR model",
+      "source": "TLDR",
+      "snippet": "Cohere is announcing Transcribe, a state-of-the-art automatic speech recognition (ASR) model that is open source and available today for download.Speech is rapidly becoming a core modality for AI-enab",
+      "trust": "medium",
+      "baseline_score": 100,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://huggingface.co/blog/ibm-granite/granite-4-speech",
+      "title": "Granite 4.0 1B Speech: Compact, Multilingual, and Built for the Edge",
+      "source": "Hugging Face Blog",
+      "snippet": "Back to Articles We’re excited to share Granite 4.0 1B Speech, the latest addition to IBM's Granite Speech collection. Designed for enterprise applications on resource-constrained devices, Granite 4.0",
+      "trust": "medium",
+      "baseline_score": 100,
+      "origin": "db",
+      "expect": "keep"
+    },
+    {
+      "url": "https://example.com/crdt-deep-dive",
+      "title": "A Deep Dive Into CRDTs and Conflict Resolution",
+      "source": "Some Blog",
+      "trust": "low",
+      "snippet": "Conflict-free replicated data types let distributed replicas converge without coordination. We walk through state-based and op-based CRDTs, then implement an RGA sequence.",
+      "baseline_score": null,
+      "origin": "synthetic",
+      "expect": "drop"
+    },
+    {
+      "url": "https://example.com/ripgrep-internals",
+      "title": "How ripgrep Searches Fast: SIMD, Aho-Corasick and mmap",
+      "source": "Some Blog",
+      "trust": "low",
+      "snippet": "ripgrep beats grep on most workloads. This post walks through its literal optimizations, the Teddy SIMD matcher, and when memory mapping actually helps.",
+      "baseline_score": null,
+      "origin": "synthetic",
+      "expect": "drop"
+    },
+    {
+      "url": "https://example.com/eu-ai-act-fines",
+      "title": "EU Regulators Fine Adtech Firm Over AI Act Transparency Breach",
+      "source": "Some News",
+      "trust": "low",
+      "snippet": "The European Commission issued its first penalty under the AI Act today, fining the company for failing to disclose automated decision-making to users.",
+      "baseline_score": null,
+      "origin": "synthetic",
+      "expect": "drop"
+    },
+    {
+      "url": "https://example.com/series-b",
+      "title": "Chatbot Startup Raises $40M Series B Led by Growth Fund",
+      "source": "Some News",
+      "trust": "low",
+      "snippet": "The round values the company at $400M post-money. The team plans to expand go-to-market and double headcount over the next year. No product details were shared.",
+      "baseline_score": null,
+      "origin": "synthetic",
+      "expect": "drop"
+    },
+    {
+      "url": "https://example.com/ai-changing-everything",
+      "title": "AI Is Changing Everything, and We Are Not Ready",
+      "source": "Some Blog",
+      "trust": "low",
+      "snippet": "I spent a week using an AI assistant for everything and came away unsettled. Here are some reflections on what this means for the future of knowledge work.",
+      "baseline_score": null,
+      "origin": "synthetic",
+      "expect": "drop"
+    }
+  ]
+}
