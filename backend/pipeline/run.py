@@ -154,17 +154,18 @@ def run_pipeline(stats: RunStats) -> None:
 
 
 def _resolve_publishers(articles: list[dict], resolver: PublisherResolver) -> None:
-    """Stamp each fetched item in place with publisher_id, trust, and channel.
+    """Stamp each fetched item in place with publisher_id and trust.
 
-    publisher_id / trust come from the Publisher row (resolved by source name,
-    auto-quarantined if unknown); channel is deterministic from source_type.
-    Runs right after fetch so trust is available to the scoring/dedup BAML calls.
+    Both come from the Publisher row (resolved by source name, auto-quarantined
+    if unknown). Runs right after fetch so trust is available to the
+    scoring/dedup BAML calls. `channel` is NOT stamped here — it's derived from
+    source_type at the single point it's needed (article insert), so the derived
+    provenance value doesn't flow through the pipeline as a loose dict key.
     """
     for a in articles:
         publisher = resolver.resolve(a["source"])
         a["publisher_id"] = publisher.id
         a["trust"] = publisher.trust.value
-        a["channel"] = channel_for(a.get("source_type", "rss"))
 
 
 # ─── Step 01 ────────────────────────────────────────────────────────────────
@@ -369,7 +370,9 @@ def _insert_articles(session: Session, scored: list[dict]) -> list[dict]:
         article = Article(
             title=item["title"],
             publisher_id=item["publisher_id"],
-            channel=item["channel"],
+            # channel is provenance, derived deterministically from source_type
+            # at the point of use (not consumer-facing — see REFACTOR_NOTES.md).
+            channel=channel_for(item.get("source_type", "rss")),
             url=item["url"],
             published_at=pub_at,
             score=item["score"],

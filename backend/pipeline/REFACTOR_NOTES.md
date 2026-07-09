@@ -36,7 +36,12 @@ Syntax checks pass (`python -m py_compile`).
   their fetchers; substack is now the single **"Feeds"** source driven by
   `feed_sources_from_db`.
 - New `_resolve_publishers(...)` step (right after fetch) stamps each item with
-  `publisher_id`, `trust` (from `Publisher.trust`), `channel`.
+  `publisher_id` and `trust` (from `Publisher.trust`). **`channel` is treated as
+  provenance/observability, not consumer data**: it's derived from `source_type`
+  via `channel_for()` at the single point of use (article insert), so the derived
+  value doesn't flow through the pipeline as a loose dict key. Per-run,
+  per-channel counts already live in `PipelineRun.sources` (fetcher label maps
+  1:1 to channel), so the observability doesn't depend on `Article.channel`.
 - `_to_baml_input` — `trust` now from the stamped item (was `TRUST_BY_SOURCE`).
 - `_dedup_semantic` — `ExistingArticle.source` now filled from a
   `publisher_id → name` lookup (Article no longer has `source`).
@@ -81,8 +86,13 @@ Syntax checks pass (`python -m py_compile`).
   stays the source of truth or is deleted now that it's ported. If ported copy
   is canonical, remove/redirect `models.py`.
 - **Read API** — `app/api/routes/articles.py`, `likes.py`, and
-  `ArticlePublic`/`ArticlesPublic` shape: expose `publisher`/`channel`/`kind`/
-  `categories`/`tags`, join `Publisher` for the source name, add tag filtering.
+  `ArticlePublic`/`ArticlesPublic` shape: expose `publisher`/`kind`/`categories`/
+  `tags`, join `Publisher` for the source name, add tag filtering. **Omit
+  `channel` from `ArticlePublic`** — it's pipeline provenance, not consumer data
+  (kept as a column to match models.py + the migrated prod DB, but not exposed).
+  Decision: keep the `Article.channel` column rather than drop it; dropping would
+  diverge from the source-of-truth schema and need a prod migration for no
+  consumer benefit.
 - **Frontend client** — `frontend/src/**` + generated `types.gen.ts` /
   `sdk.gen.ts` / `schemas.gen.ts` regen after the API schema settles.
 - **Alembic** — new migration for `publisher`, `tag`, `article_tag`, the
