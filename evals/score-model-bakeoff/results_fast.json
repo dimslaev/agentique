@@ -1,0 +1,80 @@
+{
+  "threshold": 76,
+  "results": [
+    {
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "coverage": "15/25",
+      "missing": 10,
+      "mae_vs_baseline": 11.4,
+      "spearman": -0.006,
+      "recall_on_kept": "7/10",
+      "scope_check_negatives": "5/5",
+      "threshold_agreement": 0.8,
+      "latency_p50": 7.07,
+      "latency_p95": 7.07,
+      "latency_total": 24.9,
+      "errors": [
+        "batch1:parse_error: Expecting value: line 1 column 2 (char 1)",
+        "batch4:parse_error: Expecting value: line 1 column 2 (char 1)"
+      ],
+      "scores": {
+        "https://lumalabs.ai/api": 84,
+        "https://z.ai/blog/glm-5.2": 86,
+        "https://blog.google/innovation-and-ai/products/gemini-app/generate-files-in-gemini/": 55,
+        "https://threadreaderapp.com/thread/2062548860308730061.html": 73,
+        "https://www.producthunt.com/products/grok-3": 89,
+        "https://www.anthropic.com/news/claude-opus-4-8": 84,
+        "https://www.anthropic.com/news/claude-sonnet-5": 85,
+        "https://app.therundown.ai/guides/run-your-own-coding-agent-on-your-laptop-for-free": 95,
+        "https://github.com/makerchecker/MakerChecker": 83,
+        "https://bit.simone.computer": 45,
+        "https://example.com/crdt-deep-dive": 5,
+        "https://example.com/ripgrep-internals": 5,
+        "https://example.com/eu-ai-act-fines": 5,
+        "https://example.com/series-b": 5,
+        "https://example.com/ai-changing-everything": 5
+      }
+    },
+    {
+      "model": "minimaxai/minimax-m2.7",
+      "coverage": "25/25",
+      "missing": 0,
+      "mae_vs_baseline": 14.15,
+      "spearman": 0.446,
+      "recall_on_kept": "12/20",
+      "scope_check_negatives": "5/5",
+      "threshold_agreement": 0.68,
+      "latency_p50": 12.82,
+      "latency_p95": 13.0,
+      "latency_total": 68.4,
+      "errors": [],
+      "scores": {
+        "http://www.scroll.ai/": 35,
+        "https://blog.cloudflare.com/ai-code-review/": 74,
+        "https://claude.com/product/claude-code": 72,
+        "https://github.com/andrewyng/aisuite/blob/main/examples/agents/world_weather_dashboard.ipynb": 75,
+        "https://vettedconsumer.com/quant-picker/": 86,
+        "https://lumalabs.ai/api": 85,
+        "https://z.ai/blog/glm-5.2": 84,
+        "https://blog.google/innovation-and-ai/products/gemini-app/generate-files-in-gemini/": 72,
+        "https://threadreaderapp.com/thread/2062548860308730061.html": 75,
+        "https://www.producthunt.com/products/grok-3": 87,
+        "https://www.anthropic.com/news/claude-opus-4-8": 74,
+        "https://www.anthropic.com/news/claude-sonnet-5": 83,
+        "https://app.therundown.ai/guides/run-your-own-coding-agent-on-your-laptop-for-free": 89,
+        "https://github.com/makerchecker/MakerChecker": 85,
+        "https://bit.simone.computer": 76,
+        "https://aiblewmymind.substack.com/p/ai-operating-system-claude-code": 12,
+        "https://qwen.ai/blog?id=65f766fc2dcba7905c1cb69cc4cab90e94126bf4&from=research.latest-advancements-list": 84,
+        "https://vitalik.eth.limo/general/2026/04/02/secure_llms.html": 94,
+        "https://cohere.com/blog/transcribe": 84,
+        "https://huggingface.co/blog/ibm-granite/granite-4-speech": 76,
+        "https://example.com/crdt-deep-dive": 12,
+        "https://example.com/ripgrep-internals": 8,
+        "https://example.com/eu-ai-act-fines": 10,
+        "https://example.com/series-b": 35,
+        "https://example.com/ai-changing-everything": 32
+      }
+    }
+  ]
+}

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import statistics
@@ -27,24 +28,49 @@ from pathlib import Path
 
 import httpx
 
-BASE_URL = "https://integrate.api.nvidia.com/v1"
 HERE = Path(__file__).parent
+BACKOFF_5XX = 8.0  # seconds, doubled per attempt
 
 # Latency notes are the user's own measurements, kept as a triage hint.
 CANDIDATES = [
     "openai/gpt-oss-120b",                      # 6.0s  - incumbent, times out under load
     "qwen/qwen3-next-80b-a3b-instruct",         # ---   - current fallback, poor at scoring
     "nvidia/nemotron-3-nano-30b-a3b",           # 1.6s
-    "minimaxai/minimax-m2.5",                   # 2.0s
-    "moonshotai/kimi-k2-instruct-0905",         # 2.0s
+    "minimaxai/minimax-m2.7",                   # 2.0s  (was m2.5, renamed)
+    "moonshotai/kimi-k2.6",                     # 2.0s  (was kimi-k2-instruct-0905 / k2.5, both renamed)
     "mistralai/ministral-14b-instruct-2512",    # 3.5s
-    "z-ai/glm5",                                # 4.0s
-    "nvidia/llama-3.3-nemotron-super-49b",      # 4.0s
-    "mistralai/mistral-large-3-675b",           # 4.3s
+    "z-ai/glm-5.2",                             # 4.0s  (was glm5; glm4.7 gone, only z-ai model left)
+    "mistralai/mistral-large-3-675b-instruct-2512", # 4.3s (was mistral-large-3-675b, now instruct-2512)
     "nvidia/nvidia-nemotron-nano-9b-v2",        # 8.0s  - overthinks
-    "moonshotai/kimi-k2.5",                     # 30s
-    "z-ai/glm4.7",                              # 32s
 ]
+
+# Gemini speaks OpenAI-compatible on /v1beta/openai/, so the same request shape
+# and parser work. Model ids differ entirely from NIM -- verify with
+# --list-models before trusting this list.
+GOOGLE_CANDIDATES = [
+    "gemini-3.5-flash",       # newest flash tier
+    "gemini-3.1-flash-lite",  # no 3.5 lite exists; 3.1 is the newest lite
+    "gemini-2.5-flash",       # older flash, cost/latency floor comparator
+]
+
+PROVIDERS = {
+    "nvidia": {
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "env": "NVIDIA_NIM_API_KEY",
+        "candidates": CANDIDATES,
+        # 2048 is plenty: NIM candidates emit the array directly.
+        "extra": {"max_tokens": 2048},
+    },
+    "google": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "env": "GOOGLE_API_KEY",
+        "candidates": GOOGLE_CANDIDATES,
+        # Gemini flash tiers think by default and reasoning tokens count against
+        # max_tokens, so a 2048 cap can starve the answer and return empty
+        # content. Give headroom and turn thinking off.
+        "extra": {"max_tokens": 8192, "reasoning_effort": "none"},
+    },
+}
 
 SYSTEM = (
     "You are a senior editorial analyst at a developer news platform. Your job is to "
@@ -165,7 +191,12 @@ class BatchResult:
 
 
 def score_batch(
-    client: httpx.Client, model: str, batch: list[dict], *, retries: int = 2
+    client: httpx.Client,
+    model: str,
+    batch: list[dict],
+    *,
+    retries: int = 2,
+    extra: dict | None = None,
 ) -> BatchResult:
     body = {
         "model": model,
@@ -174,7 +205,7 @@ def score_batch(
             {"role": "user", "content": render_batch(batch)},
         ],
         "temperature": 0,
-        "max_tokens": 2048,
+        **(extra or {}),
     }
 
     last = "unknown"
@@ -185,9 +216,12 @@ def score_batch(
             elapsed = time.monotonic() - t0
             if r.status_code == 404:
                 return BatchResult(error="model_not_available", latency=elapsed)
-            if r.status_code == 429:
-                last = "rate_limited"
-                time.sleep(3 * (attempt + 1))
+            if r.status_code == 429 or r.status_code >= 500:
+                # 503 "high demand" on Gemini flash tiers is transient and needs
+                # real backoff, not the 2s the generic path gives it.
+                last = "rate_limited" if r.status_code == 429 else f"http_{r.status_code}"
+                if attempt < retries:
+                    time.sleep(BACKOFF_5XX * (2**attempt))
                 continue
             r.raise_for_status()
             rows = extract_json_array(content_of(r.json()))
@@ -200,7 +234,10 @@ def score_batch(
         except httpx.TimeoutException:
             last = "timeout"
         except httpx.HTTPStatusError as e:
-            last = f"http_{e.response.status_code}"
+            detail = e.response.text[:160].replace("\n", " ")
+            last = f"http_{e.response.status_code}: {detail}"
+            if 400 <= e.response.status_code < 500 and e.response.status_code != 429:
+                return BatchResult(error=last, latency=elapsed)
         except (ValueError, KeyError, TypeError, json.JSONDecodeError) as e:
             last = f"parse_error: {e}"
         if attempt < retries:
@@ -241,6 +278,16 @@ def spearman(xs: list[float], ys: list[float]) -> float | None:
     return num / (dx * dy) ** 0.5
 
 
+def pct(values: list[float], q: float) -> float | None:
+    """Nearest-rank percentile. Guards the small-n case where a naive
+    int(n*q)-1 index underflows and returns the minimum instead."""
+    if not values:
+        return None
+    s = sorted(values)
+    i = math.ceil(q * len(s)) - 1
+    return s[min(max(i, 0), len(s) - 1)]
+
+
 def evaluate(model: str, got: dict[str, int], arts: list[dict], threshold: int,
              lat: list[float], errors: list[str]) -> dict:
     db = [a for a in arts if a["origin"] == "db" and a["url"] in got]
@@ -258,8 +305,15 @@ def evaluate(model: str, got: dict[str, int], arts: list[dict], threshold: int,
     dropped_syn = sum(1 for a in syn if got[a["url"]] < threshold)
     n_correct, n_total = kept_db + dropped_syn, len(db) + len(syn)
 
+    # Metrics are computed only over articles the model actually returned. If it
+    # dropped batches, they describe a subset it may have self-selected, so they
+    # are not comparable to a full run. Say so loudly rather than rank on them.
+    complete = len(got) == len(arts)
+
+    p50, p95 = pct(lat, 0.5), pct(lat, 0.95)
     return {
         "model": model,
+        "complete": complete,
         "coverage": f"{len(got)}/{len(arts)}",
         "missing": len(arts) - len(got),
         "mae_vs_baseline": round(mae, 2) if mae is not None else None,
@@ -267,8 +321,8 @@ def evaluate(model: str, got: dict[str, int], arts: list[dict], threshold: int,
         "recall_on_kept": f"{kept_db}/{len(db)}" if db else "0/0",
         "scope_check_negatives": f"{dropped_syn}/{len(syn)}" if syn else "0/0",
         "threshold_agreement": round(n_correct / n_total, 3) if n_total else None,
-        "latency_p50": round(statistics.median(lat), 2) if lat else None,
-        "latency_p95": round(sorted(lat)[max(0, int(len(lat) * 0.95) - 1)], 2) if lat else None,
+        "latency_p50": round(p50, 2) if p50 is not None else None,
+        "latency_p95": round(p95, 2) if p95 is not None else None,
         "latency_total": round(sum(lat), 1),
         "errors": errors,
         "scores": got,
@@ -291,17 +345,20 @@ def main() -> int:
     ap.add_argument("--list-models", action="store_true")
     ap.add_argument("--timeout", type=float, default=90.0, help="per-request read timeout (s)")
     ap.add_argument("--retries", type=int, default=2)
-    ap.add_argument("--out", default=str(HERE / "results.json"))
+    ap.add_argument("--provider", choices=sorted(PROVIDERS), default="nvidia")
+    ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
-    key = os.environ.get("NVIDIA_NIM_API_KEY")
+    prov = PROVIDERS[args.provider]
+    key = os.environ.get(prov["env"])
     if not key:
-        print("NVIDIA_NIM_API_KEY is not set", file=sys.stderr)
+        print(f"{prov['env']} is not set", file=sys.stderr)
         return 2
+    out = args.out or str(HERE / f"results_{args.provider}.json")
 
     timeout = httpx.Timeout(args.timeout, connect=10.0)
     with httpx.Client(
-        base_url=BASE_URL,
+        base_url=prov["base_url"],
         timeout=timeout,
         headers={"Authorization": f"Bearer {key}", "Accept": "application/json"},
     ) as client:
@@ -311,7 +368,7 @@ def main() -> int:
 
         data = json.loads((HERE / "articles.json").read_text())
         arts, threshold, batch_size = data["articles"], data["score_threshold"], data["batch_size"]
-        models = args.models.split(",") if args.models else CANDIDATES
+        models = args.models.split(",") if args.models else prov["candidates"]
         batches = [arts[i : i + batch_size] for i in range(0, len(arts), batch_size)]
 
         results = []
@@ -322,7 +379,7 @@ def main() -> int:
             errors: list[str] = []
 
             for n, batch in enumerate(batches, 1):
-                res = score_batch(client, model, batch, retries=args.retries)
+                res = score_batch(client, model, batch, retries=args.retries, extra=prov["extra"])
                 if res.error:
                     errors.append(f"batch{n}:{res.error}")
                     print(f"  batch {n}/{len(batches)}  FAIL {res.error} ({res.latency:.1f}s)", flush=True)
@@ -346,21 +403,35 @@ def main() -> int:
                 flush=True,
             )
 
-        results.sort(key=lambda r: (-(r["threshold_agreement"] or 0), r["mae_vs_baseline"] or 999))
-        Path(args.out).write_text(json.dumps({"threshold": threshold, "results": results}, indent=2))
+        # Complete runs first: a model that skipped batches has metrics over a
+        # subset and must never outrank one that scored every article.
+        results.sort(
+            key=lambda r: (
+                not r["complete"],
+                -(r["threshold_agreement"] or 0),
+                r["mae_vs_baseline"] or 999,
+            )
+        )
+        Path(out).write_text(json.dumps({"threshold": threshold, "results": results}, indent=2))
 
         print("\n\n## Results (best first)\n")
         hdr = ["model", "agree", "MAE", "rho", "kept", "negs", "p50", "p95", "cov", "errors"]
         print("| " + " | ".join(hdr) + " |")
         print("|" + "|".join("---" for _ in hdr) + "|")
         for r in results:
+            flag = "" if r["complete"] else " ** PARTIAL"
             print(
-                f"| `{r['model']}` | {r['threshold_agreement']} | {r['mae_vs_baseline']} | "
+                f"| `{r['model']}`{flag} | {r['threshold_agreement']} | {r['mae_vs_baseline']} | "
                 f"{r['spearman']} | {r['recall_on_kept']} | {r['scope_check_negatives']} | "
                 f"{r['latency_p50']}s | {r['latency_p95']}s | {r['coverage']} | "
                 f"{len(r['errors'])} |"
             )
-        print(f"\nFull scores written to {args.out}")
+        if any(not r["complete"] for r in results):
+            print(
+                "\n** PARTIAL: model did not score every article. Its metrics cover only the\n"
+                "   articles it returned and are NOT comparable to a complete run."
+            )
+        print(f"\nFull scores written to {out}")
     return 0
 
 
