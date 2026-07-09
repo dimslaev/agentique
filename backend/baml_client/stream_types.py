@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (14)
+# Generated classes (17)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -84,6 +84,19 @@ class SummarizeAndCategorizeResult(BaseModel):
     summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines separated by \\n')
     categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
     kind: typing.Optional[types.ArticleKind] = None
+
+class TagAssignment(BaseModel):
+    articleId: typing.Optional[int] = None
+    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
+
+class TagInput(BaseModel):
+    articleId: typing.Optional[int] = None
+    title: typing.Optional[str] = None
+    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
+
+class TagOption(BaseModel):
+    slug: typing.Optional[str] = None
+    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
 
 class TitleFix(BaseModel):
     url: typing.Optional[str] = Field(default=None, description='The exact URL from the matching input article - copy verbatim')

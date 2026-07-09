@@ -5,7 +5,7 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
   return (
     <li data-testid="article-row" className="py-5">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-        <span>{article.source}</span>
+        <span>{article.publisher.name}</span>
         {article.score != null && (
           <>
             <span>·</span>
@@ -52,6 +52,18 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
                 className="text-xs px-2 py-0.5 rounded-full bg-muted"
               >
                 {cat}
+              </span>
+            ))}
+          </div>
+        )}
+        {article.tags && article.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {article.tags.map((tag) => (
+              <span
+                key={tag.slug}
+                className="text-xs px-2 py-0.5 rounded-full border border-muted text-muted-foreground"
+              >
+                {tag.name}
               </span>
             ))}
           </div>

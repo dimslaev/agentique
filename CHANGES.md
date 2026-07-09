@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-07-09 — normalized article schema (publisher + tags)
+
+- `backend/app/alembic/versions/b2c3d4e5f6a7_add_publisher_model.py` — new head (`down_revision = a7b8c9d0e1f2`). **Destructive**: drops `article_like` + `article`, creates `publisher`/`tag`/`article_tag` and the new `article` (`publisher_id` FK, `articlekind`/`publisherkind`/`trustlevel` PG enums), recreates `article_like` and the three article indexes. Not an upgrade path for prod — prod gets the prepared dump + `alembic stamp head`.
+- `backend/app/seed_articles.py` — rewritten for the new schema (sample publishers, `publisher_id`, enum `kind`, tag links). No longer wipes `article`/`publisher`: it returns early when `article` is non-empty, so a DB loaded from the real dump survives `prestart`.
+- `backend/scripts/prestart.sh` — one added line: `python -m app.seed_tags` before `seed_articles`. Runs in **all** environments; `pipeline.tags.load_vocabulary()` raises on an empty `tag` table. Low conflict risk.
+- New files: `backend/app/seed_tags.py` (idempotent upsert keyed on `slug`), `backend/app/data/tags.json` (29-tag controlled vocabulary), `backend/app/api/article_view.py` (shared read-side shaping for articles/likes).
+- `backend/tests/utils/article.py` — `create_random_article` now creates a `Publisher`; added `create_random_publisher` / `create_random_tag` / `tag_article`.
+- `backend/app/models_agentique.py` — enums `(str, Enum)` → `StrEnum` (ruff `UP042`). Same member names, so the PG enum labels are unchanged.
+- `backend/app/api/deps.py` — `ruff format` only: `except (A, B):` → `except A, B:` (PEP 758, valid on the pinned Python 3.14). Cosmetic, but it is an upstream file — expect a trivial conflict on merge.
+- `frontend/src/components/Articles/ArticleRow.tsx` — `article.source` → `article.publisher.name`; renders `article.tags`.
+- `frontend/src/routes/_layout/developers.tsx` — API docs: response shape gains `publisher`/`tags`/`like_count`/`liked_by_me`, drops `source`/`source_type`; documents the `tag` filter and `likes-desc` sort.
+
 ## 2026-07-07 — newsletter + RSS pipeline sources
 
 - `backend/pyproject.toml` — `imap-tools` dependency.

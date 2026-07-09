@@ -7,7 +7,7 @@ function SemanticDedup(
   newArticles: ArticleInput[],
   existingArticles: ExistingArticle[]
 ) -> DedupMatch[] {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a semantic similarity engine. You compare article pairs and determine whether they cover the same underlying story. You focus on substance, not surface-level keyword overlap.

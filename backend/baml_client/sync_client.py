@@ -94,6 +94,20 @@ class BamlSyncClient:
     def parse_stream(self):
       return self.__llm_stream_parser
 
+    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+        baml_options: BamlCallOptions = {},
+    ) -> typing.List["types.TagAssignment"]:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            __stream__ = self.stream.AssignTags(articles=articles,vocabulary=vocabulary,
+                baml_options=baml_options)
+            return __stream__.get_final_response()
+        else:
+            # Original non-streaming code
+            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="AssignTags", args={
+                "articles": articles,"vocabulary": vocabulary,
+            })
+            return typing.cast(typing.List["types.TagAssignment"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> types.CategorizeOnlyResult:
@@ -257,6 +271,18 @@ class BamlStreamClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="AssignTags", args={
+            "articles": articles,"vocabulary": vocabulary,
+        })
+        return baml_py.BamlSyncStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]](
+          __result__,
+          lambda x: typing.cast(typing.List["stream_types.TagAssignment"], x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(typing.List["types.TagAssignment"], x.cast_to(types, types, stream_types, False, __runtime__)),
+          __ctx__,
+        )
     def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[stream_types.CategorizeOnlyResult, types.CategorizeOnlyResult]:
@@ -397,6 +423,13 @@ class BamlHttpRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="AssignTags", args={
+            "articles": articles,"vocabulary": vocabulary,
+        }, mode="request")
+        return __result__
     def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -482,6 +515,13 @@ class BamlHttpStreamRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="AssignTags", args={
+            "articles": articles,"vocabulary": vocabulary,
+        }, mode="stream")
+        return __result__
     def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:

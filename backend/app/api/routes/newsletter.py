@@ -7,9 +7,9 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SessionDep
 from app.models_agentique import (
+    NewsletterSubscriber,
     NewsletterSubscribeRequest,
     NewsletterSubscribeResponse,
-    NewsletterSubscriber,
     get_datetime_utc,
 )
 

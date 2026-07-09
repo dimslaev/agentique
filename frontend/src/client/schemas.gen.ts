@@ -50,21 +50,27 @@ export const AnalyticsEventCreateSchema = {
     title: 'AnalyticsEventCreate'
 } as const;
 
+export const ArticleKindSchema = {
+    type: 'string',
+    enum: ['blog', 'product', 'announcement', 'repo', 'paper', 'model'],
+    title: 'ArticleKind'
+} as const;
+
 export const ArticlePublicSchema = {
     properties: {
+        id: {
+            type: 'integer',
+            title: 'Id'
+        },
         title: {
             type: 'string',
             title: 'Title'
         },
-        source: {
-            type: 'string',
-            title: 'Source'
-        },
-        source_type: {
-            type: 'string',
-            title: 'Source Type'
-        },
         url: {
+            type: 'string',
+            title: 'Url'
+        },
+        summary: {
             anyOf: [
                 {
                     type: 'string'
@@ -73,7 +79,21 @@ export const ArticlePublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Url'
+            title: 'Summary'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        },
+        kind: {
+            '$ref': '#/components/schemas/ArticleKind'
+        },
+        categories: {
+            items: {
+                '$ref': '#/components/schemas/Category'
+            },
+            type: 'array',
+            title: 'Categories'
         },
         published_at: {
             anyOf: [
@@ -87,50 +107,6 @@ export const ArticlePublicSchema = {
             ],
             title: 'Published At'
         },
-        score: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Score'
-        },
-        summary: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Summary'
-        },
-        categories: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Categories'
-        },
-        kind: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Kind'
-        },
-        id: {
-            type: 'integer',
-            title: 'Id'
-        },
         created_at: {
             anyOf: [
                 {
@@ -142,6 +118,16 @@ export const ArticlePublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        publisher: {
+            '$ref': '#/components/schemas/PublisherPublic'
+        },
+        tags: {
+            items: {
+                '$ref': '#/components/schemas/TagPublic'
+            },
+            type: 'array',
+            title: 'Tags'
         },
         like_count: {
             type: 'integer',
@@ -155,7 +141,7 @@ export const ArticlePublicSchema = {
         }
     },
     type: 'object',
-    required: ['title', 'source', 'source_type', 'id'],
+    required: ['id', 'title', 'url', 'score', 'kind', 'publisher'],
     title: 'ArticlePublic'
 } as const;
 
@@ -233,6 +219,12 @@ export const Body_login_login_access_tokenSchema = {
     type: 'object',
     required: ['username', 'password'],
     title: 'Body_login-login_access_token'
+} as const;
+
+export const CategorySchema = {
+    type: 'string',
+    enum: ['dev', 'models', 'research'],
+    title: 'Category'
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -474,6 +466,62 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const PublisherKindSchema = {
+    type: 'string',
+    enum: ['individual', 'company', 'community', 'media'],
+    title: 'PublisherKind'
+} as const;
+
+export const PublisherPublicSchema = {
+    properties: {
+        id: {
+            type: 'integer',
+            title: 'Id'
+        },
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        kind: {
+            '$ref': '#/components/schemas/PublisherKind'
+        },
+        image: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image'
+        }
+    },
+    type: 'object',
+    required: ['id', 'slug', 'name', 'kind'],
+    title: 'PublisherPublic'
+} as const;
+
+export const TagPublicSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name'],
+    title: 'TagPublic'
 } as const;
 
 export const TokenSchema = {

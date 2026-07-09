@@ -11,7 +11,7 @@ from app.api.routes import articles
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.models_agentique import Article
-from tests.utils.article import create_random_article
+from tests.utils.article import create_random_article, create_random_tag, tag_article
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import random_email
 
@@ -27,6 +27,12 @@ def test_read_articles_default(client: TestClient) -> None:
     article = data["data"][0]
     assert "title" in article
     assert "score" in article
+    assert article["publisher"]["name"]
+    assert article["publisher"]["slug"]
+    assert isinstance(article["tags"], list)
+    # the old flat source columns must not leak back into the response
+    assert "source" not in article
+    assert "source_type" not in article
 
 
 def test_read_articles_filter_category(client: TestClient) -> None:
@@ -50,6 +56,27 @@ def test_read_articles_filter_kind(client: TestClient) -> None:
     data = r.json()
     assert data["count"] > 0
     assert all(a["kind"] == "repo" for a in data["data"])
+
+
+def test_read_articles_filter_tag(client: TestClient, db: Session) -> None:
+    now = datetime.now(UTC)
+    tag = create_random_tag(db)
+    tagged = create_random_article(db, published_at=now)
+    create_random_article(db, published_at=now)
+    tag_article(db, tagged, tag)
+
+    r = client.get(f"{ARTICLES_URL}/", params={"tag": tag.slug, "limit": 50})
+    assert r.status_code == 200
+    data = r.json()
+    assert [a["id"] for a in data["data"]] == [tagged.id]
+    assert data["count"] == 1
+    assert [t["slug"] for t in data["data"][0]["tags"]] == [tag.slug]
+
+
+def test_read_articles_filter_unknown_tag_returns_nothing(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/", params={"tag": "no-such-tag", "limit": 50})
+    assert r.status_code == 200
+    assert r.json()["count"] == 0
 
 
 def test_read_articles_filter_never_increases_count(client: TestClient) -> None:
@@ -113,7 +140,6 @@ def test_search_articles(
 
     expected_ids = db.exec(
         select(Article.id)
-        .where(Article.score.is_not(None))  # type: ignore[union-attr]
         .where(Article.embedding.is_not(None))  # type: ignore[union-attr]
         .order_by(
             cast(Article.embedding, Vector(256)).cosine_distance(fake_vec),

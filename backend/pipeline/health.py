@@ -44,6 +44,11 @@ class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
     fetched → known → dead → dup → below-threshold → inserted."""
 
+    # TODO(new-schema): `source` here is the run-level fetcher label (Hacker
+    # News / AI News / Newsletter / Feeds), not a publisher. Fine as a stats
+    # grouping key, but if per-publisher health is wanted, group by publisher_id.
+    # PROBE_URL_BY_SOURCE stays keyed by the aggregator labels. Left as-is
+    # (non-trivial) — see REFACTOR_NOTES.md.
     source: str
     fetched: int = 0
     filtered_known: int = 0

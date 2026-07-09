@@ -23,6 +23,12 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
+    def AssignTags(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> typing.List["types.TagAssignment"]:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="request")
+        return typing.cast(typing.List["types.TagAssignment"], __result__)
+
     def CategorizeOnly(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.CategorizeOnlyResult:
@@ -96,6 +102,12 @@ class LlmStreamParser:
 
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
+
+    def AssignTags(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> typing.List["stream_types.TagAssignment"]:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="stream")
+        return typing.cast(typing.List["stream_types.TagAssignment"], __result__)
 
     def CategorizeOnly(
         self, llm_response: str, baml_options: BamlCallOptions = {},

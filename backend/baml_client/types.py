@@ -54,7 +54,7 @@ class ArticleKind(str, Enum):
     Announcement = "Announcement"
 
 # #########################################################################
-# Generated classes (14)
+# Generated classes (17)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -115,6 +115,19 @@ class SummarizeAndCategorizeResult(BaseModel):
     summary: str = Field(description='2-3 short factual lines separated by \\n')
     categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
     kind: ArticleKind
+
+class TagAssignment(BaseModel):
+    articleId: int
+    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
+
+class TagInput(BaseModel):
+    articleId: int
+    title: str
+    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
+
+class TagOption(BaseModel):
+    slug: str
+    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
 
 class TitleFix(BaseModel):
     url: str = Field(description='The exact URL from the matching input article - copy verbatim')

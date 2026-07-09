@@ -39,6 +39,7 @@ export class ArticlesService {
      * @param data.minScore
      * @param data.category
      * @param data.kind
+     * @param data.tag
      * @param data.sort
      * @returns ArticlesPublic Successful Response
      * @throws ApiError
@@ -53,6 +54,7 @@ export class ArticlesService {
                 min_score: data.minScore,
                 category: data.category,
                 kind: data.kind,
+                tag: data.tag,
                 sort: data.sort
             },
             errors: {

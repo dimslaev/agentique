@@ -1,5 +1,8 @@
+import re
+import unicodedata
 import uuid
 from datetime import UTC, datetime
+from enum import StrEnum
 
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import JSON, Column, DateTime
@@ -10,36 +13,149 @@ def get_datetime_utc() -> datetime:
     return datetime.now(UTC)
 
 
-class ArticleBase(SQLModel):
-    title: str
-    source: str
-    source_type: str
-    url: str | None = None
-    published_at: datetime | None = None
-    score: int | None = None
-    summary: str | None = None
-    categories: list[str] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=True)
+def slugify(name: str) -> str:
+    """Publisher/tag slug: ASCII-fold, lowercase, non-alnum -> single hyphen.
+
+    Used to map a fetched item's source name -> a Publisher.slug so the pipeline
+    can look the publisher up (or auto-create it). Deterministic and stable.
+    """
+    ascii_name = (
+        unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
     )
-    kind: str | None = None
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_name.lower()).strip("-")
+    return slug
 
 
-class Article(ArticleBase, table=True):
+# ─── Enums (this module is the schema source of truth) ─────────────────────
+
+
+class PublisherKind(StrEnum):
+    individual = "individual"
+    company = "company"
+    community = "community"
+    media = "media"
+
+
+class TrustLevel(StrEnum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
+class ArticleKind(StrEnum):
+    blog = "blog"
+    product = "product"
+    announcement = "announcement"
+    repo = "repo"
+    paper = "paper"
+    model = "model"
+
+
+class Category(StrEnum):
+    dev = "dev"
+    models = "models"
+    research = "research"
+
+
+class LinkPlatform(StrEnum):
+    website = "website"
+    rss = "rss"
+    twitter = "twitter"
+    github = "github"
+    substack = "substack"
+    youtube = "youtube"
+    linkedin = "linkedin"
+    mastodon = "mastodon"
+    discord = "discord"
+
+
+# ─── Publisher ─────────────────────────────────────────────────────────────
+
+
+class PublisherBase(SQLModel):
+    slug: str
+    name: str
+    kind: PublisherKind
+    description: str | None = None
+    image: str | None = None
+    links: dict[LinkPlatform, str] = Field(
+        default_factory=dict, sa_column=Column(JSON, nullable=False)
+    )
+    trust: TrustLevel = TrustLevel.medium
+    is_active: bool = True
+
+
+class Publisher(PublisherBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    content: str | None = Field(default="")
-    # 256-dim model2vec vectors; nullable until the import script runs
-    embedding: list[float] | None = Field(
-        default=None, sa_column=Column(Vector(256), nullable=True)
-    )
-    created_at: datetime | None = Field(
+    created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
 
 
-class ArticlePublic(ArticleBase):
+# ─── Article ───────────────────────────────────────────────────────────────
+
+
+class ArticleBase(SQLModel):
+    title: str
+    url: str
+    publisher_id: int = Field(foreign_key="publisher.id")
+    published_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    score: int
+    kind: ArticleKind = ArticleKind.blog
+    categories: list[Category] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+    summary: str | None = None
+    content: str | None = None
+
+
+class Article(ArticleBase, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    # 256-dim model2vec vectors; nullable until the import script runs
+    embedding: list[float] | None = Field(
+        default=None, sa_column=Column(Vector(256), nullable=True)
+    )
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+# ─── Read API shapes ───────────────────────────────────────────────────────
+# Consumer-facing views. `publisher` is nested (replaces the old `source` /
+# `source_type` strings) and `tags` come from the article_tag join. Pipeline
+# provenance and bulk fields (content, embedding, links, trust) stay internal.
+
+
+class PublisherPublic(SQLModel):
     id: int
+    slug: str
+    name: str
+    kind: PublisherKind
+    image: str | None = None
+
+
+class TagPublic(SQLModel):
+    slug: str
+    name: str
+
+
+class ArticlePublic(SQLModel):
+    id: int
+    title: str
+    url: str
+    summary: str | None = None
+    score: int
+    kind: ArticleKind
+    categories: list[Category] = Field(default_factory=list)
+    published_at: datetime | None = None
     created_at: datetime | None = None
+    publisher: PublisherPublic
+    tags: list[TagPublic] = Field(default_factory=list)
     like_count: int = 0
     liked_by_me: bool = False
 
@@ -49,11 +165,34 @@ class ArticlesPublic(SQLModel):
     count: int
 
 
+# ─── Tag ───────────────────────────────────────────────────────────────────
+
+
+class Tag(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    slug: str = Field(unique=True)
+    name: str
+    # "when to apply this tag" — fed to the AssignTags prompt as the vocabulary
+    description: str | None = None
+
+
+class ArticleTag(SQLModel, table=True):
+    __tablename__ = "article_tag"
+    article_id: int = Field(foreign_key="article.id", primary_key=True)
+    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+
+
+# ─── ArticleLike ─────────────────────────────────────────────────────────────
+
+
 class ArticleLike(SQLModel, table=True):
     __tablename__ = "article_like"
     user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True)
     article_id: int = Field(foreign_key="article.id", primary_key=True)
-    created_at: datetime = Field(default_factory=get_datetime_utc)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
 
 
 class ScoredUrl(SQLModel, table=True):
