@@ -5,8 +5,8 @@
 ## 2026-07-10 — fix dead pipeline feed sources
 
 - `backend/pipeline/publishers.py` — `feed_sources_from_db()` was polling `publisher.links["substack"]` as-is; those are stored as the base site URL (e.g. `https://foo.substack.com`), not the feed endpoint, so every DB-driven feed returned 0 entries. Added `_feed_url()` to append `/feed` for `substack` links.
-- `compose.yml` — upstream file. Added `IMAP_HOST`/`IMAP_PORT`/`IMAP_USER`/`IMAP_PASSWORD` to the `pipeline` service `environment:` allowlist — these secrets existed in GitHub but were never forwarded into the container. Low conflict risk.
-- `.github/workflows/deploy-production.yml` — upstream file. Added the same four `secrets.IMAP_*` to the `deploy` job `env:` block so compose can interpolate them. Low conflict risk.
+- `compose.yml` — upstream file. Added `IMAP_HOST`/`IMAP_PORT`/`IMAP_USER`/`IMAP_PASSWORD` and `TAVILY_API_KEY` to the `pipeline` service `environment:` allowlist — these secrets existed in GitHub but were never forwarded into the container. Low conflict risk.
+- `.github/workflows/deploy-production.yml` — upstream file. Added the same `secrets.IMAP_*` / `secrets.TAVILY_API_KEY` to the `deploy` job `env:` block so compose can interpolate them. Low conflict risk.
 
 ## 2026-07-09 — normalized article schema (publisher + tags)
 
