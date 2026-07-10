@@ -2,6 +2,10 @@
 
 ---
 
+## 2026-07-10 — email a pipeline report every run, not just on anomalies
+
+- `backend/pipeline/health.py` — `verify_run()` now always emails via `_send_alert()` (subject varies: "anomalies detected" vs "Pipeline run report"); `_format_report()` shows a "No anomalies detected." line instead of omitting the email entirely.
+
 ## 2026-07-10 — fully DB-driven ingestion sources, remove dead code
 
 - `backend/app/models_agentique.py` — `LinkPlatform` gains `email`, for publishers only reachable via the IMAP newsletter source (no public RSS feed).

@@ -1,4 +1,5 @@
-"""Pipeline health: capture per-run stats, detect anomalies, alert by email.
+"""Pipeline health: capture per-run stats, detect anomalies, email a report
+every run (anomaly alert or clean daily summary).
 
 Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
 here must never change whether the pipeline itself succeeded. Reads config from
@@ -144,7 +145,8 @@ def check_liveness(session: Session) -> None:
 
 
 def verify_run(session: Session, stats: RunStats) -> None:
-    """Compare this run to recent history; email if anything looks wrong."""
+    """Compare this run to recent history; email a report every run (not just
+    when something looks wrong) so a daily digest lands regardless."""
     history = _load_history(session, exclude_started_at=stats.started_at)
 
     anomalies: list[str] = []
@@ -153,13 +155,11 @@ def verify_run(session: Session, stats: RunStats) -> None:
     for s in stats.sources:
         anomalies.extend(_check_source(s, history))
 
-    if anomalies:
-        _send_alert(
-            subject="Pipeline health: anomalies detected",
-            body=_format_report(stats, anomalies, len(history)),
-        )
-    else:
-        log("  Verifier: no anomalies")
+    subject = (
+        "Pipeline health: anomalies detected" if anomalies else "Pipeline run report"
+    )
+    _send_alert(subject=subject, body=_format_report(stats, anomalies, len(history)))
+    log(f"  Verifier: {'anomalies detected' if anomalies else 'no anomalies'}")
 
 
 def _check_source(s: SourceStats, history: list[dict]) -> list[str]:
@@ -223,9 +223,14 @@ def _probe(label: str) -> str:
 
 
 def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> str:
-    lines = ["ANOMALIES", "========="]
-    lines += [f"  - {a}" for a in anomalies]
-    lines += ["", "THIS RUN", "========"]
+    lines: list[str] = []
+    if anomalies:
+        lines += ["ANOMALIES", "========="]
+        lines += [f"  - {a}" for a in anomalies]
+        lines.append("")
+    else:
+        lines += ["No anomalies detected.", ""]
+    lines += ["THIS RUN", "========"]
     for s in stats.sources:
         row = (
             f"  {s.source}: fetched {s.fetched} "
