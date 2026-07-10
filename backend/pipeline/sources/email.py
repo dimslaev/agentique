@@ -26,21 +26,6 @@ IMAP_PORT_DEFAULT = 993
 IMAP_FOLDER = "sub"
 RESOLVE_CONCURRENCY = 5
 
-# sender -> display name. "@x" matches any address ending in x; otherwise exact match.
-# Senders with a working RSS feed have moved to pipeline/sources/rss.py (or, for
-# Ben's Bites, are already covered by substack-sources.json) - IMAP stays as the
-# fallback for newsletters that don't publish one.
-NEWSLETTER_SOURCES: list[tuple[str, str]] = [
-    ("@deeperlearning.producthunt.com", "The Frontier by Product Hunt"),
-    ("@changelog.com", "Changelog News"),
-    ("@deeplearning.ai", "The Batch"),
-    ("@pointer.io", "Pointer"),
-    ("@mail.theresanaiforthat.com", "There's An AI For That"),
-    ("@technews.therundown.ai", "The Rundown AI Tech"),
-    ("@mail.joinsuperhuman.ai", "Superhuman"),
-    ("agentai@mail.beehiiv.com", "AgentAI"),
-]
-
 # Never a product's first-party source: social posts, video, aggregators/content farms.
 DENY_DOMAINS = [
     "x.com",
@@ -66,9 +51,9 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
 
 
-def _match_sender(address: str) -> str | None:
+def _match_sender(address: str, sources: list[tuple[str, str]]) -> str | None:
     addr = address.lower()
-    for pattern, name in NEWSLETTER_SOURCES:
+    for pattern, name in sources:
         p = pattern.lower()
         if addr.endswith(p) if p.startswith("@") else addr == p:
             return name
@@ -227,7 +212,7 @@ def _imap_config() -> dict:
     return {"host": host, "port": port, "user": user, "password": password}
 
 
-def _run_imap_fetch(config: dict) -> list[dict]:
+def _run_imap_fetch(config: dict, sources: list[tuple[str, str]]) -> list[dict]:
     """One connect -> fetch -> mark-seen -> logout cycle. Two passes: headers
     only to find matches (avoids downloading full bodies of unrelated mail),
     then full source for matched UIDs only.
@@ -239,7 +224,7 @@ def _run_imap_fetch(config: dict) -> list[dict]:
     ) as mb:
         matches: dict[str, str] = {}
         for msg in mb.fetch(AND(seen=False), mark_seen=False, headers_only=True):
-            name = _match_sender(msg.from_ or "")
+            name = _match_sender(msg.from_ or "", sources)
             if name:
                 matches[msg.uid] = name
 
@@ -276,8 +261,8 @@ def _run_imap_fetch(config: dict) -> list[dict]:
     return raw
 
 
-def fetch_newsletter() -> list[dict]:
-    if not NEWSLETTER_SOURCES:
+def fetch_newsletter(sources: list[tuple[str, str]]) -> list[dict]:
+    if not sources:
         log("Newsletter: no sources configured, skipping")
         return []
 
@@ -285,7 +270,7 @@ def fetch_newsletter() -> list[dict]:
     log(f"Connecting to {config['host']} as {config['user']}...")
 
     try:
-        raw = _run_imap_fetch(config)
+        raw = _run_imap_fetch(config, sources)
     except Exception as e:
         log(f"Newsletter fetch failed: {e}")
         return []

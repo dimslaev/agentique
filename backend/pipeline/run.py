@@ -27,6 +27,7 @@ from pipeline.health import (
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
+    newsletter_senders_from_db,
 )
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
@@ -69,13 +70,17 @@ def _embed(text: str) -> list[float]:
 
 
 def _build_sources(session: Session) -> list[dict]:
-    """Assemble the run's sources. Aggregator channels (HN, AI News) and the
-    IMAP newsletter source keep their fetchers; RSS/substack feeds are now
-    DB-driven — one "Feeds" source that polls every active feed publisher.
+    """Assemble the run's sources. Aggregator channels (HN, AI News) keep their
+    fetchers; RSS/substack feeds and IMAP newsletter senders are both DB-driven
+    — "Feeds" polls every active feed publisher, "Newsletter" matches unread
+    mail against every active publisher with an ``email`` link.
     """
     return [
         {"label": "Hacker News", "fetcher": fetch_hn},
-        {"label": "Newsletter", "fetcher": fetch_newsletter},
+        {
+            "label": "Newsletter",
+            "fetcher": lambda: fetch_newsletter(newsletter_senders_from_db(session)),
+        },
         {"label": "AI News", "fetcher": fetch_ai_news},
         {
             "label": "Feeds",

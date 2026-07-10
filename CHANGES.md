@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-10 — fully DB-driven ingestion sources, remove dead code
+
+- `backend/app/models_agentique.py` — `LinkPlatform` gains `email`, for publishers only reachable via the IMAP newsletter source (no public RSS feed).
+- `backend/pipeline/publishers.py` — new `newsletter_senders_from_db()`, mirrors `feed_sources_from_db()`: active publishers with an `email` link -> `(sender pattern, name)`.
+- `backend/pipeline/sources/email.py` — removed the hardcoded `NEWSLETTER_SOURCES` list; `_match_sender`/`_run_imap_fetch`/`fetch_newsletter` now take `sources` as a parameter.
+- `backend/pipeline/run.py` — `Newsletter` source now built the same way as `Feeds`: `fetch_newsletter(newsletter_senders_from_db(session))`.
+- Deleted dead code: `backend/pipeline/sources/rss.py` (had correct feed URLs for several sources but was never imported by `run.py`), `backend/pipeline/sources/substack-sources.json` and `substack.py::fetch_substack()` (superseded by DB-driven `feed_sources_from_db`, already marked DEPRECATED), `backend/pipeline/sources/utils.py::is_twitter_url()`/`resolve_twitter_url()` (only caller was `rss.py`).
+- Prod DB: audited all active publishers for a missing feed link (same bug class as Ben's Bites/TLDR/AI Hero). Added `rss` links to 24 publishers with a confirmed working feed (incl. reviving the ones stranded in dead `rss.py`: Console, Aligned News, The Neuron, Import AI; plus company blogs — HF, OpenAI, DeepMind, TechCrunch — and ~15 individual Substack/Ghost newsletters). Added `email` links (moved off the Python hardcode) to the 7 publishers with no public feed: The Frontier by Product Hunt, The Batch, Pointer, There's An AI For That, The Rundown AI Tech, Superhuman, AgentAI. Created 3 new publisher rows for previously-untracked sources: The Neuron, Import AI, Changelog News (moved off IMAP). `ThursdAI` has neither a working feed nor a known sender address — still unresolved.
+
 ## 2026-07-10 — fix dead pipeline feed sources
 
 - `backend/pipeline/publishers.py` — `feed_sources_from_db()` was polling `publisher.links["substack"]` as-is; those are stored as the base site URL (e.g. `https://foo.substack.com`), not the feed endpoint, so every DB-driven feed returned 0 entries. Added `_feed_url()` to append `/feed` for `substack` links.

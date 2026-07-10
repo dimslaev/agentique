@@ -67,6 +67,7 @@ class LinkPlatform(StrEnum):
     linkedin = "linkedin"
     mastodon = "mastodon"
     discord = "discord"
+    email = "email"
 
 
 # ─── Publisher ─────────────────────────────────────────────────────────────

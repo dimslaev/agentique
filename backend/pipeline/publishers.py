@@ -1,14 +1,17 @@
 """Publisher resolution + DB-driven source config.
 
 Replaces the old hard-coded ingestion config (`run.py` SOURCES,
-`sources/substack-sources.json`, `steps.py` TRUST_BY_SOURCE). Under the new
-schema every article belongs to a `Publisher` row, and the set of RSS/substack
-feeds to poll comes from the active publishers in the DB — not a checked-in list.
+`sources/substack-sources.json`, `sources/rss.py`, `email.py` NEWSLETTER_SOURCES,
+`steps.py` TRUST_BY_SOURCE). Under the new schema every article belongs to a
+`Publisher` row, and every source the pipeline polls — RSS/substack feeds,
+IMAP newsletter senders — comes from the active publishers in the DB, not a
+checked-in list.
 
 Key jobs:
 - map a fetched item's ``source`` name -> a Publisher.id (via ``slugify``),
   auto-creating a *quarantined* publisher for unknown sources.
 - expose the active feed publishers (rss/substack links) the pipeline should poll.
+- expose the active newsletter senders (email links) the IMAP source matches.
 """
 
 from __future__ import annotations
@@ -125,3 +128,29 @@ def feed_sources_from_db(session: Session) -> list[dict]:
 
     log(f"  {len(sources)} active feed publishers loaded from DB")
     return sources
+
+
+# ─── DB-driven newsletter (IMAP) sender matching ───────────────────────────────
+
+
+def newsletter_senders_from_db(session: Session) -> list[tuple[str, str]]:
+    """Active publishers with an ``email`` link -> (sender pattern, name).
+
+    Fallback for newsletters that don't publish an RSS feed (see
+    ``feed_sources_from_db`` for those that do). The sender pattern is either
+    ``@domain`` (suffix match on the From address) or an exact address.
+    """
+    publishers = session.exec(
+        select(Publisher).where(Publisher.is_active == True)  # noqa: E712
+    ).all()
+
+    senders: list[tuple[str, str]] = []
+    for pub in publishers:
+        links = pub.links or {}
+        by_str = {str(getattr(k, "value", k)): v for k, v in links.items()}
+        pattern = by_str.get(LinkPlatform.email.value)
+        if pattern:
+            senders.append((pattern, pub.name))
+
+    log(f"  {len(senders)} active newsletter senders loaded from DB")
+    return senders

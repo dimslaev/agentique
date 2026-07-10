@@ -6,15 +6,11 @@ from datetime import UTC, datetime
 
 import httpx
 
-from pipeline.utils import log
-
 HN_PREFIX_RE = re.compile(r"^(?:Show|Launch|Ask|Tell) HN:\s*", re.IGNORECASE)
 WINDOW_HOURS = 168
 FETCH_TIMEOUT_SECS = 15.0
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 TAVILY_SEARCH_CANDIDATES = 5
-TWITTER_HOSTS = {"x.com", "twitter.com", "t.co"}
-_TWITTER_HANDLE_PREFIX_RE = re.compile(r"^@\w+\s+[-–]\s+")
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -81,33 +77,3 @@ def tavily_search(
         }
         for r in data.get("results", [])
     ]
-
-
-def is_twitter_url(url: str) -> bool:
-    try:
-        from urllib.parse import urlparse
-
-        return urlparse(url).hostname in TWITTER_HOSTS
-    except Exception:
-        return False
-
-
-def resolve_twitter_url(title: str, description: str) -> str | None:
-    """Given an x.com/twitter.com URL's title+description, search for the
-    underlying article and return the best non-Twitter result URL.
-    """
-    clean = _TWITTER_HANDLE_PREFIX_RE.sub("", title).strip()
-    first_sentence = description.split(". ")[0].strip() if description else ""
-    query = f"{clean} {first_sentence}" if first_sentence else clean
-
-    try:
-        results = tavily_search(query)
-    except Exception as e:
-        log(f"    Search failed: {e}")
-        return None
-
-    match = next((r for r in results if not is_twitter_url(r["url"])), None)
-    if match:
-        log(f"    Resolved to: {match['url']}")
-        return match["url"]
-    return None
