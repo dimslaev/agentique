@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-07-10 — fix dead pipeline feed sources
+
+- `backend/pipeline/publishers.py` — `feed_sources_from_db()` was polling `publisher.links["substack"]` as-is; those are stored as the base site URL (e.g. `https://foo.substack.com`), not the feed endpoint, so every DB-driven feed returned 0 entries. Added `_feed_url()` to append `/feed` for `substack` links.
+- `compose.yml` — upstream file. Added `IMAP_HOST`/`IMAP_PORT`/`IMAP_USER`/`IMAP_PASSWORD` to the `pipeline` service `environment:` allowlist — these secrets existed in GitHub but were never forwarded into the container. Low conflict risk.
+- `.github/workflows/deploy-production.yml` — upstream file. Added the same four `secrets.IMAP_*` to the `deploy` job `env:` block so compose can interpolate them. Low conflict risk.
+
 ## 2026-07-09 — normalized article schema (publisher + tags)
 
 - `backend/app/alembic/versions/b2c3d4e5f6a7_add_publisher_model.py` — new head (`down_revision = a7b8c9d0e1f2`). **Destructive**: drops `article_like` + `article`, creates `publisher`/`tag`/`article_tag` and the new `article` (`publisher_id` FK, `articlekind`/`publisherkind`/`trustlevel` PG enums), recreates `article_like` and the three article indexes. Not an upgrade path for prod — prod gets the prepared dump + `alembic stamp head`.

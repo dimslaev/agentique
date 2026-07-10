@@ -83,6 +83,21 @@ class PublisherResolver:
 _FEED_PLATFORMS = (LinkPlatform.rss.value, LinkPlatform.substack.value)
 
 
+def _feed_url(platform: str, url: str) -> str:
+    """Turn a stored link into the actual feed endpoint to poll.
+
+    ``substack`` links are stored as the base site URL (e.g.
+    ``https://foo.substack.com``, sometimes a custom domain behind it) — the
+    feed itself lives at ``/feed``. ``rss`` links are stored as the direct
+    feed URL already.
+    """
+    if platform == LinkPlatform.substack.value and not url.rstrip("/").endswith(
+        "/feed"
+    ):
+        return url.rstrip("/") + "/feed"
+    return url
+
+
 def feed_sources_from_db(session: Session) -> list[dict]:
     """Active publishers with an rss/substack link -> feed configs.
 
@@ -103,7 +118,7 @@ def feed_sources_from_db(session: Session) -> list[dict]:
         rss_url = None
         for platform in _FEED_PLATFORMS:
             if by_str.get(platform):
-                rss_url = by_str[platform]
+                rss_url = _feed_url(platform, by_str[platform])
                 break
         if rss_url:
             sources.append({"name": pub.name, "rssUrl": rss_url})

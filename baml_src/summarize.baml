@@ -13,7 +13,7 @@ class ClassifyKindResult {
 }
 
 function SummarizeAndCategorize(title: string, content: string) -> SummarizeAndCategorizeResult {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a technical writer for a developer news digest. Your readers are tech-savvy but busy. Write in plain, direct language.
@@ -51,7 +51,7 @@ function SummarizeAndCategorize(title: string, content: string) -> SummarizeAndC
 }
 
 function ClassifyKind(title: string, url: string, summary: string?) -> ClassifyKindResult {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a technical librarian who classifies AI developer content by format.
@@ -76,7 +76,7 @@ function ClassifyKind(title: string, url: string, summary: string?) -> ClassifyK
 }
 
 function CategorizeOnly(title: string) -> CategorizeOnlyResult {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a technical librarian who classifies developer-focused AI articles.

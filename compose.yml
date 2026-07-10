@@ -209,6 +209,10 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - NVIDIA_NIM_API_KEY=${NVIDIA_NIM_API_KEY}
       - RESIDENTIAL_PROXY_URL=${RESIDENTIAL_PROXY_URL}
+      - IMAP_HOST=${IMAP_HOST:-}
+      - IMAP_PORT=${IMAP_PORT:-}
+      - IMAP_USER=${IMAP_USER:-}
+      - IMAP_PASSWORD=${IMAP_PASSWORD:-}
       # Pipeline health alerts (verifier emails via Resend)
       - PROJECT_NAME=${PROJECT_NAME}
       - RESEND_API_KEY=${RESEND_API_KEY}

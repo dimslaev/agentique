@@ -4,7 +4,7 @@ class TitleFix {
 }
 
 function ImproveTitles(articles: ArticleInput[]) -> TitleFix[] {
-  client NvidiaGptOss
+  client Nvidia
   prompt #"
     {{ _.role("system") }}
     You are a technical editor. You write clear, informative article titles for an AI developer news platform.
