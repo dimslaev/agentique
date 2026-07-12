@@ -27,11 +27,17 @@ def clean_title(raw: str) -> str:
     ("raw", "expected"),
     [
         # prod: whole value wrapped in markdown bold
-        ("**Cisco Agent Runtime SDK Integrates Policy**", "Cisco Agent Runtime SDK Integrates Policy"),
+        (
+            "**Cisco Agent Runtime SDK Integrates Policy**",
+            "Cisco Agent Runtime SDK Integrates Policy",
+        ),
         ("*Single asterisk emphasis*", "Single asterisk emphasis"),
         ("`Backtick wrapped`", "Backtick wrapped"),
         # prod: markdown copied out of a README mid-sentence
-        ("Meta shares details on **Watermelon**, a framework.", "Meta shares details on Watermelon, a framework."),
+        (
+            "Meta shares details on **Watermelon**, a framework.",
+            "Meta shares details on Watermelon, a framework.",
+        ),
         # unicode normalization (pre-existing, must not regress)
         ("“Smart quotes”", '"Smart quotes"'),
         ("a → b", "a -> b"),
@@ -46,7 +52,10 @@ def test_sanitize_llm_text(raw: str, expected: str) -> None:
 
 def test_sanitize_preserves_single_underscore() -> None:
     """Identifiers like snake_case must survive; only markdown __bold__ goes."""
-    assert sanitize_llm_text("Use the max_tokens parameter") == "Use the max_tokens parameter"
+    assert (
+        sanitize_llm_text("Use the max_tokens parameter")
+        == "Use the max_tokens parameter"
+    )
 
 
 def test_sanitize_keeps_newlines() -> None:
@@ -203,7 +212,9 @@ def test_bold_wrapped_title_is_recovered_not_rejected() -> None:
 
 
 def test_nested_wrappers_are_peeled() -> None:
-    assert clean_title('**"[HN] Anthropic ships a thing"**') == "Anthropic ships a thing"
+    assert (
+        clean_title('**"[HN] Anthropic ships a thing"**') == "Anthropic ships a thing"
+    )
 
 
 @pytest.mark.parametrize(
