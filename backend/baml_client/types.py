@@ -112,7 +112,7 @@ class SearchCandidate(BaseModel):
     snippet: str
 
 class SummarizeAndCategorizeResult(BaseModel):
-    summary: str = Field(description='2-3 short factual lines separated by \\n')
+    summary: str = Field(description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
     categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
     kind: ArticleKind
 
@@ -131,7 +131,7 @@ class TagOption(BaseModel):
 
 class TitleFix(BaseModel):
     url: str = Field(description='The exact URL from the matching input article - copy verbatim')
-    title: str = Field(description='Plain title text only. No surrounding quotes. No leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
+    title: str = Field(description='Plain English title text on a single line. No markdown, no quotes, no leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
 
 # #########################################################################
 # Generated type aliases (0)
