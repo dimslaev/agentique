@@ -65,8 +65,10 @@ def to_public(
     liked_by_me: bool,
     tags: list[TagPublic],
 ) -> ArticlePublic:
+    assert article.id is not None
+    assert publisher.id is not None
     return ArticlePublic(
-        id=article.id,  # type: ignore[arg-type]
+        id=article.id,
         title=article.title,
         url=article.url,
         summary=article.summary,
@@ -76,7 +78,7 @@ def to_public(
         published_at=article.published_at,
         created_at=article.created_at,
         publisher=PublisherPublic(
-            id=publisher.id,  # type: ignore[arg-type]
+            id=publisher.id,
             slug=publisher.slug,
             name=publisher.name,
             kind=publisher.kind,

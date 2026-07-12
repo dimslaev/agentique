@@ -27,7 +27,13 @@ def seed(session: Session) -> None:
     for entry in load_tags():
         tag = existing.get(entry["slug"])
         if tag is None:
-            session.add(Tag(**entry))
+            session.add(
+                Tag(
+                    slug=entry["slug"],
+                    name=entry["name"],
+                    description=entry.get("description"),
+                )
+            )
         else:
             tag.name = entry["name"]
             tag.description = entry.get("description")

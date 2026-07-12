@@ -41,7 +41,14 @@ from pipeline.steps import (
     kind_from_url,
 )
 from pipeline.tags import Vocabulary, load_vocabulary, validate_tags, write_article_tags
-from pipeline.utils import log, sanitize_llm_text, strip_title_wrappers, wait_ms
+from pipeline.utils import (
+    is_valid_summary,
+    is_valid_title,
+    log,
+    sanitize_llm_text,
+    strip_title_wrappers,
+    wait_ms,
+)
 
 
 def _build_db_url() -> str:
@@ -403,8 +410,11 @@ def _improve_titles(session: Session, inserted: list[dict]) -> None:
             raw = fixes[0].title if fixes else None
             if not raw:
                 continue
-            sanitized = sanitize_llm_text(strip_title_wrappers(raw))
+            sanitized = strip_title_wrappers(sanitize_llm_text(raw))
             if not sanitized or sanitized == item["title"]:
+                continue
+            if not is_valid_title(sanitized):
+                log(f'  Skip rewrite #{art_id} (malformed): "{sanitized[:80]}"')
                 continue
             if item["source"].lower() in sanitized.lower():
                 log(f'  Skip rewrite #{art_id} (source name leaked): "{sanitized}"')
@@ -495,6 +505,9 @@ def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]
                     item["title"], full_content[:PROMPT_CONTENT_CAP]
                 )
                 summary = sanitize_llm_text(result.summary or "")
+                if summary and not is_valid_summary(summary):
+                    log(f'  Drop summary #{art_id} (malformed): "{summary[:80]}"')
+                    summary = ""
                 categories = _to_categories(result.categories)
                 if not kind:
                     kind = _to_kind(result.kind)

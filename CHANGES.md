@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-07-12 — sanitize + validate LLM titles and summaries
+
+- `backend/pipeline/utils.py` — `sanitize_llm_text()` now also strips markdown emphasis. New `is_corrupted()` (non-Latin script / leaked JSON envelope), `is_valid_title()`, `is_valid_summary()`. `strip_title_wrappers()` peels nested wrappers to a fixed point.
+- `backend/pipeline/run.py` — `_improve_titles()` keeps the original title when a rewrite fails validation; `_summarize()` drops a summary that fails validation rather than storing garbage.
+- `baml_src/fix_titles.baml`, `baml_src/summarize.baml` — prompts forbid markdown / non-English / JSON / truncation. Added `@@assert` regression tests built from real corrupted prod rows.
+- `backend/app/api/routes/articles.py` — `col(Article.score)` / `col(Article.kind)` in the filter conditions; drops stale `type: ignore[operator]` + `ty: ignore[unsupported-operator]` that no longer matched what mypy/ty emit.
+- `backend/app/api/article_view.py` — `assert article.id is not None` / `assert publisher.id is not None` instead of `type: ignore[arg-type]`.
+- `backend/app/seed_tags.py` — build `Tag(slug=, name=, description=)` explicitly instead of `Tag(**entry)` (ty widened the dict values to `str`).
+- `backend/pyproject.toml` — upstream file. Ruff `exclude` gains `baml_client` (generated). Low conflict risk.
+- `pyproject.toml` — upstream file. Typos `extend-exclude` gains `backend/baml_client/`. Low conflict risk.
+- `.pre-commit-config.yaml` — upstream file. `end-of-file-fixer` and `trailing-whitespace` exclude `backend/baml_client/`. Low conflict risk.
+
 ## 2026-07-10 — email a pipeline report every run, not just on anomalies
 
 - `backend/pipeline/health.py` — `verify_run()` now always emails via `_send_alert()` (subject varies: "anomalies detected" vs "Pipeline run report"); `_format_report()` shows a "No anomalies detected." line instead of omitting the email entirely.

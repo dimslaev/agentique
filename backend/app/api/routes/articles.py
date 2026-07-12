@@ -70,9 +70,9 @@ def read_articles(
 
     conditions = [col(Article.published_at) >= since_dt]
     if min_score is not None:
-        conditions.append(Article.score >= min_score)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
+        conditions.append(col(Article.score) >= min_score)
     if kind is not None:
-        conditions.append(Article.kind == kind)
+        conditions.append(col(Article.kind) == kind)
     if category is not None:
         conditions.append(
             cast(Article.categories, JSONB).contains([category])  # type: ignore[arg-type]

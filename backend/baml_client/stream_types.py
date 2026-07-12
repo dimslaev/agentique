@@ -81,7 +81,7 @@ class SearchCandidate(BaseModel):
     snippet: typing.Optional[str] = None
 
 class SummarizeAndCategorizeResult(BaseModel):
-    summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines separated by \\n')
+    summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
     categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
     kind: typing.Optional[types.ArticleKind] = None
 
@@ -100,7 +100,7 @@ class TagOption(BaseModel):
 
 class TitleFix(BaseModel):
     url: typing.Optional[str] = Field(default=None, description='The exact URL from the matching input article - copy verbatim')
-    title: typing.Optional[str] = Field(default=None, description='Plain title text only. No surrounding quotes. No leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
+    title: typing.Optional[str] = Field(default=None, description='Plain English title text on a single line. No markdown, no quotes, no leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
 
 # #########################################################################
 # Generated type aliases (0)
