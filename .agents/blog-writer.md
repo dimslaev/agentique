@@ -15,7 +15,15 @@ markdown file; the frontend build renders it to a static page at
   the same topic twice in a row.
 
 ### 2. Gather articles from the public API
-Base URL: `https://agentique.ch/api/v1` (no auth needed).
+Base URL: `https://api.agentique.ch/api/v1` (no auth needed). Note the `api.`
+subdomain — the backend is not served on the bare `agentique.ch` root domain
+(that host serves the SPA and returns 404/403 for anything under `/api`).
+
+If a request to this host returns 403 or otherwise fails to connect, that is
+a network egress policy issue with this environment, not a data problem —
+do not attempt to self-diagnose the network (e.g. probing proxy internals or
+status endpoints); just stop and report the raw error, per the skip rule
+below.
 
 - `GET /articles/?tag=<topic>&since=<YYYY-MM-DD>&sort=score-desc&limit=50`
   — set `since` to the date of the last post on this topic, or 14 days ago
