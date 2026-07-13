@@ -13,10 +13,30 @@ export type Item = {
   index: string
   title: string
   path: string
+  /** Rendered as a plain <a> — for pages outside the SPA (prerendered blog). */
+  external?: boolean
 }
 
 interface MainProps {
   items: Item[]
+}
+
+function ItemLabel({ item, isActive }: { item: Item; isActive: boolean }) {
+  return (
+    <>
+      <span
+        className={cn(
+          "flex h-[18px] w-[18px] shrink-0 items-center justify-center border font-mono text-[10px] leading-none tabular-nums transition-colors duration-200",
+          isActive
+            ? "border-foreground bg-foreground text-background"
+            : "border-border/60 text-muted-foreground group-hover/menu-button:border-foreground group-hover/menu-button:text-foreground",
+        )}
+      >
+        {item.index}
+      </span>
+      <span>{item.title}</span>
+    </>
+  )
 }
 
 export function Main({ items }: MainProps) {
@@ -42,19 +62,15 @@ export function Main({ items }: MainProps) {
                   isActive={isActive}
                   asChild
                 >
-                  <RouterLink to={item.path} onClick={handleMenuClick}>
-                    <span
-                      className={cn(
-                        "flex h-[18px] w-[18px] shrink-0 items-center justify-center border font-mono text-[10px] leading-none tabular-nums transition-colors duration-200",
-                        isActive
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border/60 text-muted-foreground group-hover/menu-button:border-foreground group-hover/menu-button:text-foreground",
-                      )}
-                    >
-                      {item.index}
-                    </span>
-                    <span>{item.title}</span>
-                  </RouterLink>
+                  {item.external ? (
+                    <a href={item.path} onClick={handleMenuClick}>
+                      <ItemLabel item={item} isActive={isActive} />
+                    </a>
+                  ) : (
+                    <RouterLink to={item.path} onClick={handleMenuClick}>
+                      <ItemLabel item={item} isActive={isActive} />
+                    </RouterLink>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
