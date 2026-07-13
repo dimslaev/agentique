@@ -25,7 +25,9 @@ const SITE_NAME = "agentique"
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const MIN_BODY_WORDS = 150
-const MAX_TITLE_CHARS = 70
+// The rendered <title> appends " · agentique" (12 chars) — keep the total
+// title tag within Google's ~60-70 char display budget.
+const MAX_TITLE_CHARS = 55
 const MAX_DESCRIPTION_CHARS = 160
 
 type Post = {

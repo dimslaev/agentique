@@ -98,7 +98,10 @@ One file: `frontend/content/blog/<YYYY-MM-DD>-<slug>.md` (today's date).
 
 ```markdown
 ---
-title: "..."             # ≤70 chars, no site name, no clickbait
+title: "..."             # ≤55 chars — the rendered <title> appends
+                          # " · agentique", keep the total in Google's
+                          # ~60-70 char display budget. No site name, no
+                          # clickbait.
 description: "..."       # meta description, ≤160 chars, plain sentence
 slug: <kebab-case>       # filename must be <date>-<slug>.md
 topic: <tag slug>        # the tag you picked in step 1

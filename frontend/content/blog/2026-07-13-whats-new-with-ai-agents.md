@@ -1,5 +1,5 @@
 ---
-title: "Agents are getting cheaper, and someone's trying to break them"
+title: "Agents got cheaper. Someone wants to break them."
 description: "Cheaper multi-step browsing, a 60% token cut for agent workloads, and a CTF built to compromise an agent in a microVM."
 slug: whats-new-with-ai-agents
 topic: agents

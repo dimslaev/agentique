@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-13 — SEO audit fixes: SPA meta, robots.txt, blog soft-404
+
+- `frontend/index.html` — upstream file. Replaced the template's default `Full Stack FastAPI Project` title (no meta description, broken `/vite.svg` favicon reference) with real title/description/canonical/OG tags for the root domain; dropped the dead favicon link. Low conflict risk.
+- New file: `frontend/public/robots.txt` — bare `Allow: /`. No `Sitemap:` line yet (sitemap.xml isn't generated — deferred, see `plans/blog-ssg-cron.md`).
+- `frontend/nginx.conf` — upstream file. New `location /blog` block (`try_files $uri $uri/ =404`) so unknown post slugs 404 for real instead of falling through to the SPA shell with `200` (a soft-404). Verified against a local nginx container: `/blog`→301→`/blog/`, real posts 200, unknown slugs 404, SPA client routes (`/profile`, unknown app paths) still 200 via the unchanged `location /` fallback. Low conflict risk.
+- `frontend/scripts/prerender-blog.ts` — `MAX_TITLE_CHARS` 70 → 55: the rendered `<title>` appends `· agentique` (12 chars), so the old cap let the total tag exceed Google's ~60-70 char display budget.
+- `.agents/blog-writer.md` — title contract comment updated to match the new 55-char cap.
+- `frontend/content/blog/2026-07-13-whats-new-with-ai-agents.md` — shortened title to fit the new cap.
+
 ## 2026-07-12 — sanitize + validate LLM titles and summaries
 
 - `backend/pipeline/utils.py` — `sanitize_llm_text()` now also strips markdown emphasis. New `is_corrupted()` (non-Latin script / leaked JSON envelope), `is_valid_title()`, `is_valid_summary()`. `strip_title_wrappers()` peels nested wrappers to a fixed point.
