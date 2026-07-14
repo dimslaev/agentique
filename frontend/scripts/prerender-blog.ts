@@ -20,6 +20,7 @@ const FRONTEND_ROOT = path.resolve(import.meta.dirname, "..")
 const CONTENT_DIR = path.join(FRONTEND_ROOT, "content", "blog")
 const DIST_DIR = path.join(FRONTEND_ROOT, "dist")
 const SITE_URL = process.env.SITE_URL ?? "https://agentique.ch"
+const API_URL = process.env.VITE_API_URL ?? "https://api.agentique.ch"
 const SITE_NAME = "agentique"
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/
@@ -140,6 +141,12 @@ function validatePost(p: Post) {
 // "system") so static pages come up in the theme the app last set.
 const THEME_SCRIPT = `try{var t=localStorage.getItem("vite-ui-theme");if(t==="dark"||((!t||t==="system")&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}`
 
+// Static pages never load the SPA router, so lib/analytics.ts's onResolved
+// hook never fires here — this beacon posts to the same endpoint, using the
+// same visitor_id localStorage key, so blog pageviews land in analytics_event
+// alongside SPA ones.
+const ANALYTICS_SCRIPT = `try{var k="analytics_visitor_id";var id=localStorage.getItem(k);if(!id){id=crypto.randomUUID();localStorage.setItem(k,id)}fetch("${API_URL}/api/v1/analytics/collect",{method:"POST",headers:{"Content-Type":"application/json"},keepalive:true,body:JSON.stringify({event:"pageview",path:location.pathname,referrer:document.referrer||undefined,visitor_id:id})}).catch(function(){})}catch(e){}`
+
 function esc(s: string): string {
   return s
     .replaceAll("&", "&amp;")
@@ -178,6 +185,7 @@ function shell(opts: {
     <meta property="og:url" content="${canonical}">${published}
     <meta name="twitter:card" content="summary">
     <script>${THEME_SCRIPT}</script>
+    <script>${ANALYTICS_SCRIPT}</script>
     ${css}
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
