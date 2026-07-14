@@ -1,0 +1,29 @@
+name: Mirror pgvector image to GHCR
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Monthly, to pick up upstream Postgres security patches on the pg17 tag
+    - cron: "0 6 1 * *"
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull, retag, and push
+        run: |
+          docker pull pgvector/pgvector:pg17
+          docker tag pgvector/pgvector:pg17 ghcr.io/${{ github.repository_owner }}/pgvector:pg17
+          docker push ghcr.io/${{ github.repository_owner }}/pgvector:pg17

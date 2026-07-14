@@ -2,6 +2,11 @@
 
 ---
 
+## 2026-07-14 — mirror pgvector image to GHCR
+
+- New file: `.github/workflows/mirror-pgvector.yml` — pulls `pgvector/pgvector:pg17` from Docker Hub and pushes it to `ghcr.io/dimslaev/pgvector:pg17`. Manual (`workflow_dispatch`) + monthly schedule to pick up upstream security patches. Prompted by the prod deploy's self-hosted runner hitting Docker Hub's anonymous pull rate limit (`429`) on `docker compose pull`.
+- `compose.yml` — upstream file. `db.image` `pgvector/pgvector:pg17` → `ghcr.io/dimslaev/pgvector:pg17`. Low conflict risk.
+
 ## 2026-07-13 — SEO audit fixes: SPA meta, robots.txt, blog soft-404
 
 - `frontend/index.html` — upstream file. Replaced the template's default `Full Stack FastAPI Project` title (no meta description, broken `/vite.svg` favicon reference) with real title/description/canonical/OG tags for the root domain; dropped the dead favicon link. Low conflict risk.
