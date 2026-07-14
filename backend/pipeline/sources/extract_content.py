@@ -5,12 +5,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import trafilatura
 
-from pipeline.sources.utils import fetch_with_timeout
+from pipeline.sources.utils import (
+    BROWSER_HEADERS,
+    RESIDENTIAL_PROXY_URL,
+    fetch_with_timeout,
+)
 from pipeline.utils import log
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
 SNIPPET_MAX_LENGTH = 500
 EXTRACT_TIMEOUT_SECS = 5.0
+# The proxy adds a hop and tends to land on slower exit nodes.
+PROXY_TIMEOUT_SECS = 20.0
 CONCURRENCY = 5
 
 BLOCKER_PATTERNS: list[re.Pattern] = [
@@ -47,11 +53,14 @@ def _is_blocker(text: str) -> bool:
     return any(p.search(text) for p in BLOCKER_PATTERNS)
 
 
-def _fetch_html(url: str) -> str:
-    if _should_skip(url):
-        return ""
+def _fetch_html(url: str, proxy: str | None = None) -> str:
     try:
-        resp = fetch_with_timeout(url, timeout=EXTRACT_TIMEOUT_SECS)
+        resp = fetch_with_timeout(
+            url,
+            timeout=PROXY_TIMEOUT_SECS if proxy else EXTRACT_TIMEOUT_SECS,
+            proxy=proxy,
+            headers=BROWSER_HEADERS,
+        )
         if not resp.is_success:
             return ""
         ct = resp.headers.get("content-type", "")
@@ -72,14 +81,34 @@ def _extract_text(html: str, max_length: int | None = None) -> str:
     return text[:max_length] if max_length else text
 
 
+def _fetch_and_extract(url: str, max_length: int | None = None) -> str:
+    """Fetch a URL directly, falling back to the residential proxy.
+
+    An empty result from the direct attempt covers every failure mode we care
+    about — connection error, 403/429, non-HTML body, or a paywall/login wall
+    that ``_is_blocker`` caught — and all of them are worth a proxied retry.
+    The proxy is metered, so it never runs first.
+    """
+    if _should_skip(url):
+        return ""
+
+    text = _extract_text(_fetch_html(url), max_length)
+    if text or not RESIDENTIAL_PROXY_URL:
+        return text
+
+    text = _extract_text(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), max_length)
+    if text:
+        log(f"    Proxy recovered: {url}")
+    return text
+
+
 def _extract_one_snippet(url: str) -> tuple[str, str]:
-    return url, _extract_text(_fetch_html(url), SNIPPET_MAX_LENGTH)
+    return url, _fetch_and_extract(url, SNIPPET_MAX_LENGTH)
 
 
 def _extract_one_full(url: str, idx: int, total: int) -> tuple[str, str]:
     log(f"    [{idx + 1}/{total}] Fetching: {url}")
-    html = _fetch_html(url)
-    text = _extract_text(html)
+    text = _fetch_and_extract(url)
     log(
         f"    [{idx + 1}/{total}] {'OK (' + str(len(text)) + ' chars)' if text else 'no content'}: {url}"
     )

@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import feedparser
 import httpx
 
-from pipeline.sources.utils import BROWSER_HEADERS, clean_title, is_within_window
+from pipeline.sources.utils import (
+    BROWSER_HEADERS,
+    RESIDENTIAL_PROXY_URL,
+    clean_title,
+    is_within_window,
+)
 from pipeline.utils import log
 
-_PROXY_URL = os.environ.get("RESIDENTIAL_PROXY_URL")
+_PROXY_URL = RESIDENTIAL_PROXY_URL
 
 if _PROXY_URL:
     try:

@@ -438,7 +438,7 @@ def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
     if not inserted:
         return []
 
-    to_extract = [a for a in inserted if a["source_type"] not in ("aiNews", "rss")]
+    to_extract = [a for a in inserted if a["source_type"] != "aiNews"]
     content_map = re_extract_full_content([{"url": a["url"]} for a in to_extract])
 
     for item in to_extract:
@@ -452,10 +452,8 @@ def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
 
     result = []
     for item in inserted:
-        if item["source_type"] in ("aiNews", "rss"):
-            result.append({**item, "full_content": item.get("content", "")})
-        else:
-            result.append({**item, "full_content": content_map.get(item["url"], "")})
+        full = content_map.get(item["url"]) or item.get("content", "")
+        result.append({**item, "full_content": full})
     return result
 
 
