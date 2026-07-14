@@ -226,6 +226,32 @@ ${bodyHtml}
   })
 }
 
+// Real, indexable SPA routes — auth-gated pages (login, settings, admin,
+// items, profile) are deliberately excluded, nothing there for Google to rank.
+const STATIC_ROUTES = ["/", "/developers", "/newsletter"]
+
+function renderSitemap(posts: Post[]): string {
+  const today = new Date().toISOString().slice(0, 10)
+  const urls = [
+    ...STATIC_ROUTES.map((route) => ({ loc: route, lastmod: today })),
+    { loc: "/blog/", lastmod: posts[0]?.date ?? today },
+    ...posts.map((p) => ({ loc: `/blog/${p.slug}/`, lastmod: p.date })),
+  ]
+  const entries = urls
+    .map(
+      (u) => `  <url>
+    <loc>${SITE_URL}${u.loc}</loc>
+    <lastmod>${u.lastmod}</lastmod>
+  </url>`,
+    )
+    .join("\n")
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries}
+</urlset>
+`
+}
+
 function renderIndex(posts: Post[], cssHrefs: string[]): string {
   const items = posts
     .map(
@@ -301,6 +327,7 @@ function main() {
     path.join(DIST_DIR, "blog", "index.html"),
     renderIndex(posts, cssHrefs),
   )
+  fs.writeFileSync(path.join(DIST_DIR, "sitemap.xml"), renderSitemap(posts))
 
   console.log(`prerender-blog: rendered ${posts.length} post(s) + index`)
 }
