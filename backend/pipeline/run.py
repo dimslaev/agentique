@@ -18,6 +18,7 @@ from app.models_agentique import (
 )
 from baml_client.sync_client import b
 from baml_client.types import ArticleInput, ExistingArticle, TagInput, TagOption
+from pipeline import keep_drop
 from pipeline.health import (
     RunStats,
     check_liveness,
@@ -135,7 +136,9 @@ def run_pipeline(stats: RunStats) -> None:
                 unique = _dedup_semantic(session, alive, label)
                 s.deduped = len(alive) - len(unique)
 
-                scored = _score_articles(session, unique)
+                candidates = _prefilter_keep_drop(session, unique)
+                scored = _score_articles(session, candidates)
+                # below_threshold = pre-filter drops + gpt-oss sub-threshold
                 s.below_threshold = len(unique) - len(scored)
 
                 inserted = _insert_articles(session, scored)
@@ -306,6 +309,37 @@ def _dedup_semantic(session: Session, articles: list[dict], label: str) -> list[
 
 
 # ─── Step 04 ────────────────────────────────────────────────────────────────
+
+
+def _prefilter_keep_drop(session: Session, articles: list[dict]) -> list[dict]:
+    """Cascade pre-filter: drop obvious junk before the gpt-oss scorer.
+
+    Runs the tiny distilled classifier on title+snippet. Anything it is very
+    confident is a drop (P(keep) < keep_drop.DROP_BELOW) is discarded without a
+    gpt-oss call and recorded in ScoredUrl so it is not re-fetched. Everything
+    else passes through for real scoring. gpt-oss stays the scoring authority.
+    """
+    if not articles or keep_drop.DROP_BELOW <= 0:
+        return articles
+
+    strings = [keep_drop.serialize(a["title"], a.get("content")) for a in articles]
+    vecs = _get_model().encode(strings)
+
+    survivors, dropped = [], 0
+    for a, vec in zip(articles, vecs):
+        if keep_drop.keep_proba(vec) < keep_drop.DROP_BELOW:
+            session.merge(ScoredUrl(url=a["url"]))
+            dropped += 1
+        else:
+            survivors.append(a)
+    if dropped:
+        session.commit()
+
+    log(
+        f"  Pre-filter dropped {dropped}/{len(articles)} as obvious junk "
+        f"(P(keep) < {keep_drop.DROP_BELOW}); {len(survivors)} to scorer"
+    )
+    return survivors
 
 
 def _score_articles(session: Session, articles: list[dict]) -> list[dict]:
