@@ -78,6 +78,12 @@ def _embed(text: str) -> list[float]:
     return _get_model().encode([text])[0].tolist()
 
 
+def _embed_batch(texts: list[str]) -> list[list[float]]:
+    if not texts:
+        return []
+    return [v.tolist() for v in _get_model().encode(texts)]
+
+
 def _build_sources(session: Session) -> list[dict]:
     """Assemble the run's sources. Aggregator channels (HN, AI News) keep their
     fetchers; RSS/substack feeds and IMAP newsletter senders are both DB-driven
@@ -232,6 +238,7 @@ def _filter_dead_domains(articles: list[dict], label: str) -> list[dict]:
     if not articles:
         return articles
 
+    from concurrent.futures import ThreadPoolExecutor
     from urllib.parse import urlparse
 
     import dns.resolver
@@ -248,7 +255,11 @@ def _filter_dead_domains(articles: list[dict], label: str) -> list[dict]:
         except Exception:
             return True  # Other errors (timeout, etc.) - assume alive
 
-    results = [(a, is_resolvable(a["url"])) for a in articles]
+    # DNS lookups are I/O-bound and each NXDOMAIN retry chain can take seconds;
+    # run them in parallel like the source fetchers do.
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        oks = list(executor.map(lambda a: is_resolvable(a["url"]), articles))
+    results = list(zip(articles, oks))
     alive = [a for a, ok in results if ok]
     dead = [a for a, ok in results if not ok]
     for a in dead:
@@ -266,31 +277,24 @@ def _dedup_semantic(session: Session, articles: list[dict], label: str) -> list[
         return articles
 
     cutoff = datetime.now(UTC) - timedelta(days=14)
-    recent_db = session.exec(
-        select(Article).where(Article.published_at >= cutoff)
+    # Dedup only needs url/title/publisher-name — not content (KBs each) or the
+    # embedding. Select just those columns and join the publisher name in one
+    # query, rather than loading whole Article rows plus a second lookup.
+    recent_rows = session.exec(
+        select(Article.url, Article.title, Publisher.name)
+        .join(Publisher, Publisher.id == Article.publisher_id, isouter=True)
+        .where(Article.published_at >= cutoff)
     ).all()
 
-    if not recent_db:
+    if not recent_rows:
         return articles
 
-    log(f"  Deduplicating against {len(recent_db)} recent DB articles...")
-
-    # Publisher name is only used for display in the dedup prompt. Resolve the
-    # ids in one query so ExistingArticle.source stays populated post-refactor.
-    pub_ids = {art.publisher_id for art in recent_db}
-    pub_names = {
-        p.id: p.name
-        for p in session.exec(select(Publisher).where(Publisher.id.in_(pub_ids))).all()
-    }
+    log(f"  Deduplicating against {len(recent_rows)} recent DB articles...")
 
     new_inputs = [_to_baml_input(a) for a in articles]
     existing_inputs = [
-        ExistingArticle(
-            url=str(art.url),
-            title=art.title,
-            source=pub_names.get(art.publisher_id, ""),
-        )
-        for art in recent_db
+        ExistingArticle(url=str(url), title=title, source=name or "")
+        for url, title, name in recent_rows
     ]
 
     try:
@@ -373,10 +377,15 @@ def _score_articles(session: Session, articles: list[dict]) -> list[dict]:
     kept = [s for s in scored if s["score"] >= SCORE_THRESHOLD]
     log(f"  {len(kept)} articles pass scoring (threshold: {SCORE_THRESHOLD})")
 
-    # Record ALL evaluated URLs (including sub-threshold)
-    for a in articles:
-        session.merge(ScoredUrl(url=a["url"]))
-    session.commit()
+    # Record only sub-threshold URLs so they are not re-fetched next run. Keepers
+    # are deliberately NOT recorded here: a crash between this commit and the
+    # insert would otherwise mark them "scored" and drop them forever. Once
+    # inserted, the Article row itself makes them known (see _filter_known_urls).
+    below = [s for s in scored if s["score"] < SCORE_THRESHOLD]
+    for s in below:
+        session.merge(ScoredUrl(url=s["url"]))
+    if below:
+        session.commit()
 
     return kept
 
@@ -438,32 +447,42 @@ def _improve_titles(session: Session, inserted: list[dict]) -> None:
 
     log(f"  Improving {len(inserted)} titles...")
 
+    # One batched LLM call for the whole set — ImproveTitles already takes a
+    # list and echoes each input's url back on the TitleFix — instead of N calls
+    # in a loop. Results are matched by url; commit once after the batch.
+    try:
+        fixes = b.ImproveTitles([_to_baml_input(item) for item in inserted])
+    except Exception as e:
+        log(f"  Title improve batch failed, continuing: {e}")
+        return
+
+    fix_by_url = {f.url: f.title for f in fixes}
+    changed = False
     for item in inserted:
         art_id = item["id"]
-        try:
-            fixes = b.ImproveTitles([_to_baml_input(item)])
-            raw = fixes[0].title if fixes else None
-            if not raw:
-                continue
-            sanitized = strip_title_wrappers(sanitize_llm_text(raw))
-            if not sanitized or sanitized == item["title"]:
-                continue
-            if not is_valid_title(sanitized):
-                log(f'  Skip rewrite #{art_id} (malformed): "{sanitized[:80]}"')
-                continue
-            if item["source"].lower() in sanitized.lower():
-                log(f'  Skip rewrite #{art_id} (source name leaked): "{sanitized}"')
-                continue
-            old_title = item["title"]
-            article = session.get(Article, art_id)
-            if article:
-                article.title = sanitized
-                session.add(article)
-                session.commit()
-            item["title"] = sanitized
-            log(f'  Improved title #{art_id}: "{old_title}" → "{sanitized}"')
-        except Exception as e:
-            log(f"  Title improve failed for #{art_id}, continuing: {e}")
+        raw = fix_by_url.get(item["url"])
+        if not raw:
+            continue
+        sanitized = strip_title_wrappers(sanitize_llm_text(raw))
+        if not sanitized or sanitized == item["title"]:
+            continue
+        if not is_valid_title(sanitized):
+            log(f'  Skip rewrite #{art_id} (malformed): "{sanitized[:80]}"')
+            continue
+        if item["source"].lower() in sanitized.lower():
+            log(f'  Skip rewrite #{art_id} (source name leaked): "{sanitized}"')
+            continue
+        old_title = item["title"]
+        article = session.get(Article, art_id)
+        if article:
+            article.title = sanitized
+            session.add(article)
+            changed = True
+        item["title"] = sanitized
+        log(f'  Improved title #{art_id}: "{old_title}" → "{sanitized}"')
+
+    if changed:
+        session.commit()
 
 
 # ─── Step 07 ────────────────────────────────────────────────────────────────
@@ -642,21 +661,23 @@ def _embed_articles(session: Session, items: list[dict]) -> None:
 
     log(f"  Embedding {len(items)} articles...")
 
-    for item in items:
+    # Encode the whole batch in one model.encode call instead of one per item.
+    texts = [
+        f"{item['title']}\n\n{item['summary']}" if item.get("summary") else item["title"]
+        for item in items
+    ]
+    try:
+        vecs = _embed_batch(texts)
+    except Exception as e:
+        log(f"  Embed batch failed, continuing: {e}")
+        return
+
+    for item, vec in zip(items, vecs):
         art_id = item["id"]
-        try:
-            text = (
-                f"{item['title']}\n\n{item['summary']}"
-                if item.get("summary")
-                else item["title"]
-            )
-            vec = _embed(text)
-            article = session.get(Article, art_id)
-            if article:
-                article.embedding = vec
-                session.add(article)
-        except Exception as e:
-            log(f"  Embed failed for #{art_id}: {e}")
+        article = session.get(Article, art_id)
+        if article:
+            article.embedding = vec
+            session.add(article)
 
     session.commit()
 

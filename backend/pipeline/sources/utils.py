@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 from datetime import UTC, datetime
 
 import httpx
@@ -44,19 +45,37 @@ def is_within_window(date_str: str | None, window_hours: int = WINDOW_HOURS) -> 
         return True
 
 
+# Pooled clients, keyed by proxy. Building one httpx.Client per request means no
+# connection reuse — HN alone fires ~201 requests. Reuse a single pooled client
+# per proxy (None = direct) instead. Timeout/headers are per-request, so they are
+# passed to .get() rather than baked into the client.
+_clients: dict[str | None, httpx.Client] = {}
+_clients_lock = threading.Lock()
+
+
+def _get_client(proxy: str | None) -> httpx.Client:
+    # Sources fetch from thread pools, so guard first-time creation. The client
+    # itself is thread-safe for concurrent requests once built.
+    client = _clients.get(proxy)
+    if client is None:
+        with _clients_lock:
+            client = _clients.get(proxy)
+            if client is None:
+                kwargs: dict = {"follow_redirects": True}
+                if proxy:
+                    kwargs["proxy"] = proxy
+                client = httpx.Client(**kwargs)
+                _clients[proxy] = client
+    return client
+
+
 def fetch_with_timeout(
     url: str,
     timeout: float = FETCH_TIMEOUT_SECS,
     proxy: str | None = None,
     headers: dict | None = None,
 ) -> httpx.Response:
-    kwargs: dict = {"timeout": timeout, "follow_redirects": True}
-    if proxy:
-        kwargs["proxy"] = proxy
-    if headers:
-        kwargs["headers"] = headers
-    with httpx.Client(**kwargs) as client:
-        return client.get(url)
+    return _get_client(proxy).get(url, timeout=timeout, headers=headers)
 
 
 def tavily_search(

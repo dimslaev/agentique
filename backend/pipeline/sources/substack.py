@@ -4,13 +4,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import feedparser
-import httpx
 
 from pipeline.sources.extract_content import _extract_text
 from pipeline.sources.utils import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     clean_title,
+    fetch_with_timeout,
     is_within_window,
 )
 from pipeline.utils import log
@@ -64,16 +64,13 @@ def _entry_content(entry) -> str:
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     for attempt in range(retries + 1):
         use_proxy = attempt > 0 and bool(_PROXY_URL)
-        kwargs: dict = {
-            "headers": BROWSER_HEADERS,
-            "timeout": 15.0,
-            "follow_redirects": True,
-        }
-        if use_proxy:
-            kwargs["proxy"] = _PROXY_URL
         try:
-            with httpx.Client(**kwargs) as client:
-                resp = client.get(url)
+            resp = fetch_with_timeout(
+                url,
+                timeout=15.0,
+                proxy=_PROXY_URL if use_proxy else None,
+                headers=BROWSER_HEADERS,
+            )
         except Exception as e:
             raise RuntimeError(
                 f"fetch failed{'(via proxy)' if use_proxy else ''}: {e}"
