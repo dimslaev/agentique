@@ -36,6 +36,7 @@ from pipeline.sources.extract_content import re_extract_full_content
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.substack import fetch_feeds
 from pipeline.steps import (
+    MIN_CONTENT_CHARS,
     PROMPT_CONTENT_CAP,
     SCORE_THRESHOLD,
     github_repo_from_content,
@@ -472,7 +473,15 @@ def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
     if not inserted:
         return []
 
-    to_extract = [a for a in inserted if a["source_type"] != "aiNews"]
+    # Only re-fetch what is actually thin. Sources that already carry full text
+    # — AI News recaps, RSS feeds with content:encoded — skip the network hop
+    # because they have content, not because of a hardcoded source name.
+    to_extract = [
+        a for a in inserted if len(a.get("content") or "") < MIN_CONTENT_CHARS
+    ]
+    skipped = len(inserted) - len(to_extract)
+    if skipped:
+        log(f"  {skipped}/{len(inserted)} already have full content, skipping re-fetch")
     content_map = re_extract_full_content([{"url": a["url"]} for a in to_extract])
 
     for item in to_extract:

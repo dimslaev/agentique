@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import feedparser
 import httpx
 
+from pipeline.sources.extract_content import _extract_text
 from pipeline.sources.utils import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
@@ -28,6 +29,36 @@ if _PROXY_URL:
         log(f"Substack proxy: set but unparseable (len {len(_PROXY_URL)})")
 else:
     log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
+
+
+def _feed_url(url: str) -> str:
+    """Normalise a publisher link to an actual feed URL.
+
+    A bare Substack link (``https://foo.substack.com``) serves the HTML site,
+    not the feed — feedparser finds no entries and the source silently yields
+    nothing. Substack always serves the feed at ``/feed``.
+    """
+    trimmed = url.rstrip("/")
+    if trimmed.endswith(".substack.com"):
+        return f"{trimmed}/feed"
+    return url
+
+
+def _entry_content(entry) -> str:
+    """Plain text for a feed entry, preferring ``content:encoded`` over the
+    ``summary`` teaser.
+
+    Both fields carry HTML, so they go through the same trafilatura pass the
+    network extractor uses — that keeps the text comparable and lets
+    ``_is_blocker`` reject teasers (anything under 50 chars) as empty rather
+    than passing a blurb off as an article.
+    """
+    encoded = max(
+        ((c.get("value") or "") for c in (entry.get("content") or [])),
+        key=len,
+        default="",
+    )
+    return _extract_text(encoded or entry.get("summary") or "")
 
 
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
@@ -63,9 +94,11 @@ def _fetch_source(source: dict) -> list[dict]:
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
     try:
-        xml = _fetch_feed_xml(rss_url)
+        xml = _fetch_feed_xml(_feed_url(rss_url))
         feed = feedparser.parse(xml)
         items = feed.get("entries", [])
+        if not items:
+            log(f"  {name}: feed parsed but has no entries — check the feed URL")
         within = [
             it
             for it in items
@@ -76,7 +109,7 @@ def _fetch_source(source: dict) -> list[dict]:
             {
                 "title": clean_title(it.get("title") or "(no title)"),
                 "url": it.get("link") or "",
-                "content": it.get("summary") or "",
+                "content": _entry_content(it),
                 "published_date": it.get("published") or it.get("updated") or "",
                 "source": name,
                 "source_type": "rss",

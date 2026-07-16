@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-07-16 — RSS full text from the feed; gate re-fetch on content length
+
+- `backend/pipeline/sources/substack.py` — new `_feed_url()` normalises bare `*.substack.com` links to `/feed`; without it feedparser parsed the HTML site and returned 0 entries, silently killing 35 of 65 active feeds. New `_entry_content()` prefers `content:encoded` over the `summary` teaser and runs both through `_extract_text` (feed fields are HTML). Logs when a feed parses but has no entries.
+- `backend/pipeline/steps.py` — new `MIN_CONTENT_CHARS = 500`. Empirical: under 200 chars of content 39.8% of articles fail to summarize, 200-500 → 30%, 500-1500 → 2.7%.
+- `backend/pipeline/run.py` — `_extract_full_content()` re-fetches only items under `MIN_CONTENT_CHARS` instead of excluding `source_type != "aiNews"`. `source_type` is now set by sources but read nowhere.
+- New file: `backend/tests/pipeline/test_feed_content.py` — covers both silent failures. Note: trafilatura deduplicates repeated segments, so fixtures need varied prose.
+
 ## 2026-07-14 — mirror pgvector image to GHCR
 
 - New file: `.github/workflows/mirror-pgvector.yml` — pulls `pgvector/pgvector:pg17` from Docker Hub and pushes it to `ghcr.io/dimslaev/pgvector:pg17`. Manual (`workflow_dispatch`) + monthly schedule to pick up upstream security patches. Prompted by the prod deploy's self-hosted runner hitting Docker Hub's anonymous pull rate limit (`429`) on `docker compose pull`.
