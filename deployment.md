@@ -11,10 +11,7 @@ Everything lives in `/opt/agentique`. The unit files and Caddyfile are versioned
 
 ## How a deploy works
 
-Push to `master` → `.github/workflows/deploy-production.yml`:
-
-1. **build** (GitHub-hosted): `bun install && bun run build` with `VITE_API_URL=https://api.$DOMAIN_PRODUCTION`, uploads `frontend/dist` as an artifact.
-2. **deploy** (self-hosted runner on the VPS): checkout + download artifact, `rsync -a --delete` into `/opt/agentique` (excluding `.env`, `.venv`, `frontend/dist`), rsync the fresh dist, `uv sync --frozen`, run migrations (`uv run --env-file ../.env bash scripts/prestart.sh`), `sudo systemctl restart agentique-backend`.
+Push to `master` → `.github/workflows/deploy-production.yml` builds the frontend on a GitHub-hosted runner, then the self-hosted runner on the VPS syncs it to `/opt/agentique`, runs migrations, and restarts the backend. Full step-by-step in [`deploy/README.md`](./deploy/README.md#deploy-flow-what-ci-does).
 
 Notes:
 
@@ -29,7 +26,7 @@ Notes:
 
 ## Self-hosted runner
 
-A GitHub Actions runner on the VPS with labels `self-hosted` + `production`, running as the `github` user, installed as a service ([official guide](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)). The runner only needs: write access to `/opt/agentique`, uv, and the narrow sudoers rule from `deploy/README.md`.
+A GitHub Actions runner on the VPS with labels `self-hosted` + `production`, installed as a service ([official guide](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)). Runs as whichever user the runner was registered under (see `deploy/README.md` for the current one — don't duplicate it here, it's the kind of detail that drifts). The runner only needs: write access to `/opt/agentique`, uv, and the narrow sudoers rule from `deploy/README.md`.
 
 ## Database
 
