@@ -13,6 +13,7 @@ from pipeline.sources.utils import (
     fetch_with_timeout,
     is_within_window,
 )
+from pipeline.types import FetchedArticle
 from pipeline.utils import log
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
@@ -86,7 +87,7 @@ def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     raise RuntimeError("Exhausted retries")
 
 
-def _fetch_source(source: dict) -> list[dict]:
+def _fetch_source(source: dict) -> list[FetchedArticle]:
     name = source["name"]
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
@@ -118,7 +119,7 @@ def _fetch_source(source: dict) -> list[dict]:
         return []
 
 
-def fetch_feeds(sources: list[dict]) -> list[dict]:
+def fetch_feeds(sources: list[dict]) -> list[FetchedArticle]:
     """Fetch a list of RSS/substack feeds in parallel.
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
@@ -131,7 +132,7 @@ def fetch_feeds(sources: list[dict]) -> list[dict]:
         log("Feeds: no active feed publishers")
         return []
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(_fetch_source, src): src for src in sources}
         for future in as_completed(futures):

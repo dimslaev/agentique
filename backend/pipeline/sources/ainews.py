@@ -6,6 +6,7 @@ import re
 from html import unescape
 
 from pipeline.sources.utils import fetch_with_timeout, is_within_window
+from pipeline.types import FetchedArticle
 from pipeline.utils import log
 
 FEED_URL = "https://news.smol.ai/rss.xml"
@@ -217,7 +218,7 @@ def _extract_reddit_recap(html: str) -> list[dict]:
 # --- fetch ---
 
 
-def fetch_ai_news() -> list[dict]:
+def fetch_ai_news() -> list[FetchedArticle]:
     log("Fetching AI News feed...")
     try:
         resp = fetch_with_timeout(FEED_URL)
@@ -231,7 +232,7 @@ def fetch_ai_news() -> list[dict]:
     items = [it for it in _parse_feed(xml) if is_within_window(it["pub_date"])]
     log(f"  AI News: {len(items)} issues within window")
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     for item in items:
         if re.match(r"^not much happened", item["title"], re.IGNORECASE):
             continue
@@ -255,7 +256,7 @@ def fetch_ai_news() -> list[dict]:
                 }
             )
 
-    by_url: dict[str, dict] = {}
+    by_url: dict[str, FetchedArticle] = {}
     for a in articles:
         if a["url"] not in by_url:
             by_url[a["url"]] = a

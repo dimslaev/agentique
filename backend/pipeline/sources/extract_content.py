@@ -10,6 +10,7 @@ from pipeline.sources.utils import (
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.types import FetchedArticle
 from pipeline.utils import log
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
@@ -115,7 +116,7 @@ def _extract_one_full(url: str, idx: int, total: int) -> tuple[str, str]:
     return url, text
 
 
-def extract_content(articles: list[dict]) -> list[dict]:
+def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
     """Fill in missing content snippets for a list of article dicts."""
     needs = [a for a in articles if not a.get("content")]
     if not needs:
@@ -139,7 +140,7 @@ def extract_content(articles: list[dict]) -> list[dict]:
 
     log(f"  Extracted {len(snippet_map)}/{len(unique_urls)} snippets")
 
-    result = []
+    result: list[FetchedArticle] = []
     for a in articles:
         if not a.get("content") and a["url"] in snippet_map:
             result.append({**a, "content": snippet_map[a["url"]]})

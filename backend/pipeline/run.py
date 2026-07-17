@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from model2vec import StaticModel
+from sqlalchemy import Engine
 from sqlmodel import Session, create_engine, select
 
 from app.models_agentique import (
@@ -43,6 +45,7 @@ from pipeline.steps import (
     kind_from_url,
 )
 from pipeline.tags import Vocabulary, load_vocabulary, validate_tags, write_article_tags
+from pipeline.types import FetchedArticle, ProcessedArticle
 from pipeline.utils import (
     is_valid_summary,
     is_valid_title,
@@ -62,7 +65,15 @@ def _build_db_url() -> str:
     return f"postgresql+psycopg://{user}:{password}@{server}:{port}/{db}"
 
 
-_engine = create_engine(_build_db_url())
+_engine: Engine | None = None
+
+
+def _get_engine() -> Engine:
+    global _engine
+    if _engine is None:
+        _engine = create_engine(_build_db_url())
+    return _engine
+
 
 _model: StaticModel | None = None
 
@@ -72,10 +83,6 @@ def _get_model() -> StaticModel:
     if _model is None:
         _model = StaticModel.from_pretrained("minishlab/potion-base-8M")
     return _model
-
-
-def _embed(text: str) -> list[float]:
-    return _get_model().encode([text])[0].tolist()
 
 
 def _embed_batch(texts: list[str]) -> list[list[float]]:
@@ -104,7 +111,7 @@ def _build_sources(session: Session) -> list[dict]:
     ]
 
 
-def _to_baml_input(a: dict) -> ArticleInput:
+def _to_baml_input(a: FetchedArticle) -> ArticleInput:
     """Build a BAML ArticleInput from a fetched-article dict (snippet capped at
     200). ``trust`` is stamped by _resolve_publishers from Publisher.trust."""
     return ArticleInput(
@@ -119,7 +126,7 @@ def _to_baml_input(a: dict) -> ArticleInput:
 def run_pipeline(stats: RunStats) -> None:
     log("=== Pipeline start ===")
 
-    with Session(_engine) as session:
+    with Session(_get_engine()) as session:
         resolver = PublisherResolver(session=session)
         vocab = load_vocabulary(session)
 
@@ -174,7 +181,9 @@ def run_pipeline(stats: RunStats) -> None:
 # ─── Step 01b: publisher resolution ───────────────────────────────────────────
 
 
-def _resolve_publishers(articles: list[dict], resolver: PublisherResolver) -> None:
+def _resolve_publishers(
+    articles: list[FetchedArticle], resolver: PublisherResolver
+) -> None:
     """Stamp each fetched item in place with publisher_id and trust.
 
     Both come from the Publisher row (resolved by source name, auto-quarantined
@@ -183,6 +192,7 @@ def _resolve_publishers(articles: list[dict], resolver: PublisherResolver) -> No
     """
     for a in articles:
         publisher = resolver.resolve(a["source"])
+        assert publisher.id is not None
         a["publisher_id"] = publisher.id
         a["trust"] = publisher.trust.value
 
@@ -190,7 +200,9 @@ def _resolve_publishers(articles: list[dict], resolver: PublisherResolver) -> No
 # ─── Step 01 ────────────────────────────────────────────────────────────────
 
 
-def _fetch_source(fetcher, label: str) -> list[dict]:
+def _fetch_source(
+    fetcher: Callable[[], list[FetchedArticle]], label: str
+) -> list[FetchedArticle]:
     articles = fetcher()
     if not articles:
         log(f"No articles from {label}")
@@ -201,8 +213,8 @@ def _fetch_source(fetcher, label: str) -> list[dict]:
 
 
 def _filter_known_urls(
-    session: Session, articles: list[dict], label: str
-) -> list[dict]:
+    session: Session, articles: list[FetchedArticle], label: str
+) -> list[FetchedArticle]:
     if not articles:
         return []
     all_urls = [a["url"] for a in articles]
@@ -234,7 +246,9 @@ def _filter_known_urls(
 # ─── Step 02b ───────────────────────────────────────────────────────────────
 
 
-def _filter_dead_domains(articles: list[dict], label: str) -> list[dict]:
+def _filter_dead_domains(
+    articles: list[FetchedArticle], label: str
+) -> list[FetchedArticle]:
     if not articles:
         return articles
 
@@ -272,7 +286,9 @@ def _filter_dead_domains(articles: list[dict], label: str) -> list[dict]:
 # ─── Step 03 ────────────────────────────────────────────────────────────────
 
 
-def _dedup_semantic(session: Session, articles: list[dict], label: str) -> list[dict]:
+def _dedup_semantic(
+    session: Session, articles: list[FetchedArticle], label: str
+) -> list[FetchedArticle]:
     if not articles:
         return articles
 
@@ -316,7 +332,9 @@ def _dedup_semantic(session: Session, articles: list[dict], label: str) -> list[
 # ─── Step 04 ────────────────────────────────────────────────────────────────
 
 
-def _prefilter_keep_drop(session: Session, articles: list[dict]) -> list[dict]:
+def _prefilter_keep_drop(
+    session: Session, articles: list[FetchedArticle]
+) -> list[FetchedArticle]:
     """Cascade pre-filter: drop obvious junk before the gpt-oss scorer.
 
     Runs the tiny distilled classifier on title+snippet. Anything it is very
@@ -347,23 +365,24 @@ def _prefilter_keep_drop(session: Session, articles: list[dict]) -> list[dict]:
     return survivors
 
 
-def _score_articles(session: Session, articles: list[dict]) -> list[dict]:
+def _score_articles(
+    session: Session, articles: list[FetchedArticle]
+) -> list[FetchedArticle]:
     if not articles:
         return []
 
     log(f"  Scoring {len(articles)} articles in batches of 5...")
 
     BATCH = 5
-    all_scores: list[dict] = []
+    score_by_url: dict[str, int] = {}
     for i in range(0, len(articles), BATCH):
         batch_inputs = [_to_baml_input(a) for a in articles[i : i + BATCH]]
         result = b.ScoreArticles(batch_inputs)
-        all_scores.extend({"url": r.url, "score": r.score} for r in result)
+        score_by_url.update({r.url: r.score for r in result})
         log(f"    batch {i // BATCH + 1}/{(len(articles) + BATCH - 1) // BATCH} done")
         wait_ms(1000)
 
-    score_by_url = {s["url"]: s["score"] for s in all_scores}
-    scored = []
+    scored: list[FetchedArticle] = []
     for a in articles:
         score = score_by_url.get(a["url"], 0)
         # TODO(new-schema): hard-coded per-source score bonus. Once publishers
@@ -393,30 +412,31 @@ def _score_articles(session: Session, articles: list[dict]) -> list[dict]:
 # ─── Step 05 ────────────────────────────────────────────────────────────────
 
 
-def _insert_articles(session: Session, scored: list[dict]) -> list[dict]:
+def _insert_articles(
+    session: Session, scored: list[FetchedArticle]
+) -> list[FetchedArticle]:
     if not scored:
         return []
 
-    by_url: dict[str, dict] = {}
+    by_url: dict[str, FetchedArticle] = {}
     for item in scored:
         existing = by_url.get(item["url"])
         if not existing or item["score"] > existing["score"]:
             by_url[item["url"]] = item
 
-    inserted = []
+    inserted: list[FetchedArticle] = []
     for item in by_url.values():
         item["title"] = sanitize_llm_text(item["title"])
         pub_at = None
-        if item.get("published_date"):
+        pub_date_str = item.get("published_date")
+        if pub_date_str:
             try:
                 from email.utils import parsedate_to_datetime
 
                 try:
-                    pub_at = parsedate_to_datetime(item["published_date"])
+                    pub_at = parsedate_to_datetime(pub_date_str)
                 except Exception:
-                    pub_at = datetime.fromisoformat(
-                        item["published_date"].replace("Z", "+00:00")
-                    )
+                    pub_at = datetime.fromisoformat(pub_date_str.replace("Z", "+00:00"))
             except Exception:
                 pass
 
@@ -441,7 +461,7 @@ def _insert_articles(session: Session, scored: list[dict]) -> list[dict]:
 # ─── Step 06 ────────────────────────────────────────────────────────────────
 
 
-def _improve_titles(session: Session, inserted: list[dict]) -> None:
+def _improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
     if not inserted:
         return
 
@@ -488,7 +508,9 @@ def _improve_titles(session: Session, inserted: list[dict]) -> None:
 # ─── Step 07 ────────────────────────────────────────────────────────────────
 
 
-def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
+def _extract_full_content(
+    session: Session, inserted: list[FetchedArticle]
+) -> list[FetchedArticle]:
     if not inserted:
         return []
 
@@ -512,7 +534,7 @@ def _extract_full_content(session: Session, inserted: list[dict]) -> list[dict]:
                 session.add(article)
     session.commit()
 
-    result = []
+    result: list[FetchedArticle] = []
     for item in inserted:
         full = content_map.get(item["url"]) or item.get("content", "")
         result.append({**item, "full_content": full})
@@ -544,12 +566,14 @@ def _to_kind(baml_kind) -> ArticleKind | None:
         return None
 
 
-def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]:
+def _summarize_and_categorize(
+    session: Session, items: list[FetchedArticle]
+) -> list[ProcessedArticle]:
     if not items:
         return []
 
     log(f"  Summarizing and categorizing {len(items)} articles...")
-    processed = []
+    processed: list[ProcessedArticle] = []
 
     for item in items:
         art_id = item["id"]
@@ -612,7 +636,9 @@ def _summarize_and_categorize(session: Session, items: list[dict]) -> list[dict]
 TAG_BATCH = 10
 
 
-def _assign_tags(session: Session, items: list[dict], vocab: Vocabulary) -> None:
+def _assign_tags(
+    session: Session, items: list[ProcessedArticle], vocab: Vocabulary
+) -> None:
     """Assign 1-3 tags per article from the DB-backed vocabulary and write
     ArticleTag rows. Batched by article id; the vocabulary is passed to the LLM
     as a parameter, and output is validated against it — off-list tags are
@@ -655,7 +681,7 @@ def _assign_tags(session: Session, items: list[dict], vocab: Vocabulary) -> None
 # ─── Step 09 ────────────────────────────────────────────────────────────────
 
 
-def _embed_articles(session: Session, items: list[dict]) -> None:
+def _embed_articles(session: Session, items: list[ProcessedArticle]) -> None:
     if not items:
         return
 
@@ -687,7 +713,7 @@ def _embed_articles(session: Session, items: list[dict]) -> None:
 if __name__ == "__main__":
     # Dead-man's-switch: did last night's run die silently? (best-effort)
     try:
-        with Session(_engine) as session:
+        with Session(_get_engine()) as session:
             check_liveness(session)
     except Exception as e:
         print(f"Liveness check failed: {e}", file=sys.stderr)
@@ -704,7 +730,7 @@ if __name__ == "__main__":
 
     # Record stats + run the verifier. Best-effort: never flips the exit code.
     try:
-        with Session(_engine) as session:
+        with Session(_get_engine()) as session:
             record_run(session, stats)
             verify_run(session, stats)
     except Exception as e:

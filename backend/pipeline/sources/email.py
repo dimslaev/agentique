@@ -20,6 +20,7 @@ from imap_tools import AND, MailBox, MailMessageFlags
 from baml_client.sync_client import b
 from baml_client.types import NewsletterProduct, SearchCandidate
 from pipeline.sources.utils import tavily_search
+from pipeline.types import FetchedArticle
 from pipeline.utils import log
 
 IMAP_PORT_DEFAULT = 993
@@ -110,7 +111,7 @@ def _is_denied(url: str) -> bool:
     return any(host == d or host.endswith(f".{d}") for d in DENY_DOMAINS)
 
 
-def _resolve_one(product: dict) -> dict | None:
+def _resolve_one(product: dict) -> FetchedArticle | None:
     """One product -> one canonical URL, or None if nothing is a clean first-party source."""
     name = product["name"]
     description = product["description"]
@@ -158,7 +159,7 @@ def _resolve_one(product: dict) -> dict | None:
     }
 
 
-def _resolve_products(raw: list[dict]) -> list[dict]:
+def _resolve_products(raw: list[dict]) -> list[FetchedArticle]:
     """Dedupe products by name across all issues in this run, drop the
     un-notable ones, then resolve each survivor to a URL.
     """
@@ -190,7 +191,7 @@ def _resolve_products(raw: list[dict]) -> list[dict]:
         f"({len(raw)} raw -> {len(unique)} unique -> {len(products)} notable)"
     )
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     with ThreadPoolExecutor(max_workers=RESOLVE_CONCURRENCY) as ex:
         futures = [ex.submit(_resolve_one, p) for p in products]
         for f in as_completed(futures):
@@ -261,7 +262,7 @@ def _run_imap_fetch(config: dict, sources: list[tuple[str, str]]) -> list[dict]:
     return raw
 
 
-def fetch_newsletter(sources: list[tuple[str, str]]) -> list[dict]:
+def fetch_newsletter(sources: list[tuple[str, str]]) -> list[FetchedArticle]:
     if not sources:
         log("Newsletter: no sources configured, skipping")
         return []
