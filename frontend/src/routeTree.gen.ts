@@ -18,7 +18,6 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutProfileRouteImport } from './routes/_layout/profile'
 import { Route as LayoutNewsletterRouteImport } from './routes/_layout/newsletter'
-import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutDevelopersRouteImport } from './routes/_layout/developers'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
@@ -66,11 +65,6 @@ const LayoutNewsletterRoute = LayoutNewsletterRouteImport.update({
   path: '/newsletter',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutItemsRoute = LayoutItemsRouteImport.update({
-  id: '/items',
-  path: '/items',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutDevelopersRoute = LayoutDevelopersRouteImport.update({
   id: '/developers',
   path: '/developers',
@@ -90,7 +84,6 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
-  '/items': typeof LayoutItemsRoute
   '/newsletter': typeof LayoutNewsletterRoute
   '/profile': typeof LayoutProfileRoute
   '/settings': typeof LayoutSettingsRoute
@@ -102,7 +95,6 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
-  '/items': typeof LayoutItemsRoute
   '/newsletter': typeof LayoutNewsletterRoute
   '/profile': typeof LayoutProfileRoute
   '/settings': typeof LayoutSettingsRoute
@@ -117,7 +109,6 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/developers': typeof LayoutDevelopersRoute
-  '/_layout/items': typeof LayoutItemsRoute
   '/_layout/newsletter': typeof LayoutNewsletterRoute
   '/_layout/profile': typeof LayoutProfileRoute
   '/_layout/settings': typeof LayoutSettingsRoute
@@ -133,7 +124,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/developers'
-    | '/items'
     | '/newsletter'
     | '/profile'
     | '/settings'
@@ -145,7 +135,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/developers'
-    | '/items'
     | '/newsletter'
     | '/profile'
     | '/settings'
@@ -159,7 +148,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/developers'
-    | '/_layout/items'
     | '/_layout/newsletter'
     | '/_layout/profile'
     | '/_layout/settings'
@@ -239,13 +227,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutNewsletterRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/items': {
-      id: '/_layout/items'
-      path: '/items'
-      fullPath: '/items'
-      preLoaderRoute: typeof LayoutItemsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/developers': {
       id: '/_layout/developers'
       path: '/developers'
@@ -266,7 +247,6 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDevelopersRoute: typeof LayoutDevelopersRoute
-  LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutNewsletterRoute: typeof LayoutNewsletterRoute
   LayoutProfileRoute: typeof LayoutProfileRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
@@ -276,7 +256,6 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutDevelopersRoute: LayoutDevelopersRoute,
-  LayoutItemsRoute: LayoutItemsRoute,
   LayoutNewsletterRoute: LayoutNewsletterRoute,
   LayoutProfileRoute: LayoutProfileRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
