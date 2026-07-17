@@ -49,7 +49,7 @@ cd backend && uv run bash scripts/tests-start.sh
 
 ## Database access
 
-No Adminer anymore. Use either:
+Use either:
 
 ```bash
 docker compose exec db psql -U <POSTGRES_USER> <POSTGRES_DB>
@@ -66,7 +66,7 @@ Careful: `docker compose down -v` deletes the db volume. Plain `down` is safe.
 
 ## Playwright (parked)
 
-The e2e tests in `frontend/tests/` no longer run in CI. They still work locally against the native dev servers (`bunx playwright test` in `frontend/`), but expect them to rot.
+The e2e tests in `frontend/tests/` don't currently run in CI.Only locally against the dev servers (`bunx playwright test` in `frontend/`), but they need work.
 
 ## Pre-commit and linting
 
