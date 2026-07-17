@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.models_agentique import ArticleTag, Tag
+from app.models import ArticleTag, Tag
 from pipeline.utils import enum_value, log
 
 MAX_TAGS_PER_ARTICLE = 3

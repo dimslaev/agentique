@@ -2,7 +2,7 @@ import random
 
 from sqlmodel import Session
 
-from app.models_agentique import (
+from app.models import (
     Article,
     ArticleKind,
     ArticleTag,

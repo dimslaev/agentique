@@ -6,7 +6,7 @@ from sqlmodel import col, select
 
 from app.api.article_view import build_rows, like_counts_subquery
 from app.api.deps import CurrentUser, SessionDep
-from app.models_agentique import Article, ArticleLike, ArticlesPublic, Publisher
+from app.models import Article, ArticleLike, ArticlesPublic, Publisher
 
 router = APIRouter(tags=["likes"])
 

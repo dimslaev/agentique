@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models_agentique import Article, ArticleKind, Category
+from app.models import Article, ArticleKind, Category
 from baml_client.sync_client import b
 from baml_client.types import TagInput, TagOption
 from pipeline import keep_drop

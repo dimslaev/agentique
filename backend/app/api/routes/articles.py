@@ -13,9 +13,8 @@ from app.api.article_view import (
     like_counts_subquery,
     liked_article_ids,
 )
-from app.api.deps import SessionDep
-from app.api.deps_agentique import CurrentUserOptional
-from app.models_agentique import (
+from app.api.deps import CurrentUserOptional, SessionDep
+from app.models import (
     Article,
     ArticlesPublic,
     ArticleTag,

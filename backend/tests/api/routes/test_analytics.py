@@ -2,8 +2,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
 from app.core.config import settings
-from app.models import User
-from app.models_agentique import AnalyticsEvent
+from app.models import AnalyticsEvent, User
 
 
 def _latest_event(db: Session, visitor_id: str) -> AnalyticsEvent | None:

@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 from app.api.routes import articles
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.models_agentique import Article
+from app.models import Article
 from tests.utils.article import create_random_article, create_random_tag, tag_article
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import random_email

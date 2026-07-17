@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from app.models_agentique import Category
+from app.models import Category
 
 
 class FetchedArticle(TypedDict, total=False):

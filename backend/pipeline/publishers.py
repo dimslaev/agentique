@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
 
-from app.models_agentique import (
+from app.models import (
     LinkPlatform,
     Publisher,
     PublisherKind,

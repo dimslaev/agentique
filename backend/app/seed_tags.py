@@ -12,7 +12,7 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 from app.core.db import engine
-from app.models_agentique import Tag
+from app.models import Tag
 
 TAGS_FILE = Path(__file__).parent / "data" / "tags.json"
 

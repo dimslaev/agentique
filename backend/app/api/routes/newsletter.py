@@ -6,7 +6,7 @@ import resend
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SessionDep
-from app.models_agentique import (
+from app.models import (
     NewsletterSubscriber,
     NewsletterSubscribeRequest,
     NewsletterSubscribeResponse,

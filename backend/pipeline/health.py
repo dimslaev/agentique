@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from sqlmodel import Session, col, select
 
-from app.models_agentique import PipelineRun
+from app.models import PipelineRun
 from pipeline.config import alert_config
 from pipeline.utils import log
 

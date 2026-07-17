@@ -12,7 +12,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from app.models_agentique import (
+from app.models import (
     Article,
     ArticleLike,
     ArticlePublic,

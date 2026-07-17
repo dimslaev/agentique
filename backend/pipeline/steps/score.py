@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models_agentique import ScoredUrl
+from app.models import ScoredUrl
 from baml_client.sync_client import b
 from pipeline import keep_drop
 from pipeline.embedding import get_model

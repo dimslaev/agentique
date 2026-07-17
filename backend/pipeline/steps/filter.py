@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import dns.resolver
 from sqlmodel import Session, select
 
-from app.models_agentique import Article, Publisher, ScoredUrl
+from app.models import Article, Publisher, ScoredUrl
 from baml_client.sync_client import b
 from baml_client.types import ExistingArticle
 from pipeline.steps import to_baml_input

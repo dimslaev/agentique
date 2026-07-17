@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 
-from app.models_agentique import ArticleKind
+from app.models import ArticleKind
 from pipeline.utils import hostname
 
 SCORE_THRESHOLD = 76

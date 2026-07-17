@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models_agentique import Article
+from app.models import Article
 from pipeline.llm_text import sanitize_llm_text
 from pipeline.types import FetchedArticle
 from pipeline.utils import log, parse_date
