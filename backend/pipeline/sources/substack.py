@@ -110,7 +110,6 @@ def _fetch_source(source: dict) -> list[FetchedArticle]:
                 "content": _entry_content(it),
                 "published_date": it.get("published") or it.get("updated") or "",
                 "source": name,
-                "source_type": "rss",
             }
             for it in within
         ]
@@ -124,9 +123,8 @@ def fetch_feeds(sources: list[dict]) -> list[FetchedArticle]:
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
     from the DB (active publishers with rss/substack links) via
-    ``pipeline.publishers.feed_sources_from_db``. All items are stamped
-    ``source_type="rss"``; the caller resolves each ``source`` name to a
-    Publisher row.
+    ``pipeline.publishers.feed_sources_from_db``. The caller resolves each
+    ``source`` name to a Publisher row.
     """
     if not sources:
         log("Feeds: no active feed publishers")

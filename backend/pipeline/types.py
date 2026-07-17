@@ -25,7 +25,6 @@ class FetchedArticle(TypedDict, total=False):
     content: str
     published_date: str | None
     source: str
-    source_type: str
     # set by _resolve_publishers
     publisher_id: int
     trust: str

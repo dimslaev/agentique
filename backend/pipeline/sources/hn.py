@@ -71,7 +71,6 @@ def fetch_hn() -> list[FetchedArticle]:
                 .datetime.now(__import__("datetime").timezone.utc)
                 .isoformat(),
                 "source": "Hacker News",
-                "source_type": "hackerNews",
             }
         )
 

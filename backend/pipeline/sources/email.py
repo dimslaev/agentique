@@ -155,7 +155,6 @@ def _resolve_one(product: dict) -> FetchedArticle | None:
         "content": description,
         "published_date": product["email_date"],
         "source": product["newsletter_name"],
-        "source_type": "newsletter",
     }
 
 

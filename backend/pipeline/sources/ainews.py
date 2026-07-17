@@ -243,7 +243,6 @@ def fetch_ai_news() -> list[FetchedArticle]:
                     **twitter,
                     "published_date": item["pub_date"],
                     "source": "AI News",
-                    "source_type": "aiNews",
                 }
             )
         for reddit in _extract_reddit_recap(item["content_html"]):
@@ -252,7 +251,6 @@ def fetch_ai_news() -> list[FetchedArticle]:
                     **reddit,
                     "published_date": item["pub_date"],
                     "source": "AI News",
-                    "source_type": "aiNews",
                 }
             )
 
