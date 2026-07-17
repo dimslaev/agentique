@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-import os
 import threading
 
 import httpx
 
+from pipeline.config import residential_proxy_url, tavily_api_key
+
 FETCH_TIMEOUT_SECS = 15.0
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 TAVILY_SEARCH_CANDIDATES = 5
-RESIDENTIAL_PROXY_URL = os.environ.get("RESIDENTIAL_PROXY_URL")
+RESIDENTIAL_PROXY_URL = residential_proxy_url()
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -58,7 +59,7 @@ def fetch_with_timeout(
 def tavily_search(
     query: str, max_results: int = TAVILY_SEARCH_CANDIDATES
 ) -> list[dict]:
-    api_key = os.environ["TAVILY_API_KEY"]
+    api_key = tavily_api_key()
     resp = httpx.post(
         TAVILY_SEARCH_URL,
         json={"api_key": api_key, "query": query, "max_results": max_results},

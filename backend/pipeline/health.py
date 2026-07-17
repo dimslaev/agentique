@@ -2,15 +2,12 @@
 every run (anomaly alert or clean daily summary).
 
 Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
-here must never change whether the pipeline itself succeeded. Reads config from
-`os.environ` directly (like `run.py`), not `app.core.config.settings`, so it
-stays decoupled from the backend's full Settings object.
+here must never change whether the pipeline itself succeeded.
 """
 
 from __future__ import annotations
 
 import html
-import os
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -18,6 +15,7 @@ import httpx
 from sqlmodel import Session, col, select
 
 from app.models_agentique import PipelineRun
+from pipeline.config import alert_config
 from pipeline.utils import log
 
 # ─── Tunables ─────────────────────────────────────────────────────────────────
@@ -252,31 +250,27 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
     return "\n".join(lines)
 
 
-# ─── Email (Resend, via os.environ — no Settings import) ──────────────────────
+# ─── Email (Resend) ─────────────────────────────────────────────────────────
 
 
 def _send_alert(subject: str, body: str) -> None:
-    api_key = os.environ.get("RESEND_API_KEY")
-    from_email = os.environ.get("EMAILS_FROM_EMAIL")
-    to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
-
-    if not (api_key and from_email and to_email):
+    cfg = alert_config()
+    if not (cfg.resend_api_key and cfg.from_email and cfg.to_email):
         log(f"  [alert suppressed — email env not set] {subject}\n{body}")
         return
 
-    name = os.environ.get("PROJECT_NAME") or "Agentique"
     try:
         import resend
 
-        resend.api_key = api_key
+        resend.api_key = cfg.resend_api_key
         resend.Emails.send(
             {
-                "from": f"{name} pipeline <{from_email}>",
-                "to": to_email,
-                "subject": f"[{name}] {subject}",
+                "from": f"{cfg.project_name} pipeline <{cfg.from_email}>",
+                "to": cfg.to_email,
+                "subject": f"[{cfg.project_name}] {subject}",
                 "html": f"<pre>{html.escape(body)}</pre>",
             }
         )
-        log(f"  Alert emailed to {to_email}: {subject}")
+        log(f"  Alert emailed to {cfg.to_email}: {subject}")
     except Exception as e:
         log(f"  Alert send failed: {e}")

@@ -18,10 +18,11 @@ potion-base-8M model, then call `keep_proba(vec)`.
 from __future__ import annotations
 
 import math
-import os
 from pathlib import Path
 
 import numpy as np
+
+from pipeline.config import keep_drop_threshold
 
 _MODEL_PATH = Path(__file__).parent / "keep_drop_model.npz"
 
@@ -29,7 +30,7 @@ _MODEL_PATH = Path(__file__).parent / "keep_drop_model.npz"
 # most obvious junk is dropped without asking gpt-oss. The CV sweep put recall
 # ~0.99 at 0.3; 0.15 is well inside that safety margin. Set the env var to 0 to
 # disable the pre-filter entirely (nothing scores below 0).
-DROP_BELOW = float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
+DROP_BELOW = keep_drop_threshold()
 
 _coef: np.ndarray | None = None
 _intercept: float = 0.0

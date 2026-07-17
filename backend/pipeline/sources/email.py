@@ -8,7 +8,6 @@ so product identity comes from the email text and the URL is rediscovered.
 
 from __future__ import annotations
 
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
@@ -18,11 +17,11 @@ from imap_tools import AND, MailBox, MailMessageFlags
 
 from baml_client.sync_client import b
 from baml_client.types import NewsletterProduct, SearchCandidate
+from pipeline.config import ImapConfig, imap_config
 from pipeline.sources.http import tavily_search
 from pipeline.types import FetchedArticle
 from pipeline.utils import hostname, log
 
-IMAP_PORT_DEFAULT = 993
 IMAP_FOLDER = "sub"
 RESOLVE_CONCURRENCY = 5
 
@@ -198,25 +197,15 @@ def _resolve_products(raw: list[dict]) -> list[FetchedArticle]:
     return articles
 
 
-def _imap_config() -> dict:
-    host = os.environ.get("IMAP_HOST")
-    user = os.environ.get("IMAP_USER")
-    password = os.environ.get("IMAP_PASSWORD")
-    if not host or not user or not password:
-        raise RuntimeError("Missing IMAP env vars: IMAP_HOST, IMAP_USER, IMAP_PASSWORD")
-    port = int(os.environ.get("IMAP_PORT", IMAP_PORT_DEFAULT))
-    return {"host": host, "port": port, "user": user, "password": password}
-
-
-def _run_imap_fetch(config: dict, sources: list[tuple[str, str]]) -> list[dict]:
+def _run_imap_fetch(config: ImapConfig, sources: list[tuple[str, str]]) -> list[dict]:
     """One connect -> fetch -> mark-seen -> logout cycle. Two passes: headers
     only to find matches (avoids downloading full bodies of unrelated mail),
     then full source for matched UIDs only.
     """
     raw: list[dict] = []
 
-    with MailBox(config["host"], port=config["port"]).login(
-        config["user"], config["password"], initial_folder=IMAP_FOLDER
+    with MailBox(config.host, port=config.port).login(
+        config.user, config.password, initial_folder=IMAP_FOLDER
     ) as mb:
         matches: dict[str, str] = {}
         for msg in mb.fetch(AND(seen=False), mark_seen=False, headers_only=True):
@@ -262,8 +251,8 @@ def fetch_newsletter(sources: list[tuple[str, str]]) -> list[FetchedArticle]:
         log("Newsletter: no sources configured, skipping")
         return []
 
-    config = _imap_config()
-    log(f"Connecting to {config['host']} as {config['user']}...")
+    config = imap_config()
+    log(f"Connecting to {config.host} as {config.user}...")
 
     try:
         raw = _run_imap_fetch(config, sources)
