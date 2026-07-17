@@ -1,0 +1,20 @@
+# Install target: /etc/systemd/system/agentique-backend.service
+[Unit]
+Description=agentique backend (FastAPI)
+# The db runs in Docker; start after the daemon so restarts on boot find it.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=agentique
+Group=agentique
+WorkingDirectory=/opt/agentique/backend
+# pydantic-settings also reads ../.env, but EnvironmentFile puts ENVIRONMENT
+# etc. in the process env so shell-level guards (prestart.sh) see them too.
+EnvironmentFile=/opt/agentique/.env
+ExecStart=/opt/agentique/.venv/bin/fastapi run --workers 4 --host 127.0.0.1 --port 8000 app/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

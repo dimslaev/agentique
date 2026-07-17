@@ -29,13 +29,8 @@ jobs:
       - name: Create .env for CI
         run: |
           cat > .env << 'EOF'
-          DOMAIN=localhost
-          STACK_NAME=agentique-ci
-          DOCKER_IMAGE_BACKEND=agentique-backend
-          DOCKER_IMAGE_FRONTEND=agentique-frontend
           PROJECT_NAME=Agentique
           ENVIRONMENT=development
-          FRONTEND_HOST=http://localhost:5173
           SECRET_KEY=ci-test-secret-key-not-for-production
           FIRST_SUPERUSER=admin@example.com
           FIRST_SUPERUSER_PASSWORD=ci-test-password
@@ -44,15 +39,14 @@ jobs:
           POSTGRES_USER=postgres
           POSTGRES_PASSWORD=ci-test-password
           EOF
-      - run: docker compose down -v --remove-orphans
-      - run: docker compose up -d db mailcatcher
+      - run: docker compose up -d
       - name: Migrate DB
         run: uv run bash scripts/prestart.sh
         working-directory: backend
       - name: Run tests
         run: uv run bash scripts/tests-start.sh "Coverage for ${{ github.sha }}"
         working-directory: backend
-      - run: docker compose down -v --remove-orphans
+      - run: docker compose down -v
       - name: Store coverage files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

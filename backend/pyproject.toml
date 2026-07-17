@@ -76,7 +76,7 @@ ignore = [
 keep-runtime-typing = true
 
 [tool.ruff.lint.per-file-ignores]
-# The pipeline logs to stdout via print() so supercronic captures it in container logs.
+# The pipeline logs to stdout via print() so systemd/journald captures it.
 "pipeline/**" = ["T201"]
 
 [tool.coverage.run]

@@ -116,7 +116,7 @@ def check_liveness(session: Session) -> None:
     """Alert if there hasn't been a successful run in STALE_RUN_HOURS.
 
     Catches the case where a previous night's run died so hard it recorded
-    nothing. Runs on the next invocation because supercronic itself is long-lived.
+    nothing. Runs at the start of the next scheduled invocation.
     """
     last = session.exec(
         select(PipelineRun)

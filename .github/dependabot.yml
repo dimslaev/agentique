@@ -47,21 +47,6 @@ updates:
       npm-packages:
         patterns:
           - "*"
-  # Docker
-  - package-ecosystem: docker
-    directories:
-      - /backend
-      - /frontend
-    schedule:
-      interval: "monthly"
-    cooldown:
-      default-days: 7
-    commit-message:
-      prefix: ⬆
-    groups:
-      docker:
-        patterns:
-          - "*"
   # Docker Compose
   - package-ecosystem: docker-compose
     directory: /

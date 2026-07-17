@@ -6,14 +6,14 @@ AI-powered article aggregation and intelligence feed. Fetches articles from conf
 
 A cron-scheduled pipeline fetches articles from configured sources and runs each batch through a sequence of BAML-powered steps: deduplication, LLM scoring, content extraction, summarization, categorization, and vector embedding. Results are served via a FastAPI REST API and a React frontend.
 
-Docker Compose services:
+The stack:
 
-- `db` — PostgreSQL with pgvector extension
-- `backend` — FastAPI app serving the REST API
-- `pipeline` — runs the article pipeline on a cron schedule via supercronic
-- `frontend` — React app served via Vite
-- `adminer` — lightweight web UI for browsing and querying the database directly
-- `prestart` — one-shot container that runs DB migrations before the backend starts
+- `db` — PostgreSQL with pgvector, the only Docker container (`docker compose up -d`)
+- backend — FastAPI, runs natively via uv (systemd service in production)
+- pipeline — article pipeline, runs natively via uv (systemd timer, daily 04:00)
+- frontend — React SPA, built to static files and served by Caddy in production
+
+See [development.md](./development.md) for the local loop and [deployment.md](./deployment.md) for the VPS setup.
 
 ## Stack
 
@@ -22,7 +22,8 @@ Docker Compose services:
 - [PostgreSQL + pgvector](https://github.com/pgvector/pgvector) — article storage and vector search
 - [model2vec](https://github.com/MinishLab/model2vec) — fast static embeddings
 - [React](https://react.dev) + [Vite](https://vitejs.dev) + [Tailwind CSS](https://tailwindcss.com) — frontend
-- [Docker Compose](https://docs.docker.com/compose/) — local dev and production
+- [Docker Compose](https://docs.docker.com/compose/) — the database
+- [Caddy](https://caddyserver.com) + systemd — production serving
 
 ## Docs
 
@@ -33,4 +34,4 @@ Docker Compose services:
 
 ## Upstream
 
-Fork of [fastapi/full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template). See [CHANGES.md](./CHANGES.md) for divergences.
+Started as a fork of [fastapi/full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template). The fork is cut — upstream is no longer merged. [CHANGES.md](./CHANGES.md) is frozen as the historical record of divergences.

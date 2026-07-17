@@ -76,8 +76,8 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
   external API call needed for search.
 - **Frontend**: React + Vite + Tailwind, talking to the backend through a generated
   TypeScript client.
-- **Deploy**: Docker Compose on a single VPS — db, backend, pipeline, frontend, and an
-  Adminer UI for poking at the database directly.
+- **Deploy**: a single VPS — the db in Docker, backend and pipeline as systemd
+  services, the frontend as static files behind Caddy.
 
 The whole thing is a fork of a well-known open-source FastAPI starter template, so a lot
 of the plumbing (auth scaffolding, migrations, project layout, CI) is inherited rather
