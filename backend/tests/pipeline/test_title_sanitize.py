@@ -6,7 +6,7 @@ Fixtures marked "prod" are real corrupted values pulled from the production
 
 import pytest
 
-from pipeline.utils import (
+from pipeline.llm_text import (
     is_corrupted,
     is_valid_summary,
     is_valid_title,

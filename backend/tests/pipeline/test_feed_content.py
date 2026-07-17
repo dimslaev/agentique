@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.sources.substack import _entry_content, _feed_url
-from pipeline.steps import MIN_CONTENT_CHARS
+from pipeline.heuristics import MIN_CONTENT_CHARS
+from pipeline.sources.substack import _entry_content
+from pipeline.utils import feed_url
 
 # Varied prose on purpose: trafilatura deduplicates repeated segments, so a
 # fixture built from one repeated sentence extracts to nothing.
@@ -40,12 +41,35 @@ _ARTICLE_HTML = """
         # already a feed URL — leave it alone
         ("https://importai.substack.com/feed", "https://importai.substack.com/feed"),
         # non-Substack hosts keep whatever the publisher configured
-        ("https://huggingface.co/blog/feed.xml", "https://huggingface.co/blog/feed.xml"),
+        (
+            "https://huggingface.co/blog/feed.xml",
+            "https://huggingface.co/blog/feed.xml",
+        ),
         ("https://console.dev/rss.xml", "https://console.dev/rss.xml"),
     ],
 )
 def test_feed_url_normalises_bare_substack_links(given, expected):
-    assert _feed_url(given) == expected
+    assert feed_url(given) == expected
+
+
+@pytest.mark.parametrize(
+    "given, expected",
+    [
+        # a substack-platform link on a custom domain: the host gives nothing
+        # away, so only the platform flag says it needs /feed
+        ("https://www.latent.space", "https://www.latent.space/feed"),
+        ("https://www.latent.space/", "https://www.latent.space/feed"),
+        ("https://www.latent.space/feed", "https://www.latent.space/feed"),
+    ],
+)
+def test_feed_url_appends_feed_for_substack_platform_links(given, expected):
+    assert feed_url(given, is_substack=True) == expected
+
+
+def test_feed_url_is_idempotent():
+    """Applied by publisher config and again by the fetcher — must not double up."""
+    once = feed_url("https://linas.substack.com")
+    assert feed_url(once) == once
 
 
 def test_content_encoded_preferred_over_summary_teaser():

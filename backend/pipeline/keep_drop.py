@@ -10,26 +10,34 @@ auto-drop only what the classifier is very confident is junk, send everything
 else on to gpt-oss for the real 1-100 score. gpt-oss stays the scoring
 authority; this only trims obvious noise to cut LLM calls and timeouts.
 
-Serialization must match training exactly: `title\n\nsummary-or-snippet`, the
-same string _embed_articles builds. Embed with the pipeline's shared
+The embedding text must match training exactly: `title\n\nsummary-or-snippet`,
+the same string the embed step builds. Embed with the pipeline's shared
 potion-base-8M model, then call `keep_proba(vec)`.
 """
 
 from __future__ import annotations
 
 import math
-import os
 from pathlib import Path
 
 import numpy as np
 
+from pipeline.config import keep_drop_threshold
+
 _MODEL_PATH = Path(__file__).parent / "keep_drop_model.npz"
 
-# Auto-drop cutoff for the pre-filter. Deliberately low (high recall): only the
-# most obvious junk is dropped without asking gpt-oss. The CV sweep put recall
-# ~0.99 at 0.3; 0.15 is well inside that safety margin. Set the env var to 0 to
-# disable the pre-filter entirely (nothing scores below 0).
-DROP_BELOW = float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
+
+def drop_below() -> float:
+    """Auto-drop cutoff for the pre-filter. Deliberately low (high recall):
+    only the most obvious junk is dropped without asking gpt-oss. The CV sweep
+    put recall ~0.99 at 0.3; 0.15 is well inside that safety margin. Set the env
+    var to 0 to disable the pre-filter entirely (nothing scores below 0).
+
+    Read fresh each call (not cached at import) so the env var can disable the
+    pre-filter without a process restart.
+    """
+    return keep_drop_threshold()
+
 
 _coef: np.ndarray | None = None
 _intercept: float = 0.0
@@ -45,8 +53,8 @@ def _load() -> None:
         _threshold = float(d["proba_threshold"])
 
 
-def serialize(title: str, text: str | None) -> str:
-    """One string per article, identical to _embed_articles / training."""
+def to_embedding_text(title: str, text: str | None) -> str:
+    """One string per article, identical to the embed step / training."""
     title = (title or "").strip()
     text = (text or "").strip()
     return f"{title}\n\n{text}" if text else title

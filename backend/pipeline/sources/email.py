@@ -8,21 +8,20 @@ so product identity comes from the email text and the URL is rediscovered.
 
 from __future__ import annotations
 
-import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from html import unescape
-from urllib.parse import urlparse
 
 from imap_tools import AND, MailBox, MailMessageFlags
 
 from baml_client.sync_client import b
 from baml_client.types import NewsletterProduct, SearchCandidate
-from pipeline.sources.utils import tavily_search
-from pipeline.utils import log
+from pipeline.config import ImapConfig, imap_config
+from pipeline.sources.http import tavily_search
+from pipeline.types import FetchedArticle
+from pipeline.utils import hostname, log
 
-IMAP_PORT_DEFAULT = 993
 IMAP_FOLDER = "sub"
 RESOLVE_CONCURRENCY = 5
 
@@ -101,16 +100,13 @@ def _extract_products(html: str, newsletter_name: str, email_date: str) -> list[
 
 
 def _is_denied(url: str) -> bool:
-    try:
-        host = (urlparse(url).hostname or "").removeprefix("www.").lower()
-    except Exception:
-        return True
+    host = hostname(url)
     if not host:
         return True
     return any(host == d or host.endswith(f".{d}") for d in DENY_DOMAINS)
 
 
-def _resolve_one(product: dict) -> dict | None:
+def _resolve_one(product: dict) -> FetchedArticle | None:
     """One product -> one canonical URL, or None if nothing is a clean first-party source."""
     name = product["name"]
     description = product["description"]
@@ -154,11 +150,10 @@ def _resolve_one(product: dict) -> dict | None:
         "content": description,
         "published_date": product["email_date"],
         "source": product["newsletter_name"],
-        "source_type": "newsletter",
     }
 
 
-def _resolve_products(raw: list[dict]) -> list[dict]:
+def _resolve_products(raw: list[dict]) -> list[FetchedArticle]:
     """Dedupe products by name across all issues in this run, drop the
     un-notable ones, then resolve each survivor to a URL.
     """
@@ -190,7 +185,7 @@ def _resolve_products(raw: list[dict]) -> list[dict]:
         f"({len(raw)} raw -> {len(unique)} unique -> {len(products)} notable)"
     )
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     with ThreadPoolExecutor(max_workers=RESOLVE_CONCURRENCY) as ex:
         futures = [ex.submit(_resolve_one, p) for p in products]
         for f in as_completed(futures):
@@ -202,25 +197,15 @@ def _resolve_products(raw: list[dict]) -> list[dict]:
     return articles
 
 
-def _imap_config() -> dict:
-    host = os.environ.get("IMAP_HOST")
-    user = os.environ.get("IMAP_USER")
-    password = os.environ.get("IMAP_PASSWORD")
-    if not host or not user or not password:
-        raise RuntimeError("Missing IMAP env vars: IMAP_HOST, IMAP_USER, IMAP_PASSWORD")
-    port = int(os.environ.get("IMAP_PORT", IMAP_PORT_DEFAULT))
-    return {"host": host, "port": port, "user": user, "password": password}
-
-
-def _run_imap_fetch(config: dict, sources: list[tuple[str, str]]) -> list[dict]:
+def _run_imap_fetch(config: ImapConfig, sources: list[tuple[str, str]]) -> list[dict]:
     """One connect -> fetch -> mark-seen -> logout cycle. Two passes: headers
     only to find matches (avoids downloading full bodies of unrelated mail),
     then full source for matched UIDs only.
     """
     raw: list[dict] = []
 
-    with MailBox(config["host"], port=config["port"]).login(
-        config["user"], config["password"], initial_folder=IMAP_FOLDER
+    with MailBox(config.host, port=config.port).login(
+        config.user, config.password, initial_folder=IMAP_FOLDER
     ) as mb:
         matches: dict[str, str] = {}
         for msg in mb.fetch(AND(seen=False), mark_seen=False, headers_only=True):
@@ -261,13 +246,13 @@ def _run_imap_fetch(config: dict, sources: list[tuple[str, str]]) -> list[dict]:
     return raw
 
 
-def fetch_newsletter(sources: list[tuple[str, str]]) -> list[dict]:
+def fetch_newsletter(sources: list[tuple[str, str]]) -> list[FetchedArticle]:
     if not sources:
         log("Newsletter: no sources configured, skipping")
         return []
 
-    config = _imap_config()
-    log(f"Connecting to {config['host']} as {config['user']}...")
+    config = imap_config()
+    log(f"Connecting to {config.host} as {config.user}...")
 
     try:
         raw = _run_imap_fetch(config, sources)

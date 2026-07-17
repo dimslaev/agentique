@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import re
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 
 from pipeline.sources.extract_content import extract_content
-from pipeline.sources.utils import clean_title, fetch_with_timeout, is_within_window
-from pipeline.utils import log
+from pipeline.sources.http import fetch_with_timeout
+from pipeline.types import FetchedArticle
+from pipeline.utils import clean_title, is_within_window, log
 
 HN_TOP = "https://hacker-news.firebaseio.com/v0/topstories.json"
 HN_ITEM = "https://hacker-news.firebaseio.com/v0/item"
@@ -28,7 +30,7 @@ def _fetch_item(item_id: int) -> dict | None:
         return None
 
 
-def fetch_hn() -> list[dict]:
+def fetch_hn() -> list[FetchedArticle]:
     log("Fetching Hacker News top stories...")
     try:
         resp = fetch_with_timeout(HN_TOP)
@@ -42,18 +44,14 @@ def fetch_hn() -> list[dict]:
     with ThreadPoolExecutor(max_workers=20) as executor:
         results = list(executor.map(_fetch_item, top_ids))
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     for item in results:
         if not item or item.get("type") != "story" or not item.get("title"):
             continue
         if not HN_AI_KEYWORDS.search(item["title"]):
             continue
         pub_date = (
-            __import__("datetime")
-            .datetime.fromtimestamp(
-                item["time"], tz=__import__("datetime").timezone.utc
-            )
-            .isoformat()
+            datetime.fromtimestamp(item["time"], tz=UTC).isoformat()
             if item.get("time")
             else None
         )
@@ -65,12 +63,8 @@ def fetch_hn() -> list[dict]:
                 "url": item.get("url")
                 or f"https://news.ycombinator.com/item?id={item['id']}",
                 "content": "",
-                "published_date": pub_date
-                or __import__("datetime")
-                .datetime.now(__import__("datetime").timezone.utc)
-                .isoformat(),
+                "published_date": pub_date or datetime.now(UTC).isoformat(),
                 "source": "Hacker News",
-                "source_type": "hackerNews",
             }
         )
 

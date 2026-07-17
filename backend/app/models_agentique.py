@@ -127,9 +127,9 @@ class Article(ArticleBase, table=True):
 
 
 # ─── Read API shapes ───────────────────────────────────────────────────────
-# Consumer-facing views. `publisher` is nested (replaces the old `source` /
-# `source_type` strings) and `tags` come from the article_tag join. Pipeline
-# provenance and bulk fields (content, embedding, links, trust) stay internal.
+# Consumer-facing views. `publisher` is nested (replaces the old `source` string)
+# and `tags` come from the article_tag join. Pipeline provenance and bulk fields
+# (content, embedding, links, trust) stay internal.
 
 
 class PublisherPublic(SQLModel):

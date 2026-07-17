@@ -2,46 +2,42 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
 
 import feedparser
-import httpx
 
-from pipeline.sources.extract_content import _extract_text
-from pipeline.sources.utils import (
+from pipeline.sources.extract_content import extract_text
+from pipeline.sources.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
-    clean_title,
-    is_within_window,
+    fetch_with_timeout,
 )
-from pipeline.utils import log
+from pipeline.types import FetchedArticle
+from pipeline.utils import clean_title, feed_url, is_within_window, log
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
+_proxy_status_logged = False
 
-if _PROXY_URL:
+
+def _log_proxy_status_once() -> None:
+    """Diagnostic, logged the first time a feed is actually fetched — not at
+    import, so importing this module (tests included) has no side effect."""
+    global _proxy_status_logged
+    if _proxy_status_logged:
+        return
+    _proxy_status_logged = True
+
+    if not _PROXY_URL:
+        log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
+        return
     try:
-        from urllib.parse import urlparse
-
-        _u = urlparse(_PROXY_URL)
+        u = urlparse(_PROXY_URL)
         log(
-            f"Substack proxy: {_u.scheme}://{_u.hostname}:{_u.port or '(default)'} (auth: {'yes' if _u.username else 'no'})"
+            f"Substack proxy: {u.scheme}://{u.hostname}:{u.port or '(default)'} "
+            f"(auth: {'yes' if u.username else 'no'})"
         )
     except Exception:
         log(f"Substack proxy: set but unparseable (len {len(_PROXY_URL)})")
-else:
-    log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
-
-
-def _feed_url(url: str) -> str:
-    """Normalise a publisher link to an actual feed URL.
-
-    A bare Substack link (``https://foo.substack.com``) serves the HTML site,
-    not the feed — feedparser finds no entries and the source silently yields
-    nothing. Substack always serves the feed at ``/feed``.
-    """
-    trimmed = url.rstrip("/")
-    if trimmed.endswith(".substack.com"):
-        return f"{trimmed}/feed"
-    return url
 
 
 def _entry_content(entry) -> str:
@@ -58,22 +54,19 @@ def _entry_content(entry) -> str:
         key=len,
         default="",
     )
-    return _extract_text(encoded or entry.get("summary") or "")
+    return extract_text(encoded or entry.get("summary") or "")
 
 
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     for attempt in range(retries + 1):
         use_proxy = attempt > 0 and bool(_PROXY_URL)
-        kwargs: dict = {
-            "headers": BROWSER_HEADERS,
-            "timeout": 15.0,
-            "follow_redirects": True,
-        }
-        if use_proxy:
-            kwargs["proxy"] = _PROXY_URL
         try:
-            with httpx.Client(**kwargs) as client:
-                resp = client.get(url)
+            resp = fetch_with_timeout(
+                url,
+                timeout=15.0,
+                proxy=_PROXY_URL if use_proxy else None,
+                headers=BROWSER_HEADERS,
+            )
         except Exception as e:
             raise RuntimeError(
                 f"fetch failed{'(via proxy)' if use_proxy else ''}: {e}"
@@ -89,12 +82,12 @@ def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     raise RuntimeError("Exhausted retries")
 
 
-def _fetch_source(source: dict) -> list[dict]:
+def _fetch_source(source: dict) -> list[FetchedArticle]:
     name = source["name"]
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
     try:
-        xml = _fetch_feed_xml(_feed_url(rss_url))
+        xml = _fetch_feed_xml(feed_url(rss_url))
         feed = feedparser.parse(xml)
         items = feed.get("entries", [])
         if not items:
@@ -112,7 +105,6 @@ def _fetch_source(source: dict) -> list[dict]:
                 "content": _entry_content(it),
                 "published_date": it.get("published") or it.get("updated") or "",
                 "source": name,
-                "source_type": "rss",
             }
             for it in within
         ]
@@ -121,20 +113,21 @@ def _fetch_source(source: dict) -> list[dict]:
         return []
 
 
-def fetch_feeds(sources: list[dict]) -> list[dict]:
+def fetch_feeds(sources: list[dict]) -> list[FetchedArticle]:
     """Fetch a list of RSS/substack feeds in parallel.
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
     from the DB (active publishers with rss/substack links) via
-    ``pipeline.publishers.feed_sources_from_db``. All items are stamped
-    ``source_type="rss"``; the caller resolves each ``source`` name to a
-    Publisher row.
+    ``pipeline.publishers.feed_sources_from_db``. The caller resolves each
+    ``source`` name to a Publisher row.
     """
     if not sources:
         log("Feeds: no active feed publishers")
         return []
 
-    articles: list[dict] = []
+    _log_proxy_status_once()
+
+    articles: list[FetchedArticle] = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(_fetch_source, src): src for src in sources}
         for future in as_completed(futures):

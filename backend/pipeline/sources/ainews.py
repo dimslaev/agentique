@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from html import unescape
 
-from pipeline.sources.utils import fetch_with_timeout, is_within_window
-from pipeline.utils import log
+from pipeline.sources.http import fetch_with_timeout
+from pipeline.types import FetchedArticle
+from pipeline.utils import hostname, is_within_window, log
 
 FEED_URL = "https://news.smol.ai/rss.xml"
 MAX_CONTENT_LENGTH = 1400
@@ -53,20 +54,11 @@ def _first_bold(html: str) -> str:
     return _strip_tags(m.group(1)) if m else ""
 
 
-def _host_of(url: str) -> str:
-    try:
-        from urllib.parse import urlparse
-
-        return urlparse(url).hostname.removeprefix("www.")
-    except Exception:
-        return ""
-
-
 def _collect_links(html: str) -> list[dict]:
     return [
         {
             "url": m.group(1),
-            "host": _host_of(m.group(1)),
+            "host": hostname(m.group(1)),
             "text": _strip_tags(m.group(2)),
         }
         for m in re.finditer(r'<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)</a>', html)
@@ -217,7 +209,7 @@ def _extract_reddit_recap(html: str) -> list[dict]:
 # --- fetch ---
 
 
-def fetch_ai_news() -> list[dict]:
+def fetch_ai_news() -> list[FetchedArticle]:
     log("Fetching AI News feed...")
     try:
         resp = fetch_with_timeout(FEED_URL)
@@ -231,7 +223,7 @@ def fetch_ai_news() -> list[dict]:
     items = [it for it in _parse_feed(xml) if is_within_window(it["pub_date"])]
     log(f"  AI News: {len(items)} issues within window")
 
-    articles: list[dict] = []
+    articles: list[FetchedArticle] = []
     for item in items:
         if re.match(r"^not much happened", item["title"], re.IGNORECASE):
             continue
@@ -242,7 +234,6 @@ def fetch_ai_news() -> list[dict]:
                     **twitter,
                     "published_date": item["pub_date"],
                     "source": "AI News",
-                    "source_type": "aiNews",
                 }
             )
         for reddit in _extract_reddit_recap(item["content_html"]):
@@ -251,11 +242,10 @@ def fetch_ai_news() -> list[dict]:
                     **reddit,
                     "published_date": item["pub_date"],
                     "source": "AI News",
-                    "source_type": "aiNews",
                 }
             )
 
-    by_url: dict[str, dict] = {}
+    by_url: dict[str, FetchedArticle] = {}
     for a in articles:
         if a["url"] not in by_url:
             by_url[a["url"]] = a
