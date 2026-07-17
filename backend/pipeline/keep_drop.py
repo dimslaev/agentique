@@ -26,11 +26,18 @@ from pipeline.config import keep_drop_threshold
 
 _MODEL_PATH = Path(__file__).parent / "keep_drop_model.npz"
 
-# Auto-drop cutoff for the pre-filter. Deliberately low (high recall): only the
-# most obvious junk is dropped without asking gpt-oss. The CV sweep put recall
-# ~0.99 at 0.3; 0.15 is well inside that safety margin. Set the env var to 0 to
-# disable the pre-filter entirely (nothing scores below 0).
-DROP_BELOW = keep_drop_threshold()
+
+def drop_below() -> float:
+    """Auto-drop cutoff for the pre-filter. Deliberately low (high recall):
+    only the most obvious junk is dropped without asking gpt-oss. The CV sweep
+    put recall ~0.99 at 0.3; 0.15 is well inside that safety margin. Set the env
+    var to 0 to disable the pre-filter entirely (nothing scores below 0).
+
+    Read fresh each call (not cached at import) so the env var can disable the
+    pre-filter without a process restart.
+    """
+    return keep_drop_threshold()
+
 
 _coef: np.ndarray | None = None
 _intercept: float = 0.0

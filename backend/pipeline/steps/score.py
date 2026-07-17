@@ -29,11 +29,12 @@ def prefilter_keep_drop(
     """Drop obvious junk before the LLM scorer.
 
     Runs the tiny distilled classifier on title+snippet. Anything it is very
-    confident is a drop (P(keep) < keep_drop.DROP_BELOW) is discarded without an
-    LLM call and recorded in ScoredUrl so it is not re-fetched. Everything else
-    passes through for real scoring.
+    confident is a drop (P(keep) < threshold) is discarded without an LLM call
+    and recorded in ScoredUrl so it is not re-fetched. Everything else passes
+    through for real scoring.
     """
-    if not articles or keep_drop.DROP_BELOW <= 0:
+    threshold = keep_drop.drop_below()
+    if not articles or threshold <= 0:
         return articles
 
     texts = [
@@ -44,7 +45,7 @@ def prefilter_keep_drop(
     survivors: list[FetchedArticle] = []
     dropped = 0
     for a, vec in zip(articles, vecs, strict=True):
-        if keep_drop.keep_proba(vec) < keep_drop.DROP_BELOW:
+        if keep_drop.keep_proba(vec) < threshold:
             session.merge(ScoredUrl(url=a["url"]))
             dropped += 1
         else:
@@ -54,7 +55,7 @@ def prefilter_keep_drop(
 
     log(
         f"  Pre-filter dropped {dropped}/{len(articles)} as obvious junk "
-        f"(P(keep) < {keep_drop.DROP_BELOW}); {len(survivors)} to scorer"
+        f"(P(keep) < {threshold}); {len(survivors)} to scorer"
     )
     return survivors
 
@@ -96,7 +97,8 @@ def score_articles(
         result = b.ScoreArticles([to_baml_input(a) for a in batch])
         score_by_url.update({r.url: r.score for r in result})
         log(f"    batch {i // SCORE_BATCH + 1}/{batches} done")
-        wait_ms(SCORE_BATCH_PAUSE_MS)
+        if i + SCORE_BATCH < len(articles):
+            wait_ms(SCORE_BATCH_PAUSE_MS)
 
     scored = apply_scores(articles, score_by_url)
     kept = [s for s in scored if s["score"] >= SCORE_THRESHOLD]

@@ -82,7 +82,8 @@ def improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
             log(f"  Title improve failed for batch {i // TITLE_BATCH + 1}: {e}")
             continue
         fix_by_url.update({f.url: f.title for f in fixes})
-        wait_ms(BATCH_PAUSE_MS)
+        if i + TITLE_BATCH < len(inserted):
+            wait_ms(BATCH_PAUSE_MS)
 
     changed = False
     for item in inserted:
@@ -272,7 +273,8 @@ def assign_tags(
         for a in assignments:
             slugs = validate_tags(list(a.tags), vocab.slugs)
             write_article_tags(session, a.articleId, slugs, vocab)
-        wait_ms(BATCH_PAUSE_MS)
+        if i + TAG_BATCH < len(items):
+            wait_ms(BATCH_PAUSE_MS)
 
     session.commit()
     log("  Done assigning tags")

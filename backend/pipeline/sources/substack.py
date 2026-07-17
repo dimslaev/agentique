@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
 
 import feedparser
 
@@ -15,19 +16,28 @@ from pipeline.types import FetchedArticle
 from pipeline.utils import clean_title, feed_url, is_within_window, log
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
+_proxy_status_logged = False
 
-if _PROXY_URL:
+
+def _log_proxy_status_once() -> None:
+    """Diagnostic, logged the first time a feed is actually fetched — not at
+    import, so importing this module (tests included) has no side effect."""
+    global _proxy_status_logged
+    if _proxy_status_logged:
+        return
+    _proxy_status_logged = True
+
+    if not _PROXY_URL:
+        log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
+        return
     try:
-        from urllib.parse import urlparse
-
-        _u = urlparse(_PROXY_URL)
+        u = urlparse(_PROXY_URL)
         log(
-            f"Substack proxy: {_u.scheme}://{_u.hostname}:{_u.port or '(default)'} (auth: {'yes' if _u.username else 'no'})"
+            f"Substack proxy: {u.scheme}://{u.hostname}:{u.port or '(default)'} "
+            f"(auth: {'yes' if u.username else 'no'})"
         )
     except Exception:
         log(f"Substack proxy: set but unparseable (len {len(_PROXY_URL)})")
-else:
-    log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
 
 
 def _entry_content(entry) -> str:
@@ -114,6 +124,8 @@ def fetch_feeds(sources: list[dict]) -> list[FetchedArticle]:
     if not sources:
         log("Feeds: no active feed publishers")
         return []
+
+    _log_proxy_status_once()
 
     articles: list[FetchedArticle] = []
     with ThreadPoolExecutor(max_workers=10) as executor:
