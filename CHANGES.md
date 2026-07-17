@@ -1,5 +1,7 @@
 # Changes on top of `fastapi/full-stack-fastapi-template`
 
+**Frozen 2026-07-17.** The fork is cut — upstream is no longer merged and this log is no longer updated. Kept as the historical record of divergences.
+
 ---
 
 ## 2026-07-16 — RSS full text from the feed; gate re-fetch on content length

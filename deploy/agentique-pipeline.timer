@@ -1,0 +1,12 @@
+# Install target: /etc/systemd/system/agentique-pipeline.timer
+# Replaces the supercronic crontab (was: 0 4 * * *).
+[Unit]
+Description=Daily agentique pipeline run
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+# Run on boot if the 04:00 slot was missed (box was down).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

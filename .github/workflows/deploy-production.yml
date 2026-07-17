@@ -11,47 +11,27 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+          bun-version: 1.3.12
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build frontend
+        run: bun run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.${{ secrets.DOMAIN_PRODUCTION }}
+      - name: Upload dist
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          context: .
-          file: backend/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_IMAGE_BACKEND }}:latest
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-
-      - name: Build and push frontend
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
-        with:
-          context: .
-          file: frontend/Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_IMAGE_FRONTEND }}:latest
-          build-args: |
-            VITE_API_URL=https://api.${{ secrets.DOMAIN_PRODUCTION }}
-            NODE_ENV=production
-          cache-from: type=gha,scope=frontend
-          cache-to: type=gha,mode=max,scope=frontend
+          name: frontend-dist
+          path: frontend/dist
 
   deploy:
     needs: build
@@ -59,47 +39,44 @@ jobs:
       - self-hosted
       - production
     environment: production
-    if: github.repository_owner != 'fastapi'
-    env:
-      ENVIRONMENT: production
-      PROJECT_NAME: Agentique
-      DOMAIN: ${{ secrets.DOMAIN_PRODUCTION }}
-      STACK_NAME: ${{ secrets.STACK_NAME_PRODUCTION }}
-      SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      FIRST_SUPERUSER: ${{ secrets.FIRST_SUPERUSER }}
-      FIRST_SUPERUSER_PASSWORD: ${{ secrets.FIRST_SUPERUSER_PASSWORD }}
-      SMTP_HOST: ${{ secrets.SMTP_HOST }}
-      SMTP_USER: ${{ secrets.SMTP_USER }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      EMAILS_FROM_EMAIL: ${{ secrets.EMAILS_FROM_EMAIL }}
-      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
-      RESEND_AUDIENCE_ID: ${{ secrets.RESEND_AUDIENCE_ID }}
-      # Optional: where pipeline health alerts go. Falls back to EMAILS_FROM_EMAIL if unset.
-      PIPELINE_ALERT_EMAIL: ${{ secrets.PIPELINE_ALERT_EMAIL }}
-      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
-      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
-      POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
-      POSTGRES_SERVER: ${{ secrets.POSTGRES_SERVER }}
-      DOCKER_IMAGE_BACKEND: ${{ secrets.DOCKER_IMAGE_BACKEND }}
-      DOCKER_IMAGE_FRONTEND: ${{ secrets.DOCKER_IMAGE_FRONTEND }}
-      FRONTEND_HOST: ${{ secrets.FRONTEND_HOST }}
-      BACKEND_CORS_ORIGINS: ${{ secrets.BACKEND_CORS_ORIGINS }}
-      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-      BAML_LOG: ${{ secrets.BAML_LOG }}
-      NVIDIA_NIM_API_KEY: ${{ secrets.NVIDIA_NIM_API_KEY }}
-      RESIDENTIAL_PROXY_URL: ${{ secrets.RESIDENTIAL_PROXY_URL }}
-      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-      IMAP_HOST: ${{ secrets.IMAP_HOST }}
-      IMAP_PORT: ${{ secrets.IMAP_PORT }}
-      IMAP_USER: ${{ secrets.IMAP_USER }}
-      IMAP_PASSWORD: ${{ secrets.IMAP_PASSWORD }}
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - run: touch .env
-      - run: docker network create traefik-public 2>/dev/null || true
-      - run: docker compose -f compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} pull
-      - run: docker compose -f compose.yml --project-name ${{ secrets.STACK_NAME_PRODUCTION }} up -d
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.18"
+      - name: Download dist
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: frontend-dist
+          path: frontend-dist
+      # The workspace is a staging area only — actions/checkout resets it every
+      # run, so the services live in /opt/agentique. .env and .venv belong to
+      # the box; frontend/dist is replaced separately below.
+      - name: Sync source to /opt/agentique
+        run: >
+          rsync -a --delete
+          --exclude '.git'
+          --exclude '.env'
+          --exclude '.venv'
+          --exclude 'frontend/dist'
+          --exclude 'frontend-dist'
+          ./ /opt/agentique/
+      - name: Sync frontend dist
+        run: rsync -a --delete frontend-dist/ /opt/agentique/frontend/dist/
+      # --package app: the workspace root is virtual, a bare sync would not
+      # install the backend (same flag the old Dockerfile used).
+      - name: Sync venv
+        run: uv sync --frozen --package app
+        working-directory: /opt/agentique
+      # --env-file is load-bearing: prestart.sh's seed guard checks the shell
+      # ENVIRONMENT, and a bare deploy shell doesn't have it.
+      - name: Run migrations + prestart
+        run: uv run --env-file ../.env bash scripts/prestart.sh
+        working-directory: /opt/agentique/backend
+      - name: Restart backend
+        run: sudo systemctl restart agentique-backend

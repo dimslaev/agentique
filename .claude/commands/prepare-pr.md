@@ -2,17 +2,13 @@ Prepare, commit, and open a pull request for the current branch. Do the followin
 
 1. Run `git status`, `git diff --cached`, `git log main..HEAD --oneline`, and `git diff main..HEAD` to understand what is staged and what the full branch diff looks like.
 
-2. Read `CHANGES.md` to understand the current upstream divergence state.
-
-3. Craft a conventional commit message for the staged changes:
+2. Craft a conventional commit message for the staged changes:
    - Format: `<type>(<scope>): <short description>` (under 72 chars)
    - Types: feat, fix, chore, refactor, docs, style, test
    - Focus on WHY and WHAT changed logically, not which files were touched
 
-4. Commit the staged changes with that message.
+3. Commit the staged changes with that message.
 
-5. Write the PR description — short, human-readable prose (2–4 sentences max). Explain what the change does and why, as if telling a teammate. No bullet lists of files. Capture intent and logic, not implementation details.
+4. Write the PR description — short, human-readable prose (2–4 sentences max). Explain what the change does and why, as if telling a teammate. No bullet lists of files. Capture intent and logic, not implementation details.
 
-6. Update `CHANGES.md` if any newly touched upstream files are not yet logged. Follow the existing table format.
-
-7. Push the branch and create the PR using `gh pr create` with the prose description.
+5. Push the branch and create the PR using `gh pr create` with the prose description.

@@ -1,0 +1,29 @@
+# Caddy config for the agentique VPS. Install target: /etc/caddy/Caddyfile
+# Caddy handles TLS (Let's Encrypt) automatically for every site block.
+
+agentique.ch {
+	root * /opt/agentique/frontend/dist
+	encode zstd gzip
+
+	# Prerendered blog pages: unknown slugs must get a real 404, not the SPA
+	# shell (a 200 "soft 404" that search engines treat as thin content).
+	@blog path /blog /blog/*
+	handle @blog {
+		try_files {path} {path}/
+		file_server
+	}
+
+	# SPA fallback for everything else.
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+www.agentique.ch {
+	redir https://agentique.ch{uri} permanent
+}
+
+api.agentique.ch {
+	reverse_proxy 127.0.0.1:8000
+}
