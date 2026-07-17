@@ -14,7 +14,7 @@ from typing import Any
 from sqlmodel import Session, select
 
 from app.models_agentique import ArticleTag, Tag
-from pipeline.utils import log
+from pipeline.utils import enum_value, log
 
 MAX_TAGS_PER_ARTICLE = 3
 
@@ -56,8 +56,7 @@ def normalize_tag(raw: Any, valid: frozenset[str]) -> str | None:
     """
     if raw is None:
         return None
-    value = getattr(raw, "value", raw)  # tolerate an enum-ish value
-    slug = str(value).strip().lower().replace("_", "-")
+    slug = enum_value(raw).strip().lower().replace("_", "-")
     return slug if slug in valid else None
 
 

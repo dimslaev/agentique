@@ -13,15 +13,14 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from html import unescape
-from urllib.parse import urlparse
 
 from imap_tools import AND, MailBox, MailMessageFlags
 
 from baml_client.sync_client import b
 from baml_client.types import NewsletterProduct, SearchCandidate
-from pipeline.sources.utils import tavily_search
+from pipeline.sources.http import tavily_search
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
+from pipeline.utils import hostname, log
 
 IMAP_PORT_DEFAULT = 993
 IMAP_FOLDER = "sub"
@@ -102,10 +101,7 @@ def _extract_products(html: str, newsletter_name: str, email_date: str) -> list[
 
 
 def _is_denied(url: str) -> bool:
-    try:
-        host = (urlparse(url).hostname or "").removeprefix("www.").lower()
-    except Exception:
-        return True
+    host = hostname(url)
     if not host:
         return True
     return any(host == d or host.endswith(f".{d}") for d in DENY_DOMAINS)

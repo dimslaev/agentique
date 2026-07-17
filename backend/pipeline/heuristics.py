@@ -1,8 +1,13 @@
+"""Deterministic rules the pipeline applies before (or instead of) asking an LLM,
+plus the thresholds the steps are tuned around.
+"""
+
 from __future__ import annotations
 
 import re
 
 from app.models_agentique import ArticleKind
+from pipeline.utils import hostname
 
 SCORE_THRESHOLD = 76
 PROMPT_CONTENT_CAP = 1500
@@ -46,19 +51,13 @@ def github_repo_from_content(content: str) -> str | None:
 
 def kind_from_url(url: str) -> ArticleKind | None:
     """Deterministic ArticleKind from a URL host, or None if inconclusive."""
-    try:
-        from urllib.parse import urlparse
-
-        host = urlparse(url).hostname or ""
-        host = host.removeprefix("www.")
-        if host in ("github.com", "gitlab.com"):
-            return ArticleKind.repo
-        if host in ("huggingface.co", "hf.co"):
-            return ArticleKind.model
-        if host in ("arxiv.org", "ar5iv.labs.arxiv.org"):
-            return ArticleKind.paper
-    except Exception:
-        pass
+    host = hostname(url)
+    if host in ("github.com", "gitlab.com"):
+        return ArticleKind.repo
+    if host in ("huggingface.co", "hf.co"):
+        return ArticleKind.model
+    if host in ("arxiv.org", "ar5iv.labs.arxiv.org"):
+        return ArticleKind.paper
     return None
 
 

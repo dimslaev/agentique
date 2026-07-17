@@ -1,3 +1,5 @@
+"""Fetch a URL and extract its readable text (trafilatura), with a proxy retry."""
+
 from __future__ import annotations
 
 import re
@@ -5,13 +7,13 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import trafilatura
 
-from pipeline.sources.utils import (
+from pipeline.sources.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
+from pipeline.utils import hostname, log
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
 SNIPPET_MAX_LENGTH = 500
@@ -39,13 +41,10 @@ BLOCKER_PATTERNS: list[re.Pattern] = [
 
 
 def _should_skip(url: str) -> bool:
-    try:
-        from urllib.parse import urlparse
-
-        host = urlparse(url).hostname or ""
-        return any(host == d or host.endswith(f".{d}") for d in SKIP_DOMAINS)
-    except Exception:
+    host = hostname(url)
+    if not host:
         return True
+    return any(host == d or host.endswith(f".{d}") for d in SKIP_DOMAINS)
 
 
 def _is_blocker(text: str) -> bool:
@@ -72,7 +71,12 @@ def _fetch_html(url: str, proxy: str | None = None) -> str:
         return ""
 
 
-def _extract_text(html: str, max_length: int | None = None) -> str:
+def extract_text(html: str, max_length: int | None = None) -> str:
+    """Readable text from an HTML string, or "" if it is a blocker/teaser.
+
+    Also used on feed-embedded HTML (``content:encoded``), so the text from a
+    feed and the text from a network fetch stay comparable.
+    """
     if not html:
         return ""
     text = trafilatura.extract(html, include_comments=False, include_tables=False) or ""
@@ -93,27 +97,48 @@ def _fetch_and_extract(url: str, max_length: int | None = None) -> str:
     if _should_skip(url):
         return ""
 
-    text = _extract_text(_fetch_html(url), max_length)
+    text = extract_text(_fetch_html(url), max_length)
     if text or not RESIDENTIAL_PROXY_URL:
         return text
 
-    text = _extract_text(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), max_length)
+    text = extract_text(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), max_length)
     if text:
         log(f"    Proxy recovered: {url}")
     return text
 
 
-def _extract_one_snippet(url: str) -> tuple[str, str]:
-    return url, _fetch_and_extract(url, SNIPPET_MAX_LENGTH)
+def _fetch_texts(
+    urls: list[str], max_length: int | None = None, verbose: bool = False
+) -> dict[str, str]:
+    """Fetch and extract many URLs in parallel -> {url: text}, skipping failures.
 
+    Shared core of ``extract_content`` (short snippets, quiet) and
+    ``fetch_full_content`` (full text, logs per-URL progress because it is the
+    slow step).
+    """
+    total = len(urls)
 
-def _extract_one_full(url: str, idx: int, total: int) -> tuple[str, str]:
-    log(f"    [{idx + 1}/{total}] Fetching: {url}")
-    text = _fetch_and_extract(url)
-    log(
-        f"    [{idx + 1}/{total}] {'OK (' + str(len(text)) + ' chars)' if text else 'no content'}: {url}"
-    )
-    return url, text
+    def one(idx_url: tuple[int, str]) -> tuple[str, str]:
+        idx, url = idx_url
+        if verbose:
+            log(f"    [{idx + 1}/{total}] Fetching: {url}")
+        text = _fetch_and_extract(url, max_length)
+        if verbose:
+            size = f"OK ({len(text)} chars)" if text else "no content"
+            log(f"    [{idx + 1}/{total}] {size}: {url}")
+        return url, text
+
+    texts: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
+        futures = [executor.submit(one, pair) for pair in enumerate(urls)]
+        for future in as_completed(futures):
+            try:
+                url, text = future.result()
+                if text:
+                    texts[url] = text
+            except Exception:
+                pass
+    return texts
 
 
 def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
@@ -125,19 +150,7 @@ def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
     unique_urls = list(dict.fromkeys(a["url"] for a in needs))
     log(f"  Extracting content for {len(unique_urls)} URLs...")
 
-    snippet_map: dict[str, str] = {}
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
-        futures = {
-            executor.submit(_extract_one_snippet, url): url for url in unique_urls
-        }
-        for future in as_completed(futures):
-            try:
-                url, text = future.result()
-                if text:
-                    snippet_map[url] = text
-            except Exception:
-                pass
-
+    snippet_map = _fetch_texts(unique_urls, max_length=SNIPPET_MAX_LENGTH)
     log(f"  Extracted {len(snippet_map)}/{len(unique_urls)} snippets")
 
     result: list[FetchedArticle] = []
@@ -149,29 +162,14 @@ def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
     return result
 
 
-def re_extract_full_content(articles: list[dict]) -> dict[str, str]:
-    """Re-fetch full article text for already-inserted articles. Returns url->text map."""
-    if not articles:
+def fetch_full_content(urls: list[str]) -> dict[str, str]:
+    """Fetch full article text for already-inserted articles -> {url: text}."""
+    if not urls:
         return {}
 
-    unique_urls = list(dict.fromkeys(a["url"] for a in articles))
+    unique_urls = list(dict.fromkeys(urls))
     log(f"  Re-extracting full content for {len(unique_urls)} URLs...")
 
-    content_map: dict[str, str] = {}
-    total = len(unique_urls)
-
-    with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
-        futures = {
-            executor.submit(_extract_one_full, url, idx, total): url
-            for idx, url in enumerate(unique_urls)
-        }
-        for future in as_completed(futures):
-            try:
-                url, text = future.result()
-                if text:
-                    content_map[url] = text
-            except Exception:
-                pass
-
+    content_map = _fetch_texts(unique_urls, verbose=True)
     log(f"  Re-extracted {len(content_map)}/{len(unique_urls)} full texts")
     return content_map

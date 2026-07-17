@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from html import unescape
 
-from pipeline.sources.utils import fetch_with_timeout, is_within_window
+from pipeline.sources.http import fetch_with_timeout
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
+from pipeline.utils import hostname, is_within_window, log
 
 FEED_URL = "https://news.smol.ai/rss.xml"
 MAX_CONTENT_LENGTH = 1400
@@ -54,20 +54,11 @@ def _first_bold(html: str) -> str:
     return _strip_tags(m.group(1)) if m else ""
 
 
-def _host_of(url: str) -> str:
-    try:
-        from urllib.parse import urlparse
-
-        return urlparse(url).hostname.removeprefix("www.")
-    except Exception:
-        return ""
-
-
 def _collect_links(html: str) -> list[dict]:
     return [
         {
             "url": m.group(1),
-            "host": _host_of(m.group(1)),
+            "host": hostname(m.group(1)),
             "text": _strip_tags(m.group(2)),
         }
         for m in re.finditer(r'<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)</a>', html)

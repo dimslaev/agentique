@@ -5,16 +5,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import feedparser
 
-from pipeline.sources.extract_content import _extract_text
-from pipeline.sources.utils import (
+from pipeline.sources.extract_content import extract_text
+from pipeline.sources.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
-    clean_title,
     fetch_with_timeout,
-    is_within_window,
 )
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
+from pipeline.utils import clean_title, feed_url, is_within_window, log
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
 
@@ -32,19 +30,6 @@ else:
     log("Substack proxy: none (RESIDENTIAL_PROXY_URL unset)")
 
 
-def _feed_url(url: str) -> str:
-    """Normalise a publisher link to an actual feed URL.
-
-    A bare Substack link (``https://foo.substack.com``) serves the HTML site,
-    not the feed — feedparser finds no entries and the source silently yields
-    nothing. Substack always serves the feed at ``/feed``.
-    """
-    trimmed = url.rstrip("/")
-    if trimmed.endswith(".substack.com"):
-        return f"{trimmed}/feed"
-    return url
-
-
 def _entry_content(entry) -> str:
     """Plain text for a feed entry, preferring ``content:encoded`` over the
     ``summary`` teaser.
@@ -59,7 +44,7 @@ def _entry_content(entry) -> str:
         key=len,
         default="",
     )
-    return _extract_text(encoded or entry.get("summary") or "")
+    return extract_text(encoded or entry.get("summary") or "")
 
 
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
@@ -92,7 +77,7 @@ def _fetch_source(source: dict) -> list[FetchedArticle]:
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
     try:
-        xml = _fetch_feed_xml(_feed_url(rss_url))
+        xml = _fetch_feed_xml(feed_url(rss_url))
         feed = feedparser.parse(xml)
         items = feed.get("entries", [])
         if not items:

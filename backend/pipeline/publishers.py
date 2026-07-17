@@ -27,7 +27,7 @@ from app.models_agentique import (
     TrustLevel,
     slugify,
 )
-from pipeline.utils import log
+from pipeline.utils import enum_value, feed_url, log
 
 # ─── per-run publisher resolution ───────────────────────────────────────────
 
@@ -86,19 +86,20 @@ class PublisherResolver:
 _FEED_PLATFORMS = (LinkPlatform.rss.value, LinkPlatform.substack.value)
 
 
-def _feed_url(platform: str, url: str) -> str:
-    """Turn a stored link into the actual feed endpoint to poll.
+def _active_publisher_links(session: Session) -> list[tuple[Publisher, dict[str, str]]]:
+    """Every active publisher paired with its links keyed by platform string.
 
-    ``substack`` links are stored as the base site URL (e.g.
-    ``https://foo.substack.com``, sometimes a custom domain behind it) — the
-    feed itself lives at ``/feed``. ``rss`` links are stored as the direct
-    feed URL already.
+    Link keys may be LinkPlatform enums or plain strings depending on the JSON
+    round-trip, so they are normalised to strings once here rather than at each
+    call site.
     """
-    if platform == LinkPlatform.substack.value and not url.rstrip("/").endswith(
-        "/feed"
-    ):
-        return url.rstrip("/") + "/feed"
-    return url
+    publishers = session.exec(
+        select(Publisher).where(Publisher.is_active == True)  # noqa: E712
+    ).all()
+    return [
+        (pub, {enum_value(k): v for k, v in (pub.links or {}).items()})
+        for pub in publishers
+    ]
 
 
 def feed_sources_from_db(session: Session) -> list[dict]:
@@ -108,23 +109,20 @@ def feed_sources_from_db(session: Session) -> list[dict]:
     (``name`` / ``rssUrl``) so the substack fetcher needs no interface change.
     Prefers an explicit ``rss`` link, else falls back to ``substack``.
     """
-    publishers = session.exec(
-        select(Publisher).where(Publisher.is_active == True)  # noqa: E712
-    ).all()
-
     sources: list[dict] = []
-    for pub in publishers:
-        links = pub.links or {}
-        # links keys may be LinkPlatform enums or plain strings depending on the
-        # JSON round-trip — normalise to string lookup.
-        by_str = {str(getattr(k, "value", k)): v for k, v in links.items()}
-        rss_url = None
+    for pub, links in _active_publisher_links(session):
         for platform in _FEED_PLATFORMS:
-            if by_str.get(platform):
-                rss_url = _feed_url(platform, by_str[platform])
+            url = links.get(platform)
+            if url:
+                sources.append(
+                    {
+                        "name": pub.name,
+                        "rssUrl": feed_url(
+                            url, is_substack=platform == LinkPlatform.substack.value
+                        ),
+                    }
+                )
                 break
-        if rss_url:
-            sources.append({"name": pub.name, "rssUrl": rss_url})
 
     log(f"  {len(sources)} active feed publishers loaded from DB")
     return sources
@@ -140,17 +138,10 @@ def newsletter_senders_from_db(session: Session) -> list[tuple[str, str]]:
     ``feed_sources_from_db`` for those that do). The sender pattern is either
     ``@domain`` (suffix match on the From address) or an exact address.
     """
-    publishers = session.exec(
-        select(Publisher).where(Publisher.is_active == True)  # noqa: E712
-    ).all()
-
-    senders: list[tuple[str, str]] = []
-    for pub in publishers:
-        links = pub.links or {}
-        by_str = {str(getattr(k, "value", k)): v for k, v in links.items()}
-        pattern = by_str.get(LinkPlatform.email.value)
-        if pattern:
-            senders.append((pattern, pub.name))
-
+    senders = [
+        (pattern, pub.name)
+        for pub, links in _active_publisher_links(session)
+        if (pattern := links.get(LinkPlatform.email.value))
+    ]
     log(f"  {len(senders)} active newsletter senders loaded from DB")
     return senders
