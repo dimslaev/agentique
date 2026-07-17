@@ -11,11 +11,15 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
 
 import dns.resolver
+import numpy as np
 from sqlmodel import Session, select
 
 from app.models import Article, Publisher, ScoredUrl
 from baml_client.sync_client import b
 from baml_client.types import ExistingArticle
+from pipeline import keep_drop
+from pipeline.config import dedup_dist_threshold, dedup_topk
+from pipeline.embedding import embed_batch
 from pipeline.steps import to_baml_input
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -91,6 +95,64 @@ def filter_dead_domains(
     return alive
 
 
+def _cosine_dist_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    a_norm = a / np.linalg.norm(a, axis=1, keepdims=True)
+    b_norm = b / np.linalg.norm(b, axis=1, keepdims=True)
+    return 1 - (a_norm @ b_norm.T)
+
+
+def _select_candidate_indices(
+    new_vecs: np.ndarray, recent_vecs: np.ndarray, threshold: float, topk: int
+) -> set[int]:
+    """For each new-article vector, the recent-vector indices within
+    ``threshold`` cosine distance, capped to the ``topk`` closest. Pure numpy:
+    the pinned core of the shortlist, kept separate from embedding I/O so it
+    can be tested with synthetic vectors."""
+    dist = _cosine_dist_matrix(new_vecs, recent_vecs)
+
+    candidate_idx: set[int] = set()
+    for row in dist:
+        within = np.where(row <= threshold)[0]
+        if within.size == 0:
+            continue
+        if within.size > topk:
+            within = within[np.argsort(row[within])[:topk]]
+        candidate_idx.update(within.tolist())
+    return candidate_idx
+
+
+def _shortlist_candidates(
+    articles: list[FetchedArticle],
+    recent_rows: list[tuple[str, str, str | None, list[float] | None]],
+) -> list[ExistingArticle]:
+    """Cosine-distance shortlist of recent articles worth sending to the LLM
+    dedup check, so the prompt scales with likely dupes instead of the whole
+    window. Recent rows without a stored embedding cannot be shortlisted and
+    are skipped (the 14-day window is expected to be fully embedded)."""
+    embedded = [r for r in recent_rows if r[3]]
+    if not embedded:
+        return []
+
+    new_texts = [
+        keep_drop.to_embedding_text(a["title"], a.get("content")) for a in articles
+    ]
+    new_vecs = np.array(embed_batch(new_texts), dtype=np.float32)
+    recent_vecs = np.array([r[3] for r in embedded], dtype=np.float32)
+
+    candidate_idx = _select_candidate_indices(
+        new_vecs, recent_vecs, dedup_dist_threshold(), dedup_topk()
+    )
+
+    return [
+        ExistingArticle(
+            url=str(embedded[i][0]),
+            title=embedded[i][1],
+            source=embedded[i][2] or "",
+        )
+        for i in sorted(candidate_idx)
+    ]
+
+
 def dedup_semantic(
     session: Session, articles: list[FetchedArticle], label: str
 ) -> list[FetchedArticle]:
@@ -98,11 +160,8 @@ def dedup_semantic(
         return articles
 
     cutoff = datetime.now(UTC) - timedelta(days=DEDUP_WINDOW_DAYS)
-    # Dedup only needs url/title/publisher-name — not content (KBs each) or the
-    # embedding. Select just those columns and join the publisher name in one
-    # query, rather than loading whole Article rows plus a second lookup.
     recent_rows = session.exec(
-        select(Article.url, Article.title, Publisher.name)
+        select(Article.url, Article.title, Publisher.name, Article.embedding)
         .join(Publisher, Publisher.id == Article.publisher_id, isouter=True)
         .where(Article.published_at >= cutoff)
     ).all()
@@ -110,13 +169,20 @@ def dedup_semantic(
     if not recent_rows:
         return articles
 
-    log(f"  Deduplicating against {len(recent_rows)} recent DB articles...")
+    existing_inputs = _shortlist_candidates(articles, recent_rows)
+    if not existing_inputs:
+        log(
+            f"  No dedup shortlist matches among {len(recent_rows)} recent DB "
+            f"articles; skipping LLM check, all {len(articles)} unique"
+        )
+        return articles
+
+    log(
+        f"  Shortlisted {len(existing_inputs)}/{len(recent_rows)} recent DB "
+        f"articles for dedup LLM check"
+    )
 
     new_inputs = [to_baml_input(a) for a in articles]
-    existing_inputs = [
-        ExistingArticle(url=str(url), title=title, source=name or "")
-        for url, title, name in recent_rows
-    ]
 
     try:
         matches = b.SemanticDedup(new_inputs, existing_inputs)

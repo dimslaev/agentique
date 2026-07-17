@@ -53,13 +53,19 @@ def run_pipeline(stats: RunStats) -> None:
                 alive = filter_dead_domains(fresh, source.label)
                 s.filtered_dead = len(fresh) - len(alive)
 
-                unique = dedup_semantic(session, alive, source.label)
-                s.deduped = len(alive) - len(unique)
+                # Pre-filter obvious junk before the dedup LLM call: cuts the
+                # new-article side dedup has to check, and junk-that-is-a-dup
+                # gets recorded in ScoredUrl instead of silently dropped by
+                # dedup.
+                candidates = prefilter_keep_drop(session, alive)
+                prefiltered = len(alive) - len(candidates)
 
-                candidates = prefilter_keep_drop(session, unique)
-                scored = score_articles(session, candidates)
+                unique = dedup_semantic(session, candidates, source.label)
+                s.deduped = len(candidates) - len(unique)
+
+                scored = score_articles(session, unique)
                 # below_threshold = pre-filter drops + LLM sub-threshold
-                s.below_threshold = len(unique) - len(scored)
+                s.below_threshold = prefiltered + (len(unique) - len(scored))
 
                 inserted = insert_articles(session, scored)
                 s.inserted = len(inserted)
