@@ -14,4 +14,10 @@ WorkingDirectory=/opt/agentique/backend
 # pipeline/run.py and pipeline/health.py read raw os.environ and load no
 # dotenv — EnvironmentFile is what feeds them.
 EnvironmentFile=/opt/agentique/.env
+# agentique is a system user (adduser --system) with home=/nonexistent.
+# dedup_semantic embeds via model2vec, which lazy-downloads through
+# huggingface_hub and expands ~ for its cache dir — fails with EACCES against
+# /nonexistent. /var/lib/agentique is real and writable (vps-setup.sh) and
+# lives outside /opt/agentique so the deploy rsync's --delete never touches it.
+Environment=HOME=/var/lib/agentique
 ExecStart=/opt/agentique/.venv/bin/python -m pipeline.run

@@ -129,7 +129,9 @@ def _shortlist_candidates(
     dedup check, so the prompt scales with likely dupes instead of the whole
     window. Recent rows without a stored embedding cannot be shortlisted and
     are skipped (the 14-day window is expected to be fully embedded)."""
-    embedded = [r for r in recent_rows if r[3]]
+    # r[3] is Article.embedding — pgvector returns a numpy array on read, and
+    # bool(array) raises for length > 1, so this must be an is-not-None check.
+    embedded = [r for r in recent_rows if r[3] is not None]
     if not embedded:
         return []
 

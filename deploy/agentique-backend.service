@@ -12,6 +12,12 @@ WorkingDirectory=/opt/agentique/backend
 # pydantic-settings also reads ../.env, but EnvironmentFile puts ENVIRONMENT
 # etc. in the process env so shell-level guards (prestart.sh) see them too.
 EnvironmentFile=/opt/agentique/.env
+# agentique is a system user (adduser --system) with home=/nonexistent. The
+# search endpoint lazy-loads a model2vec model via huggingface_hub, which
+# expands ~ for its cache dir and fails with EACCES against /nonexistent.
+# /var/lib/agentique is real and writable (created by vps-setup.sh) — outside
+# /opt/agentique so the deploy rsync's --delete never touches it.
+Environment=HOME=/var/lib/agentique
 ExecStart=/opt/agentique/.venv/bin/fastapi run --workers 4 --host 127.0.0.1 --port 8000 app/main.py
 Restart=always
 RestartSec=5
