@@ -19,10 +19,20 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  portalContainer,
   ...props
-}: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+}: React.ComponentProps<typeof PopoverPrimitive.Content> & {
+  /**
+   * Defaults to `document.body`, which sits as a Dialog/Sheet-sibling portal
+   * rather than a descendant — inside a modal Sheet (e.g. the mobile
+   * sidebar) that makes the Dialog's own layer intercept pointer events
+   * meant for the popover (see radix-ui/primitives#2121, #2348, #3079).
+   * Pass a node inside the Sheet to keep the popover a true descendant.
+   */
+  portalContainer?: HTMLElement | null
+}) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal container={portalContainer ?? undefined}>
       <PopoverPrimitive.Content
         data-slot="popover-content"
         align={align}

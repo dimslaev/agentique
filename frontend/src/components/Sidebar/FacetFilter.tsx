@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Check, ChevronsUpDown } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import {
   Command,
   CommandEmpty,
@@ -41,6 +41,11 @@ export function FacetFilter({
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const debouncedQuery = useDebouncedValue(query, 250)
+  // portal the popover into this element (rather than the default
+  // document.body) so it stays a DOM descendant when rendered inside the
+  // mobile sidebar's Sheet — a sibling portal there lets the Sheet's own
+  // dialog layer intercept taps meant for the popover
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const { data: results, isFetching } = useQuery({
     queryKey: ["facet-search", label, debouncedQuery],
@@ -57,7 +62,7 @@ export function FacetFilter({
   }, [topItems, value, selectedName])
 
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5" ref={containerRef}>
       <FilterSectionLabel>{label}</FilterSectionLabel>
       <FilterOptionButton
         label="All"
@@ -83,7 +88,11 @@ export function FacetFilter({
             More…
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-56 p-0">
+        <PopoverContent
+          align="start"
+          className="w-56 p-0"
+          portalContainer={containerRef.current}
+        >
           <Command shouldFilter={false}>
             <CommandInput
               placeholder={`Search ${label.toLowerCase()}…`}
