@@ -1,51 +1,43 @@
 # deploy/
 
-Versioned copies of everything the VPS runs outside Docker. Docker only runs the db (`compose.yml` at the repo root).
+Docker runs only the db (`compose.yml` at repo root). Everything else here.
 
-Files and their install targets:
-
-- `Caddyfile` → `/etc/caddy/Caddyfile` (TLS, static frontend, reverse proxy to the API)
+Install targets:
+- `Caddyfile` → `/etc/caddy/Caddyfile`
 - `agentique-backend.service` → `/etc/systemd/system/` (FastAPI, 4 workers, 127.0.0.1:8000)
-- `agentique-pipeline.service` + `agentique-pipeline.timer` → `/etc/systemd/system/` (daily 04:00)
-- `agentique-backup.service` + `agentique-backup.timer` → `/etc/systemd/system/` (daily 03:30, db dump to kDrive — needs `KDRIVE_API_TOKEN` + `KDRIVE_DRIVE_ID` in `.env`)
+- `agentique-pipeline.service` + `.timer` → `/etc/systemd/system/` (daily 04:00)
+- `agentique-backup.service` + `.timer` → `/etc/systemd/system/` (daily 03:30, db dump to kDrive — needs `KDRIVE_API_TOKEN` + `KDRIVE_DRIVE_ID` in `.env`)
 
-## Layout on the box
+## Layout
 
-- `/opt/agentique` — code + `.venv` + `frontend/dist`, rsynced by the deploy workflow. Never run services out of the runner workspace (checkout resets it every run).
-- `/opt/agentique/.env` — hand-written, never touched by CI. Back it up to the password manager. Must set `POSTGRES_SERVER=localhost` (the db is on `127.0.0.1:5432` now, not a Docker network). `chown ubuntu:agentique`, `chmod 640` — see below for why.
+- `/opt/agentique` — code + `.venv` + `frontend/dist`, rsynced by CI. Never run services out of the runner workspace (checkout resets it every run).
+- `/opt/agentique/.env` — hand-written, never touched by CI. `chown ubuntu:agentique`, `chmod 640`. Restore those perms after any edit — see CLAUDE.md.
+- `/var/lib/agentique` — `agentique`'s `HOME` (model2vec/huggingface cache; the user is a system account with no real home dir). `chown agentique:agentique`, `750`. Same restore-perms-after-touching gotcha as `.env`.
 
-## Users and permissions
+## Users
 
-- `agentique` — dedicated user, runs both services.
-- `ubuntu` — the actual self-hosted runner user on this box (the runner was registered under this account before this plan was written; there's no separate `github` user, and creating one would mean re-registering the runner for no real benefit). Owns `/opt/agentique` contents so rsync + `uv sync` work without sudo; `agentique` needs read+execute (world-readable checkout defaults are fine).
-- `.env` is `ubuntu:agentique`, `640` — not `agentique:agentique 600`. The deploy job's prestart step (`uv run --env-file ../.env ...`) runs as `ubuntu`, so `ubuntu` needs read access too; `600` owned solely by `agentique` locks CI out of its own env file.
-- Sudoers rule for the runner (`/etc/sudoers.d/agentique-deploy`):
+- `agentique` — runs both services, `HOME=/var/lib/agentique`.
+- `ubuntu` — self-hosted runner user, owns `/opt/agentique`. `.env` is `ubuntu:agentique 640`, not `agentique:agentique 600` — CI's prestart step runs as `ubuntu` and needs to read it too.
+- Sudoers (`/etc/sudoers.d/agentique-deploy`): `ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend`
 
-```
-ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend
-```
+## One-time setup
 
-## One-time setup (belongs in `.ignored/vps-setup.sh`, not committed)
-
-Order matters: the systemd units and Caddyfile live in `deploy/`, which doesn't exist on the box until the code has been synced there once. So the first population of `/opt/agentique` is a manual `git clone` (the repo is public — no auth needed), not the CI workflow. Do the `cp` steps after that clone, not before.
-
-This box is small (2GB RAM) — don't bring up the native stack while the old Docker stack is still running, or you'll OOM the box and lose SSH. Stop/remove the old containers before starting `agentique-backend`.
+`.ignored/vps-setup.sh` (uncommitted, box-specific). Order matters: `deploy/` only exists on the box after the first `git clone`, so units/Caddyfile get copied after that, not CI. Box has 2GB RAM — stop any old app stack before starting the native services or you'll OOM and lose SSH.
 
 ```bash
-# Docker (db only, if not already present) + Caddy
-# Docker: follow https://docs.docker.com/engine/install/ubuntu/ (the official repo,
-# not the docker.io/docker-compose-v2 Ubuntu packages — installs a different build
-# than Docker CE and wasn't the path actually used on this box).
+# Docker (db only, if not present) + Caddy
+# Docker: https://docs.docker.com/engine/install/ubuntu/ (official repo, not
+# the docker.io/docker-compose-v2 Ubuntu packages — different build)
 apt-get install -y caddy
 
-# uv — as the ubuntu user, not root, so it lands in /home/ubuntu/.local/bin
-# where the runner's PATH picks it up.
+# uv — as ubuntu, not root, so it lands in /home/ubuntu/.local/bin
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # users + dirs
 adduser --system --group agentique
-mkdir -p /opt/agentique
+mkdir -p /opt/agentique /var/lib/agentique
 chown ubuntu:agentique /opt/agentique
+chown agentique:agentique /var/lib/agentique && chmod 750 /var/lib/agentique
 
 # first-ever population — after this, CI's rsync takes over
 git clone https://github.com/dimslaev/agentique /opt/agentique
@@ -55,12 +47,11 @@ chown ubuntu:agentique /opt/agentique/.env && chmod 640 /opt/agentique/.env
 
 # db, before starting the backend (prestart needs it reachable)
 cd /opt/agentique && docker compose up -d
-# restore the dump here if this is a fresh box, then:
+# restore a dump here if this is a fresh box, then:
 cd /opt/agentique && uv sync --frozen --package app
 cd /opt/agentique/backend && uv run --env-file ../.env bash scripts/prestart.sh
 
-# stop/remove any old Docker-based app stack now, before starting units —
-# see the memory note above.
+# stop/remove any old app stack now, before starting units — see the memory note above
 
 # units + caddy
 cp /opt/agentique/deploy/agentique-*.{service,timer} /etc/systemd/system/
@@ -73,11 +64,11 @@ systemctl reload caddy
 echo 'ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend' > /etc/sudoers.d/agentique-deploy
 ```
 
-## Deploy flow (what CI does)
+## Deploy flow (CI)
 
-1. Build `frontend/dist` on a GitHub-hosted runner, ship it as an artifact.
-2. On the self-hosted runner: checkout + download artifact, rsync to `/opt/agentique` (excluding `.env`, `.venv`, `frontend/dist`), then rsync the fresh dist.
-3. `uv sync --frozen --package app`, run migrations via `uv run --env-file ../.env bash scripts/prestart.sh` (the `--env-file` is load-bearing: the production guard in prestart.sh reads the shell env).
+1. Build `frontend/dist` on a GitHub-hosted runner, upload as artifact.
+2. Self-hosted runner: rsync to `/opt/agentique` (excludes `.env`, `.venv`, `frontend/dist`), then rsync the fresh dist.
+3. `uv sync --frozen --package app`, `uv run --env-file ../.env bash scripts/prestart.sh`.
 4. `sudo systemctl restart agentique-backend`.
 
-The pipeline needs no restart — the timer starts a fresh process each run.
+Pipeline needs no restart — the timer starts a fresh process each run.

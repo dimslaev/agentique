@@ -12,3 +12,6 @@ ACTIVE EVERY RESPONSE. No revert after many turns. No filler drift. Still active
 
 ## Client generation
 - `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`, `baml_client/` - must be generated after changes and committed
+
+## Prod
+- After `sudo`-touching `/opt/agentique/.env` (`chown ubuntu:agentique`, `chmod 640`) or `/var/lib/agentique/` (`chown -R agentique:agentique`), restore perms or agentique-backend/pipeline crash-loops
