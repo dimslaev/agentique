@@ -76,6 +76,7 @@ dependencies = [
     { name = "httpx" },
     { name = "imap-tools" },
     { name = "jinja2" },
+    { name = "kdriveclientpy" },
     { name = "model2vec" },
     { name = "pgvector" },
     { name = "psycopg", extra = ["binary"] },
@@ -113,6 +114,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.25.1,<1.0.0" },
     { name = "imap-tools", specifier = ">=1.5.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
+    { name = "kdriveclientpy", specifier = ">=1.0.7" },
     { name = "model2vec", specifier = ">=0.4.0" },
     { name = "pgvector", specifier = ">=0.3.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
@@ -877,6 +879,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/49/f3/45890c1b314f0d04e19c1c83d534e611513150939a7cf039664d9ab1e649/justext-3.0.2.tar.gz", hash = "sha256:13496a450c44c4cd5b5a75a5efcd9996066d2a189794ea99a49949685a0beb05", size = 828521, upload-time = "2025-02-25T20:21:49.934Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f2/ac/52f4e86d1924a7fc05af3aeb34488570eccc39b4af90530dd6acecdf16b5/justext-3.0.2-py2.py3-none-any.whl", hash = "sha256:62b1c562b15c3c6265e121cc070874243a443bfd53060e869393f09d6b6cc9a7", size = 837940, upload-time = "2025-02-25T20:21:44.179Z" },
+]
+
+[[package]]
+name = "kdriveclientpy"
+version = "1.0.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2d/e7/3739dc80a3de7cd0945b269f1ff5eeb480895259819106af526097ac5c96/kdriveclientpy-1.0.7.tar.gz", hash = "sha256:dfdf26d73cb025ba15f0eed6929e11d892350f6e51a37b6f3e3bda41363b5013", size = 5722, upload-time = "2026-04-10T04:18:49.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/cc/3fe40ef86896656b262bb7520d3aba933d05aa25679742e866988740ccf2/kdriveclientpy-1.0.7-py3-none-any.whl", hash = "sha256:32da1ce8be865e1de89b94293cb072d214825a25cb57f15cd99646c963b9815a", size = 6921, upload-time = "2026-04-10T04:18:48.215Z" },
 ]
 
 [[package]]

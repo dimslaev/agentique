@@ -7,6 +7,7 @@ Files and their install targets:
 - `Caddyfile` → `/etc/caddy/Caddyfile` (TLS, static frontend, reverse proxy to the API)
 - `agentique-backend.service` → `/etc/systemd/system/` (FastAPI, 4 workers, 127.0.0.1:8000)
 - `agentique-pipeline.service` + `agentique-pipeline.timer` → `/etc/systemd/system/` (daily 04:00)
+- `agentique-backup.service` + `agentique-backup.timer` → `/etc/systemd/system/` (daily 03:30, db dump to kDrive — needs `KDRIVE_API_TOKEN` + `KDRIVE_DRIVE_ID` in `.env`)
 
 ## Layout on the box
 
@@ -65,7 +66,7 @@ cd /opt/agentique/backend && uv run --env-file ../.env bash scripts/prestart.sh
 cp /opt/agentique/deploy/agentique-*.{service,timer} /etc/systemd/system/
 cp /opt/agentique/deploy/Caddyfile /etc/caddy/Caddyfile
 systemctl daemon-reload
-systemctl enable --now agentique-backend agentique-pipeline.timer
+systemctl enable --now agentique-backend agentique-pipeline.timer agentique-backup.timer
 systemctl reload caddy
 
 # sudoers (see above)
