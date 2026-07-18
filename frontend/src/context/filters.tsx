@@ -6,6 +6,8 @@ export type Filters = {
   sort: string
   category: string
   kind: string
+  publisher: string
+  tag: string
 }
 
 type FiltersContextType = {
@@ -22,6 +24,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     sort: "published_at-desc",
     category: "",
     kind: "",
+    publisher: "",
+    tag: "",
   })
 
   const setFilter = (key: keyof Filters, value: string) => {

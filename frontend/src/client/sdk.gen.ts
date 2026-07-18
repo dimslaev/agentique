@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -40,6 +40,7 @@ export class ArticlesService {
      * @param data.category
      * @param data.kind
      * @param data.tag
+     * @param data.publisher
      * @param data.sort
      * @returns ArticlesPublic Successful Response
      * @throws ApiError
@@ -55,6 +56,7 @@ export class ArticlesService {
                 category: data.category,
                 kind: data.kind,
                 tag: data.tag,
+                publisher: data.publisher,
                 sort: data.sort
             },
             errors: {
@@ -75,6 +77,70 @@ export class ArticlesService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/api/v1/articles/search',
+            query: {
+                q: data.q,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Article Facets
+     * @param data The data for the request.
+     * @param data.limit
+     * @returns ArticleFacets Successful Response
+     * @throws ApiError
+     */
+    public static articleFacets(data: ArticlesArticleFacetsData = {}): CancelablePromise<ArticlesArticleFacetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/articles/facets',
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Search Publishers
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.limit
+     * @returns PublisherFacet Successful Response
+     * @throws ApiError
+     */
+    public static searchPublishers(data: ArticlesSearchPublishersData = {}): CancelablePromise<ArticlesSearchPublishersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/articles/publishers',
+            query: {
+                q: data.q,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Search Tags
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.limit
+     * @returns TagFacet Successful Response
+     * @throws ApiError
+     */
+    public static searchTags(data: ArticlesSearchTagsData = {}): CancelablePromise<ArticlesSearchTagsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/articles/tags',
             query: {
                 q: data.q,
                 limit: data.limit

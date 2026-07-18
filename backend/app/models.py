@@ -250,6 +250,26 @@ class ArticlesPublic(SQLModel):
     count: int
 
 
+# ─── Facets (sidebar filter options) ───────────────────────────────────────
+
+
+class PublisherFacet(SQLModel):
+    slug: str
+    name: str
+    count: int
+
+
+class TagFacet(SQLModel):
+    slug: str
+    name: str
+    count: int
+
+
+class ArticleFacets(SQLModel):
+    publishers: list[PublisherFacet]
+    tags: list[TagFacet]
+
+
 # ─── Tag ───────────────────────────────────────────────────────────────────
 
 

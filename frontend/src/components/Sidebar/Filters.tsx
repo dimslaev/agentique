@@ -1,7 +1,10 @@
+import { useQuery } from "@tanstack/react-query"
 import { Search, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { ArticlesService } from "@/client"
 import { useFilters } from "@/context/filters"
-import { cn } from "@/lib/utils"
+import { FacetFilter } from "./FacetFilter"
+import { FilterOptionButton, FilterSectionLabel } from "./FilterOptionButton"
 
 const DATE_OPTIONS = [
   { value: "3d", label: "Last 3 days" },
@@ -45,31 +48,14 @@ function FilterGroup({
 }) {
   return (
     <div className="space-y-0.5">
-      <p className="px-2 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
-        {label}
-      </p>
+      <FilterSectionLabel>{label}</FilterSectionLabel>
       {options.map((o) => (
-        <button
+        <FilterOptionButton
           key={o.value}
-          type="button"
+          label={o.label}
+          active={o.value === value}
           onClick={() => onChange(o.value)}
-          className={cn(
-            "flex shrink-0 items-center gap-2.5 rounded-sm px-2 py-[3px] text-xs transition-colors whitespace-nowrap",
-            o.value === value
-              ? "text-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <span
-            className={cn(
-              "h-[5px] w-[5px] shrink-0 rounded-full transition-colors",
-              o.value === value
-                ? "bg-foreground"
-                : "border border-muted-foreground/40",
-            )}
-          />
-          {o.label}
-        </button>
+        />
       ))}
     </div>
   )
@@ -79,6 +65,16 @@ export function SidebarFilters() {
   const { filters, setFilter } = useFilters()
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
+  // names for the current publisher/tag slug when it came from search and
+  // isn't among the top facets — kept out of context since it's display-only
+  const [publisherName, setPublisherName] = useState<string>()
+  const [tagName, setTagName] = useState<string>()
+
+  const { data: facets } = useQuery({
+    queryKey: ["article-facets"],
+    queryFn: () => ArticlesService.articleFacets(),
+    staleTime: 5 * 60 * 1000,
+  })
 
   function handleSearchChange(v: string) {
     setLocalSearch(v)
@@ -143,6 +139,28 @@ export function SidebarFilters() {
         options={KIND_OPTIONS}
         value={filters.kind}
         onChange={(v) => setFilter("kind", v)}
+      />
+      <FacetFilter
+        label="Publisher"
+        value={filters.publisher}
+        selectedName={publisherName}
+        topItems={facets?.publishers ?? []}
+        onChange={(slug, name) => {
+          setFilter("publisher", slug)
+          setPublisherName(name)
+        }}
+        search={(q) => ArticlesService.searchPublishers({ q, limit: 20 })}
+      />
+      <FacetFilter
+        label="Tags"
+        value={filters.tag}
+        selectedName={tagName}
+        topItems={facets?.tags ?? []}
+        onChange={(slug, name) => {
+          setFilter("tag", slug)
+          setTagName(name)
+        }}
+        search={(q) => ArticlesService.searchTags({ q, limit: 20 })}
       />
     </div>
   )

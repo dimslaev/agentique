@@ -50,6 +50,28 @@ export const AnalyticsEventCreateSchema = {
     title: 'AnalyticsEventCreate'
 } as const;
 
+export const ArticleFacetsSchema = {
+    properties: {
+        publishers: {
+            items: {
+                '$ref': '#/components/schemas/PublisherFacet'
+            },
+            type: 'array',
+            title: 'Publishers'
+        },
+        tags: {
+            items: {
+                '$ref': '#/components/schemas/TagFacet'
+            },
+            type: 'array',
+            title: 'Tags'
+        }
+    },
+    type: 'object',
+    required: ['publishers', 'tags'],
+    title: 'ArticleFacets'
+} as const;
+
 export const ArticleKindSchema = {
     type: 'string',
     enum: ['blog', 'product', 'announcement', 'repo', 'paper', 'model'],
@@ -343,6 +365,26 @@ export const PrivateUserCreateSchema = {
     title: 'PrivateUserCreate'
 } as const;
 
+export const PublisherFacetSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name', 'count'],
+    title: 'PublisherFacet'
+} as const;
+
 export const PublisherKindSchema = {
     type: 'string',
     enum: ['individual', 'company', 'community', 'media'],
@@ -381,6 +423,26 @@ export const PublisherPublicSchema = {
     type: 'object',
     required: ['id', 'slug', 'name', 'kind'],
     title: 'PublisherPublic'
+} as const;
+
+export const TagFacetSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name', 'count'],
+    title: 'TagFacet'
 } as const;
 
 export const TagPublicSchema = {
