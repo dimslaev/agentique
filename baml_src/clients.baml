@@ -39,6 +39,6 @@ client<llm> Gemini {
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [GptOss, Ministral, Gemini]
+    strategy [Gemini, GptOss, Ministral]
   }
 }
