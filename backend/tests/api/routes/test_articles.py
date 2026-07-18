@@ -11,7 +11,12 @@ from app.api.routes import articles
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.models import Article
-from tests.utils.article import create_random_article, create_random_tag, tag_article
+from tests.utils.article import (
+    create_random_article,
+    create_random_publisher,
+    create_random_tag,
+    tag_article,
+)
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import random_email
 
@@ -126,6 +131,34 @@ def test_read_articles_malformed_since_falls_back_to_default_window(
     assert malformed["count"] == default["count"]
 
 
+# Placed after the count-sensitive tests above (which assume the seeded
+# window fits under the default limit=50) since these insert extra articles.
+def test_read_articles_filter_publisher(client: TestClient, db: Session) -> None:
+    now = datetime.now(UTC)
+    publisher = create_random_publisher(db)
+    matched = create_random_article(db, publisher_id=publisher.id, published_at=now)
+    create_random_article(db, published_at=now)
+
+    r = client.get(
+        f"{ARTICLES_URL}/", params={"publisher": publisher.slug, "limit": 50}
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert [a["id"] for a in data["data"]] == [matched.id]
+    assert data["count"] == 1
+    assert data["data"][0]["publisher"]["slug"] == publisher.slug
+
+
+def test_read_articles_filter_unknown_publisher_returns_nothing(
+    client: TestClient,
+) -> None:
+    r = client.get(
+        f"{ARTICLES_URL}/", params={"publisher": "no-such-publisher", "limit": 50}
+    )
+    assert r.status_code == 200
+    assert r.json()["count"] == 0
+
+
 def test_search_articles(
     client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -148,6 +181,69 @@ def test_search_articles(
         .limit(5)
     ).all()
     assert [a["id"] for a in data["data"]] == list(expected_ids)
+
+
+def test_article_facets(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/facets")
+    assert r.status_code == 200
+    data = r.json()
+    assert isinstance(data["publishers"], list)
+    assert isinstance(data["tags"], list)
+    assert len(data["publishers"]) > 0
+    assert len(data["tags"]) > 0
+    for p in data["publishers"]:
+        assert p["count"] >= 1
+    for t in data["tags"]:
+        assert t["count"] >= 1
+    publisher_counts = [p["count"] for p in data["publishers"]]
+    tag_counts = [t["count"] for t in data["tags"]]
+    assert publisher_counts == sorted(publisher_counts, reverse=True)
+    assert tag_counts == sorted(tag_counts, reverse=True)
+
+
+def test_article_facets_respects_limit(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/facets", params={"limit": 2})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["publishers"]) <= 2
+    assert len(data["tags"]) <= 2
+
+
+def test_search_publishers(client: TestClient, db: Session) -> None:
+    publisher = create_random_publisher(db, name="Zzz Unique Publisher")
+    create_random_article(db, publisher_id=publisher.id)
+
+    r = client.get(f"{ARTICLES_URL}/publishers", params={"q": "unique"})
+    assert r.status_code == 200
+    data = r.json()
+    found = next((p for p in data if p["slug"] == publisher.slug), None)
+    assert found is not None
+    assert found["count"] == 1
+
+
+def test_search_publishers_no_match(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/publishers", params={"q": "no-such-publisher-xyz"})
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_search_tags(client: TestClient, db: Session) -> None:
+    tag = create_random_tag(db, name="Zzz Unique Tag")
+    article = create_random_article(db)
+    tag_article(db, article, tag)
+
+    r = client.get(f"{ARTICLES_URL}/tags", params={"q": "unique"})
+    assert r.status_code == 200
+    data = r.json()
+    found = next((t for t in data if t["slug"] == tag.slug), None)
+    assert found is not None
+    assert found["count"] == 1
+
+
+def test_search_tags_no_match(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/tags", params={"q": "no-such-tag-xyz"})
+    assert r.status_code == 200
+    assert r.json() == []
 
 
 def test_article_stats(client: TestClient) -> None:

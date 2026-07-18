@@ -10,6 +10,11 @@ export type AnalyticsEventCreate = {
     };
 };
 
+export type ArticleFacets = {
+    publishers: Array<PublisherFacet>;
+    tags: Array<TagFacet>;
+};
+
 export type ArticleKind = 'blog' | 'product' | 'announcement' | 'repo' | 'paper' | 'model';
 
 export type ArticlePublic = {
@@ -75,6 +80,12 @@ export type PrivateUserCreate = {
     is_verified?: boolean;
 };
 
+export type PublisherFacet = {
+    slug: string;
+    name: string;
+    count: number;
+};
+
 export type PublisherKind = 'individual' | 'company' | 'community' | 'media';
 
 export type PublisherPublic = {
@@ -83,6 +94,12 @@ export type PublisherPublic = {
     name: string;
     kind: PublisherKind;
     image?: (string | null);
+};
+
+export type TagFacet = {
+    slug: string;
+    name: string;
+    count: number;
 };
 
 export type TagPublic = {
@@ -162,6 +179,7 @@ export type ArticlesReadArticlesData = {
     kind?: (string | null);
     limit?: number;
     minScore?: (number | null);
+    publisher?: (string | null);
     since?: (string | null);
     sort?: string;
     tag?: (string | null);
@@ -175,6 +193,26 @@ export type ArticlesSearchArticlesData = {
 };
 
 export type ArticlesSearchArticlesResponse = (ArticlesPublic);
+
+export type ArticlesArticleFacetsData = {
+    limit?: number;
+};
+
+export type ArticlesArticleFacetsResponse = (ArticleFacets);
+
+export type ArticlesSearchPublishersData = {
+    limit?: number;
+    q?: (string | null);
+};
+
+export type ArticlesSearchPublishersResponse = (Array<PublisherFacet>);
+
+export type ArticlesSearchTagsData = {
+    limit?: number;
+    q?: (string | null);
+};
+
+export type ArticlesSearchTagsResponse = (Array<TagFacet>);
 
 export type ArticlesArticleStatsResponse = (unknown);
 
