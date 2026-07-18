@@ -22,12 +22,23 @@ client<llm> Ministral {
   }
 }
 
+// Third fallback: Google Gemini Flash. Cheap, fast, different provider
+// than the NVIDIA-backed pair above, so it survives an NVIDIA outage too.
+client<llm> Gemini {
+  provider google-ai
+  options {
+    api_key env.GOOGLE_API_KEY
+    model "gemini-2.5-flash"
+  }
+}
+
 // The name every function already references. Now a fallback wrapper: try
-// gpt-oss first, drop to Ministral only if it keeps failing. Renaming would
-// mean editing all 12 `client Nvidia` sites for no gain; both are NVIDIA NIM.
+// gpt-oss first, drop to Ministral if it keeps failing, then Gemini as
+// last resort. Renaming would mean editing all 12 `client Nvidia` sites
+// for no gain; both NVIDIA clients keep their name for that reason.
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [GptOss, Ministral]
+    strategy [GptOss, Ministral, Gemini]
   }
 }
