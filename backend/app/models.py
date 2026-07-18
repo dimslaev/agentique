@@ -144,6 +144,10 @@ class Category(StrEnum):
 class LinkPlatform(StrEnum):
     website = "website"
     rss = "rss"
+    # first-party domain to discover articles from via search, for labs that
+    # publish no RSS feed (see pipeline.sources.lab_watch). Value is the bare
+    # host, e.g. "anthropic.com".
+    search = "search"
     twitter = "twitter"
     github = "github"
     substack = "substack"

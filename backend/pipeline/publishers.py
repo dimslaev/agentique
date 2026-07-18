@@ -131,6 +131,22 @@ def feed_sources_from_db(session: Session) -> list[dict]:
 # ─── DB-driven newsletter (IMAP) sender matching ───────────────────────────────
 
 
+def lab_watch_targets_from_db(session: Session) -> list[tuple[str, str]]:
+    """Active publishers with a ``search`` link -> (name, first-party domain).
+
+    Fallback for labs that publish no RSS feed and no newsletter: their own site
+    is searched for recent first-party articles (see ``pipeline.sources.
+    lab_watch``). The ``search`` value is the bare host to restrict results to.
+    """
+    targets = [
+        (pub.name, domain)
+        for pub, links in _active_publisher_links(session)
+        if (domain := links.get(LinkPlatform.search.value))
+    ]
+    log(f"  {len(targets)} active lab-watch target(s) loaded from DB")
+    return targets
+
+
 def newsletter_senders_from_db(session: Session) -> list[tuple[str, str]]:
     """Active publishers with an ``email`` link -> (sender pattern, name).
 

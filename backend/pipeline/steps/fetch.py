@@ -10,11 +10,13 @@ from sqlmodel import Session
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
+    lab_watch_targets_from_db,
     newsletter_senders_from_db,
 )
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.hn import fetch_hn
+from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -43,6 +45,10 @@ def build_sources(session: Session) -> list[Source]:
         ),
         Source("AI News", fetch_ai_news),
         Source("Feeds", lambda: fetch_feeds(feed_sources_from_db(session))),
+        Source(
+            "Lab Watch",
+            lambda: fetch_lab_watch(lab_watch_targets_from_db(session)),
+        ),
     ]
 
 
