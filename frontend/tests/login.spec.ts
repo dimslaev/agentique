@@ -43,7 +43,7 @@ test("Log in with valid email and password ", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/feed")
 
   await expect(page.getByTestId("user-menu")).toBeVisible()
 })
@@ -73,7 +73,7 @@ test("Successful log out", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/feed")
 
   await expect(page.getByTestId("user-menu")).toBeVisible()
 
@@ -88,7 +88,7 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/feed")
 
   await expect(page.getByTestId("user-menu")).toBeVisible()
 
@@ -96,8 +96,9 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await page.getByRole("menuitem", { name: "Log out" }).click()
   await page.waitForURL("/login")
 
+  // Gated routes bounce logged-out visitors to the public landing.
   await page.goto("/settings")
-  await page.waitForURL(/\/login/)
+  await page.waitForURL("/")
 })
 
 test("Redirects to /login when token is wrong", async ({ page }) => {
@@ -122,11 +123,11 @@ test("Clears token and redirects to /login when current user is 404 (deleted use
     }),
   )
 
-  await page.goto("/")
+  await page.goto("/feed")
   await page.evaluate(() => {
     localStorage.setItem("access_token", "stale-token-for-deleted-user")
   })
-  await page.goto("/")
+  await page.goto("/feed")
 
   await page.waitForURL("/login")
   await expect(page).toHaveURL("/login")

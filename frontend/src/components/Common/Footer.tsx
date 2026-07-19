@@ -4,8 +4,12 @@ async function fetchStats(): Promise<{
   total: number
   lastUpdated: string | null
 }> {
+  // The stats endpoint is auth-gated; attach the token when signed in.
+  // Logged-out visitors (landing page) simply get zeros and the footer hides.
+  const token = localStorage.getItem("access_token")
   const res = await fetch(
     `${import.meta.env.VITE_API_URL}/api/v1/articles/stats`,
+    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined,
   )
   if (!res.ok) return { total: 0, lastUpdated: null }
   return res.json()
