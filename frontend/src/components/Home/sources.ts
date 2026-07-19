@@ -1,7 +1,9 @@
-// Hardcoded homepage "top selection" — one box per source. Kept in sync by a
-// separate agent later; for now these are real articles pulled from prod
-// plus current items sourced from each publisher's own site.
-// No app article IDs exposed: every link points straight to the origin.
+// Hardcoded homepage "top selection" — one box per source. Refreshed weekly by
+// the `.agents/homepage-refresh.md` agent, which web-searches each publisher for
+// their latest items and opens a PR editing this file.
+// No app article IDs exposed: every link points straight to the origin (for
+// aggregated newsletter rows, to the story's own source — official or not, as
+// long as the item is confirmable).
 
 export type SourceArticle = {
   title: string
@@ -34,6 +36,22 @@ export const SOURCES: Source[] = [
     domain: "anthropic.com",
     articles: [
       {
+        title: "A new way to reflect on how you use Claude",
+        url: "https://www.anthropic.com/news/reflect-with-claude",
+        date: "2026-07-09",
+        kind: "product",
+        category: "dev",
+        tags: ["Anthropic"],
+      },
+      {
+        title: "UST is bringing Claude to physical AI",
+        url: "https://www.anthropic.com/news/ust-claude",
+        date: "2026-07-08",
+        kind: "product",
+        category: "dev",
+        tags: ["Enterprise AI", "Robotics"],
+      },
+      {
         title: "Introducing Claude Sonnet 5",
         url: "https://www.anthropic.com/news/claude-sonnet-5",
         date: "2026-06-30",
@@ -42,28 +60,12 @@ export const SOURCES: Source[] = [
         tags: ["Model Releases", "Anthropic"],
       },
       {
-        title: "Claude Fable 5 and Claude Mythos 5",
-        url: "https://www.anthropic.com/news/claude-fable-5-mythos-5",
-        date: "2026-06-09",
-        kind: "model",
-        category: "models",
-        tags: ["Model Releases", "Anthropic"],
-      },
-      {
-        title: "KPMG integrates Claude across its core business and workforce",
-        url: "https://www.anthropic.com/news/anthropic-kpmg",
-        date: "2026-05-19",
+        title: "Claude Science, an AI workbench for scientists",
+        url: "https://www.anthropic.com/news/claude-science-ai-workbench",
+        date: "2026-06-30",
         kind: "product",
         category: "dev",
         tags: ["Enterprise AI"],
-      },
-      {
-        title: "Higher usage limits for Claude and a compute deal with SpaceX",
-        url: "https://www.anthropic.com/news/higher-limits-spacex",
-        date: "2026-05-06",
-        kind: "announcement",
-        category: "dev",
-        tags: ["Anthropic"],
       },
     ],
   },
@@ -74,37 +76,36 @@ export const SOURCES: Source[] = [
     domain: "openai.com",
     articles: [
       {
+        title: "GPT-5.6: Frontier intelligence that scales with your ambition",
+        url: "https://openai.com/index/gpt-5-6/",
+        date: "2026-07-09",
+        kind: "model",
+        category: "models",
+        tags: ["Model Releases", "OpenAI"],
+      },
+      {
+        title: "GPT-5.6 is now the preferred model in Microsoft 365 Copilot",
+        url: "https://openai.com/index/gpt-5-6-preferred-model-microsoft-365-copilot/",
+        date: "2026-07-09",
+        kind: "announcement",
+        category: "dev",
+        tags: ["OpenAI", "Enterprise AI"],
+      },
+      {
+        title: "Introducing GPT-Live",
+        url: "https://openai.com/index/introducing-gpt-live/",
+        date: "2026-07-08",
+        kind: "product",
+        category: "dev",
+        tags: ["OpenAI", "Multimodal"],
+      },
+      {
         title: "Previewing GPT-5.6 Sol: a next-generation model",
         url: "https://openai.com/index/previewing-gpt-5-6-sol/",
         date: "2026-06-26",
         kind: "announcement",
         category: "models",
         tags: ["Model Releases", "OpenAI"],
-      },
-      {
-        title:
-          "From model to agent: Equipping the Responses API with a computer environment",
-        url: "https://openai.com/index/equip-responses-api-computer-environment",
-        date: "2026-03-11",
-        kind: "blog",
-        category: "dev",
-        tags: ["Agents", "Tool Calling"],
-      },
-      {
-        title: "Codex Security: now in research preview",
-        url: "https://openai.com/index/codex-security-now-in-research-preview",
-        date: "2026-03-06",
-        kind: "product",
-        category: "dev",
-        tags: ["Coding Assistants", "Security"],
-      },
-      {
-        title: "GPT-5.4: Efficient Frontier Model with 1M-Token Context",
-        url: "https://openai.com/index/introducing-gpt-5-4",
-        date: "2026-03-05",
-        kind: "announcement",
-        category: "models",
-        tags: ["Model Releases", "Context Optimization"],
       },
     ],
   },
@@ -125,7 +126,7 @@ export const SOURCES: Source[] = [
       {
         title: "Kimi K3: Open Frontier Intelligence",
         url: "https://www.kimi.com/blog/kimi-k3",
-        date: "2026-07-14",
+        date: "2026-07-16",
         kind: "model",
         category: "models",
         tags: ["Open Weights", "Model Releases"],
@@ -155,6 +156,14 @@ export const SOURCES: Source[] = [
     domain: "qwen.ai",
     articles: [
       {
+        title: "Qwen3.8-Max-Preview: 2.4T-parameter open-weight flagship",
+        url: "https://officechai.com/ai/alibaba-qwen-3-8/",
+        date: "2026-07-19",
+        kind: "announcement",
+        category: "models",
+        tags: ["Model Releases", "Qwen"],
+      },
+      {
         title: "Qwen3.7-Plus: Multimodal Agent Intelligence",
         url: "https://qwen.ai/blog?id=qwen3.7-plus",
         date: "2026-06-01",
@@ -177,14 +186,6 @@ export const SOURCES: Source[] = [
         kind: "announcement",
         category: "models",
         tags: ["Agents", "Qwen"],
-      },
-      {
-        title: "Qwen3.6 27b",
-        url: "https://qwen.ai/blog?id=qwen3.6-27b",
-        date: "2026-04-22",
-        kind: "model",
-        category: "models",
-        tags: ["Open Weights", "Model Releases"],
       },
     ],
   },
@@ -238,45 +239,45 @@ export const SOURCES: Source[] = [
         from: "Ben's Bites",
         fromDomain: "bensbites.com",
         title:
-          "Google open-weights DiffusionGemma delivers 3-5× speedup at comparable performance",
-        url: "https://arstechnica.com/google/2026/06/googles-latest-diffusiongemma-open-ai-model-comes-with-a-4x-speed-boost",
-        date: "2026-06-11",
+          "Moonshot's Kimi K3 rivals OpenAI and Anthropic with 2.8T open weights",
+        url: "https://www.cnbc.com/2026/07/17/moonshot-ai-kimi-k3-model-openai-anthropic-china.html",
+        date: "2026-07-17",
         kind: "announcement",
         category: "models",
-        tags: ["Open Weights", "Inference"],
+        tags: ["Open Weights", "Model Releases"],
       },
       {
         from: "The Rundown AI",
         fromDomain: "therundown.ai",
         title:
-          "OpenAI launches GPT-5.4-Cyber permissive model for defensive security",
-        url: "https://openai.com/index/scaling-trusted-access-for-cyber-defense/",
-        date: "2026-04-15",
+          "Alibaba previews 2.4T open-weight Qwen3.8-Max, second only to Fable 5",
+        url: "https://finance.yahoo.com/technology/ai/articles/alibaba-qwen-unveils-preview-flagship-110209258.html",
+        date: "2026-07-19",
         kind: "announcement",
         category: "models",
-        tags: ["Security", "OpenAI"],
+        tags: ["Open Weights", "Qwen"],
       },
       {
         from: "TLDR",
         fromDomain: "tldr.tech",
         title:
-          "Composer 2 offers frontier coding ability at $0.50 per M input tokens",
-        url: "https://cursor.com/blog/composer-2",
-        date: "2026-03-20",
+          "OpenAI ships GPT-5.6 to general availability with Sol, Terra and Luna",
+        url: "https://openai.com/index/gpt-5-6/",
+        date: "2026-07-09",
         kind: "announcement",
-        category: "dev",
-        tags: ["Coding Assistants", "Inference"],
+        category: "models",
+        tags: ["Model Releases", "OpenAI"],
       },
       {
         from: "The Batch",
         fromDomain: "deeplearning.ai",
         title:
-          "Claude Opus 4.5: Token-Efficient Model Improving on Previous Release",
-        url: "https://www.anthropic.com/news/claude-opus-4-5",
-        date: "2025-12-11",
-        kind: "announcement",
-        category: "models",
-        tags: ["Anthropic", "Model Releases"],
+          "OpenAI's GPT-Live brings full-duplex voice to ChatGPT",
+        url: "https://openai.com/index/introducing-gpt-live/",
+        date: "2026-07-08",
+        kind: "product",
+        category: "dev",
+        tags: ["OpenAI", "Multimodal"],
       },
     ],
   },
