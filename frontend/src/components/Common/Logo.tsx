@@ -7,6 +7,8 @@ interface LogoProps {
   asLink?: boolean
   /** Expands from "ag" to "agentique" with the sidebar collapse state. */
   expandable?: boolean
+  /** Always renders the full "agentique" wordmark, no collapse/hover behavior. */
+  full?: boolean
 }
 
 const box =
@@ -16,8 +18,11 @@ export function Logo({
   className,
   asLink = true,
   expandable = false,
+  full = false,
 }: LogoProps) {
-  const content = expandable ? (
+  const content = full ? (
+    <span className={cn(box, "px-2", className)}>agentique</span>
+  ) : expandable ? (
     <span className={cn(box, "px-2", className)}>
       <span>ag</span>
       {/* grid-template-columns 1fr→0fr animates smoothly; the border just
