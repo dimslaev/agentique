@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
@@ -13,7 +13,7 @@ from app.api.article_view import (
     like_counts_subquery,
     liked_article_ids,
 )
-from app.api.deps import CurrentUserOptional, SessionDep
+from app.api.deps import CurrentUser, SessionDep, get_current_user
 from app.models import (
     Article,
     ArticleFacets,
@@ -52,7 +52,7 @@ def _embed(text: str) -> list[float]:  # pragma: no cover
 @router.get("/", response_model=ArticlesPublic)
 def read_articles(
     session: SessionDep,
-    current_user: CurrentUserOptional,
+    current_user: CurrentUser,
     limit: int = Query(default=20, ge=1, le=50),
     since: str | None = None,
     min_score: int | None = Query(default=None, ge=1, le=10),
@@ -122,7 +122,7 @@ def read_articles(
     joined_statement = joined_statement.limit(limit)
 
     rows = session.exec(joined_statement).all()
-    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
+    liked_ids = liked_article_ids(session, current_user.id)
 
     return ArticlesPublic(data=build_rows(session, list(rows), liked_ids), count=count)
 
@@ -130,7 +130,7 @@ def read_articles(
 @router.get("/search", response_model=ArticlesPublic)
 def search_articles(
     session: SessionDep,
-    current_user: CurrentUserOptional,
+    current_user: CurrentUser,
     q: str,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> Any:
@@ -152,7 +152,7 @@ def search_articles(
     )
 
     rows = session.exec(statement).all()
-    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
+    liked_ids = liked_article_ids(session, current_user.id)
 
     data = build_rows(session, list(rows), liked_ids)
     return ArticlesPublic(data=data, count=len(data))
@@ -190,7 +190,11 @@ def _tag_facets(session: Session, q: str | None, limit: int) -> list[TagFacet]:
     return [TagFacet(slug=s, name=n, count=c) for s, n, c in rows]
 
 
-@router.get("/facets", response_model=ArticleFacets)
+@router.get(
+    "/facets",
+    response_model=ArticleFacets,
+    dependencies=[Depends(get_current_user)],
+)
 def article_facets(
     session: SessionDep, limit: int = Query(default=8, ge=1, le=20)
 ) -> Any:
@@ -200,7 +204,11 @@ def article_facets(
     )
 
 
-@router.get("/publishers", response_model=list[PublisherFacet])
+@router.get(
+    "/publishers",
+    response_model=list[PublisherFacet],
+    dependencies=[Depends(get_current_user)],
+)
 def search_publishers(
     session: SessionDep,
     q: str | None = None,
@@ -209,7 +217,11 @@ def search_publishers(
     return _publisher_facets(session, q, limit)
 
 
-@router.get("/tags", response_model=list[TagFacet])
+@router.get(
+    "/tags",
+    response_model=list[TagFacet],
+    dependencies=[Depends(get_current_user)],
+)
 def search_tags(
     session: SessionDep,
     q: str | None = None,
@@ -218,7 +230,7 @@ def search_tags(
     return _tag_facets(session, q, limit)
 
 
-@router.get("/stats")
+@router.get("/stats", dependencies=[Depends(get_current_user)])
 def article_stats(session: SessionDep) -> Any:
     total = session.exec(select(func.count()).select_from(Article)).one()
     last = session.exec(

@@ -1,5 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { trackEvent } from "@/lib/analytics"
 
 export const Route = createFileRoute("/_layout/developers")({
   component: DevelopersPage,
@@ -36,12 +45,23 @@ const RESPONSE_SHAPE = `{
 }`
 
 function DevelopersPage() {
+  const [dialogOpen, setDialogOpen] = useState(false)
+
+  function onUpgrade() {
+    trackEvent("checkout_click", {
+      plan: "pro",
+      price: 10,
+      source: "developers",
+    })
+    setDialogOpen(true)
+  }
+
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">API Reference</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Pro API</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          REST API for curated AI news. No authentication required.
+          Programmatic access to curated AI news. $10/mo — coming soon.
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Base URL:{" "}
@@ -49,7 +69,22 @@ function DevelopersPage() {
             https://agentique.ch
           </code>
         </p>
+        <div className="mt-4">
+          <Button onClick={onUpgrade}>Upgrade to Pro — $10/mo</Button>
+        </div>
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Coming soon</DialogTitle>
+            <DialogDescription>
+              The Pro API isn&apos;t live yet. We&apos;ll email you the moment
+              it opens — thanks for the interest.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
 
       <div className="space-y-6">
         <EndpointCard

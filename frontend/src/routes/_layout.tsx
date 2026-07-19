@@ -1,6 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router"
-// import { isLoggedIn } from "@/hooks/useAuth"
-
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { Footer } from "@/components/Common/Footer"
 import { Logo } from "@/components/Common/Logo"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -10,16 +8,17 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { FiltersProvider } from "@/context/filters"
+import { isLoggedIn } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  //   beforeLoad: async () => {
-  //     if (!isLoggedIn()) {
-  //       throw redirect({
-  //         to: "/login",
-  //       })
-  //     }
-  //   },
+  beforeLoad: () => {
+    if (!isLoggedIn()) {
+      throw redirect({
+        to: "/",
+      })
+    }
+  },
 })
 
 function Layout() {

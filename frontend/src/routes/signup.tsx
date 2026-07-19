@@ -44,7 +44,7 @@ export const Route = createFileRoute("/signup")({
   beforeLoad: async () => {
     if (isLoggedIn()) {
       throw redirect({
-        to: "/",
+        to: "/feed",
       })
     }
   },
