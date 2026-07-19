@@ -271,8 +271,7 @@ export const SOURCES: Source[] = [
       {
         from: "The Batch",
         fromDomain: "deeplearning.ai",
-        title:
-          "OpenAI's GPT-Live brings full-duplex voice to ChatGPT",
+        title: "OpenAI's GPT-Live brings full-duplex voice to ChatGPT",
         url: "https://openai.com/index/introducing-gpt-live/",
         date: "2026-07-08",
         kind: "product",
