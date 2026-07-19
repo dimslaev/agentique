@@ -59,12 +59,12 @@ function DevelopersPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Pro API</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Pro plan</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Programmatic access to curated AI news. $10/mo.
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Base URL:{" "}
+          API base URL:{" "}
           <code className="font-mono text-xs text-foreground">
             https://agentique.ch
           </code>
@@ -92,8 +92,16 @@ function DevelopersPage() {
           path="/api/v1/articles"
           description="List recent articles with optional filters."
           params={[
-            { name: "since", description: "ISO date · default 30 days ago" },
+            {
+              name: "since",
+              description:
+                "ISO date · omit for all-time (Pro only) · free capped to last 7 days",
+            },
             { name: "limit", description: "integer · 1-50 · default 20" },
+            {
+              name: "q",
+              description: "string · optional · title/summary match",
+            },
             { name: "min_score", description: "integer · 1-10 · optional" },
             {
               name: "category",

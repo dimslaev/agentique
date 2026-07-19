@@ -16,10 +16,9 @@ import { User } from "./User"
 
 const navItems: Item[] = [
   { index: "01", title: "Feed", path: "/feed" },
-  { index: "02", title: "Newsletter", path: "/newsletter" },
-  { index: "03", title: "API", path: "/developers" },
+  { index: "02", title: "API", path: "/developers" },
   // Prerendered static pages, not SPA routes — full page load by design.
-  { index: "04", title: "Blog", path: "/blog/", external: true },
+  { index: "03", title: "Blog", path: "/blog/", external: true },
 ]
 
 export function AppSidebar() {

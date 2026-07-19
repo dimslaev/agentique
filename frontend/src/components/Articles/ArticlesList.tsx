@@ -16,7 +16,9 @@ export function ArticlesList() {
   const { filters } = useFilters()
   const { search, dateRange, sort, category, kind, publisher, tag } = filters
 
-  const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
+  // "all time" -> omit `since` (Pro-only, backend treats missing as all-time).
+  const since =
+    dateRange === "all" ? undefined : cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: [
@@ -29,20 +31,17 @@ export function ArticlesList() {
       publisher,
       tag,
     ],
-    queryFn: () => {
-      if (search) {
-        return ArticlesService.searchArticles({ q: search, limit: 50 })
-      }
-      return ArticlesService.readArticles({
+    queryFn: () =>
+      ArticlesService.readArticles({
         limit: 50,
         since,
+        q: search || undefined,
         sort,
         category: category || undefined,
         kind: kind || undefined,
         publisher: publisher || undefined,
         tag: tag || undefined,
-      })
-    },
+      }),
     placeholderData: keepPreviousData,
   })
 

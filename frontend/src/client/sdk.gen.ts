@@ -36,6 +36,7 @@ export class ArticlesService {
      * @param data The data for the request.
      * @param data.limit
      * @param data.since
+     * @param data.q
      * @param data.minScore
      * @param data.category
      * @param data.kind
@@ -52,6 +53,7 @@ export class ArticlesService {
             query: {
                 limit: data.limit,
                 since: data.since,
+                q: data.q,
                 min_score: data.minScore,
                 category: data.category,
                 kind: data.kind,

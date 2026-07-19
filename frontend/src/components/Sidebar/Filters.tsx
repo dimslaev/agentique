@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 import { Search, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { ArticlesService } from "@/client"
 import { useFilters } from "@/context/filters"
+import useAuth from "@/hooks/useAuth"
 import { FacetFilter } from "./FacetFilter"
 import { FilterOptionButton, FilterSectionLabel } from "./FilterOptionButton"
 
 const DATE_OPTIONS = [
   { value: "3d", label: "Last 3 days" },
   { value: "1w", label: "Last week" },
-  { value: "1m", label: "Last month" },
+  { value: "1m", label: "Last month", pro: true },
+  { value: "all", label: "All time", pro: true },
 ]
 
 const SORT_OPTIONS = [
@@ -40,29 +43,39 @@ function FilterGroup({
   options,
   value,
   onChange,
+  isPro,
+  onLocked,
 }: {
   label: string
-  options: { value: string; label: string }[]
+  options: { value: string; label: string; pro?: boolean }[]
   value: string
   onChange: (v: string) => void
+  isPro?: boolean
+  onLocked?: () => void
 }) {
   return (
     <div className="space-y-0.5">
       <FilterSectionLabel>{label}</FilterSectionLabel>
-      {options.map((o) => (
-        <FilterOptionButton
-          key={o.value}
-          label={o.label}
-          active={o.value === value}
-          onClick={() => onChange(o.value)}
-        />
-      ))}
+      {options.map((o) => {
+        const locked = !!o.pro && !isPro
+        return (
+          <FilterOptionButton
+            key={o.value}
+            label={o.label}
+            active={o.value === value}
+            pro={o.pro}
+            onClick={() => (locked ? onLocked?.() : onChange(o.value))}
+          />
+        )
+      })}
     </div>
   )
 }
 
 export function SidebarFilters() {
   const { filters, setFilter } = useFilters()
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
   // names for the current publisher/tag slug when it came from search and
@@ -121,6 +134,8 @@ export function SidebarFilters() {
         options={DATE_OPTIONS}
         value={filters.dateRange}
         onChange={(v) => setFilter("dateRange", v)}
+        isPro={user?.is_pro}
+        onLocked={() => navigate({ to: "/developers" })}
       />
       <FilterGroup
         label="Sort by"
