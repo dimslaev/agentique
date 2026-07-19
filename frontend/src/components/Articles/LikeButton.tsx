@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useNavigate, useRouterState } from "@tanstack/react-router"
 import { Flame } from "lucide-react"
 
 import {
@@ -8,7 +7,6 @@ import {
   type ArticlesPublic,
   LikesService,
 } from "@/client"
-import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
@@ -35,8 +33,6 @@ function patchArticle(
 }
 
 export function LikeButton({ article }: { article: ArticlePublic }) {
-  const navigate = useNavigate()
-  const routerState = useRouterState()
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
 
@@ -90,22 +86,12 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
     },
   })
 
-  function handleClick() {
-    if (!isLoggedIn()) {
-      const redirect =
-        routerState.location.pathname + routerState.location.searchStr
-      navigate({ to: "/login", search: { redirect } })
-      return
-    }
-    mutation.mutate()
-  }
-
   return (
     <button
       type="button"
       data-testid="like-button"
       data-liked={liked}
-      onClick={handleClick}
+      onClick={() => mutation.mutate()}
       className={cn(
         "flex items-center gap-1 text-xs transition-colors",
         liked
