@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import { NewsletterService } from "@/client"
 import { Footer } from "@/components/Common/Footer"
-import { Logo } from "@/components/Common/Logo"
+import { Header } from "@/components/Common/Header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
@@ -15,7 +15,7 @@ import { SourceBoxes } from "./SourceBoxes"
 export function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Header nav={<LandingNav />} />
       <main className="flex-1 px-6 py-16">
         <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-16">
           <div className="flex w-full max-w-xl flex-col items-center gap-6 text-center">
@@ -33,22 +33,19 @@ export function LandingPage() {
   )
 }
 
-function Header() {
+function LandingNav() {
   return (
-    <header className="flex items-center justify-between border-b px-6 py-3">
-      <Logo full />
-      <nav className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" asChild>
-          <a href="/blog/">Blog</a>
-        </Button>
-        <Button variant="ghost" size="sm" asChild>
-          <Link to="/login">Log in</Link>
-        </Button>
-        <Button size="sm" asChild>
-          <Link to="/signup">Sign up</Link>
-        </Button>
-      </nav>
-    </header>
+    <>
+      <Button variant="ghost" size="sm" asChild>
+        <a href="/blog/">Blog</a>
+      </Button>
+      <Button variant="ghost" size="sm" asChild>
+        <Link to="/login">Log in</Link>
+      </Button>
+      <Button size="sm" asChild>
+        <Link to="/signup">Sign up</Link>
+      </Button>
+    </>
   )
 }
 

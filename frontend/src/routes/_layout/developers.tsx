@@ -13,7 +13,7 @@ import { trackEvent } from "@/lib/analytics"
 export const Route = createFileRoute("/_layout/developers")({
   component: DevelopersPage,
   head: () => ({
-    meta: [{ title: "API Reference - Agentique" }],
+    meta: [{ title: "Developers API - Agentique" }],
   }),
 })
 
@@ -61,7 +61,7 @@ function DevelopersPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Pro API</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Programmatic access to curated AI news. $10/mo — coming soon.
+          Programmatic access to curated AI news. $10/mo.
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Base URL:{" "}
@@ -93,8 +93,8 @@ function DevelopersPage() {
           description="List recent articles with optional filters."
           params={[
             { name: "since", description: "ISO date · default 30 days ago" },
-            { name: "limit", description: "integer · 1–50 · default 20" },
-            { name: "min_score", description: "integer · 1–10 · optional" },
+            { name: "limit", description: "integer · 1-50 · default 20" },
+            { name: "min_score", description: "integer · 1-10 · optional" },
             {
               name: "category",
               description: "models | dev | research · optional",
@@ -122,7 +122,7 @@ function DevelopersPage() {
               name: "q",
               description: "string · required · natural language query",
             },
-            { name: "limit", description: "integer · 1–50 · default 20" },
+            { name: "limit", description: "integer · 1-50 · default 20" },
           ]}
         />
       </div>
