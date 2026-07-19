@@ -55,7 +55,7 @@ function SourceCard({ source }: { source: Source }) {
   }, [updateFade])
 
   return (
-    <div className="relative flex h-[26rem] flex-col rounded-lg border bg-card py-4">
+    <div className="relative flex flex-col rounded-lg border bg-card py-4 md:h-[26rem]">
       <div className="flex shrink-0 items-center gap-3 px-4">
         <Avatar className="size-9 rounded-md border">
           <AvatarImage src={faviconUrl(source.domain)} alt={source.name} />
@@ -76,7 +76,7 @@ function SourceCard({ source }: { source: Source }) {
       <ul
         ref={listRef}
         onScroll={updateFade}
-        className="mt-2 min-h-0 flex-1 divide-y overflow-y-auto scrollbar-thin"
+        className="mt-2 min-h-0 flex-1 divide-y overflow-visible scrollbar-thin md:overflow-y-auto"
       >
         {source.articles.map((article) => (
           <li key={article.url} className="px-4 py-3">
@@ -126,7 +126,7 @@ function SourceCard({ source }: { source: Source }) {
         ))}
       </ul>
       {showFade && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 h-8 bg-gradient-to-t from-card to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 hidden h-8 bg-gradient-to-t from-card to-transparent md:block" />
       )}
     </div>
   )
