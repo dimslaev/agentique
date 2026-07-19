@@ -234,9 +234,11 @@ ${bodyHtml}
   })
 }
 
-// Real, indexable SPA routes — auth-gated pages (login, settings, admin,
-// items, profile) are deliberately excluded, nothing there for Google to rank.
-const STATIC_ROUTES = ["/", "/developers", "/newsletter"]
+// Real, indexable SPA routes. Everything else — /feed, /developers,
+// /newsletter, login, settings, admin, profile — sits behind the login
+// guard and bounces anonymous visitors (and crawlers) to "/", so there's
+// nothing there for Google to rank.
+const STATIC_ROUTES = ["/"]
 
 function renderSitemap(posts: Post[]): string {
   const today = new Date().toISOString().slice(0, 10)
