@@ -36,7 +36,7 @@ export function LandingPage() {
 function Header() {
   return (
     <header className="flex items-center justify-between border-b px-6 py-3">
-      <Logo />
+      <Logo full />
       <nav className="flex items-center gap-1">
         <Button variant="ghost" size="sm" asChild>
           <a href="/blog/">Blog</a>
@@ -98,7 +98,7 @@ function NewsletterSignup() {
         e.preventDefault()
         if (email) mutation.mutate()
       }}
-      className="flex w-full max-w-sm items-center gap-2"
+      className="flex w-full max-w-md items-center rounded-full border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
       noValidate
     >
       <Input
@@ -108,9 +108,20 @@ function NewsletterSignup() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         disabled={mutation.isPending}
-        className="rounded-full"
+        autoComplete="email"
+        // Suppress password-manager icon overlays (1Password, LastPass,
+        // Bitwarden, Dashlane) — they clash with the merged pill shape.
+        data-1p-ignore="true"
+        data-lpignore="true"
+        data-bwignore="true"
+        data-form-type="other"
+        className="h-11 flex-1 rounded-full border-0 bg-transparent pl-5 pr-3 text-base shadow-none dark:bg-transparent focus-visible:ring-0"
       />
-      <LoadingButton type="submit" loading={mutation.isPending}>
+      <LoadingButton
+        type="submit"
+        loading={mutation.isPending}
+        className="my-1 mr-1 h-9 shrink-0 rounded-full px-6"
+      >
         Subscribe
       </LoadingButton>
     </form>
