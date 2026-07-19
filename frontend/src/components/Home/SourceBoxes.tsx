@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { type Source, SOURCES } from "./sources"
+import { SOURCES, type Source } from "./sources"
 
 function monogram(name: string): string {
   return name

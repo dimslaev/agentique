@@ -259,7 +259,8 @@ export const SOURCES: Source[] = [
       {
         from: "TLDR",
         fromDomain: "tldr.tech",
-        title: "Composer 2 offers frontier coding ability at $0.50 per M input tokens",
+        title:
+          "Composer 2 offers frontier coding ability at $0.50 per M input tokens",
         url: "https://cursor.com/blog/composer-2",
         date: "2026-03-20",
         kind: "announcement",
@@ -269,7 +270,8 @@ export const SOURCES: Source[] = [
       {
         from: "The Batch",
         fromDomain: "deeplearning.ai",
-        title: "Claude Opus 4.5: Token-Efficient Model Improving on Previous Release",
+        title:
+          "Claude Opus 4.5: Token-Efficient Model Improving on Previous Release",
         url: "https://www.anthropic.com/news/claude-opus-4-5",
         date: "2025-12-11",
         kind: "announcement",
