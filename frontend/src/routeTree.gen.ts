@@ -13,6 +13,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomeRouteImport } from './routes/home'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
@@ -40,6 +41,11 @@ const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRoute = HomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutRoute = LayoutRouteImport.update({
@@ -84,6 +90,7 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
+  '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/home'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/home'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_layout'
+    | '/home'
     | '/login'
     | '/recover-password'
     | '/reset-password'
@@ -169,6 +181,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LayoutRoute: typeof LayoutRouteWithChildren
+  HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -203,6 +216,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout': {
@@ -288,6 +308,7 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LayoutRoute: LayoutRouteWithChildren,
+  HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   RecoverPasswordRoute: RecoverPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,

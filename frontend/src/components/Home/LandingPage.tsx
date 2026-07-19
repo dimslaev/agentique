@@ -1,0 +1,125 @@
+import { useMutation } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
+import { useState } from "react"
+
+import { NewsletterService } from "@/client"
+import { Footer } from "@/components/Common/Footer"
+import { Logo } from "@/components/Common/Logo"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { LoadingButton } from "@/components/ui/loading-button"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
+
+export function LandingPage() {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <main className="flex flex-1 flex-col items-center justify-center px-6 py-20">
+        <div className="flex w-full max-w-xl flex-col items-center gap-10 text-center">
+          <Hero />
+          {/* --- BUTTON 1: newsletter signup (logic owned by routing agent) --- */}
+          <NewsletterSignup />
+          {/* --- BUTTON 2: app signup (logic owned by routing agent) --- */}
+          <SignupCta />
+        </div>
+      </main>
+      <Footer />
+    </div>
+  )
+}
+
+function Header() {
+  return (
+    <header className="flex items-center justify-between border-b px-6 py-3">
+      <Logo />
+      <nav className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" asChild>
+          <a href="/blog/">Blog</a>
+        </Button>
+        <Button variant="ghost" size="sm" asChild>
+          <Link to="/login">Log in</Link>
+        </Button>
+        <Button size="sm" asChild>
+          <Link to="/signup">Sign up</Link>
+        </Button>
+      </nav>
+    </header>
+  )
+}
+
+function Hero() {
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
+        AI news for developers
+      </p>
+      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+        Every AI story that matters. For devs.
+      </h1>
+      <p className="text-muted-foreground">
+        Agentique ingests 1,000+ articles, tweets, and discussions every day and
+        runs them through an AI pipeline built to answer one question: can a
+        developer act on this today?
+      </p>
+    </div>
+  )
+}
+
+function NewsletterSignup() {
+  const { showErrorToast } = useCustomToast()
+  const [email, setEmail] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      NewsletterService.subscribe({
+        requestBody: { email, categories: ["all"], customCategory: "" },
+      }),
+    onSuccess: () => setSubmitted(true),
+    onError: handleError.bind(showErrorToast),
+  })
+
+  if (submitted) {
+    return (
+      <p className="text-sm font-medium">
+        You&apos;re subscribed. Check your inbox.
+      </p>
+    )
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (email) mutation.mutate()
+      }}
+      className="flex w-full max-w-sm items-center gap-2"
+      noValidate
+    >
+      <Input
+        type="email"
+        required
+        placeholder="your@email.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={mutation.isPending}
+        className="rounded-full"
+      />
+      <LoadingButton type="submit" loading={mutation.isPending}>
+        Subscribe
+      </LoadingButton>
+    </form>
+  )
+}
+
+function SignupCta() {
+  return (
+    <p className="text-sm text-muted-foreground">
+      Want the full feed?{" "}
+      <Link to="/signup" className="text-foreground underline underline-offset-4">
+        Create a free account
+      </Link>
+    </p>
+  )
+}
