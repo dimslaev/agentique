@@ -10,18 +10,22 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { SourceBoxes } from "./SourceBoxes"
 
 export function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex flex-1 flex-col items-center justify-center px-6 py-20">
-        <div className="flex w-full max-w-xl flex-col items-center gap-10 text-center">
-          <Hero />
-          {/* --- BUTTON 1: newsletter signup (logic owned by routing agent) --- */}
-          <NewsletterSignup />
-          {/* --- BUTTON 2: app signup (logic owned by routing agent) --- */}
-          <SignupCta />
+      <main className="flex-1 px-6 py-16">
+        <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-16">
+          <div className="flex w-full max-w-xl flex-col items-center gap-6 text-center">
+            <Hero />
+            {/* --- BUTTON 1: newsletter signup (logic owned by routing agent) --- */}
+            <NewsletterSignup />
+            {/* --- BUTTON 2: app signup (logic owned by routing agent) --- */}
+            <SignupCta />
+          </div>
+          <SourceBoxes />
         </div>
       </main>
       <Footer />
