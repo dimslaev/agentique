@@ -1,4 +1,5 @@
 import uuid
+from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -10,6 +11,7 @@ from sqlmodel import Session, col, select
 from app.api.routes import articles
 from app.core.config import settings
 from app.core.security import create_access_token
+from app.main import app
 from app.models import Article
 from tests.utils.article import (
     create_random_article,
@@ -23,8 +25,62 @@ from tests.utils.utils import random_email
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
 
 
-def test_read_articles_default(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/")
+@pytest.fixture(scope="module")
+def auth_client(
+    normal_user_token_headers: dict[str, str],
+) -> Generator[TestClient]:
+    """A TestClient that sends the normal-user bearer token on every request.
+
+    The articles read API is auth-gated, so the bulk of these tests need a
+    logged-in caller. The token works on any client instance.
+    """
+    with TestClient(app) as c:
+        c.headers.update(normal_user_token_headers)
+        yield c
+
+
+# --- auth gate ---------------------------------------------------------------
+
+READ_ENDPOINTS = [
+    "/",
+    "/search?q=agents",
+    "/facets",
+    "/publishers",
+    "/tags",
+    "/stats",
+]
+
+
+@pytest.mark.parametrize("path", READ_ENDPOINTS)
+def test_read_endpoints_require_auth(client: TestClient, path: str) -> None:
+    r = client.get(f"{ARTICLES_URL}{path}")
+    assert r.status_code == 401
+
+
+def test_read_articles_garbage_token_rejected(client: TestClient) -> None:
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"limit": 5},
+        headers={"Authorization": "Bearer not-a-real-token"},
+    )
+    assert r.status_code == 403
+
+
+def test_read_articles_valid_token_unknown_user_rejected(client: TestClient) -> None:
+    token = create_access_token(str(uuid.uuid4()), expires_delta=timedelta(minutes=5))
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"limit": 5},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 404
+
+
+# --- reads (authenticated) ---------------------------------------------------
+
+
+def test_read_articles_default(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/")
     assert r.status_code == 200
     data = r.json()
     assert data["count"] > 0
@@ -40,37 +96,37 @@ def test_read_articles_default(client: TestClient) -> None:
     assert "source_type" not in article
 
 
-def test_read_articles_filter_category(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"category": "dev", "limit": 50})
+def test_read_articles_filter_category(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"category": "dev", "limit": 50})
     assert r.status_code == 200
     data = r.json()
     assert data["count"] > 0
     assert all("dev" in a["categories"] for a in data["data"])
 
 
-def test_read_articles_filter_min_score(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"min_score": 8, "limit": 50})
+def test_read_articles_filter_min_score(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"min_score": 8, "limit": 50})
     assert r.status_code == 200
     data = r.json()
     assert all(a["score"] >= 8 for a in data["data"])
 
 
-def test_read_articles_filter_kind(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"kind": "repo", "limit": 50})
+def test_read_articles_filter_kind(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"kind": "repo", "limit": 50})
     assert r.status_code == 200
     data = r.json()
     assert data["count"] > 0
     assert all(a["kind"] == "repo" for a in data["data"])
 
 
-def test_read_articles_filter_tag(client: TestClient, db: Session) -> None:
+def test_read_articles_filter_tag(auth_client: TestClient, db: Session) -> None:
     now = datetime.now(UTC)
     tag = create_random_tag(db)
     tagged = create_random_article(db, published_at=now)
     create_random_article(db, published_at=now)
     tag_article(db, tagged, tag)
 
-    r = client.get(f"{ARTICLES_URL}/", params={"tag": tag.slug, "limit": 50})
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"tag": tag.slug, "limit": 50})
     assert r.status_code == 200
     data = r.json()
     assert [a["id"] for a in data["data"]] == [tagged.id]
@@ -78,20 +134,24 @@ def test_read_articles_filter_tag(client: TestClient, db: Session) -> None:
     assert [t["slug"] for t in data["data"][0]["tags"]] == [tag.slug]
 
 
-def test_read_articles_filter_unknown_tag_returns_nothing(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"tag": "no-such-tag", "limit": 50})
+def test_read_articles_filter_unknown_tag_returns_nothing(
+    auth_client: TestClient,
+) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"tag": "no-such-tag", "limit": 50})
     assert r.status_code == 200
     assert r.json()["count"] == 0
 
 
-def test_read_articles_filter_never_increases_count(client: TestClient) -> None:
-    base = client.get(f"{ARTICLES_URL}/").json()["count"]
-    filtered = client.get(f"{ARTICLES_URL}/", params={"min_score": 5}).json()["count"]
+def test_read_articles_filter_never_increases_count(auth_client: TestClient) -> None:
+    base = auth_client.get(f"{ARTICLES_URL}/").json()["count"]
+    filtered = auth_client.get(f"{ARTICLES_URL}/", params={"min_score": 5}).json()[
+        "count"
+    ]
     assert filtered <= base
 
 
-def test_read_articles_sort_published_at_desc(client: TestClient) -> None:
-    r = client.get(
+def test_read_articles_sort_published_at_desc(auth_client: TestClient) -> None:
+    r = auth_client.get(
         f"{ARTICLES_URL}/", params={"sort": "published_at-desc", "limit": 50}
     )
     data = r.json()["data"]
@@ -99,20 +159,20 @@ def test_read_articles_sort_published_at_desc(client: TestClient) -> None:
     assert dates == sorted(dates, reverse=True)
 
 
-def test_read_articles_sort_default_is_score_desc(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"limit": 50})
+def test_read_articles_sort_default_is_score_desc(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50})
     scores = [a["score"] for a in r.json()["data"]]
     assert scores == sorted(scores, reverse=True)
 
 
-def test_read_articles_since_narrows_results(client: TestClient) -> None:
+def test_read_articles_since_narrows_results(auth_client: TestClient) -> None:
     wide_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
     narrow_since = (datetime.now(UTC) - timedelta(days=3)).isoformat()
 
-    wide = client.get(
+    wide = auth_client.get(
         f"{ARTICLES_URL}/", params={"since": wide_since, "limit": 50}
     ).json()
-    narrow = client.get(
+    narrow = auth_client.get(
         f"{ARTICLES_URL}/", params={"since": narrow_since, "limit": 50}
     ).json()
 
@@ -123,23 +183,25 @@ def test_read_articles_since_narrows_results(client: TestClient) -> None:
 
 
 def test_read_articles_malformed_since_falls_back_to_default_window(
-    client: TestClient,
+    auth_client: TestClient,
 ) -> None:
-    default = client.get(f"{ARTICLES_URL}/").json()
-    malformed = client.get(f"{ARTICLES_URL}/", params={"since": "not-a-date"}).json()
+    default = auth_client.get(f"{ARTICLES_URL}/").json()
+    malformed = auth_client.get(
+        f"{ARTICLES_URL}/", params={"since": "not-a-date"}
+    ).json()
 
     assert malformed["count"] == default["count"]
 
 
 # Placed after the count-sensitive tests above (which assume the seeded
 # window fits under the default limit=50) since these insert extra articles.
-def test_read_articles_filter_publisher(client: TestClient, db: Session) -> None:
+def test_read_articles_filter_publisher(auth_client: TestClient, db: Session) -> None:
     now = datetime.now(UTC)
     publisher = create_random_publisher(db)
     matched = create_random_article(db, publisher_id=publisher.id, published_at=now)
     create_random_article(db, published_at=now)
 
-    r = client.get(
+    r = auth_client.get(
         f"{ARTICLES_URL}/", params={"publisher": publisher.slug, "limit": 50}
     )
     assert r.status_code == 200
@@ -150,9 +212,9 @@ def test_read_articles_filter_publisher(client: TestClient, db: Session) -> None
 
 
 def test_read_articles_filter_unknown_publisher_returns_nothing(
-    client: TestClient,
+    auth_client: TestClient,
 ) -> None:
-    r = client.get(
+    r = auth_client.get(
         f"{ARTICLES_URL}/", params={"publisher": "no-such-publisher", "limit": 50}
     )
     assert r.status_code == 200
@@ -160,12 +222,12 @@ def test_read_articles_filter_unknown_publisher_returns_nothing(
 
 
 def test_search_articles(
-    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
     monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
 
-    r = client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200
     data = r.json()
     assert len(data["data"]) <= 5
@@ -183,8 +245,8 @@ def test_search_articles(
     assert [a["id"] for a in data["data"]] == list(expected_ids)
 
 
-def test_article_facets(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/facets")
+def test_article_facets(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/facets")
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data["publishers"], list)
@@ -201,19 +263,19 @@ def test_article_facets(client: TestClient) -> None:
     assert tag_counts == sorted(tag_counts, reverse=True)
 
 
-def test_article_facets_respects_limit(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/facets", params={"limit": 2})
+def test_article_facets_respects_limit(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/facets", params={"limit": 2})
     assert r.status_code == 200
     data = r.json()
     assert len(data["publishers"]) <= 2
     assert len(data["tags"]) <= 2
 
 
-def test_search_publishers(client: TestClient, db: Session) -> None:
+def test_search_publishers(auth_client: TestClient, db: Session) -> None:
     publisher = create_random_publisher(db, name="Zzz Unique Publisher")
     create_random_article(db, publisher_id=publisher.id)
 
-    r = client.get(f"{ARTICLES_URL}/publishers", params={"q": "unique"})
+    r = auth_client.get(f"{ARTICLES_URL}/publishers", params={"q": "unique"})
     assert r.status_code == 200
     data = r.json()
     found = next((p for p in data if p["slug"] == publisher.slug), None)
@@ -221,18 +283,20 @@ def test_search_publishers(client: TestClient, db: Session) -> None:
     assert found["count"] == 1
 
 
-def test_search_publishers_no_match(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/publishers", params={"q": "no-such-publisher-xyz"})
+def test_search_publishers_no_match(auth_client: TestClient) -> None:
+    r = auth_client.get(
+        f"{ARTICLES_URL}/publishers", params={"q": "no-such-publisher-xyz"}
+    )
     assert r.status_code == 200
     assert r.json() == []
 
 
-def test_search_tags(client: TestClient, db: Session) -> None:
+def test_search_tags(auth_client: TestClient, db: Session) -> None:
     tag = create_random_tag(db, name="Zzz Unique Tag")
     article = create_random_article(db)
     tag_article(db, article, tag)
 
-    r = client.get(f"{ARTICLES_URL}/tags", params={"q": "unique"})
+    r = auth_client.get(f"{ARTICLES_URL}/tags", params={"q": "unique"})
     assert r.status_code == 200
     data = r.json()
     found = next((t for t in data if t["slug"] == tag.slug), None)
@@ -240,29 +304,29 @@ def test_search_tags(client: TestClient, db: Session) -> None:
     assert found["count"] == 1
 
 
-def test_search_tags_no_match(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/tags", params={"q": "no-such-tag-xyz"})
+def test_search_tags_no_match(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/tags", params={"q": "no-such-tag-xyz"})
     assert r.status_code == 200
     assert r.json() == []
 
 
-def test_article_stats(client: TestClient) -> None:
-    r = client.get(f"{ARTICLES_URL}/stats")
+def test_article_stats(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/stats")
     assert r.status_code == 200
     data = r.json()
     assert data["total"] >= 50
     datetime.fromisoformat(data["lastUpdated"])
 
 
-def test_read_articles_anonymous_has_like_count_and_liked_by_me(
-    client: TestClient,
+def test_read_articles_has_like_count_and_liked_by_me(
+    auth_client: TestClient,
 ) -> None:
-    r = client.get(f"{ARTICLES_URL}/", params={"limit": 50})
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50})
     data = r.json()["data"]
     assert len(data) > 0
     for article in data:
         assert article["like_count"] >= 0
-        assert article["liked_by_me"] is False
+        assert isinstance(article["liked_by_me"], bool)
 
 
 def test_read_articles_liked_by_me_true_only_for_liked(
@@ -285,31 +349,6 @@ def test_read_articles_liked_by_me_true_only_for_liked(
     assert data[unliked.id]["like_count"] == 0
 
 
-def test_read_articles_garbage_token_treated_as_anonymous(client: TestClient) -> None:
-    r = client.get(
-        f"{ARTICLES_URL}/",
-        params={"limit": 5},
-        headers={"Authorization": "Bearer not-a-real-token"},
-    )
-    assert r.status_code == 200
-    for article in r.json()["data"]:
-        assert article["liked_by_me"] is False
-
-
-def test_read_articles_valid_token_unknown_user_treated_as_anonymous(
-    client: TestClient,
-) -> None:
-    token = create_access_token(str(uuid.uuid4()), expires_delta=timedelta(minutes=5))
-    r = client.get(
-        f"{ARTICLES_URL}/",
-        params={"limit": 5},
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert r.status_code == 200
-    for article in r.json()["data"]:
-        assert article["liked_by_me"] is False
-
-
 def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
     now = datetime.now(UTC)
     low_score_more_likes = create_random_article(db, score=3, published_at=now)
@@ -325,7 +364,11 @@ def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
         client.put(f"{ARTICLES_URL}/{low_score_more_likes.id}/like", headers=headers)
     client.put(f"{ARTICLES_URL}/{tied_score_a.id}/like", headers=headers_list[0])
 
-    r = client.get(f"{ARTICLES_URL}/", params={"sort": "likes-desc", "limit": 50})
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"sort": "likes-desc", "limit": 50},
+        headers=headers_list[0],
+    )
     data = r.json()["data"]
     ids = [a["id"] for a in data]
 
@@ -337,12 +380,12 @@ def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
 
 
 def test_search_articles_has_like_count_and_liked_by_me(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
     monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
 
-    r = client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200
     for article in r.json()["data"]:
         assert "like_count" in article

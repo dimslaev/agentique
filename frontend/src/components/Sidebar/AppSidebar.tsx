@@ -15,7 +15,7 @@ import { type Item, Main } from "./Main"
 import { User } from "./User"
 
 const navItems: Item[] = [
-  { index: "01", title: "Feed", path: "/" },
+  { index: "01", title: "Feed", path: "/feed" },
   { index: "02", title: "Newsletter", path: "/newsletter" },
   { index: "03", title: "API", path: "/developers" },
   // Prerendered static pages, not SPA routes — full page load by design.
@@ -25,7 +25,7 @@ const navItems: Item[] = [
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
   const router = useRouterState()
-  const isHome = router.location.pathname === "/"
+  const isHome = router.location.pathname === "/feed"
 
   return (
     <Sidebar collapsible="icon">

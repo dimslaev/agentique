@@ -5,35 +5,11 @@ import { expect, test } from "@playwright/test"
 // other or they'll race on the same rows.
 test.describe.configure({ mode: "serial" })
 
-test.describe("Anonymous likes", () => {
-  test.use({ storageState: { cookies: [], origins: [] } })
-
-  test("article rows show a fire button with a numeric badge, including 0", async ({
-    page,
-  }) => {
-    await page.goto("/")
-    const firstRow = page.getByTestId("article-row").first()
-    await expect(firstRow.getByTestId("like-button")).toBeVisible()
-    const countText = await firstRow.getByTestId("like-count").textContent()
-    expect(countText).toMatch(/^\d+$/)
-  })
-
-  test("clicking the fire while logged out redirects to /login with a redirect param", async ({
-    page,
-  }) => {
-    await page.goto("/")
-    await page.getByTestId("like-button").first().click()
-    await page.waitForURL(/\/login/)
-    const url = new URL(page.url())
-    expect(url.searchParams.get("redirect")).toBeTruthy()
-  })
-})
-
 test.describe("Logged-in likes", () => {
   test("clicking the fire toggles the like optimistically", async ({
     page,
   }) => {
-    await page.goto("/")
+    await page.goto("/feed")
     const firstRow = page.getByTestId("article-row").first()
     const likeButton = firstRow.getByTestId("like-button")
     const likeCount = firstRow.getByTestId("like-count")
@@ -66,7 +42,7 @@ test.describe("Popular sort", () => {
   test("sort filter shows Popular and selecting it reorders the list", async ({
     page,
   }) => {
-    await page.goto("/")
+    await page.goto("/feed")
     const popularOption = page.getByRole("button", { name: "Popular" })
     await expect(popularOption).toBeVisible()
     await popularOption.click()
@@ -79,9 +55,11 @@ test.describe("Profile page", () => {
   test.describe("logged out", () => {
     test.use({ storageState: { cookies: [], origins: [] } })
 
-    test("visiting /profile redirects to /login", async ({ page }) => {
+    test("visiting /profile redirects to the landing page", async ({
+      page,
+    }) => {
       await page.goto("/profile")
-      await page.waitForURL(/\/login/)
+      await page.waitForURL("/")
     })
   })
 
@@ -101,7 +79,7 @@ test.describe("Profile page", () => {
   test("a liked article appears in the Liked tab; unliking removes it", async ({
     page,
   }) => {
-    await page.goto("/")
+    await page.goto("/feed")
     const firstRow = page.getByTestId("article-row").first()
     const href = await firstRow.locator("a").first().getAttribute("href")
     await firstRow.getByTestId("like-button").click()
