@@ -38,7 +38,11 @@ jobs:
         # To be able to commit it needs the head branch of the PR, the remote one
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-          persist-credentials: false
+          # pre-commit-ci/lite-action does its own `git fetch origin` and has
+          # no token input — on a private repo that needs a credential, not
+          # the anonymous access a public repo allowed. Token is contents:read
+          # only (see workflow permissions above), so this doesn't grant push.
+          persist-credentials: true
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: 1.3.12
