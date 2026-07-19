@@ -132,7 +132,10 @@ function SignupCta() {
   return (
     <p className="text-sm text-muted-foreground">
       Want the full feed?{" "}
-      <Link to="/signup" className="text-foreground underline underline-offset-4">
+      <Link
+        to="/signup"
+        className="text-foreground underline underline-offset-4"
+      >
         Create a free account
       </Link>
     </p>
