@@ -40,6 +40,8 @@ chown ubuntu:agentique /opt/agentique
 chown agentique:agentique /var/lib/agentique && chmod 750 /var/lib/agentique
 
 # first-ever population — after this, CI's rsync takes over
+# repo is private: authenticate first, e.g. an SSH deploy key or
+# `gh auth login` (gh CLI rewrites the https URL transparently)
 git clone https://github.com/dimslaev/agentique /opt/agentique
 
 # .env — write by hand, then:
