@@ -1,9 +1,9 @@
 import { useMutation } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
+import { ArrowUp } from "lucide-react"
 import { useState } from "react"
 
 import { NewsletterService } from "@/client"
-import { Footer } from "@/components/Common/Footer"
 import { Header } from "@/components/Common/Header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +28,18 @@ export function LandingPage() {
           <SourceBoxes />
         </div>
       </main>
-      <Footer />
+      <footer className="border-t">
+        <div className="mx-auto flex w-full max-w-5xl justify-center px-6 py-6">
+          <button
+            type="button"
+            aria-label="Scroll back to top"
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex h-9 w-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
+        </div>
+      </footer>
     </div>
   )
 }

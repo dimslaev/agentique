@@ -8,6 +8,7 @@ from pgvector.sqlalchemy import Vector
 from sqlalchemy import cast
 from sqlmodel import Session, col, select
 
+from app import crud
 from app.api.routes import articles
 from app.core.config import settings
 from app.core.security import create_access_token
@@ -24,18 +25,34 @@ from tests.utils.utils import random_email
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
 
+# A `since` comfortably inside the 7-day free window, for free-user reads.
+RECENT_SINCE = (datetime.now(UTC) - timedelta(days=1)).isoformat()
+
+
+@pytest.fixture(scope="module")
+def pro_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+    """Headers for a Pro user (pro_until a month out) — unbounded date access."""
+    email = random_email()
+    headers = authentication_token_from_email(client=client, email=email, db=db)
+    user = crud.get_user_by_email(session=db, email=email)
+    assert user is not None
+    user.pro_until = datetime.now(UTC) + timedelta(days=30)
+    db.add(user)
+    db.commit()
+    return headers
+
 
 @pytest.fixture(scope="module")
 def auth_client(
-    normal_user_token_headers: dict[str, str],
+    pro_user_token_headers: dict[str, str],
 ) -> Generator[TestClient]:
-    """A TestClient that sends the normal-user bearer token on every request.
+    """A TestClient that sends a Pro-user bearer token on every request.
 
-    The articles read API is auth-gated, so the bulk of these tests need a
-    logged-in caller. The token works on any client instance.
+    The articles read API is auth-gated and free callers are capped to the last
+    7 days, so the bulk of these tests use a Pro caller to read unbounded.
     """
     with TestClient(app) as c:
-        c.headers.update(normal_user_token_headers)
+        c.headers.update(pro_user_token_headers)
         yield c
 
 
@@ -182,15 +199,138 @@ def test_read_articles_since_narrows_results(auth_client: TestClient) -> None:
     assert narrow_ids <= wide_ids
 
 
-def test_read_articles_malformed_since_falls_back_to_default_window(
+def test_read_articles_malformed_since_returns_422(
     auth_client: TestClient,
 ) -> None:
-    default = auth_client.get(f"{ARTICLES_URL}/").json()
-    malformed = auth_client.get(
-        f"{ARTICLES_URL}/", params={"since": "not-a-date"}
-    ).json()
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"since": "not-a-date"})
+    assert r.status_code == 422
 
-    assert malformed["count"] == default["count"]
+
+# --- free-window gate --------------------------------------------------------
+
+
+def test_read_articles_missing_since_free_forbidden(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    r = client.get(f"{ARTICLES_URL}/", headers=normal_user_token_headers)
+    assert r.status_code == 403
+
+
+def test_read_articles_missing_since_pro_ok(
+    client: TestClient, pro_user_token_headers: dict[str, str]
+) -> None:
+    r = client.get(f"{ARTICLES_URL}/", headers=pro_user_token_headers)
+    assert r.status_code == 200
+    assert r.json()["count"] > 0
+
+
+def test_read_articles_missing_since_superuser_ok(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    r = client.get(f"{ARTICLES_URL}/", headers=superuser_token_headers)
+    assert r.status_code == 200
+    assert r.json()["count"] > 0
+
+
+def test_read_articles_old_since_free_forbidden(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"since": old_since},
+        headers=normal_user_token_headers,
+    )
+    assert r.status_code == 403
+
+
+def test_read_articles_old_since_pro_ok(
+    client: TestClient, pro_user_token_headers: dict[str, str]
+) -> None:
+    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"since": old_since},
+        headers=pro_user_token_headers,
+    )
+    assert r.status_code == 200
+
+
+def test_read_articles_old_since_superuser_ok(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"since": old_since},
+        headers=superuser_token_headers,
+    )
+    assert r.status_code == 200
+
+
+def test_read_articles_recent_since_free_ok(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"since": RECENT_SINCE},
+        headers=normal_user_token_headers,
+    )
+    assert r.status_code == 200
+
+
+def test_read_articles_q_filters_title_or_summary(
+    auth_client: TestClient, db: Session
+) -> None:
+    now = datetime.now(UTC)
+    marker = "zzqqxxmarker"
+    by_title = create_random_article(db, title=f"A {marker} headline", published_at=now)
+    by_summary = create_random_article(
+        db, summary=f"body mentions {marker} here", published_at=now
+    )
+    create_random_article(db, published_at=now)
+
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"q": marker, "limit": 50})
+    assert r.status_code == 200
+    ids = {a["id"] for a in r.json()["data"]}
+    assert ids == {by_title.id, by_summary.id}
+
+
+def test_search_free_bounded_pro_unbounded(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers: dict[str, str],
+    pro_user_token_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_vec = [0.05] * 256
+    monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
+    now = datetime.now(UTC)
+    # identical embedding to the query -> cosine distance 0 -> ranks first
+    old = create_random_article(
+        db, published_at=now - timedelta(days=20), embedding=fake_vec
+    )
+    recent = create_random_article(db, published_at=now, embedding=fake_vec)
+
+    free = client.get(
+        f"{ARTICLES_URL}/search",
+        params={"q": "x", "limit": 50},
+        headers=normal_user_token_headers,
+    )
+    assert free.status_code == 200
+    free_ids = {a["id"] for a in free.json()["data"]}
+    assert recent.id in free_ids
+    assert old.id not in free_ids
+
+    pro = client.get(
+        f"{ARTICLES_URL}/search",
+        params={"q": "x", "limit": 50},
+        headers=pro_user_token_headers,
+    )
+    assert pro.status_code == 200
+    pro_ids = {a["id"] for a in pro.json()["data"]}
+    assert old.id in pro_ids
+    assert recent.id in pro_ids
 
 
 # Placed after the count-sensitive tests above (which assume the seeded
@@ -340,7 +480,9 @@ def test_read_articles_liked_by_me_true_only_for_liked(
     assert r.status_code == 200
 
     r = client.get(
-        f"{ARTICLES_URL}/", params={"limit": 50}, headers=normal_user_token_headers
+        f"{ARTICLES_URL}/",
+        params={"limit": 50, "since": RECENT_SINCE},
+        headers=normal_user_token_headers,
     )
     data = {a["id"]: a for a in r.json()["data"]}
     assert data[liked.id]["liked_by_me"] is True
@@ -366,7 +508,7 @@ def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
 
     r = client.get(
         f"{ARTICLES_URL}/",
-        params={"sort": "likes-desc", "limit": 50},
+        params={"sort": "likes-desc", "limit": 50, "since": RECENT_SINCE},
         headers=headers_list[0],
     )
     data = r.json()["data"]

@@ -586,6 +586,11 @@ export const UserPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        is_pro: {
+            type: 'boolean',
+            title: 'Is Pro',
+            default: false
         }
     },
     type: 'object',
@@ -686,6 +691,18 @@ export const UserUpdateSchema = {
                 }
             ],
             title: 'Password'
+        },
+        pro_until: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pro Until'
         }
     },
     type: 'object',

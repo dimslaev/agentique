@@ -132,6 +132,7 @@ export type UserPublic = {
     full_name?: (string | null);
     id: string;
     created_at?: (string | null);
+    is_pro?: boolean;
 };
 
 export type UserRegister = {
@@ -151,6 +152,7 @@ export type UserUpdate = {
     is_superuser?: (boolean | null);
     full_name?: (string | null);
     password?: (string | null);
+    pro_until?: (string | null);
 };
 
 export type UserUpdateMe = {
@@ -180,6 +182,7 @@ export type ArticlesReadArticlesData = {
     limit?: number;
     minScore?: (number | null);
     publisher?: (string | null);
+    q?: (string | null);
     since?: (string | null);
     sort?: string;
     tag?: (string | null);

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
@@ -23,9 +23,24 @@ from app.models import (
     PublisherFacet,
     Tag,
     TagFacet,
+    User,
 )
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+
+# No rate limiting — access is gated by how far back a user can query.
+# Free = last 7 days, Pro/superuser = unlimited.
+FREE_WINDOW = timedelta(days=7)
+# absorb clock skew / request latency so a legit "last 7 days" request never trips the edge
+_SKEW = timedelta(hours=1)
+
+
+def _free_cutoff(user: User) -> datetime | None:
+    """Lower bound a free user is allowed to query, or None if unlimited (pro/superuser)."""
+    if user.is_pro or user.is_superuser:
+        return None
+    return datetime.now(UTC) - FREE_WINDOW - _SKEW
+
 
 # Loaded once at module import — model2vec is CPU-only and tiny (~30 MB)
 _model: StaticModel | None = None
@@ -55,6 +70,7 @@ def read_articles(
     current_user: CurrentUser,
     limit: int = Query(default=20, ge=1, le=50),
     since: str | None = None,
+    q: str | None = None,
     min_score: int | None = Query(default=None, ge=1, le=10),
     category: str | None = None,
     kind: str | None = None,
@@ -62,16 +78,29 @@ def read_articles(
     publisher: str | None = None,
     sort: str = Query(default="score-desc"),
 ) -> Any:
-    since_dt: datetime
-    if since:
+    # Missing `since` means "all time" (no lower bound) — Pro-only.
+    since_dt: datetime | None = None
+    if since is not None:
         try:
             since_dt = datetime.fromisoformat(since)
         except ValueError:
-            since_dt = datetime.now(UTC) - timedelta(days=30)
-    else:
-        since_dt = datetime.now(UTC) - timedelta(days=30)
+            raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
 
-    conditions = [col(Article.published_at) >= since_dt]
+    cutoff = _free_cutoff(current_user)
+    if cutoff is not None and (since_dt is None or since_dt < cutoff):
+        raise HTTPException(
+            status_code=403,
+            detail="Free plan is limited to the last 7 days. "
+            "Upgrade to Pro for full history.",
+        )
+
+    conditions: list[Any] = []
+    if since_dt is not None:
+        conditions.append(col(Article.published_at) >= since_dt)
+    if q:
+        conditions.append(
+            col(Article.title).ilike(f"%{q}%") | col(Article.summary).ilike(f"%{q}%")
+        )
     if min_score is not None:
         conditions.append(col(Article.score) >= min_score)
     if kind is not None:
@@ -139,11 +168,18 @@ def search_articles(
     like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
 
+    # Same free-window floor as the list endpoint, applied silently (no date
+    # param here). Pro/superuser callers are unbounded.
+    conditions = [Article.embedding.is_not(None)]  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
+    cutoff = _free_cutoff(current_user)
+    if cutoff is not None:
+        conditions.append(col(Article.published_at) >= cutoff)
+
     statement = (
         select(Article, Publisher, like_count_expr.label("like_count"))
         .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .outerjoin(like_counts_subq, like_counts_subq.c.article_id == Article.id)
-        .where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
+        .where(*conditions)
         .order_by(
             cast(Article.embedding, Vector(256)).cosine_distance(query_vec),
             col(Article.id).desc(),

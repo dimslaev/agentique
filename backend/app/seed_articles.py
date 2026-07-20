@@ -51,13 +51,13 @@ def _normalized_embedding(rng: random.Random) -> list[float]:
 def _published_at(rng: random.Random, index: int) -> datetime:
     now = datetime.now(UTC)
     if index < 40:
-        # bulk: today down to a week ago
+        # bulk: today down to a week ago — inside the free 7-day window
         return now - timedelta(days=rng.uniform(0, 7))
     elif index < 48:
-        # a week ago down to just under the 30-day default window
+        # a week ago down to a month ago — Pro-only history
         return now - timedelta(days=rng.uniform(7, 30))
     else:
-        # just past the default `since` window, to exercise it
+        # older still, to exercise deeper Pro queries
         return now - timedelta(days=rng.uniform(31, 40))
 
 
