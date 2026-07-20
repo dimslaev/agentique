@@ -48,9 +48,6 @@ function LandingNav() {
   return (
     <>
       <Button variant="ghost" size="sm" asChild>
-        <a href="/blog/">Blog</a>
-      </Button>
-      <Button variant="ghost" size="sm" asChild>
         <Link to="/login">Log in</Link>
       </Button>
       <Button size="sm" asChild>
