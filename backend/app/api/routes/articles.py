@@ -41,6 +41,7 @@ def _free_cutoff(user: User) -> datetime | None:
         return None
     return datetime.now(UTC) - FREE_WINDOW - _SKEW
 
+
 # Loaded once at module import — model2vec is CPU-only and tiny (~30 MB)
 _model: StaticModel | None = None
 
