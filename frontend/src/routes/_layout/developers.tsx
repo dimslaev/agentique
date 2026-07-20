@@ -63,13 +63,8 @@ function DevelopersPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Programmatic access to curated AI news. $10/mo.
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          API base URL:{" "}
-          <code className="font-mono text-xs text-foreground">
-            https://agentique.ch
-          </code>
-        </p>
-        <div className="mt-4">
+
+        <div className="mt-6">
           <Button onClick={onUpgrade}>Upgrade to Pro — $10/mo</Button>
         </div>
       </div>
