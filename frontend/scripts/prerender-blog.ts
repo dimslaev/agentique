@@ -192,6 +192,7 @@ function shell(opts: {
     <meta property="og:type" content="${opts.ogType}">
     <meta property="og:url" content="${canonical}">${published}
     <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.png">
     <script>${THEME_SCRIPT}</script>
     <script>${ANALYTICS_SCRIPT}</script>
     ${css}
