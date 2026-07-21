@@ -147,6 +147,14 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem("vite-ui-theme");if(t==="da
 // alongside SPA ones.
 const ANALYTICS_SCRIPT = `try{var k="analytics_visitor_id";var id=localStorage.getItem(k);if(!id){id=crypto.randomUUID();localStorage.setItem(k,id)}fetch("${API_URL}/api/v1/analytics/collect",{method:"POST",headers:{"Content-Type":"application/json"},keepalive:true,body:JSON.stringify({event:"pageview",path:location.pathname,referrer:document.referrer||undefined,visitor_id:id})}).catch(function(){})}catch(e){}`
 
+// Vanilla-JS twin of Appearance.tsx's toggle — static pages have no React
+// runtime, so clicking sets an explicit light/dark (never "system") in the
+// same "vite-ui-theme" localStorage key the SPA's ThemeProvider reads.
+const THEME_TOGGLE_SCRIPT = `(function(){var b=document.getElementById("theme-toggle"),s=document.getElementById("theme-icon-sun"),m=document.getElementById("theme-icon-moon");function sync(){var d=document.documentElement.classList.contains("dark");s.classList.toggle("hidden",d);m.classList.toggle("hidden",!d)}sync();b.addEventListener("click",function(){var next=document.documentElement.classList.contains("dark")?"light":"dark";document.documentElement.classList.remove("light","dark");document.documentElement.classList.add(next);try{localStorage.setItem("vite-ui-theme",next)}catch(e){}sync()})})();`
+
+const SUN_ICON = `<svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="size-4"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`
+const MOON_ICON = `<svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hidden size-4"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`
+
 function esc(s: string): string {
   return s
     .replaceAll("&", "&amp;")
@@ -195,9 +203,14 @@ function shell(opts: {
         <nav class="flex items-center gap-4 font-mono text-[11px] text-muted-foreground">
           <a href="/blog/" class="hover:text-foreground">blog</a>
           <a href="/" class="hover:text-foreground">feed</a>
+          <button id="theme-toggle" aria-label="Toggle theme" class="inline-flex size-7 items-center justify-center rounded-full border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50">
+            ${SUN_ICON}
+            ${MOON_ICON}
+          </button>
         </nav>
       </div>
     </header>
+    <script>${THEME_TOGGLE_SCRIPT}</script>
     <main class="mx-auto max-w-3xl px-4 py-10">
 ${opts.body}
     </main>

@@ -118,26 +118,6 @@
   * {
     @apply border-border outline-ring/50;
   }
-  /* Map typography's prose palette onto the theme vars so blog posts follow
-     light/dark automatically (no prose-invert needed). */
-  .prose {
-    --tw-prose-body: var(--color-foreground);
-    --tw-prose-headings: var(--color-foreground);
-    --tw-prose-lead: var(--color-muted-foreground);
-    --tw-prose-links: var(--color-foreground);
-    --tw-prose-bold: var(--color-foreground);
-    --tw-prose-counters: var(--color-muted-foreground);
-    --tw-prose-bullets: var(--color-muted-foreground);
-    --tw-prose-hr: var(--color-border);
-    --tw-prose-quotes: var(--color-muted-foreground);
-    --tw-prose-quote-borders: var(--color-border);
-    --tw-prose-captions: var(--color-muted-foreground);
-    --tw-prose-code: var(--color-foreground);
-    --tw-prose-pre-code: var(--color-secondary-foreground);
-    --tw-prose-pre-bg: var(--color-secondary);
-    --tw-prose-th-borders: var(--color-border);
-    --tw-prose-td-borders: var(--color-border);
-  }
   body {
     @apply bg-background text-foreground;
   }
@@ -165,5 +145,30 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--color-muted-foreground);
     border-radius: 9999px;
+  }
+}
+
+/* Typography plugin ships its own --tw-prose-* defaults in the utilities
+   layer. A same override in @layer base always loses that layer battle, so
+   this one must also live in @layer utilities (last-in-source wins the tie)
+   to actually repaint blog posts with the theme palette in dark mode. */
+@layer utilities {
+  .prose {
+    --tw-prose-body: var(--color-foreground);
+    --tw-prose-headings: var(--color-foreground);
+    --tw-prose-lead: var(--color-muted-foreground);
+    --tw-prose-links: var(--color-foreground);
+    --tw-prose-bold: var(--color-foreground);
+    --tw-prose-counters: var(--color-muted-foreground);
+    --tw-prose-bullets: var(--color-muted-foreground);
+    --tw-prose-hr: var(--color-border);
+    --tw-prose-quotes: var(--color-muted-foreground);
+    --tw-prose-quote-borders: var(--color-border);
+    --tw-prose-captions: var(--color-muted-foreground);
+    --tw-prose-code: var(--color-foreground);
+    --tw-prose-pre-code: var(--color-secondary-foreground);
+    --tw-prose-pre-bg: var(--color-secondary);
+    --tw-prose-th-borders: var(--color-border);
+    --tw-prose-td-borders: var(--color-border);
   }
 }
