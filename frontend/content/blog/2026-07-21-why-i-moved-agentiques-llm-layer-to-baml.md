@@ -10,51 +10,21 @@ articles:
   - https://github.com/BoundaryML/baml
 ---
 
-When I started building https://agentique.ch, I thought the only hard part would be
-ranking AI articles. It turned out there was another problem - keeping the
-LLM layer maintainable while constantly experimenting with different models
-and providers.
+When I started building https://agentique.ch, I thought the only hard part would be ranking AI articles. It turned out there was another problem - keeping the LLM layer maintainable while constantly experimenting with different models and providers.
 
 ## A bit of context
 
-Agentique is an AI news aggregator for developers. The goal isn't to cover
-*all* AI news - funding rounds, acquisitions, or how large AI labs cope with
-government affairs is out of scope. I'm much more interested in individual
-contributors or small teams sharing insights: blog posts about agent
-orchestration systems, GitHub repos solving a problem I ran into the week
-before, dev workflows that made an assistant twice as useful.
+Agentique is an AI news aggregator for developers. The goal isn't to cover *all* AI news - funding rounds, acquisitions, or how large AI labs cope with government affairs is out of scope. I'm much more interested in individual contributors or small teams sharing insights: blog posts about agent orchestration systems, GitHub repos solving a problem I ran into the week before, dev workflows that made an assistant twice as useful.
 
-To surface that, agentique collects articles from a curated list of
-technical sources and runs them through a pipeline: fetch, deduplicate, score
-relevance, improve titles, generate summaries, publish. Most stages involve
-one or more LLM calls, which means every stage has prompts, schemas, model
-selection, retries, and tests. After a while the LLM layer became its own 
-subsystem. That's when I started looking for better tooling.
-
+To surface that, agentique collects articles from a curated list of technical sources and runs them through a pipeline: fetch, deduplicate, score relevance, improve titles, generate summaries, publish. Most stages involve one or more LLM calls, which means every stage has prompts, schemas, model selection, retries, and tests. After a while the LLM layer became its own subsystem. That's when I started looking for better tooling. 
 ## Looking at the alternatives
 
-Before settling on [BAML](https://docs.boundaryml.com/home), I compared the
-existing ecosystem. Vercel AI SDK is excellent for building AI directly into
-a web app - streaming, React integration, provider abstraction. Mastra looks
-great for long-running agents, workflows, memory, RAG. LangChain/LangGraph is
-still the most complete orchestration framework for complex agent systems.
+Before settling on [BAML](https://docs.boundaryml.com/home), I compared the existing ecosystem. Vercel AI SDK is excellent for building AI directly into a web app - streaming, React integration, provider abstraction. Mastra looks great for long-running agents, workflows, memory, RAG. LangChain/LangGraph is still the most complete orchestration framework for complex agent systems. 
 
-My problem was different - I wasn't building autonomous agents or
-conversational UIs. I needed a reliable, well-organized way of expressing
-dozens of independent LLM tasks: classify article, improve title, generate
-summary, extract metadata, score relevance. Each one should look like a
-normal function in the codebase - typed inputs, typed outputs, easy testing,
-easy model switching, minimal boilerplate. That's the niche BAML fills: a DSL
-for turning prompts into typed functions with reliable structured output.
-
+My problem was different - I wasn't building autonomous agents or conversational UIs. I needed a reliable, well-organized way of expressing dozens of independent LLM tasks: classify article, improve title, generate summary, extract metadata, score relevance. Each one should look like a normal function in the codebase - typed inputs, typed outputs, easy testing, easy model switching, minimal boilerplate. That's the niche BAML fills: a DSL for turning prompts into typed functions with reliable structured output. 
 ## What I liked most
 
-**Prompt tests.** Every prompt lives together with its tests, right in the
-same `.baml` file, and the BAML VSCode extension runs them like unit tests
-from the editor. When I switch from Gemini to GPT-OSS, or tweak a prompt, I
-immediately know whether I've broken something. That removes a surprising
-amount of uncertainty.
-
+**Prompt tests.** Every prompt lives together with its tests, right in the same `.baml` file, and the BAML VSCode extension runs them like unit tests from the editor. When I switch from Gemini to GPT-OSS, or tweak a prompt, I immediately know whether I've broken something. That removes a surprising amount of uncertainty. 
 
 ## Prompt tests
 
@@ -147,14 +117,8 @@ client<llm> GeneralClient {
 }
 ```
 
-If Gemini is unavailable, the next provider in the strategy is tried
-automatically. The application code still just calls `ImproveTitles(...)` -
-it stays unaware of which provider ultimately serves the request.
+If Gemini is unavailable, the next provider in the strategy is tried automatically. The application code still just calls `ImproveTitles(...)` - it stays unaware of which provider ultimately serves the request. 
 
 ## The funny part
 
-One of the goals of Agentique was to help me discover technical content I
-probably wouldn't have found otherwise. BAML ended up being one of those
-discoveries - I found the [project on GitHub](https://github.com/BoundaryML/baml),
-added it to the feed because it looked interesting, gave it a try a few days
-later, and it ended up replacing my entire LLM layer.
+One of the goals of Agentique was to help me discover technical content I probably wouldn't have found otherwise. BAML ended up being one of those discoveries - it popped up in the feed with a high score so I gave it a try a few days later, and it ended up replacing my entire LLM layer.
