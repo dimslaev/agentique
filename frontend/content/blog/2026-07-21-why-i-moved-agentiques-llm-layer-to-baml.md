@@ -14,7 +14,7 @@ When I started building https://agentique.ch, I thought the only hard part would
 
 ## A bit of context
 
-Agentique is an AI news aggregator for developers. The goal isn't to cover *all* AI news - funding rounds, acquisitions, or how large AI labs cope with government affairs is out of scope. I'm much more interested in individual contributors or small teams sharing insights: blog posts about agent orchestration systems, GitHub repos solving a problem I ran into the week before, dev workflows that made an assistant twice as useful.
+Agentique is an AI news aggregator for developers. The goal isn't to cover *all* AI news - funding rounds, acquisitions, or how large AI labs cope with government affairs is out of scope. I'm much more interested in individual contributors or small teams sharing insights: blog posts about agent orchestration systems, GitHub repos solving a problem I ran into the week before, dev workflows that made an assistant twice as fast or efficient.
 
 To surface that, agentique collects articles from a curated list of technical sources and runs them through a pipeline: fetch, deduplicate, score relevance, improve titles, generate summaries, publish. Most stages involve one or more LLM calls, which means every stage has prompts, schemas, model selection, retries, and tests. After a while the LLM layer became its own subsystem. That's when I started looking for better tooling. 
 ## Looking at the alternatives
@@ -74,6 +74,9 @@ test improve_titles_rewrite_short {
       }
     ]
   }
+
+  @@assert(single_line, {{ "\n" not in this[0].title }})
+  @@assert(word_count, {{ this[0].title|split(" ")|list|length >= 3 and this[0].title|split(" ")|list|length <= 12 }})
 }
 
 test improve_titles_keep_unchanged {
@@ -87,6 +90,8 @@ test improve_titles_keep_unchanged {
       }
     ]
   }
+
+  @@assert(kept_original, {{ this[0].title == "Anthropic releases Claude 4 with 1M-token context window" }})
 }
 
 @@assert(no_markdown, {{ "**" not in this[0].title }})
