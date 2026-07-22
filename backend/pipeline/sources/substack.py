@@ -13,7 +13,7 @@ from pipeline.sources.http import (
     fetch_with_timeout,
 )
 from pipeline.types import FetchedArticle
-from pipeline.utils import clean_title, feed_url, is_within_window, log
+from pipeline.utils import clean_title, is_within_window, log
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
 _proxy_status_logged = False
@@ -87,7 +87,7 @@ def _fetch_source(source: dict) -> list[FetchedArticle]:
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
     try:
-        xml = _fetch_feed_xml(feed_url(rss_url))
+        xml = _fetch_feed_xml(rss_url)
         feed = feedparser.parse(xml)
         items = feed.get("entries", [])
         if not items:

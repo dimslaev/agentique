@@ -27,7 +27,7 @@ from app.models import (
     TrustLevel,
     slugify,
 )
-from pipeline.utils import enum_value, feed_url, log
+from pipeline.utils import enum_value, log
 
 # ─── per-run publisher resolution ───────────────────────────────────────────
 
@@ -82,9 +82,6 @@ class PublisherResolver:
 
 # ─── DB-driven feed discovery ────────────────────────────────────────────────
 
-# Which link platforms are pollable RSS-style feeds. substack feeds are RSS too.
-_FEED_PLATFORMS = (LinkPlatform.rss.value, LinkPlatform.substack.value)
-
 
 def _active_publisher_links(session: Session) -> list[tuple[Publisher, dict[str, str]]]:
     """Every active publisher paired with its links keyed by platform string.
@@ -103,26 +100,19 @@ def _active_publisher_links(session: Session) -> list[tuple[Publisher, dict[str,
 
 
 def feed_sources_from_db(session: Session) -> list[dict]:
-    """Active publishers with an rss/substack link -> feed configs.
+    """Active publishers with an rss link -> feed configs.
 
     Replaces ``sources/substack-sources.json``. Shape mirrors the old JSON
-    (``name`` / ``rssUrl``) so the substack fetcher needs no interface change.
-    Prefers an explicit ``rss`` link, else falls back to ``substack``.
+    (``name`` / ``rssUrl``) so the fetcher needs no interface change. Substack
+    links are normalised to their ``/feed`` rss URL at the DB level (see the
+    ``normalize_substack_links_to_rss`` migration), so there is a single ``rss``
+    link to read here.
     """
     sources: list[dict] = []
     for pub, links in _active_publisher_links(session):
-        for platform in _FEED_PLATFORMS:
-            url = links.get(platform)
-            if url:
-                sources.append(
-                    {
-                        "name": pub.name,
-                        "rssUrl": feed_url(
-                            url, is_substack=platform == LinkPlatform.substack.value
-                        ),
-                    }
-                )
-                break
+        url = links.get(LinkPlatform.rss.value)
+        if url:
+            sources.append({"name": pub.name, "rssUrl": url})
 
     log(f"  {len(sources)} active feed publishers loaded from DB")
     return sources
