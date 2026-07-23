@@ -95,7 +95,7 @@ function DevelopersPage() {
             { name: "limit", description: "integer · 1-50 · default 20" },
             {
               name: "q",
-              description: "string · optional · title/summary match",
+              description: "string · optional · title/content match",
             },
             { name: "min_score", description: "integer · 1-10 · optional" },
             {

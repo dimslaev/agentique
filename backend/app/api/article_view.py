@@ -23,6 +23,25 @@ from app.models import (
     TagPublic,
 )
 
+# How much of the article body to send as the list-view preview. The frontend
+# line-clamps it to a few lines; we trim here so the payload stays small and the
+# text is never cut mid-word.
+PREVIEW_CHARS = 280
+
+
+def content_preview(content: str | None) -> str | None:
+    """A short, word-boundary-trimmed preview of the article body, or None.
+
+    The pipeline sanitizes ``content`` at write time and no longer writes a
+    ``summary``, so the list view shows a trimmed slice of the content instead.
+    """
+    if not content:
+        return None
+    text = content.strip()
+    if len(text) <= PREVIEW_CHARS:
+        return text or None
+    return text[:PREVIEW_CHARS].rsplit(" ", 1)[0].rstrip() + "..."
+
 
 def like_counts_subquery() -> Any:
     return (
@@ -71,7 +90,7 @@ def to_public(
         id=article.id,
         title=article.title,
         url=article.url,
-        summary=article.summary,
+        summary=content_preview(article.content) or article.summary,
         score=article.score,
         kind=article.kind,
         categories=article.categories,

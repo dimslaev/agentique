@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["ArticleInput","CategorizeOnlyResult","ClassifyKindResult","DedupMatch","ExistingArticle","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","SummarizeAndCategorizeResult","TagAssignment","TagInput","TagOption","TitleFix",]
+          ["ArticleInput","CategorizeContentResult","CategorizeOnlyResult","ClassifyKindResult","DedupMatch","ExistingArticle","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","SummarizeAndCategorizeResult","TagAssignment","TagInput","TagOption","TitleFix",]
         ), enums=set(
           ["ArticleCategory","ArticleKind",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -39,12 +39,16 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 17
+    # Generated classes 18
     # #########################################################################
 
     @property
     def ArticleInput(self) -> "ArticleInputViewer":
         return ArticleInputViewer(self)
+
+    @property
+    def CategorizeContentResult(self) -> "CategorizeContentResultViewer":
+        return CategorizeContentResultViewer(self)
 
     @property
     def CategorizeOnlyResult(self) -> "CategorizeOnlyResultViewer":
@@ -222,7 +226,7 @@ class ArticleKindValues:
 
 
 # #########################################################################
-# Generated classes 17
+# Generated classes 18
 # #########################################################################
 
 class ArticleInputAst:
@@ -276,6 +280,49 @@ class ArticleInputProperties:
     @property
     def trust(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("trust"))
+    
+    
+
+
+class CategorizeContentResultAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.class_("CategorizeContentResult")
+        self._properties: typing.Set[str] = set([  "categories",  "kind",  ])
+        self._props = CategorizeContentResultProperties(self._bldr, self._properties)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def props(self) -> "CategorizeContentResultProperties":
+        return self._props
+
+
+class CategorizeContentResultViewer(CategorizeContentResultAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
+        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
+    
+
+
+class CategorizeContentResultProperties:
+    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
+        self.__bldr = bldr
+        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def categories(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("categories"))
+    
+    @property
+    def kind(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
     
     
 

@@ -7,8 +7,8 @@ from the start -- this documents and typo-checks step signatures, it does not
 enforce stage ordering (a step reading a not-yet-populated key is still a
 runtime KeyError, same as before).
 
-``_summarize_and_categorize`` reshapes into the narrower, fully-populated
-``ProcessedArticle`` that ``_assign_tags``/``_embed_articles`` consume.
+``categorize_articles`` reshapes into the narrower, fully-populated
+``ProcessedArticle`` that ``assign_tags``/``embed_articles`` consume.
 """
 
 from __future__ import annotations
@@ -32,8 +32,6 @@ class FetchedArticle(TypedDict, total=False):
     score: int
     # set by _insert_articles
     id: int
-    # set by _extract_full_content
-    full_content: str
 
 
 class ProcessedArticle(TypedDict):
@@ -41,5 +39,5 @@ class ProcessedArticle(TypedDict):
     url: str
     title: str
     score: int
-    summary: str
+    content: str
     categories: list[Category]

@@ -97,6 +97,21 @@ class BamlAsyncClient:
                 "articles": articles,"vocabulary": vocabulary,
             })
             return typing.cast(typing.List["types.TagAssignment"], __result__.cast_to(types, types, stream_types, False, __runtime__))
+    async def CategorizeContent(self, title: str,content: str,
+        baml_options: BamlCallOptions = {},
+    ) -> types.CategorizeContentResult:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            # Use streaming internally when on_tick is provided
+            __stream__ = self.stream.CategorizeContent(title=title,content=content,
+                baml_options=baml_options)
+            return await __stream__.get_final_response()
+        else:
+            # Original non-streaming code
+            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="CategorizeContent", args={
+                "title": title,"content": content,
+            })
+            return typing.cast(types.CategorizeContentResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
     async def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> types.CategorizeOnlyResult:
@@ -283,6 +298,18 @@ class BamlStreamClient:
           lambda x: typing.cast(typing.List["types.TagAssignment"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
+    def CategorizeContent(self, title: str,content: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlStream[stream_types.CategorizeContentResult, types.CategorizeContentResult]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="CategorizeContent", args={
+            "title": title,"content": content,
+        })
+        return baml_py.BamlStream[stream_types.CategorizeContentResult, types.CategorizeContentResult](
+          __result__,
+          lambda x: typing.cast(stream_types.CategorizeContentResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.CategorizeContentResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          __ctx__,
+        )
     def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlStream[stream_types.CategorizeOnlyResult, types.CategorizeOnlyResult]:
@@ -430,6 +457,13 @@ class BamlHttpRequestClient:
             "articles": articles,"vocabulary": vocabulary,
         }, mode="request")
         return __result__
+    async def CategorizeContent(self, title: str,content: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="CategorizeContent", args={
+            "title": title,"content": content,
+        }, mode="request")
+        return __result__
     async def CategorizeOnly(self, title: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -520,6 +554,13 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AssignTags", args={
             "articles": articles,"vocabulary": vocabulary,
+        }, mode="stream")
+        return __result__
+    async def CategorizeContent(self, title: str,content: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="CategorizeContent", args={
+            "title": title,"content": content,
         }, mode="stream")
         return __result__
     async def CategorizeOnly(self, title: str,

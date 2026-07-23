@@ -1,10 +1,10 @@
 """The pipeline's steps, in the order run.py applies them.
 
-    fetch    - poll each source, stamp publisher/trust onto every item
+    fetch    - poll each source, fill content, stamp publisher/trust per item
     filter   - drop known URLs, dead domains, semantic duplicates
     score    - cheap keep/drop pre-filter, then the LLM scorer
     persist  - insert what passed
-    enrich   - titles, full content, summary/categories, tags, embedding
+    enrich   - titles, categories/kind, tags, embedding
 
 Every step takes the session and a list of articles and returns the survivors,
 so run.py reads as the funnel it is. Steps own their own logging and commits.

@@ -7,16 +7,12 @@ from dataclasses import dataclass
 
 from sqlmodel import Session
 
+from pipeline.heuristics import MIN_CONTENT_CHARS
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
-    lab_watch_targets_from_db,
-    newsletter_senders_from_db,
 )
-from pipeline.sources.ainews import fetch_ai_news
-from pipeline.sources.email import fetch_newsletter
-from pipeline.sources.hn import fetch_hn
-from pipeline.sources.lab_watch import fetch_lab_watch
+from pipeline.sources.extract_content import fetch_full_content
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -32,23 +28,16 @@ class Source:
 
 
 def build_sources(session: Session) -> list[Source]:
-    """Assemble the run's sources. Aggregator channels (HN, AI News) keep their
-    fetchers; RSS/substack feeds and IMAP newsletter senders are both DB-driven
-    — "Feeds" polls every active feed publisher, "Newsletter" matches unread
-    mail against every active publisher with an ``email`` link.
+    """Assemble the run's sources.
+
+    Only RSS/substack feeds are polled — the "Feeds" channel covers every active
+    publisher with an rss or substack link (DB-driven via
+    ``feed_sources_from_db``). The aggregator/IMAP/lab-watch channels (Hacker
+    News, Newsletter, AI News, Lab Watch) are intentionally disabled: they fetch
+    thin, un-summarizable items and blow up the downstream LLM budget.
     """
     return [
-        Source("Hacker News", fetch_hn),
-        Source(
-            "Newsletter",
-            lambda: fetch_newsletter(newsletter_senders_from_db(session)),
-        ),
-        Source("AI News", fetch_ai_news),
         Source("Feeds", lambda: fetch_feeds(feed_sources_from_db(session))),
-        Source(
-            "Lab Watch",
-            lambda: fetch_lab_watch(lab_watch_targets_from_db(session)),
-        ),
     ]
 
 
@@ -56,7 +45,32 @@ def fetch_source(source: Source) -> list[FetchedArticle]:
     articles = source.fetcher()
     if not articles:
         log(f"No articles from {source.label}")
-    return articles
+        return articles
+    return _with_content(articles, source.label)
+
+
+def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
+    """Fill each item's content at fetch time, then drop the ones still empty.
+
+    Feeds already carry ``content:encoded``; thin items (< ``MIN_CONTENT_CHARS``)
+    get a network re-fetch — direct, then residential proxy — via
+    ``fetch_full_content``. An article with no usable content after that is
+    dropped and logged: downstream steps assume full content, so a contentless
+    item has nothing to categorize and no point being scored or inserted.
+    """
+    thin = [a for a in articles if len(a.get("content") or "") < MIN_CONTENT_CHARS]
+    if thin:
+        content_map = fetch_full_content([a["url"] for a in thin])
+        for a in thin:
+            full = content_map.get(a["url"])
+            if full:
+                a["content"] = full
+
+    kept = [a for a in articles if (a.get("content") or "").strip()]
+    dropped = len(articles) - len(kept)
+    if dropped:
+        log(f"  {label}: dropped {dropped} article(s) with no content")
+    return kept
 
 
 def resolve_publishers(

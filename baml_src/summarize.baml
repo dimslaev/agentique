@@ -8,6 +8,11 @@ class CategorizeOnlyResult {
   categories ArticleCategory[] @description("1-2 categories")
 }
 
+class CategorizeContentResult {
+  categories ArticleCategory[] @description("1-2 categories")
+  kind ArticleKind
+}
+
 class ClassifyKindResult {
   kind ArticleKind
 }
@@ -37,6 +42,40 @@ function SummarizeAndCategorize(title: string, content: string) -> SummarizeAndC
        - Never truncate mid-word or mid-sentence.
     2. Assign 1-2 categories.
     3. Assign a kind.
+
+    Category definitions:
+    - Models: New model releases, benchmarks, evals, model cards, model comparisons
+    - Dev: Repos, tools, product launches, developer blogs, tutorials, how-tos, fine-tuning guides, deployment recipes, infrastructure updates
+    - Research: Papers, breakthroughs, novel techniques with practical implications
+
+    Kind definitions:
+    - Repo: GitHub or GitLab repository
+    - Paper: Academic paper, preprint, or long-form technical report
+    - Model: Model card or model release page (e.g. HuggingFace)
+    - Blog: Developer blog post, tutorial, how-to, or opinion piece
+    - Product: Product launch page or product website
+    - Announcement: Official release post from a major AI lab (OpenAI, Anthropic, Google, Meta, Mistral, etc.)
+
+    {{ ctx.output_format }}
+  "#
+}
+
+function CategorizeContent(title: string, content: string) -> CategorizeContentResult {
+  client Nvidia
+  prompt #"
+    {{ _.role("system") }}
+    You are a technical librarian who classifies developer-focused AI articles by topic and format. You do not write prose - you only classify.
+
+    {{ _.role("user") }}
+    Classify this article. Assign categories and a kind. Do not summarize.
+
+    Title: {{ title }}
+
+    Content:
+    {{ content }}
+
+    1. Assign 1-2 categories.
+    2. Assign a kind.
 
     Category definitions:
     - Models: New model releases, benchmarks, evals, model cards, model comparisons
@@ -112,6 +151,14 @@ test categorize_only_basic {
   functions [CategorizeOnly]
   args {
     title "OpenAI releases GPT-5 with 2M context"
+  }
+}
+
+test categorize_content_basic {
+  functions [CategorizeContent]
+  args {
+    title "Anthropic releases Claude 4"
+    content "Anthropic today launched Claude 4, a new flagship model. It features improved reasoning, a 1M-token context window, and native tool use. The model is available via API and Claude.ai starting today."
   }
 }
 

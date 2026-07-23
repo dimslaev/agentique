@@ -99,7 +99,7 @@ def read_articles(
         conditions.append(col(Article.published_at) >= since_dt)
     if q:
         conditions.append(
-            col(Article.title).ilike(f"%{q}%") | col(Article.summary).ilike(f"%{q}%")
+            col(Article.title).ilike(f"%{q}%") | col(Article.content).ilike(f"%{q}%")
         )
     if min_score is not None:
         conditions.append(col(Article.score) >= min_score)
