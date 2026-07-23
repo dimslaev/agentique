@@ -7,7 +7,7 @@ from the start -- this documents and typo-checks step signatures, it does not
 enforce stage ordering (a step reading a not-yet-populated key is still a
 runtime KeyError, same as before).
 
-``categorize_articles`` reshapes into the narrower, fully-populated
+``summarize_and_categorize`` reshapes into the narrower, fully-populated
 ``ProcessedArticle`` that ``assign_tags``/``embed_articles`` consume.
 """
 
@@ -39,5 +39,5 @@ class ProcessedArticle(TypedDict):
     url: str
     title: str
     score: int
-    content: str
+    summary: str
     categories: list[Category]

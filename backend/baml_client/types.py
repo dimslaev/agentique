@@ -54,7 +54,7 @@ class ArticleKind(str, Enum):
     Announcement = "Announcement"
 
 # #########################################################################
-# Generated classes (18)
+# Generated classes (16)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -63,13 +63,6 @@ class ArticleInput(BaseModel):
     source: str
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
-
-class CategorizeContentResult(BaseModel):
-    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
-    kind: ArticleKind
-
-class CategorizeOnlyResult(BaseModel):
-    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
 
 class ClassifyKindResult(BaseModel):
     kind: ArticleKind

@@ -4,7 +4,7 @@
     filter   - drop known URLs, dead domains, semantic duplicates
     score    - cheap keep/drop pre-filter, then the LLM scorer
     persist  - insert what passed
-    enrich   - titles, categories/kind, tags, embedding
+    enrich   - titles, summary/categories/kind, tags, embedding
 
 Every step takes the session and a list of articles and returns the survivors,
 so run.py reads as the funnel it is. Steps own their own logging and commits.
