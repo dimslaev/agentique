@@ -1,0 +1,29 @@
+<item>
+  <title>Bitwarden CLI compromised</title>
+  <guid isPermaLink="false">changelog.com/16/2828</guid>
+  <link>https://changelog.com/news/185</link>
+  <pubDate>Wed, 29 Apr 2026 15:00:00 +0000</pubDate>
+  <enclosure type="audio/mpeg" length="12477662" url="https://op3.dev/e/https://pscrb.fm/rss/p/https://cdn.changelog.com/uploads/news/185/changelog-news-185.mp3"/>
+  <description>Bitwarden's CLI got hit by the Checkmarx supply-chain campaign, TypeScript 7.0 beta lands with the Go-rewritten compiler running ~10x faster than 6.0, and pgBackRest lost its maintainer of thirteen years leaving anyone running production Postgres with a real dependency-trust task this week. We've also got Ubuntu 26.04 LTS shipping with TPM-backed full-disk encryption, and Matz dropping Spinel as an AOT path that takes Ruby to native binaries. This week was a good reminder that the tools we depend on are all moving at once. Security, performance, and maintenance aren't isolated threads.</description>
+  <itunes:episodeType>full</itunes:episodeType>
+  <itunes:image href="https://cdn.changelog.com/uploads/covers/changelog-news-original.png?v=63848365621"/>
+  <itunes:duration>08:33</itunes:duration>
+  <itunes:explicit>false</itunes:explicit>
+  <podcast:person role="host" img="https://cdn.changelog.com/uploads/avatars/people/Qo/avatar_large.jpg?v=63760280419" href="https://changelog.com/person/adamstac">Adam Stacoviak</podcast:person>
+  <podcast:chapters type="application/json+chapters" url="https://changelog.com/news/185/chapters"/>
+  <psc:chapters xmlns="http://podlove.org/simple-chapters" version="1.1">
+    <psc:chapter start="0" title="Warp is now open-source"/>
+    <psc:chapter start="47" title="Bitwarden CLI compromised"/>
+    <psc:chapter start="119" title="TypeScript 7.0 Beta"/>
+    <psc:chapter start="175" title="Ubuntu 26.04 LTS"/>
+    <psc:chapter start="226" title="Sponsor: Coder.com" href="https://coder.com/"/>
+    <psc:chapter start="341" title="Spinel compiles Ruby to native binaries"/>
+    <psc:chapter start="405" title="pgBackRest is no longer being maintained"/>
+    <psc:chapter start="476" title="End of show."/>
+  </psc:chapters>
+  <podcast:socialInteract protocol="activitypub" uri="https://changelog.social/@changelog/116488588858864326"/>
+  <content:encoded><![CDATA[<p>Bitwarden’s CLI got hit by the Checkmarx supply-chain campaign, TypeScript 7.0 beta lands with the Go-rewritten compiler running ~10x faster than 6.0, and pgBackRest lost its maintainer of thirteen years leaving anyone running production Postgres with a real dependency-trust task this week. We’ve also got Ubuntu 26.04 LTS shipping with TPM-backed full-disk encryption, and Matz dropping Spinel as an AOT path that takes Ruby to native binaries. This week was a good reminder that the tools we depend on are all moving at once. Security, performance, and maintenance aren’t isolated threads.</p>
+<p><a href="https://changelog.com/news/185/email">View the newsletter</a></p><p><a href="https://changelog.zulipchat.com/#narrow/stream/455469-news">Join the discussion</a></p><p><a href="https://changelog.com/++" rel="payment">Changelog++</a> members save 2 minutes on this episode because they made the ads disappear. Join today!</p><p>Sponsors:</p><p><ul><li><a href="https://coder.com/">Coder.com</a> – Secure environments where devs and agents work in parallel. Open by design. Secure by default.
+</li>
+</ul></p><p>Featuring:</p><ul><li>Adam Stacoviak &ndash; <a href="https://adamstacoviak.com/" rel="external ugc">Website</a>, <a href="https://github.com/adamstac" rel="external ugc">GitHub</a>, <a href="https://www.linkedin.com/in/adamstacoviak" rel="external ugc">LinkedIn</a>, <a href="https://changelog.social/@adam" rel="external ugc">Mastodon</a>, <a href="https://x.com/adamstac" rel="external ugc">X</a></li></ul></p>]]></content:encoded>
+</item>

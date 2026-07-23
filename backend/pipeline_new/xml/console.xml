@@ -1,0 +1,6 @@
+<item>
+  <title>Tool: Databasement</title>
+  <description><![CDATA[<p><strong>Description:</strong> Database server backups.</p><p><strong>What we like:</strong> Manage database (MySQL, Postgres, MongoDB, SQLite, Redis, etc) backups through a web UI. Supports local, S3, SFTP locations and connections to sources through SSH. Can be automated via an API and MCP server.</p><p><strong>What we dislike:</strong> No fine-grained user permissions. UI looks a bit vibe-coded.</p>]]></description>
+  <link>https://david-crty.github.io/databasement/?ref=console.dev</link>
+  <pubDate>Thu, 23 Jul 2026 00:00:00 +0000</pubDate>
+</item>
