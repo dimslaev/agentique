@@ -80,6 +80,7 @@ keep-runtime-typing = true
 # The pipeline and ops scripts log to stdout via print() so systemd/journald
 # captures it.
 "pipeline/**" = ["T201"]
+"pipeline_new/**" = ["T201"]
 "scripts/**" = ["T201"]
 
 [tool.coverage.run]
