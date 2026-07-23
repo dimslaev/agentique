@@ -13,6 +13,7 @@ from pipeline.publishers import (
     feed_sources_from_db,
 )
 from pipeline.sources.extract_content import fetch_full_content
+from pipeline.sources.hn import fetch_hn
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -30,14 +31,16 @@ class Source:
 def build_sources(session: Session) -> list[Source]:
     """Assemble the run's sources.
 
-    Only RSS/substack feeds are polled — the "Feeds" channel covers every active
+    RSS/substack feeds and Hacker News are polled — "Feeds" covers every active
     publisher with an rss or substack link (DB-driven via
-    ``feed_sources_from_db``). The aggregator/IMAP/lab-watch channels (Hacker
-    News, Newsletter, AI News, Lab Watch) are intentionally disabled: they fetch
-    thin, un-summarizable items and blow up the downstream LLM budget.
+    ``feed_sources_from_db``). The IMAP/aggregator/lab-watch channels
+    (Newsletter, AI News, Lab Watch) are intentionally disabled: they fetch thin
+    items and blow up the downstream LLM budget. HN items start thin too but the
+    fetch step fills their content (and drops any it cannot), so they survive.
     """
     return [
         Source("Feeds", lambda: fetch_feeds(feed_sources_from_db(session))),
+        Source("Hacker News", fetch_hn),
     ]
 
 

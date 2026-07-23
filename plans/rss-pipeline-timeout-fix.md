@@ -8,8 +8,9 @@ summarizer works from teasers.
 ## Changes
 
 ### Fetch
-- Only poll rss + substack. Drop Hacker News, Newsletter (IMAP), AI News, Lab
-  Watch from `build_sources`.
+- Poll rss + substack + Hacker News. Drop Newsletter (IMAP), AI News, Lab Watch
+  from `build_sources`. HN items start thin but the fetch step fills their
+  content (and drops any it cannot), so they survive.
 - Fill content at fetch time: for thin items (< `MIN_CONTENT_CHARS`) do direct
   fetch then residential-proxy fetch (`fetch_full_content`).
 - Articles still empty after that: drop and log. Only content-bearing items go
