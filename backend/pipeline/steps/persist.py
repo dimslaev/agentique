@@ -33,19 +33,20 @@ def insert_articles(
     inserted: list[FetchedArticle] = []
     for item in best_per_url(scored):
         title = sanitize_llm_text(item["title"])
+        content = sanitize_llm_text(item.get("content") or "")
         article = Article(
             title=title,
             publisher_id=item["publisher_id"],
             url=item["url"],
             published_at=parse_date(item.get("published_date")),
             score=item["score"],
-            content=item.get("content") or "",
+            content=content,
         )
         session.add(article)
         session.flush()
         assert article.id is not None
         log(f"  Inserted #{article.id}: [{item['score']}/100] {title}")
-        inserted.append({**item, "id": article.id, "title": title})
+        inserted.append({**item, "id": article.id, "title": title, "content": content})
 
     session.commit()
     return inserted

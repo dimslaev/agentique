@@ -4,10 +4,6 @@ class SummarizeAndCategorizeResult {
   kind ArticleKind
 }
 
-class CategorizeOnlyResult {
-  categories ArticleCategory[] @description("1-2 categories")
-}
-
 class ClassifyKindResult {
   kind ArticleKind
 }
@@ -75,26 +71,6 @@ function ClassifyKind(title: string, url: string, summary: string?) -> ClassifyK
     - Blog: Developer blog post, tutorial, how-to, or opinion piece
     - Product: Product launch page or product website
     - Announcement: Official release post from a major AI lab (OpenAI, Anthropic, Google, Meta, Mistral, etc.)
-
-    {{ ctx.output_format }}
-  "#
-}
-
-function CategorizeOnly(title: string) -> CategorizeOnlyResult {
-  client Nvidia
-  prompt #"
-    {{ _.role("system") }}
-    You are a technical librarian who classifies developer-focused AI articles.
-
-    {{ _.role("user") }}
-    Assign 1-2 categories to this article title.
-
-    Title: {{ title }}
-
-    Category definitions:
-    - Models: New model releases, benchmarks, evals, model cards, model comparisons
-    - Dev: Repos, tools, product launches, developer blogs, tutorials, how-tos, fine-tuning guides, deployment recipes, infrastructure updates
-    - Research: Papers, breakthroughs, novel techniques with practical implications
 
     {{ ctx.output_format }}
   "#

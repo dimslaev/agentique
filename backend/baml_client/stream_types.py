@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (17)
+# Generated classes (16)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -32,9 +32,6 @@ class ArticleInput(BaseModel):
     source: typing.Optional[str] = None
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
-
-class CategorizeOnlyResult(BaseModel):
-    categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
 
 class ClassifyKindResult(BaseModel):
     kind: typing.Optional[types.ArticleKind] = None

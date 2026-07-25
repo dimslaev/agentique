@@ -19,9 +19,6 @@ type_map = {
     "types.ArticleInput": types.ArticleInput,
     "stream_types.ArticleInput": stream_types.ArticleInput,
 
-    "types.CategorizeOnlyResult": types.CategorizeOnlyResult,
-    "stream_types.CategorizeOnlyResult": stream_types.CategorizeOnlyResult,
-
     "types.ClassifyKindResult": types.ClassifyKindResult,
     "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
 

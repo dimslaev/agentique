@@ -18,7 +18,6 @@ from pipeline.publishers import PublisherResolver
 from pipeline.steps.enrich import (
     assign_tags,
     embed_articles,
-    extract_full_content,
     improve_titles,
     summarize_and_categorize,
 )
@@ -71,8 +70,7 @@ def run_pipeline(stats: RunStats) -> None:
                 s.inserted = len(inserted)
 
                 improve_titles(session, inserted)
-                with_content = extract_full_content(session, inserted)
-                processed = summarize_and_categorize(session, with_content)
+                processed = summarize_and_categorize(session, inserted)
                 assign_tags(session, processed, vocab)
                 embed_articles(session, processed)
             except Exception as e:
