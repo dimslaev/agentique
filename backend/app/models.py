@@ -135,6 +135,18 @@ class PublisherKind(StrEnum):
     media = "media"
 
 
+class PublisherType(StrEnum):
+    """How the pipeline discovers a publisher's articles (its ingestion source)."""
+
+    rss = "rss"
+    substack = "substack"
+    search = "search"
+    hn = "hn"
+    email = "email"
+    ainews = "ainews"
+    other = "other"
+
+
 class TrustLevel(StrEnum):
     low = "low"
     medium = "medium"
@@ -180,6 +192,7 @@ class PublisherBase(SQLModel):
     slug: str
     name: str
     kind: PublisherKind
+    type: PublisherType = PublisherType.other
     description: str | None = None
     image: str | None = None
     links: dict[LinkPlatform, str] = Field(
