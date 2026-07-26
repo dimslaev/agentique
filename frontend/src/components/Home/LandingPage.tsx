@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { trackEvent } from "@/lib/analytics"
 import { handleError } from "@/utils"
 import { SourceBoxes } from "./SourceBoxes"
 
@@ -22,8 +23,8 @@ export function LandingPage() {
             <Hero />
             {/* --- BUTTON 1: newsletter signup (logic owned by routing agent) --- */}
             <NewsletterSignup />
-            {/* --- BUTTON 2: app signup (logic owned by routing agent) --- */}
-            <SignupCta />
+            {/* --- BUTTON 2: into the app (logic owned by routing agent) --- */}
+            <FeedCta />
           </div>
           <SourceBoxes />
         </div>
@@ -46,14 +47,9 @@ export function LandingPage() {
 
 function LandingNav() {
   return (
-    <>
-      <Button variant="ghost" size="sm" asChild>
-        <Link to="/login">Log in</Link>
-      </Button>
-      <Button size="sm" asChild>
-        <Link to="/signup">Sign up</Link>
-      </Button>
-    </>
+    <Button size="sm" asChild>
+      <Link to="/feed">Feed</Link>
+    </Button>
   )
 }
 
@@ -101,7 +97,10 @@ function NewsletterSignup() {
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        if (email) mutation.mutate()
+        if (email) {
+          trackEvent("newsletter_subscribe_click", { source: "landing" })
+          mutation.mutate()
+        }
       }}
       className="flex w-full max-w-md items-center rounded-full border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
       noValidate
@@ -133,15 +132,12 @@ function NewsletterSignup() {
   )
 }
 
-function SignupCta() {
+function FeedCta() {
   return (
     <p className="text-sm text-muted-foreground">
       Want the full feed?{" "}
-      <Link
-        to="/signup"
-        className="text-foreground underline underline-offset-4"
-      >
-        Create a free account
+      <Link to="/feed" className="text-foreground underline underline-offset-4">
+        Browse it now
       </Link>
     </p>
   )

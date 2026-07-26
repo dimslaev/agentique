@@ -89,8 +89,7 @@ function DevelopersPage() {
           params={[
             {
               name: "since",
-              description:
-                "ISO date · omit for all-time (Pro only) · free capped to last 7 days",
+              description: "ISO date · optional · omit for all-time",
             },
             { name: "limit", description: "integer · 1-50 · default 20" },
             {

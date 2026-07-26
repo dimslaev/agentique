@@ -32,10 +32,18 @@ API = "https://api.kdrive.infomaniak.com"
 
 def dump_db(dest: Path) -> None:
     cmd = [
-        "docker", "compose", "-f", str(COMPOSE_FILE), "exec", "-T", "db",
+        "docker",
+        "compose",
+        "-f",
+        str(COMPOSE_FILE),
+        "exec",
+        "-T",
+        "db",
         "pg_dump",
-        "-U", os.environ["POSTGRES_USER"],
-        "--clean", "--if-exists",
+        "-U",
+        os.environ["POSTGRES_USER"],
+        "--clean",
+        "--if-exists",
         os.environ["POSTGRES_DB"],
     ]
     with gzip.open(dest, "wb", compresslevel=6) as out:

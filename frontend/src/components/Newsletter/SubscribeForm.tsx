@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
+import { trackEvent } from "@/lib/analytics"
 import { handleError } from "@/utils"
 
 const CATEGORIES = ["all", "models", "dev", "research"] as const
@@ -91,7 +92,12 @@ export function SubscribeForm() {
       <CardContent>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+            onSubmit={form.handleSubmit((data) => {
+              trackEvent("newsletter_subscribe_click", {
+                source: "newsletter_page",
+              })
+              mutation.mutate(data)
+            })}
             noValidate
             className="flex flex-col gap-5"
           >

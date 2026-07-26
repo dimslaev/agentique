@@ -55,11 +55,20 @@ test.describe("Profile page", () => {
   test.describe("logged out", () => {
     test.use({ storageState: { cookies: [], origins: [] } })
 
-    test("visiting /profile redirects to the landing page", async ({
+    test("visiting /profile redirects to login", async ({ page }) => {
+      await page.goto("/profile")
+      await page.waitForURL(/\/login/)
+    })
+
+    test("the feed is readable and liking sends you to login", async ({
       page,
     }) => {
-      await page.goto("/profile")
-      await page.waitForURL("/")
+      await page.goto("/feed")
+      const firstRow = page.getByTestId("article-row").first()
+      await expect(firstRow).toBeVisible()
+
+      await firstRow.getByTestId("like-button").click()
+      await page.waitForURL(/\/login/)
     })
   })
 

@@ -56,8 +56,6 @@ class UserUpdate(SQLModel):
     is_superuser: bool | None = None
     full_name: str | None = Field(default=None, max_length=255)
     password: str | None = Field(default=None, min_length=8, max_length=128)
-    # manual Pro grant path until Stripe exists (superuser via PATCH /users/{id})
-    pro_until: datetime | None = None
 
 
 class UserUpdateMe(SQLModel):
@@ -78,25 +76,12 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
-    # Pro plan expiry. Set manually today; a future Stripe webhook sets it to
-    # the subscription period end. Access is checked live per request (is_pro),
-    # so it falls off exactly at this instant with no cron needed.
-    pro_until: datetime | None = Field(
-        default=None,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-
-    @property
-    def is_pro(self) -> bool:
-        return self.pro_until is not None and self.pro_until > get_datetime_utc()
 
 
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None
-    # populated from the User.is_pro property via from_attributes
-    is_pro: bool = False
 
 
 class UsersPublic(SQLModel):

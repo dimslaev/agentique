@@ -96,9 +96,13 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await page.getByRole("menuitem", { name: "Log out" }).click()
   await page.waitForURL("/login")
 
-  // Gated routes bounce logged-out visitors to the public landing.
+  // The feed is public…
+  await page.goto("/feed")
+  await expect(page.getByTestId("article-row").first()).toBeVisible()
+
+  // …but account pages bounce logged-out visitors to login.
   await page.goto("/settings")
-  await page.waitForURL("/")
+  await page.waitForURL(/\/login/)
 })
 
 test("Redirects to /login when token is wrong", async ({ page }) => {

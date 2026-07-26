@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { createFileRoute, Outlet } from "@tanstack/react-router"
 import { Footer } from "@/components/Common/Footer"
 import { Logo } from "@/components/Common/Logo"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
@@ -8,17 +8,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { FiltersProvider } from "@/context/filters"
-import { isLoggedIn } from "@/hooks/useAuth"
 
+// Public shell: every page under it is readable logged out. Pages that need a
+// user (profile, admin) guard themselves.
 export const Route = createFileRoute("/_layout")({
   component: Layout,
-  beforeLoad: () => {
-    if (!isLoggedIn()) {
-      throw redirect({
-        to: "/",
-      })
-    }
-  },
 })
 
 function Layout() {

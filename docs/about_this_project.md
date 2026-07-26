@@ -18,7 +18,7 @@ The Batch/etc.) — plus the newsletter signup and a link to create an account. 
 static marketing page, not backed by the live article API; a separate agent keeps its
 source data current.
 
-**A filtered, ranked article feed (`/feed`, requires a free account).** Lists recent
+**A filtered, ranked article feed (`/feed`, public — no account needed).** Lists recent
 articles sorted by an LLM-assigned "developer-actionability" score (or by recency).
 Each entry shows a 2–3 line factual summary, a category (Models / Dev / Research), and
 a "kind" (repo, paper, model, blog, product, announcement). You can filter by category,
@@ -33,11 +33,13 @@ subscribers are synced to a Resend audience for future digest emails (the sendin
 isn't built yet — this is capture only, for now). Separate from creating an account —
 subscribing doesn't create a login, and signing up for an account doesn't subscribe you.
 
-**A developer API — requires login, paid tier not live yet.** The article endpoints
-(list, search, facets, publishers, tags, stats) all require a logged-in account; there's
-no separate API-key system. The `/developers` page pitches a $10/mo Pro tier for
-programmatic access — the upgrade button fires an analytics event and shows a "coming
-soon" dialog; no real Stripe integration exists yet.
+**A developer API — public, paid tier not live yet.** The article endpoints (list,
+search, facets, publishers, tags, stats) are open and unauthenticated, with no date
+window or rate limit; a token is optional and only fills in `liked_by_me`. Liking an
+article and the profile page are the only things that need an account. The
+`/developers` page still pitches a $10/mo Pro tier for programmatic access — the
+upgrade button fires an analytics event and shows a "coming soon" dialog; no real
+Stripe integration exists yet.
 
 ## How the pipeline works
 
@@ -96,8 +98,8 @@ in upstream improvements later.
 
 ## Where things stand / what's next
 
-The product today is deliberately narrow: a public landing page, a gated feed and
-search behind a free account, one capture-only newsletter form. Things explicitly not
+The product today is deliberately narrow: a public landing page, a public feed and
+search, one capture-only newsletter form. Things explicitly not
 built yet (and worth knowing about if you're picking up work here): sending the actual
 newsletter digest, a real Pro API with keys and billing (currently a "coming soon"
 button), saved articles / personalization, an MCP server so AI agents can query the

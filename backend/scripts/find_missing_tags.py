@@ -99,7 +99,9 @@ def load_articles(
         if a.id is None or a.embedding is None:
             continue
         vec = np.asarray(a.embedding, dtype=np.float32)
-        out.append(ArticleVec(id=a.id, title=a.title, vec=vec, tags=tags_by_article[a.id]))
+        out.append(
+            ArticleVec(id=a.id, title=a.title, vec=vec, tags=tags_by_article[a.id])
+        )
     return out
 
 
@@ -110,9 +112,7 @@ class Cluster:
 
     def add(self, idx: int, vec: np.ndarray) -> None:
         n = len(self.members)
-        self.centroid = normalize(
-            ((self.centroid * n + vec) / (n + 1))[None, :]
-        )[0]
+        self.centroid = normalize(((self.centroid * n + vec) / (n + 1))[None, :])[0]
         self.members.append(idx)
 
 
@@ -238,10 +238,14 @@ def main() -> None:
     print("(if p50 sits below your threshold, the threshold is too high)\n")
 
     if not report_clusters:
-        print("No candidate gaps at these settings. Lower --threshold or --min-cluster.")
+        print(
+            "No candidate gaps at these settings. Lower --threshold or --min-cluster."
+        )
         return
 
-    print(f"=== {len(report_clusters)} candidate gap(s) — themes the vocabulary misses ===\n")
+    print(
+        f"=== {len(report_clusters)} candidate gap(s) — themes the vocabulary misses ===\n"
+    )
     for i, rc in enumerate(report_clusters, 1):
         print(
             f"[{i}] {rc['size']} articles | nearest existing tag: "

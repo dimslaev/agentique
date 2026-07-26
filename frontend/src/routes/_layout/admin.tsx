@@ -7,7 +7,7 @@ import AddUser from "@/components/Admin/AddUser"
 import { columns, type UserTableData } from "@/components/Admin/columns"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
-import useAuth from "@/hooks/useAuth"
+import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 function getUsersQueryOptions() {
   return {
@@ -18,7 +18,10 @@ function getUsersQueryOptions() {
 
 export const Route = createFileRoute("/_layout/admin")({
   component: Admin,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
+    if (!isLoggedIn()) {
+      throw redirect({ to: "/login", search: { redirect: location.href } })
+    }
     const user = await UsersService.readUserMe()
     if (!user.is_superuser) {
       throw redirect({

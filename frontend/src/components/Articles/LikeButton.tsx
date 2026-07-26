@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 import { Flame } from "lucide-react"
 
 import {
@@ -7,6 +8,7 @@ import {
   type ArticlesPublic,
   LikesService,
 } from "@/client"
+import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
@@ -34,6 +36,7 @@ function patchArticle(
 
 export function LikeButton({ article }: { article: ArticlePublic }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { showErrorToast } = useCustomToast()
 
   const liked = article.liked_by_me ?? false
@@ -91,7 +94,17 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
       type="button"
       data-testid="like-button"
       data-liked={liked}
-      onClick={() => mutation.mutate()}
+      onClick={() => {
+        // liking is the one thing on the feed that needs an account
+        if (!isLoggedIn()) {
+          navigate({
+            to: "/login",
+            search: { redirect: window.location.pathname },
+          })
+          return
+        }
+        mutation.mutate()
+      }}
       className={cn(
         "flex items-center gap-1 text-xs transition-colors",
         liked

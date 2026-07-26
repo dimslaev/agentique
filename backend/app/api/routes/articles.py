@@ -1,7 +1,7 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
@@ -13,7 +13,7 @@ from app.api.article_view import (
     like_counts_subquery,
     liked_article_ids,
 )
-from app.api.deps import CurrentUser, SessionDep, get_current_user
+from app.api.deps import CurrentUserOptional, SessionDep
 from app.models import (
     Article,
     ArticleFacets,
@@ -23,24 +23,12 @@ from app.models import (
     PublisherFacet,
     Tag,
     TagFacet,
-    User,
 )
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
-# No rate limiting — access is gated by how far back a user can query.
-# Free = last 7 days, Pro/superuser = unlimited.
-FREE_WINDOW = timedelta(days=7)
-# absorb clock skew / request latency so a legit "last 7 days" request never trips the edge
-_SKEW = timedelta(hours=1)
-
-
-def _free_cutoff(user: User) -> datetime | None:
-    """Lower bound a free user is allowed to query, or None if unlimited (pro/superuser)."""
-    if user.is_pro or user.is_superuser:
-        return None
-    return datetime.now(UTC) - FREE_WINDOW - _SKEW
-
+# Reads are public and unbounded. A caller may still send a token — it only
+# decides whether `liked_by_me` is filled in.
 
 # Loaded once at module import — model2vec is CPU-only and tiny (~30 MB)
 _model: StaticModel | None = None
@@ -67,7 +55,7 @@ def _embed(text: str) -> list[float]:  # pragma: no cover
 @router.get("/", response_model=ArticlesPublic)
 def read_articles(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserOptional,
     limit: int = Query(default=20, ge=1, le=50),
     since: str | None = None,
     q: str | None = None,
@@ -78,21 +66,13 @@ def read_articles(
     publisher: str | None = None,
     sort: str = Query(default="score-desc"),
 ) -> Any:
-    # Missing `since` means "all time" (no lower bound) — Pro-only.
+    # Missing `since` means "all time" (no lower bound).
     since_dt: datetime | None = None
     if since is not None:
         try:
             since_dt = datetime.fromisoformat(since)
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
-
-    cutoff = _free_cutoff(current_user)
-    if cutoff is not None and (since_dt is None or since_dt < cutoff):
-        raise HTTPException(
-            status_code=403,
-            detail="Free plan is limited to the last 7 days. "
-            "Upgrade to Pro for full history.",
-        )
 
     conditions: list[Any] = []
     if since_dt is not None:
@@ -151,7 +131,7 @@ def read_articles(
     joined_statement = joined_statement.limit(limit)
 
     rows = session.exec(joined_statement).all()
-    liked_ids = liked_article_ids(session, current_user.id)
+    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
 
     return ArticlesPublic(data=build_rows(session, list(rows), liked_ids), count=count)
 
@@ -159,7 +139,7 @@ def read_articles(
 @router.get("/search", response_model=ArticlesPublic)
 def search_articles(
     session: SessionDep,
-    current_user: CurrentUser,
+    current_user: CurrentUserOptional,
     q: str,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> Any:
@@ -168,12 +148,7 @@ def search_articles(
     like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
 
-    # Same free-window floor as the list endpoint, applied silently (no date
-    # param here). Pro/superuser callers are unbounded.
     conditions = [Article.embedding.is_not(None)]  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
-    cutoff = _free_cutoff(current_user)
-    if cutoff is not None:
-        conditions.append(col(Article.published_at) >= cutoff)
 
     statement = (
         select(Article, Publisher, like_count_expr.label("like_count"))
@@ -188,7 +163,7 @@ def search_articles(
     )
 
     rows = session.exec(statement).all()
-    liked_ids = liked_article_ids(session, current_user.id)
+    liked_ids = liked_article_ids(session, current_user.id) if current_user else set()
 
     data = build_rows(session, list(rows), liked_ids)
     return ArticlesPublic(data=data, count=len(data))
@@ -226,11 +201,7 @@ def _tag_facets(session: Session, q: str | None, limit: int) -> list[TagFacet]:
     return [TagFacet(slug=s, name=n, count=c) for s, n, c in rows]
 
 
-@router.get(
-    "/facets",
-    response_model=ArticleFacets,
-    dependencies=[Depends(get_current_user)],
-)
+@router.get("/facets", response_model=ArticleFacets)
 def article_facets(
     session: SessionDep, limit: int = Query(default=8, ge=1, le=20)
 ) -> Any:
@@ -240,11 +211,7 @@ def article_facets(
     )
 
 
-@router.get(
-    "/publishers",
-    response_model=list[PublisherFacet],
-    dependencies=[Depends(get_current_user)],
-)
+@router.get("/publishers", response_model=list[PublisherFacet])
 def search_publishers(
     session: SessionDep,
     q: str | None = None,
@@ -253,11 +220,7 @@ def search_publishers(
     return _publisher_facets(session, q, limit)
 
 
-@router.get(
-    "/tags",
-    response_model=list[TagFacet],
-    dependencies=[Depends(get_current_user)],
-)
+@router.get("/tags", response_model=list[TagFacet])
 def search_tags(
     session: SessionDep,
     q: str | None = None,
@@ -266,7 +229,7 @@ def search_tags(
     return _tag_facets(session, q, limit)
 
 
-@router.get("/stats", dependencies=[Depends(get_current_user)])
+@router.get("/stats")
 def article_stats(session: SessionDep) -> Any:
     total = session.exec(select(func.count()).select_from(Article)).one()
     last = session.exec(

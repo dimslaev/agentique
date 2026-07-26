@@ -25,38 +25,33 @@ from tests.utils.utils import random_email
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
 
-# A `since` comfortably inside the 7-day free window, for free-user reads.
+# A recent `since`, for tests that want a narrow window.
 RECENT_SINCE = (datetime.now(UTC) - timedelta(days=1)).isoformat()
 
 
 @pytest.fixture(scope="module")
-def pro_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
-    """Headers for a Pro user (pro_until a month out) — unbounded date access."""
+def reader_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+    """Headers for an ordinary logged-in reader."""
     email = random_email()
     headers = authentication_token_from_email(client=client, email=email, db=db)
-    user = crud.get_user_by_email(session=db, email=email)
-    assert user is not None
-    user.pro_until = datetime.now(UTC) + timedelta(days=30)
-    db.add(user)
-    db.commit()
+    assert crud.get_user_by_email(session=db, email=email) is not None
     return headers
 
 
 @pytest.fixture(scope="module")
 def auth_client(
-    pro_user_token_headers: dict[str, str],
+    reader_token_headers: dict[str, str],
 ) -> Generator[TestClient]:
-    """A TestClient that sends a Pro-user bearer token on every request.
+    """A TestClient that sends a logged-in reader's bearer token on every request.
 
-    The articles read API is auth-gated and free callers are capped to the last
-    7 days, so the bulk of these tests use a Pro caller to read unbounded.
+    Reads are public; the token only decides whether `liked_by_me` is filled in.
     """
     with TestClient(app) as c:
-        c.headers.update(pro_user_token_headers)
+        c.headers.update(reader_token_headers)
         yield c
 
 
-# --- auth gate ---------------------------------------------------------------
+# --- public reads ------------------------------------------------------------
 
 READ_ENDPOINTS = [
     "/",
@@ -69,31 +64,42 @@ READ_ENDPOINTS = [
 
 
 @pytest.mark.parametrize("path", READ_ENDPOINTS)
-def test_read_endpoints_require_auth(client: TestClient, path: str) -> None:
+def test_read_endpoints_are_public(client: TestClient, path: str) -> None:
     r = client.get(f"{ARTICLES_URL}{path}")
-    assert r.status_code == 401
+    assert r.status_code == 200
 
 
-def test_read_articles_garbage_token_rejected(client: TestClient) -> None:
+def test_read_articles_anonymous_has_no_likes(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/", params={"limit": 5})
+    assert r.status_code == 200
+    assert all(a["liked_by_me"] is False for a in r.json()["data"])
+
+
+def test_read_articles_garbage_token_falls_back_to_anonymous(
+    client: TestClient,
+) -> None:
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"limit": 5},
         headers={"Authorization": "Bearer not-a-real-token"},
     )
-    assert r.status_code == 403
+    assert r.status_code == 200
 
 
-def test_read_articles_valid_token_unknown_user_rejected(client: TestClient) -> None:
+def test_read_articles_valid_token_unknown_user_is_anonymous(
+    client: TestClient,
+) -> None:
     token = create_access_token(str(uuid.uuid4()), expires_delta=timedelta(minutes=5))
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"limit": 5},
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert r.status_code == 404
+    assert r.status_code == 200
+    assert all(a["liked_by_me"] is False for a in r.json()["data"])
 
 
-# --- reads (authenticated) ---------------------------------------------------
+# --- reads -------------------------------------------------------------------
 
 
 def test_read_articles_default(auth_client: TestClient) -> None:
@@ -206,74 +212,28 @@ def test_read_articles_malformed_since_returns_422(
     assert r.status_code == 422
 
 
-# --- free-window gate --------------------------------------------------------
+# --- unbounded history -------------------------------------------------------
 
 
-def test_read_articles_missing_since_free_forbidden(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    r = client.get(f"{ARTICLES_URL}/", headers=normal_user_token_headers)
-    assert r.status_code == 403
-
-
-def test_read_articles_missing_since_pro_ok(
-    client: TestClient, pro_user_token_headers: dict[str, str]
-) -> None:
-    r = client.get(f"{ARTICLES_URL}/", headers=pro_user_token_headers)
+def test_read_articles_missing_since_returns_all_time(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/")
     assert r.status_code == 200
     assert r.json()["count"] > 0
 
 
-def test_read_articles_missing_since_superuser_ok(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    r = client.get(f"{ARTICLES_URL}/", headers=superuser_token_headers)
+def test_read_articles_old_since_ok_anonymous(client: TestClient) -> None:
+    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
+    r = client.get(f"{ARTICLES_URL}/", params={"since": old_since})
     assert r.status_code == 200
-    assert r.json()["count"] > 0
 
 
-def test_read_articles_old_since_free_forbidden(
+def test_read_articles_old_since_ok_logged_in(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"since": old_since},
-        headers=normal_user_token_headers,
-    )
-    assert r.status_code == 403
-
-
-def test_read_articles_old_since_pro_ok(
-    client: TestClient, pro_user_token_headers: dict[str, str]
-) -> None:
-    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
-    r = client.get(
-        f"{ARTICLES_URL}/",
-        params={"since": old_since},
-        headers=pro_user_token_headers,
-    )
-    assert r.status_code == 200
-
-
-def test_read_articles_old_since_superuser_ok(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
-    r = client.get(
-        f"{ARTICLES_URL}/",
-        params={"since": old_since},
-        headers=superuser_token_headers,
-    )
-    assert r.status_code == 200
-
-
-def test_read_articles_recent_since_free_ok(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    r = client.get(
-        f"{ARTICLES_URL}/",
-        params={"since": RECENT_SINCE},
         headers=normal_user_token_headers,
     )
     assert r.status_code == 200
@@ -296,11 +256,9 @@ def test_read_articles_q_filters_title_or_summary(
     assert ids == {by_title.id, by_summary.id}
 
 
-def test_search_free_bounded_pro_unbounded(
+def test_search_is_unbounded_for_anonymous(
     client: TestClient,
     db: Session,
-    normal_user_token_headers: dict[str, str],
-    pro_user_token_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_vec = [0.05] * 256
@@ -312,25 +270,11 @@ def test_search_free_bounded_pro_unbounded(
     )
     recent = create_random_article(db, published_at=now, embedding=fake_vec)
 
-    free = client.get(
-        f"{ARTICLES_URL}/search",
-        params={"q": "x", "limit": 50},
-        headers=normal_user_token_headers,
-    )
-    assert free.status_code == 200
-    free_ids = {a["id"] for a in free.json()["data"]}
-    assert recent.id in free_ids
-    assert old.id not in free_ids
-
-    pro = client.get(
-        f"{ARTICLES_URL}/search",
-        params={"q": "x", "limit": 50},
-        headers=pro_user_token_headers,
-    )
-    assert pro.status_code == 200
-    pro_ids = {a["id"] for a in pro.json()["data"]}
-    assert old.id in pro_ids
-    assert recent.id in pro_ids
+    r = client.get(f"{ARTICLES_URL}/search", params={"q": "x", "limit": 50})
+    assert r.status_code == 200
+    ids = {a["id"] for a in r.json()["data"]}
+    assert old.id in ids
+    assert recent.id in ids
 
 
 # Placed after the count-sensitive tests above (which assume the seeded

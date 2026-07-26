@@ -12,12 +12,10 @@ export function FilterOptionButton({
   label,
   active,
   onClick,
-  pro,
 }: {
   label: string
   active: boolean
   onClick: () => void
-  pro?: boolean
 }) {
   return (
     <button
@@ -37,11 +35,6 @@ export function FilterOptionButton({
         )}
       />
       {label}
-      {pro && (
-        <span className="rounded-sm bg-primary/10 px-1 py-px text-[9px] font-semibold uppercase tracking-wider text-primary">
-          Pro
-        </span>
-      )}
     </button>
   )
 }
