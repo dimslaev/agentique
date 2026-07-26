@@ -1,90 +1,182 @@
-# Topic boxes on landing page
+# Topic lanes on landing page
 
-Replace hardcoded `SourceBoxes` (frontend/src/components/Home/sources.ts,
-static JSON, no db) with live db-backed topic boxes. Each box = curated
-topic, its own react-query, pulled from real article data.
+Replace hardcoded `SourceBoxes` (static `sources.ts`, no db) with live
+db-backed topic lanes. Each lane = one curated topic, one react-query.
 
-## Decisions (from user)
+## What changed from v1 of this plan
 
-- Lives on landing page, replaces `SourceBoxes` section in `LandingPage.tsx`
-- Goal: retention (get visitor to come back / subscribe), not raw SEO
-- Boxes built from structured joins (tag / category / kind / publisher /
-  keyword), NOT the `/articles/search` embedding endpoint — that uses
-  `model2vec potion-base-8M`, too weak for box curation. Semantic search
-  capped at 0-1 optional future box, not the default mechanism
-- 7 boxes, matching original ask: Open Weights, Security, Coding, Claude,
-  Kimi, Small Models, Harness
+v1 mapped each box to a single tag. Wrong — that is just the `/feed` filter
+sidebar rearranged, and it ignored "don't base queries only on existing
+tags". v1 also named retention as the goal but shipped no retention
+mechanic. Both fixed below.
 
-**Open assumption, not yet confirmed with user:** "retention" on a
-pre-login landing page means enticing return visits / newsletter signup by
-showing topic breadth — there's no auth session to track here. If the real
-intent was logged-in engagement, boxes belong on `/feed`, not landing.
+## The test a box must pass
 
-## Box definitions (verified against prod dump, 2026-07-26)
+**A box earns its place only if `/feed` filters cannot express it.**
 
-| slug | filter | live count |
+`/feed` is single-select tag / category / kind / publisher. So `tag=Security`
+is a chip, not a box — one click in the existing sidebar does it. A box must
+be one of:
+
+- **Intersection** — A AND B (`Security` ∩ `Agents`)
+- **Supertopic union** — A OR B OR C (`Kimi`∪`DeepSeek`∪`Qwen`∪`GLM`)
+- **Facet cross** — tag ∩ kind (`Open Weights` ∩ kind=`model`)
+- **Editorial** — no tag exists, keyword/regex (`harness`, param-size regex)
+
+Anything expressible as one filter gets cut.
+
+## Lanes discovered from data, not guessed
+
+Ran tag co-occurrence lift over the dump. Two strong clusters neither of us
+named:
+
+| pair | n | lift |
 |---|---|---|
-| open-weights | tag = `Open Weights` | 65 |
-| security | tag = `Security` | 87 |
-| coding | tag = `Coding Assistants` | 185 |
-| claude | tag = `Anthropic` | 208 |
-| kimi | tag = `Kimi` OR title/publisher ILIKE `%kimi%`/`%moonshot%` | 17 tagged, ~25-30 padded |
-| small-models | tag IN (`Model Distillation`, `Quantization`) OR title ILIKE `%tiny%`/`%distill%`/`%on-device%`/`%small model%`/`%edge%` | ~40-70 |
-| harness | tag = `Orchestration` OR title ILIKE `%harness%`/`%terminal%`/`% cli %`/`%agentic loop%` | ~50+ |
+| Multimodal + Media Generation | 18 | 6.44 |
+| Multimodal + Voice & Speech | 14 | 3.98 |
+| Inference Optimization + Hardware | 16 | 3.11 |
+| Coding Assistants + Anthropic | 57 | 1.68 |
 
-No existing tag for `harness` or `claude`-as-such — `claude` maps to the
-`Anthropic` tag (covers Claude models, Claude Code, MCP). `kimi` and
-`harness` need keyword OR since tags don't cover them fully; this is plain
-SQL ILIKE, not ML — fine per the "no semantic" decision above.
+→ **Generative Media** and **Make It Fast** added. The Anthropic+Coding lift
+also says the "claude" lane should be Claude-*in-practice*, not all 208
+Anthropic articles.
+
+## Lane set (all counts verified against dump 2026-07-26)
+
+| lane | type | query | n |
+|---|---|---|---|
+| agent-security | ∩ | (Security\|Safety\|Auditing\|Privacy\|Sandboxing) ∩ (Agents\|Tool Calling\|Browser Agents\|Orchestration) | 53 |
+| open-model-drops | ∩ facet | `Open Weights` ∩ kind(model,announcement) | 36 |
+| claude-in-practice | ∩ | `Anthropic` ∩ (Coding Assistants\|Prompt Engineering\|Orchestration) | 57 |
+| open-challengers | ∪ | Kimi\|DeepSeek\|Qwen\|GLM\|Mistral\|Llama | 75 |
+| harness | ∪∩ editorial | (Orchestration\|Agents\|Coding Assistants) ∩ kind(repo,product) + title `harness\|CLI\|terminal` | ~90 |
+| small-models | ∪ editorial | (Model Distillation\|Quantization\|Local AI) ∪ param-size regex ∩ tiny/nano/edge/on-device | 117 |
+| generative-media | ∪ | Multimodal\|Media Generation\|Voice & Speech | 145 |
+| make-it-fast | ∪ | Inference Optimization\|Hardware\|Quantization\|Cost Optimization | 178 |
+
+Bench (built if a lane above disappoints): `context-memory` (Agent Memory\|
+Context Optimization\|RAG, 121), `papers` (kind=paper ∩ research, 49).
+
+### Deviations from the requested list — read these
+
+- **"security" → `agent-security`.** Bare `Security` (87) is a feed chip.
+  Intersected with agents it becomes a topic that doesn't exist as a tag and
+  is the hottest thing in the set. Sample: *"Declaw Arena — CTF-style
+  challenge to break an AI agent in a microVM"*, *"Google SAIF: The Agent
+  Security Map"*.
+- **"kimi" → `open-challengers`.** Kimi alone is 17 articles — too thin to
+  fill a lane on a slow week, and too narrow to be a lane anyone follows.
+  Widened to the open-lab supertopic; Kimi is still the headline inside it.
+- **"coding" cut as standalone.** `Coding Assistants` is the 3rd-largest tag
+  and lands inside both `claude-in-practice` and `harness`. A separate
+  Coding box would be ~70% duplicate of those two. Cut, not forgotten.
+- **"static models" → `small-models`,** per "8m params not gpt". Verified:
+  *"Granite 4.0 1B Speech"*, *"Nemotron 3 Nano 4B"*, *"Gemma 2B runs on
+  laptop CPU"*.
+
+## Retention mechanic — the actual point
+
+v1 had none. A grid of links is a shelf; a shelf does not bring anyone back.
+Three additions, cheapest first:
+
+**1. Freshness badge.** Each lane returns `new_count` = matches published in
+last 7d. Header shows "4 new this week". Without a reason to look *now*, a
+returning visitor sees the same grid as last time and leaves.
+
+**2. Follow a lane → newsletter.** `NewsletterSubscriber.categories` is
+already free-form `list[str]` JSON. Subscribing to a lane is
+`subscribe({categories: ["agent-security"]})` — **zero schema change, zero
+backend change.** This is the real return loop: pick lane → get email → come
+back. Biggest value-per-effort in this plan.
+
+**3. "See all" → feed.** A lane you cannot expand past 6 items is a dead
+end. Needs a `topic` param on `read_articles` reusing the exact same
+condition builder as the lane endpoint. Last item, cuttable, but a box
+without it leaks users.
 
 ## Backend
 
-**1. `app/api/topics.py`** — static `TOPICS: dict[str, TopicDef]` config.
-`TopicDef` = tag names list + optional keyword list + optional kind. Keep
-code-defined, no admin UI (see Not Doing).
+**1. `app/api/topics.py`** — declarative config, boxes are data not code:
 
-**2. `GET /articles/topics/{slug}`** in `articles.py` — reuse
-`build_rows`/`like_counts_subquery` from `article_view.py` (same as
-`read_articles`). Build conditions: `Tag.name.in_(tags)` OR
-`Article.title.ilike(...)` for each keyword, OR'd together. Sort
-`score-desc`, `limit` default 6, param `?limit=`.
-- 404 on unknown slug.
+```python
+@dataclass(frozen=True)
+class TopicDef:
+    slug: str
+    label: str
+    blurb: str
+    tag_groups: list[list[str]] = []   # OR within group, AND across groups
+    kinds: list[str] = []
+    title_any: list[str] = []          # OR'd against tag_groups
+    categories: list[str] = []
+```
 
-**3. `GET /articles/topics`** — list `[{slug, label}]` from the `TOPICS`
-config, so frontend doesn't hardcode topic metadata twice. Cheap to add now,
-avoids drift if topic list changes.
+One `build_conditions(TopicDef)` helper turns it into SQLAlchemy. Every lane
+above is expressible in it — that is the schema's acceptance test.
 
-**4. Regenerate client** — `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`,
-commit per repo convention.
+**2. `GET /articles/topics/{slug}`** — reuse `build_rows` +
+`like_counts_subquery` from `article_view.py` (same path `read_articles`
+uses, so lanes get like counts and `liked_by_me` free). `limit` default 6,
+sort score desc. 404 unknown slug.
+
+**3. `GET /articles/topics`** — `[{slug, label, blurb, count, new_count}]`.
+Frontend renders the grid from this, so lane metadata lives in one place.
+
+**4. `topic` param on `read_articles`** — same condition builder, for "see
+all". (Retention item 3.)
+
+**5. `CREATE INDEX ix_article_tag_tag_id ON article_tag(tag_id)`** — alembic
+migration. Current PK is `(article_id, tag_id)`, so nothing leads on
+`tag_id`, and every lane query filters on it. Free at 2.4k rows, not free at
+8 concurrent lane queries as the corpus grows.
+
+**6. Regenerate client** — `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`,
+commit (repo convention).
 
 ## Frontend
 
-**5. `TopicBoxes.tsx`** replaces `SourceBoxes.tsx` in `LandingPage.tsx`.
-Renders a grid of `TopicBox` components from `useQuery(['topics'])` (topic
-list, long `staleTime` — this barely changes).
+**7. `TopicLanes.tsx`** replaces `SourceBoxes` in `LandingPage.tsx`.
+`useQuery(['topics'])` for the lane list, long `staleTime`.
 
-**6. `TopicBox` component** — one per box, own
-`useQuery(['topic-articles', slug], () => ArticlesService.readArticlesByTopic({ slug, limit: 6 }))`.
-Reuse card/list visual shell from current `SourceCard` (avatar, title,
-tag chips, fade-on-overflow) — just swap the static `source.articles` data
-source for the query result, and publisher avatar comes from
-`article.publisher` now instead of hardcoded `source.domain`.
+**8. `TopicLane.tsx`** — one per lane, own query as specified:
+`useQuery(['topic', slug], () => ArticlesService.readTopic({slug, limit: 6}))`.
+Reuse the `SourceCard` shell (avatar, scroll fade, tag chips); swap
+`source.articles` for query data and take the avatar from
+`article.publisher` instead of a hardcoded domain.
 
-**7. Empty/thin box handling** — `kimi` and `harness` can run dry on slow
-news days. If a box returns < 3 articles, either hide it that render or
-show a lightweight "more soon" placeholder — don't ship an empty card.
+**9. Skeleton per lane.** 8 independent queries resolve at different times.
+Without fixed-height skeletons the grid reflows 8 times on load. Card is
+already `md:h-[26rem]` — keep that, render skeleton rows inside.
+
+**10. Thin-lane guard.** Under 3 results → hide the lane this render rather
+than ship an empty card.
+
+## Known trade-offs
+
+- **Lanes overlap and that is fine.** *Declaw Arena* is in both
+  `agent-security` and `harness`; *Kimi Work* in both `open-challengers` and
+  `harness`. Independent per-lane queries make cross-lane dedupe impossible
+  without a coordinating endpoint, which the one-query-per-box requirement
+  rules out. Accepted: an article in three lanes is a signal it is big, not
+  a bug.
+- **No hard weekly windows.** Only 44 articles in the last 7d vs 290 in 30d.
+  8 lanes × 6 slots = 48 > 44, so a strict 7d filter starves the grid. Lanes
+  rank all-time by score; recency shows up in the `new_count` badge instead.
+- **8 requests on landing.** Explicitly requested (one query per box). Cheap
+  and cacheable, but it is 8 round trips before the page settles.
 
 ## Not doing (v1)
 
-- No admin UI for adding/editing topics — code change + deploy to add one
-- No auto-trending / topic auto-discovery from embedding clusters
-- No personalization — same 7 boxes for every visitor
-- No semantic-search-backed boxes — flagged as future optional 8th box
-  ("Trending this week"), not built now
-- No topic-aware deep link into `/feed` — `/feed` filters are single-select
-  tag/category/kind/publisher and can't represent OR'd keyword topics like
-  `kimi`/`harness`/`small-models` cleanly. "See all" link deferred; if
-  wanted later, cleanest path is a `topic` param on `/feed` + `ArticlesList`
-  itself (mirrors the backend `/articles/topics/{slug}` filter), not
-  client-side guessing
-- No infinite scroll per box — fixed `limit`, newest-highest-score first
+- No admin UI for lanes — code change + deploy to add one
+- No auto-discovered/trending lanes — lift analysis was a design tool, run
+  by hand, not a runtime feature
+- No personalization — same lanes for everyone
+- **No embedding-backed lanes.** `/articles/search` uses model2vec
+  `potion-base-8M`; too weak to curate against, per explicit direction. The
+  hnsw index stays unused here.
+- No per-lane infinite scroll — fixed limit, "see all" goes to feed
+
+## Unresolved
+
+`min_score` on `read_articles` validates `ge=1, le=10` but actual scores are
+76–100, so the param can never match. Pre-existing, unrelated to lanes,
+flagged for whenever someone touches that endpoint.
