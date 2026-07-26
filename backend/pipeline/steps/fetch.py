@@ -12,6 +12,7 @@ from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
 )
+from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.extract_content import fetch_full_content
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.substack import fetch_feeds
@@ -31,16 +32,19 @@ class Source:
 def build_sources(session: Session) -> list[Source]:
     """Assemble the run's sources.
 
-    RSS/substack feeds and Hacker News are polled — "Feeds" covers every active
-    publisher with an rss or substack link (DB-driven via
-    ``feed_sources_from_db``). The IMAP/aggregator/lab-watch channels
-    (Newsletter, AI News, Lab Watch) are intentionally disabled: they fetch thin
-    items and blow up the downstream LLM budget. HN items start thin too but the
-    fetch step fills their content (and drops any it cannot), so they survive.
+    RSS/substack feeds, Hacker News and AI News are polled — "Feeds" covers
+    every active publisher with an rss or substack link (DB-driven via
+    ``feed_sources_from_db``). The IMAP/lab-watch channels (Newsletter, Lab
+    Watch) are intentionally disabled: they fetch thin items and blow up the
+    downstream LLM budget. HN items start thin too but the fetch step fills
+    their content (and drops any it cannot), so they survive. AI News extracts
+    its own content inline (see ``sources/ainews.py``), so it doesn't need the
+    re-fetch path either.
     """
     return [
         Source("Feeds", lambda: fetch_feeds(feed_sources_from_db(session))),
         Source("Hacker News", fetch_hn),
+        Source("AI News", fetch_ai_news),
     ]
 
 
