@@ -1,26 +1,40 @@
 # dumps
 
-Point-in-time `pg_dump` snapshots of the prod database, gzipped.
-Naming: `agentique-db-<UTC timestamp>.sql.gz`.
+Gzipped `pg_dump` snapshot of the prod database, named
+`agentique-db-<UTC timestamp>.sql.gz`. Only the latest snapshot is kept in the
+working tree — older ones stay in git history.
 
-Created with (on prod, from `/opt/agentique`):
-
-```bash
-set -a; . /opt/agentique/.env; set +a
-sudo docker exec agentique-db-1 pg_dump -U "$POSTGRES_USER" --clean --if-exists "$POSTGRES_DB" \
-  | gzip -6 > /tmp/agentique-db.sql.gz
-```
-
-Restore into a local db:
+Restore into a local/sandbox db (also used by cloud sessions):
 
 ```bash
-gzip -dc dumps/agentique-db-<stamp>.sql.gz \
-  | docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+scripts/restore-db.sh
 ```
 
-The dump carries `--clean --if-exists`, so restoring drops the existing objects first.
+That script copies `.env.dev` to `.env` when `.env` is missing, starts the
+`db` service from `compose.yml`, and restores the newest dump in this folder.
+Connection string it prints:
 
-Nightly off-repo backups go to kDrive via `backend/scripts/backup_db.py`.
+```
+postgresql://postgres:agentique-dev@localhost:5432/app
+```
 
-Note: these are full data dumps — they include the `user`, `newsletter_subscriber`
-and `analytics_event` tables.
+Credentials live in committed `.env.dev` — throwaway values for a local db
+only. `POSTGRES_USER` must stay `postgres`, since the dumps carry
+`OWNER TO postgres`.
+
+Refresh from prod (needs the `agentique-prod` ssh alias, so local only):
+
+```bash
+scripts/dump-prod-db.sh
+```
+
+It writes a new timestamped dump, deletes the older ones from the working
+tree, and leaves the result to be committed.
+
+Notes:
+
+- The dumps are `--clean --if-exists`, so restoring drops existing objects
+  first. Re-running is safe and idempotent.
+- Full data dumps: `user`, `newsletter_subscriber` and `analytics_event`
+  tables are included. Repo is private; keep it that way.
+- Nightly off-repo backups still go to kDrive via `backend/scripts/backup_db.py`.
