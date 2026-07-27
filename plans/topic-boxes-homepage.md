@@ -130,9 +130,16 @@ into view rather than arriving blank. Once enabled, a box stays enabled —
 never unmount its query on scroll-away, or scrolling up refetches
 everything.
 
-The landing page shows hero + newsletter + CTA above the grid, and cards are
-`md:h-[26rem]` in a 3-column grid, so **roughly one row (~3 boxes) loads on
-first paint** instead of all 13.
+**Measured in a browser at 1280x900: 16 requests on first paint, 30 across a
+full scroll.** Hero + newsletter push the grid down ~490px, cards are
+`md:h-[26rem]`, so rows one and two both fall inside the viewport plus
+`rootMargin` and load immediately.
+
+Box *order* turned out to be the lever, not `rootMargin`. Ordering purely
+best-first put the three widest lanes (harness 6, make-it-fast 4,
+open-challengers 6) on top and cost **22** requests before any scroll;
+leading with strong single-request boxes instead brought first paint to 16
+with no loss of what a visitor sees first.
 
 **2. Key queries by tag, not by box.** A box does not fetch "its" data — it
 composes from `useQueries` over per-tag keys like
@@ -141,9 +148,9 @@ Tags reused across boxes (`Quantization` is in both `make-it-fast` and
 `small-models`; `Agents` and `Orchestration` recur in `harness`) then fetch
 **once** and every later box reads the same cache entry — react-query
 dedupes identical query keys for free. Each box still owns its own
-`useQueries` declaration as intended.
-
-All 13 boxes fully scrolled ≈ 30 requests; first paint ≈ 6-10.
+`useQueries` declaration as intended. Confirmed in the browser: the 13 boxes
+expand to 31 parts but issue **30** network requests — `quantization`, shared
+by `make-it-fast` and `small-models`, is fetched once.
 
 ## Frontend
 
@@ -173,10 +180,12 @@ that vanishes *after* the user has scrolled to it yanks the content under
 their cursor. Reserve the slot, and if a box comes back under 3 items,
 render a quiet "nothing new here" inside it.
 
-**7. "See all" — presets only in v1.** A preset is one filter, so it
-deep-links straight into `/feed` with existing params. Lanes have no URL
-that can represent them until v2; omit the link on lanes rather than send
-users somewhere that shows the wrong thing.
+**7. "See all" — dropped from v1 entirely.** An earlier draft of this plan
+claimed presets get it for free. They do not: `/feed`'s filters live in
+`useState` inside `FiltersProvider` with no `validateSearch` on the route, so
+**no feed filter has a URL at all**. Linking to `/feed` would land on the
+unfiltered list. Making this work means putting feed filters in the URL —
+worth doing, but it is its own task, not part of this one.
 
 **8. Follow a box → newsletter.** `NewsletterSubscriber.categories` is
 already free-form `list[str]` JSON, so
@@ -193,7 +202,8 @@ Only once v1 says which boxes people actually use.
    box, full tails, reusing `build_rows` + `like_counts_subquery`
 3. **Unblocks `agent-security` and `claude-in-practice`** — tag∩tag done in
    SQL, where it is trivial
-4. `topic` param on `read_articles` — makes "see all" work for lanes
+4. `topic` param on `read_articles`, plus URL-addressable `/feed` filters —
+   together these make "see all" possible at all
 5. Title-only keyword matching — unlocks the `harness` and `small-models`
    keyword halves
 6. `CREATE INDEX ix_article_tag_tag_id ON article_tag(tag_id)` — current PK
@@ -281,3 +291,17 @@ the tag set steers away from it.
 - No time/quality boxes (top this week, perfect score, research desk) —
   dropped
 - No per-box infinite scroll — fixed limit 10
+
+## Follow-ups this work surfaced
+
+- **`.agents/homepage-refresh.md` is now orphaned.** It exists to web-search
+  each lab and open PRs editing `frontend/src/components/Home/sources.ts`,
+  which this change deletes. Retire the agent or repoint it — as written its
+  next run edits a file that no longer exists.
+- **`/feed` filters need to be URL-addressable** before any box can offer
+  "see all".
+- **Backend does not boot on the pinned Python.** `.python-version` is
+  `3.14`, the only interpreter uv offers here is `3.14.0rc2`, and pydantic
+  2.13.4 calls `typing._eval_type(..., prefer_fwd_module=...)` which that RC
+  does not accept. Unrelated to this change, but it blocks running the API
+  locally.
