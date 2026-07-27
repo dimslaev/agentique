@@ -17,7 +17,7 @@ lazy-loaded on scroll.
 - **Lanes** — combinations `/feed` cannot express (intersection, union,
   tag∩kind, editorial). These are the reason the page exists.
 - **Presets** — a single filter, but a recognizable *format* or *lab*
-  identity. Cheap, and their "see all" deep-links to `/feed` for free.
+  identity, and one request each.
 
 ## v1: what the existing API can and cannot do
 
@@ -63,8 +63,6 @@ Counts verified against dump 2026-07-26. `req` = v1 request cost.
 
 ### Lanes — v1
 
-| box | type | query | n | req |
-|---|---|---|---|---|
 `pool` = articles matching the box. `fresh` = age of its newest article and
 the span its 10 shown items cover. Every box fills all 10 slots.
 
