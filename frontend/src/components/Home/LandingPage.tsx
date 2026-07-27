@@ -11,7 +11,7 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { trackEvent } from "@/lib/analytics"
 import { handleError } from "@/utils"
-import { SourceBoxes } from "./SourceBoxes"
+import { TopicLanes } from "./TopicLanes"
 
 export function LandingPage() {
   return (
@@ -26,7 +26,7 @@ export function LandingPage() {
             {/* --- BUTTON 2: into the app (logic owned by routing agent) --- */}
             <FeedCta />
           </div>
-          <SourceBoxes />
+          <TopicLanes />
         </div>
       </main>
       <footer className="border-t">
