@@ -7,6 +7,9 @@ db-backed boxes. Each box = one topic, its own react-query.
 prove the concept and find out which boxes actually feel good before any
 schema or endpoint work. v2 collapses each box to one request.
 
+Global settings for every box: **sort by `published_at-desc`, limit 10,**
+lazy-loaded on scroll.
+
 ## The test a box must pass
 
 **A box earns its place only if it is worth a box.** Two families qualify:
@@ -19,49 +22,68 @@ schema or endpoint work. v2 collapses each box to one request.
 ## v1: what the existing API can and cannot do
 
 `readArticles` takes one `tag`, one `kind`, one `category`, one `publisher`,
-`limit` ≤ 50, `sort`. Everything below was measured against the prod dump.
+`limit` ≤ 50, `sort`. Everything below was measured against the prod dump
+**under date sort at limit 10** — the settings this plan actually ships.
 
 **Works perfectly (1 request, server-side correct)**
 Format presets and lab presets — one filter each.
 
-**Works (N requests, merged client-side, correct at limit 6)**
-Union lanes. Union of per-tag top-50s trivially contains the union's top 6.
+**Works (N requests, merged client-side, provably correct)**
+Union lanes and tag∩kind lanes. If article X is in the merged top-10 by
+date, at most 9 articles in the merge are newer, so at most 9 are newer
+within any single constituent query — X is therefore in that query's own
+top-10. Verified on `open-challengers`: **10/10** of the true top-10
+recovered. tag∩kind needs no client-side intersection at all, because `tag`
+and `kind` travel in the *same* request.
 
-**Works (N×M requests, each server-side correct)**
-tag∩kind lanes — `tag` and `kind` go in the *same* request, so no client-side
-intersection is needed at all.
+**Broken — moved to v2**
+tag∩tag lanes. Date sort has no ordering that constituent queries share, so
+recall collapses:
 
-**Degraded but acceptable (client-side intersection)**
-tag∩tag lanes. Measured on `agent-security`: the true intersection is 53
-articles, client-side recovery is **15**. But the **top 6 by score came back
-6/6** — high-score articles are in every tag's top-50 by construction. Fine
-for a 6-item box, breaks the moment anyone expands it.
+| fetch limit | articles found | of true top-10 |
+|---|---|---|
+| 10 | **1** | 1/10 |
+| 25 | 5 | 4/10 |
+| 50 (API max) | 12 | 7/10 |
 
-**Broken — cut from v1**
+Under score sort this worked (6/6 at the top) because high-score articles
+rank high in *every* tag's list. Date sort has no such shared spine — each
+tag's recent items are its own. Even at the API ceiling it does not
+recover, so `agent-security` and `claude-in-practice` cannot ship in v1.
+
+**Broken — moved to v2**
 Keyword lanes. `q` matches title **OR full article content**, so `q=harness`
 returns 102 articles of which only 5 have "harness" in the title — 95% noise
 (*"Ulysses Sequence Parallelism"*, *"Sarvam 105B"*). No title-only option
-exists. `harness` and `small-models` therefore ship tag-only in v1 and pick
-up their keyword half in v2.
+exists. `harness` and `small-models` ship tag-only in v1.
 
 ## Box set
 
 Counts verified against dump 2026-07-26. `req` = v1 request cost.
 
-### Lanes
+### Lanes — v1
 
 | box | type | query | n | req |
 |---|---|---|---|---|
-| agent-security | ∩ | (Security\|Safety\|Auditing\|Privacy\|Sandboxing) ∩ (Agents\|Tool Calling\|Browser Agents\|Orchestration) | 53 | 9 |
-| claude-in-practice | ∩ | `Anthropic` ∩ (Coding Assistants\|Prompt Engineering\|Orchestration) | 57 | 4 |
-| open-model-drops | tag∩kind | `Open Weights` ∩ kind(model, announcement) | 36 | 2 |
 | harness | tag∩kind | (Orchestration\|Agents\|Coding Assistants) ∩ kind(repo, product) | ~90 | 6 |
+| open-model-drops | tag∩kind | `Open Weights` ∩ kind(model, announcement) | 36 | 2 |
 | open-challengers | ∪ | Kimi\|DeepSeek\|Qwen\|GLM\|Mistral\|Llama | 75 | 6 |
 | generative-media | ∪ | Multimodal\|Media Generation\|Voice & Speech | 145 | 3 |
 | make-it-fast | ∪ | Inference Optimization\|Hardware\|Quantization\|Cost Optimization | 178 | 4 |
 | small-models | ∪ | Model Distillation\|Quantization\|Local AI | 117 | 3 |
 
-### Format presets
+### Lanes — deferred to v2
+
+| box | why |
+|---|---|
+| agent-security | tag∩tag — 1/10 recall under date sort. Best box in the set; worth waiting for the endpoint rather than shipping broken |
+| claude-in-practice | tag∩tag — same |
+
+Do **not** rescue these by widening to a union (`Security`∪`Safety`∪…) —
+that drops the agent angle and collapses back to something `/feed` already
+does in one click, failing the box test.
+
+### Format presets — v1
 
 | box | filter | n | req |
 |---|---|---|---|
@@ -70,7 +92,7 @@ Counts verified against dump 2026-07-26. `req` = v1 request cost.
 | launches | kind=product ∩ dev | 170 | 1 |
 | new-models | kind=announcement ∩ models | 123 | 1 |
 
-### Lab presets
+### Lab presets — v1
 
 `Anthropic` 208 · `OpenAI` 85 · `Google` 51 · (`Microsoft` 21, `xAI` 13 —
 thin, optional). 1 request each.
@@ -81,21 +103,31 @@ lab boxes are web-searched by `.agents/homepage-refresh.md`, not db-backed.
 Tag coverage is rich (208) where publisher coverage is not. Swapping to
 publisher would silently gut these boxes.
 
-## v1 request budget — read this before building
+## Request budget
 
-Everything above is ~44 requests on landing page load. That is the honest
-cost of proving the concept with no backend.
+Two independent optimizations, both needed.
 
-**Mitigation: key the queries by tag, not by box.** A box does not fetch
-"its" data — it composes from `useQueries` over per-tag keys like
-`['articles', {tag: 'agents', limit: 50}]`. Tags reused across boxes
-(`Agents`, `Orchestration`, `Quantization`) then fetch **once** and every box
-reads the same cache entry — react-query dedupes identical query keys for
-free. Distinct tags across all lanes ≈ 20, plus 4 format presets and 3 lab
-presets, so **~27 requests instead of 44**, and each box still owns its own
+**1. Lazy load — only boxes in (or near) the viewport query at all.**
+`IntersectionObserver` on each box wrapper drives react-query's `enabled`.
+Use ~200px `rootMargin` so a box starts fetching just before it scrolls
+into view rather than arriving blank. Once enabled, a box stays enabled —
+never unmount its query on scroll-away, or scrolling up refetches
+everything.
+
+The landing page shows hero + newsletter + CTA above the grid, and cards are
+`md:h-[26rem]` in a 3-column grid, so **roughly one row (~3 boxes) loads on
+first paint** instead of all 13.
+
+**2. Key queries by tag, not by box.** A box does not fetch "its" data — it
+composes from `useQueries` over per-tag keys like
+`['articles', {tag: 'quantization', sort: 'published_at-desc', limit: 10}]`.
+Tags reused across boxes (`Quantization` is in both `make-it-fast` and
+`small-models`; `Agents` and `Orchestration` recur in `harness`) then fetch
+**once** and every later box reads the same cache entry — react-query
+dedupes identical query keys for free. Each box still owns its own
 `useQueries` declaration as intended.
 
-Trim further by dropping boxes, not by batching — batching is v2's job.
+All 13 boxes fully scrolled ≈ 30 requests; first paint ≈ 6-10.
 
 ## Frontend
 
@@ -103,10 +135,10 @@ Trim further by dropping boxes, not by batching — batching is v2's job.
 `blurb`, `tagGroups` (OR within, AND across), `kinds`, `categories`. Pure
 config, no fetching. Becomes the seed for v2's backend config.
 
-**2. `useTopicArticles(def)`** — one hook. Expands a `TopicDef` into
-per-tag `useQueries`, then merges: union = dedupe by id, intersection =
-filter by id presence across groups, then sort by score and slice to 6.
-All box types go through this one path.
+**2. `useTopicArticles(def, enabled)`** — one hook. Expands a `TopicDef`
+into per-tag `useQueries` (all `sort: 'published_at-desc'`, `limit: 10`),
+merges by dedupe on id, re-sorts by `published_at desc`, slices to 10. All
+v1 box types go through this one path.
 
 **3. `TopicLanes.tsx`** replaces `SourceBoxes` in `LandingPage.tsx`.
 
@@ -114,12 +146,16 @@ All box types go through this one path.
 tag chips); swap `source.articles` for hook output, take the avatar from
 `article.publisher` instead of a hardcoded domain.
 
-**5. Fixed-height skeletons.** Boxes resolve at different times; the card is
-already `md:h-[26rem]`, keep it and render skeleton rows inside so the grid
-does not reflow N times on load.
+**5. Fixed-height skeletons, always reserved.** With lazy loading the grid
+must claim each box's height *before* its query runs, or every scroll tick
+reflows the page under the user. Card is already `md:h-[26rem]` — keep it
+and render skeleton rows inside.
 
-**6. Thin-box guard.** Under 3 results → hide the box this render rather
-than ship an empty card.
+**6. Thin boxes: show an empty state, do not unmount.** This reverses the
+earlier "hide the box" rule, which is incompatible with lazy loading — a box
+that vanishes *after* the user has scrolled to it yanks the content under
+their cursor. Reserve the slot, and if a box comes back under 3 items,
+render a quiet "nothing new here" inside it.
 
 **7. "See all" — presets only in v1.** A preset is one filter, so it
 deep-links straight into `/feed` with existing params. Lanes have no URL
@@ -128,7 +164,7 @@ users somewhere that shows the wrong thing.
 
 **8. Follow a box → newsletter.** `NewsletterSubscriber.categories` is
 already free-form `list[str]` JSON, so
-`subscribe({categories: ["agent-security"]})` needs **no schema and no
+`subscribe({categories: ["open-challengers"]})` needs **no schema and no
 backend change**. This is the retention loop — pick box, get email, come
 back — and it is the main reason v1 is worth shipping before v2.
 
@@ -139,13 +175,15 @@ Only once v1 says which boxes people actually use.
 1. `app/api/topics.py` — the `topics.ts` config moved server-side
 2. `GET /articles/topics` and `GET /articles/topics/{slug}` — one request per
    box, full tails, reusing `build_rows` + `like_counts_subquery`
-3. `topic` param on `read_articles` — makes "see all" work for lanes
-4. Title-only keyword matching — unlocks the `harness` and `small-models`
-   keyword halves that v1 cannot do
-5. `CREATE INDEX ix_article_tag_tag_id ON article_tag(tag_id)` — current PK
+3. **Unblocks `agent-security` and `claude-in-practice`** — tag∩tag done in
+   SQL, where it is trivial
+4. `topic` param on `read_articles` — makes "see all" work for lanes
+5. Title-only keyword matching — unlocks the `harness` and `small-models`
+   keyword halves
+6. `CREATE INDEX ix_article_tag_tag_id ON article_tag(tag_id)` — current PK
    is `(article_id, tag_id)`, nothing leads on `tag_id`. Free at 2.4k rows;
    not free later
-6. Regenerate client — `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`
+7. Regenerate client — `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`
 
 ## Separate session: tag vocabulary gaps
 
@@ -199,15 +237,20 @@ the tag set steers away from it.
 
 ## Known trade-offs
 
-- **Boxes overlap and that is fine.** *Declaw Arena* is in both
-  `agent-security` and `harness`. Per-box queries make cross-box dedupe
+- **Date sort trades quality for freshness.** Measured on
+  `generative-media`: top-10 by date averages score **86.6** and spans 8
+  days; top-10 by score averages **99.4** and spans 9 months. Scores run
+  76-100, so 86.6 is mid-high, not bad — and a news product that looks
+  frozen is worse than one that looks merely good. Accepted, but this is the
+  reason the two best-scoring boxes now look ordinary.
+- **Boxes overlap and that is fine.** Per-box queries make cross-box dedupe
   impossible without a coordinating endpoint, which the one-query-per-box
   requirement rules out. An article in three boxes is a signal it is big.
-- **No time windows.** Only 44 articles in the last 7d vs 290 in 30d, so a
-  weekly filter would starve a multi-box grid. Boxes rank all-time by score.
-- **v1 intersections show the head, not the tail** — 6/6 correct at the top,
-  ~28% recall overall. Acceptable at limit 6; the reason "see all" is
-  preset-only until v2.
+- **Smaller boxes will look older.** `open-model-drops` has 36 articles
+  total, so its 10 most recent span ~5 weeks. Nothing to fix, but expect
+  uneven recency across the grid.
+- **`published_at` is nullable in the schema but 0/1131 rows are null**, so
+  date sort is safe today. Sort with `NULLS LAST` anyway.
 
 ## Not doing
 
@@ -216,10 +259,9 @@ the tag set steers away from it.
   design tool run by hand, not a runtime feature
 - No personalization — same boxes for everyone
 - **No embedding-backed boxes.** `/articles/search` uses model2vec
-  `potion-base-8M`, too weak to curate against, per explicit direction. The
-  hnsw index stays unused here
+  `potion-base-8M`, too weak to curate against, per explicit direction
 - No freshness badge — dropped
 - No source-identity boxes (Hacker News, digests, editor's picks) — dropped
 - No time/quality boxes (top this week, perfect score, research desk) —
   dropped
-- No per-box infinite scroll — fixed limit
+- No per-box infinite scroll — fixed limit 10
