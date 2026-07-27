@@ -65,12 +65,17 @@ Counts verified against dump 2026-07-26. `req` = v1 request cost.
 
 | box | type | query | n | req |
 |---|---|---|---|---|
-| harness | tag∩kind | (Orchestration\|Agents\|Coding Assistants) ∩ kind(repo, product) | ~90 | 6 |
-| open-model-drops | tag∩kind | `Open Weights` ∩ kind(model, announcement) | 36 | 2 |
-| open-challengers | ∪ | Kimi\|DeepSeek\|Qwen\|GLM\|Mistral\|Llama | 75 | 6 |
-| generative-media | ∪ | Multimodal\|Media Generation\|Voice & Speech | 145 | 3 |
-| make-it-fast | ∪ | Inference Optimization\|Hardware\|Quantization\|Cost Optimization | 178 | 4 |
-| small-models | ∪ | Model Distillation\|Quantization\|Local AI | 117 | 3 |
+`pool` = articles matching the box. `fresh` = age of its newest article and
+the span its 10 shown items cover. Every box fills all 10 slots.
+
+| box | type | query | pool | fresh | req |
+|---|---|---|---|---|---|
+| harness | tag∩kind | (Orchestration\|Agents\|Coding Assistants) ∩ kind(repo, product) | 231 | 2d, 9d span | 6 |
+| make-it-fast | ∪ | Inference Optimization\|Hardware\|Quantization\|Cost Optimization | 178 | 2d, 5d span | 4 |
+| generative-media | ∪ | Multimodal\|Media Generation\|Voice & Speech | 145 | 3d, 8d span | 3 |
+| small-models | ∪ | Model Distillation\|Quantization\|Local AI | 111 | 2d, 6d span | 3 |
+| open-challengers | ∪ | Kimi\|DeepSeek\|Qwen\|GLM\|Mistral\|Llama | 75 | 6d, 7d span | 6 |
+| open-model-drops | tag∩kind | `Open Weights` ∩ kind(model, announcement) | 36 | 5d, 34d span | 2 |
 
 ### Lanes — deferred to v2
 
@@ -85,17 +90,28 @@ does in one click, failing the box test.
 
 ### Format presets — v1
 
-| box | filter | n | req |
-|---|---|---|---|
-| papers | kind=paper ∩ research | 49 | 1 |
-| open-source-drops | kind=repo ∩ dev | 249 | 1 |
-| launches | kind=product ∩ dev | 170 | 1 |
-| new-models | kind=announcement ∩ models | 123 | 1 |
+| box | filter | pool | fresh | req |
+|---|---|---|---|---|
+| open-source-drops | kind=repo ∩ dev | 249 | 2d, 5d span | 1 |
+| launches | kind=product ∩ dev | 170 | 2d, 12d span | 1 |
+| new-models | kind=announcement ∩ models | 123 | 1d, 11d span | 1 |
+| papers | kind=paper ∩ research | 49 | 11d, 13d span | 1 |
 
 ### Lab presets — v1
 
-`Anthropic` 208 · `OpenAI` 85 · `Google` 51 · (`Microsoft` 21, `xAI` 13 —
-thin, optional). 1 request each.
+1 request each.
+
+| box | pool | fresh |
+|---|---|---|
+| `Anthropic` | 208 | 3d, 8d span |
+| `OpenAI` | 85 | 8d, 9d span |
+| `Google` | 51 | 5d, 35d span |
+| `Microsoft` | 21 | 14d, 19d span — marginal |
+| `xAI` | 13 | 9d, **77d span** — cut |
+
+**Cut `xAI`.** It fills 10 slots only by reaching back 77 days; a box whose
+"latest" is from May reads as broken, not quiet. `Microsoft` is borderline
+for the same reason — ship it only if the grid needs a 13th box.
 
 **These must be tag-based, not publisher-based.** The db has 3 articles
 *published by* Anthropic, 4 by Moonshot, 1 by xAI — the current homepage's
