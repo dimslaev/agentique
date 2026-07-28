@@ -14,23 +14,14 @@ function cutoffIso(days: number): string {
 
 export function ArticlesList() {
   const { filters } = useFilters()
-  const { search, dateRange, sort, category, kind, publisher, tag } = filters
+  const { search, dateRange, sort, category, kind, publisher } = filters
 
   // "all time" -> omit `since` (backend treats missing as all-time).
   const since =
     dateRange === "all" ? undefined : cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
   const { data, isLoading, isFetching, isError } = useQuery({
-    queryKey: [
-      "articles",
-      search,
-      dateRange,
-      sort,
-      category,
-      kind,
-      publisher,
-      tag,
-    ],
+    queryKey: ["articles", search, dateRange, sort, category, kind, publisher],
     queryFn: () =>
       ArticlesService.readArticles({
         limit: 50,
@@ -40,7 +31,6 @@ export function ArticlesList() {
         category: category || undefined,
         kind: kind || undefined,
         publisher: publisher || undefined,
-        tag: tag || undefined,
       }),
     placeholderData: keepPreviousData,
   })

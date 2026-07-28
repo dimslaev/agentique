@@ -13,17 +13,10 @@ const DATE_OPTIONS = [
   { value: "all", label: "All time" },
 ]
 
+// Score is gone as a sort: nothing carries one any more.
 const SORT_OPTIONS = [
   { value: "published_at-desc", label: "Date" },
-  { value: "score-desc", label: "Score" },
   { value: "likes-desc", label: "Popular" },
-]
-
-const CATEGORY_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "models", label: "Models" },
-  { value: "dev", label: "Dev" },
-  { value: "research", label: "Research" },
 ]
 
 const KIND_OPTIONS = [
@@ -66,10 +59,10 @@ export function SidebarFilters() {
   const { filters, setFilter } = useFilters()
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
-  // names for the current publisher/tag slug when it came from search and
-  // isn't among the top facets — kept out of context since it's display-only
+  // name for the current publisher slug when it came from search and isn't
+  // among the top facets — kept out of context since it's display-only
   const [publisherName, setPublisherName] = useState<string>()
-  const [tagName, setTagName] = useState<string>()
+  const [categoryName, setCategoryName] = useState<string>()
 
   const { data: facets } = useQuery({
     queryKey: ["article-facets"],
@@ -130,12 +123,6 @@ export function SidebarFilters() {
         onChange={(v) => setFilter("sort", v)}
       />
       <FilterGroup
-        label="Category"
-        options={CATEGORY_OPTIONS}
-        value={filters.category}
-        onChange={(v) => setFilter("category", v)}
-      />
-      <FilterGroup
         label="Kind"
         options={KIND_OPTIONS}
         value={filters.kind}
@@ -152,16 +139,19 @@ export function SidebarFilters() {
         }}
         search={(q) => ArticlesService.searchPublishers({ q, limit: 20 })}
       />
+      {/* Category replaces both the old hardcoded dev/models/research group
+          and the separate tag facet: it is the site's only topic axis now, and
+          it comes from the server vocabulary rather than a list in this file. */}
       <FacetFilter
-        label="Tags"
-        value={filters.tag}
-        selectedName={tagName}
-        topItems={facets?.tags ?? []}
+        label="Category"
+        value={filters.category}
+        selectedName={categoryName}
+        topItems={facets?.categories ?? []}
         onChange={(slug, name) => {
-          setFilter("tag", slug)
-          setTagName(name)
+          setFilter("category", slug)
+          setCategoryName(name)
         }}
-        search={(q) => ArticlesService.searchTags({ q, limit: 20 })}
+        search={(q) => ArticlesService.searchCategories({ q, limit: 20 })}
       />
     </div>
   )

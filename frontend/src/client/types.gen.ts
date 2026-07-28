@@ -12,7 +12,7 @@ export type AnalyticsEventCreate = {
 
 export type ArticleFacets = {
     publishers: Array<PublisherFacet>;
-    tags: Array<TagFacet>;
+    categories: Array<CategoryFacet>;
 };
 
 export type ArticleKind = 'blog' | 'product' | 'announcement' | 'repo' | 'paper' | 'model';
@@ -22,13 +22,11 @@ export type ArticlePublic = {
     title: string;
     url: string;
     summary?: (string | null);
-    score: number;
     kind: ArticleKind;
-    categories?: Array<Category>;
+    categories?: Array<CategoryPublic>;
     published_at?: (string | null);
     created_at?: (string | null);
     publisher: PublisherPublic;
-    tags?: Array<TagPublic>;
     like_count?: number;
     liked_by_me?: boolean;
 };
@@ -47,7 +45,16 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
-export type Category = 'dev' | 'models' | 'research';
+export type CategoryFacet = {
+    slug: string;
+    name: string;
+    count: number;
+};
+
+export type CategoryPublic = {
+    slug: string;
+    name: string;
+};
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -94,17 +101,6 @@ export type PublisherPublic = {
     name: string;
     kind: PublisherKind;
     image?: (string | null);
-};
-
-export type TagFacet = {
-    slug: string;
-    name: string;
-    count: number;
-};
-
-export type TagPublic = {
-    slug: string;
-    name: string;
 };
 
 export type Token = {
@@ -178,12 +174,10 @@ export type ArticlesReadArticlesData = {
     category?: (string | null);
     kind?: (string | null);
     limit?: number;
-    minScore?: (number | null);
     publisher?: (string | null);
     q?: (string | null);
     since?: (string | null);
     sort?: string;
-    tag?: (string | null);
 };
 
 export type ArticlesReadArticlesResponse = (ArticlesPublic);
@@ -208,12 +202,12 @@ export type ArticlesSearchPublishersData = {
 
 export type ArticlesSearchPublishersResponse = (Array<PublisherFacet>);
 
-export type ArticlesSearchTagsData = {
+export type ArticlesSearchCategoriesData = {
     limit?: number;
     q?: (string | null);
 };
 
-export type ArticlesSearchTagsResponse = (Array<TagFacet>);
+export type ArticlesSearchCategoriesResponse = (Array<CategoryFacet>);
 
 export type ArticlesArticleStatsResponse = (unknown);
 

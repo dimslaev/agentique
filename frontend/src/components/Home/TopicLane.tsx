@@ -54,9 +54,6 @@ export function TopicLane({ topic }: { topic: TopicDef }) {
     >
       <div className="shrink-0 px-4">
         <div className="font-medium leading-tight">{topic.label}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground">
-          {topic.blurb}
-        </div>
       </div>
 
       <ul
@@ -68,7 +65,7 @@ export function TopicLane({ topic }: { topic: TopicDef }) {
           <LaneSkeleton />
         ) : (
           articles.map((article) => (
-            <LaneRow key={article.id} article={article} />
+            <LaneRow key={article.id} article={article} lane={topic.slug} />
           ))
         )}
       </ul>
@@ -89,7 +86,12 @@ export function TopicLane({ topic }: { topic: TopicDef }) {
   )
 }
 
-function LaneRow({ article }: { article: ArticlePublic }) {
+function LaneRow({ article, lane }: { article: ArticlePublic; lane: string }) {
+  // Every article in a lane carries that lane's category, so printing it back
+  // says nothing. The *other* categories do: they are the cross-links between
+  // lanes, and the reason an article shows up in two places.
+  const others = (article.categories ?? []).filter((c) => c.slug !== lane)
+
   return (
     <li className="px-4 py-3">
       <div className="mb-1 flex items-center gap-1.5">
@@ -120,12 +122,12 @@ function LaneRow({ article }: { article: ArticlePublic }) {
         <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
           {article.kind}
         </span>
-        {article.tags?.slice(0, 2).map((tag) => (
+        {others.slice(0, 2).map((category) => (
           <span
-            key={tag.slug}
+            key={category.slug}
             className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
           >
-            {tag.name}
+            {category.name}
           </span>
         ))}
         {article.published_at && (

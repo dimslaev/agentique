@@ -23,12 +23,6 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AssignTags(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.TagAssignment"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="request")
-        return typing.cast(typing.List["types.TagAssignment"], __result__)
-
     def ClassifyKind(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> types.ClassifyKindResult:
@@ -59,11 +53,11 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ImproveTitles", llm_response=llm_response, mode="request")
         return typing.cast(typing.List["types.TitleFix"], __result__)
 
-    def ScoreArticles(
+    def MatchCategories(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.ScoredArticle"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ScoreArticles", llm_response=llm_response, mode="request")
-        return typing.cast(typing.List["types.ScoredArticle"], __result__)
+    ) -> typing.List["types.CategoryMatch"]:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="MatchCategories", llm_response=llm_response, mode="request")
+        return typing.cast(typing.List["types.CategoryMatch"], __result__)
 
     def SelectNotableProducts(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -83,11 +77,11 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="request")
         return typing.cast(typing.List["types.DedupMatch"], __result__)
 
-    def SummarizeAndCategorize(
+    def Summarize(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.SummarizeAndCategorizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SummarizeAndCategorize", llm_response=llm_response, mode="request")
-        return typing.cast(types.SummarizeAndCategorizeResult, __result__)
+    ) -> types.SummarizeResult:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Summarize", llm_response=llm_response, mode="request")
+        return typing.cast(types.SummarizeResult, __result__)
 
     
 
@@ -96,12 +90,6 @@ class LlmStreamParser:
 
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
-
-    def AssignTags(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["stream_types.TagAssignment"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="stream")
-        return typing.cast(typing.List["stream_types.TagAssignment"], __result__)
 
     def ClassifyKind(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -133,11 +121,11 @@ class LlmStreamParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ImproveTitles", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List["stream_types.TitleFix"], __result__)
 
-    def ScoreArticles(
+    def MatchCategories(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["stream_types.ScoredArticle"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ScoreArticles", llm_response=llm_response, mode="stream")
-        return typing.cast(typing.List["stream_types.ScoredArticle"], __result__)
+    ) -> typing.List["stream_types.CategoryMatch"]:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="MatchCategories", llm_response=llm_response, mode="stream")
+        return typing.cast(typing.List["stream_types.CategoryMatch"], __result__)
 
     def SelectNotableProducts(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -157,10 +145,10 @@ class LlmStreamParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List["stream_types.DedupMatch"], __result__)
 
-    def SummarizeAndCategorize(
+    def Summarize(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.SummarizeAndCategorizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SummarizeAndCategorize", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.SummarizeAndCategorizeResult, __result__)
+    ) -> stream_types.SummarizeResult:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Summarize", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.SummarizeResult, __result__)
 
     

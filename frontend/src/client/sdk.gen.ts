@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchCategoriesData, ArticlesSearchCategoriesResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -37,10 +37,8 @@ export class ArticlesService {
      * @param data.limit
      * @param data.since
      * @param data.q
-     * @param data.minScore
      * @param data.category
      * @param data.kind
-     * @param data.tag
      * @param data.publisher
      * @param data.sort
      * @returns ArticlesPublic Successful Response
@@ -54,10 +52,8 @@ export class ArticlesService {
                 limit: data.limit,
                 since: data.since,
                 q: data.q,
-                min_score: data.minScore,
                 category: data.category,
                 kind: data.kind,
-                tag: data.tag,
                 publisher: data.publisher,
                 sort: data.sort
             },
@@ -132,17 +128,17 @@ export class ArticlesService {
     }
     
     /**
-     * Search Tags
+     * Search Categories
      * @param data The data for the request.
      * @param data.q
      * @param data.limit
-     * @returns TagFacet Successful Response
+     * @returns CategoryFacet Successful Response
      * @throws ApiError
      */
-    public static searchTags(data: ArticlesSearchTagsData = {}): CancelablePromise<ArticlesSearchTagsResponse> {
+    public static searchCategories(data: ArticlesSearchCategoriesData = {}): CancelablePromise<ArticlesSearchCategoriesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/articles/tags',
+            url: '/api/v1/articles/categories',
             query: {
                 q: data.q,
                 limit: data.limit

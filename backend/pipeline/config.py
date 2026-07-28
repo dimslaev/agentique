@@ -59,6 +59,26 @@ def keep_drop_threshold() -> float:
     return float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
 
 
+def category_gate_threshold() -> float:
+    """Cosine floor for the static category gate; 0 disables it.
+
+    Max similarity between an article and any category prototype, under
+    potion-base-8M.
+
+    Ships DISABLED on purpose. The right cutoff is a property of the embedding
+    model and the category wording, not something to guess: a floor set too high
+    silently deletes articles the matcher would have accepted, and nothing
+    downstream can tell that it happened. Run
+    ``python -m scripts.calibrate_category_gate`` against a restored dump, read
+    the recall table it prints, and set CATEGORY_GATE_THRESHOLD from it.
+
+    Gate 0 (pipeline.keep_drop) is already a calibrated potion-base-8M filter
+    and runs regardless, so the cheap-static-then-LLM cascade holds either way;
+    this gate only adds category-awareness on top of it.
+    """
+    return float(os.environ.get("CATEGORY_GATE_THRESHOLD", "0"))
+
+
 def dedup_dist_threshold() -> float:
     """Cosine-distance cutoff for the dedup embedding shortlist. Same-story
     pairs empirically sit at 0.29-0.35; kept generous above that band to

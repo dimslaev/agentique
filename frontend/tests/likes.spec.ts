@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test"
 
-// These tests mutate like counts on shared seeded articles (e.g. the
-// top-scored "first row"), so they must not run concurrently with each
-// other or they'll race on the same rows.
+// These tests mutate like counts on shared seeded articles (e.g. the newest
+// "first row"), so they must not run concurrently with each other or they'll
+// race on the same rows.
 test.describe.configure({ mode: "serial" })
 
 test.describe("Logged-in likes", () => {

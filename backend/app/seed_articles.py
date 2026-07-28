@@ -10,12 +10,11 @@ from app.core.config import settings
 from app.core.db import engine
 from app.models import (
     Article,
+    ArticleCategory,
     ArticleKind,
-    ArticleTag,
     Category,
     Publisher,
     PublisherKind,
-    Tag,
     TrustLevel,
 )
 
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 # Fixed seed so local dev, CI, and the Playwright stack all get the same 50 rows.
 SEED = 20260701
 
-CATEGORIES = list(Category)
 KINDS = list(ArticleKind)
 
 EMBEDDING_DIM = 256
@@ -80,16 +78,13 @@ def make_sample_articles(publisher_ids: list[int]) -> list[Article]:
     rng = random.Random(SEED)
     articles = []
     for i in range(ARTICLE_COUNT):
-        categories = rng.sample(CATEGORIES, k=rng.choice([1, 2]))
         articles.append(
             Article(
                 title=f"Sample article {i + 1}",
                 publisher_id=rng.choice(publisher_ids),
                 url=f"https://example.com/articles/{i + 1}",
                 published_at=_published_at(rng, i),
-                score=rng.randint(1, 10),
                 summary=f"Summary for sample article {i + 1}.",
-                categories=categories,
                 kind=rng.choice(KINDS),
                 content=f"Content body for sample article {i + 1}.",
                 embedding=_normalized_embedding(rng),
@@ -98,17 +93,23 @@ def make_sample_articles(publisher_ids: list[int]) -> list[Article]:
     return articles
 
 
-def make_sample_article_tags(
-    article_ids: list[int], tag_ids: list[int]
-) -> list[ArticleTag]:
-    """1–3 tags per article, drawn from whatever `seed_tags` loaded."""
-    if not tag_ids:
+def make_sample_article_categories(
+    article_ids: list[int], category_ids: list[int]
+) -> list[ArticleCategory]:
+    """1-3 categories per article, drawn from whatever `seed_categories` loaded.
+
+    Every sample article gets at least one, matching the real invariant: an
+    article with no category is never stored.
+    """
+    if not category_ids:
         return []
     rng = random.Random(SEED)
     return [
-        ArticleTag(article_id=article_id, tag_id=tag_id)
+        ArticleCategory(article_id=article_id, category_id=category_id)
         for article_id in article_ids
-        for tag_id in rng.sample(tag_ids, k=min(rng.randint(1, 3), len(tag_ids)))
+        for category_id in rng.sample(
+            category_ids, k=min(rng.randint(1, 3), len(category_ids))
+        )
     ]
 
 
@@ -130,8 +131,10 @@ def seed(session: Session) -> None:
     session.commit()
     article_ids = [a.id for a in articles if a.id is not None]
 
-    tag_ids = [t.id for t in session.exec(select(Tag)).all() if t.id is not None]
-    session.add_all(make_sample_article_tags(article_ids, tag_ids))
+    category_ids = [
+        c.id for c in session.exec(select(Category)).all() if c.id is not None
+    ]
+    session.add_all(make_sample_article_categories(article_ids, category_ids))
     session.commit()
 
 

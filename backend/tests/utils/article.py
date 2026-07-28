@@ -1,14 +1,12 @@
-import random
-
 from sqlmodel import Session
 
 from app.models import (
     Article,
+    ArticleCategory,
     ArticleKind,
-    ArticleTag,
+    Category,
     Publisher,
     PublisherKind,
-    Tag,
     slugify,
 )
 from tests.utils.utils import random_lower_string
@@ -29,19 +27,20 @@ def create_random_publisher(db: Session, **overrides: object) -> Publisher:
     return publisher
 
 
-def create_random_tag(db: Session, **overrides: object) -> Tag:
+def create_random_category(db: Session, **overrides: object) -> Category:
     name = random_lower_string()
     defaults: dict[str, object] = {
         "slug": slugify(name),
         "name": name,
         "description": random_lower_string(),
+        "exemplars": [random_lower_string()],
     }
     defaults.update(overrides)
-    tag = Tag(**defaults)  # type: ignore[arg-type]
-    db.add(tag)
+    category = Category(**defaults)  # type: ignore[arg-type]
+    db.add(category)
     db.commit()
-    db.refresh(tag)
-    return tag
+    db.refresh(category)
+    return category
 
 
 def create_random_article(db: Session, **overrides: object) -> Article:
@@ -52,9 +51,7 @@ def create_random_article(db: Session, **overrides: object) -> Article:
     defaults: dict[str, object] = {
         "title": random_lower_string(),
         "url": f"https://example.com/{random_lower_string()}",
-        "score": random.randint(1, 10),
         "summary": random_lower_string(),
-        "categories": ["dev"],
         "kind": ArticleKind.blog,
         "content": random_lower_string(),
     }
@@ -66,7 +63,7 @@ def create_random_article(db: Session, **overrides: object) -> Article:
     return article
 
 
-def tag_article(db: Session, article: Article, tag: Tag) -> None:
-    assert article.id is not None and tag.id is not None
-    db.add(ArticleTag(article_id=article.id, tag_id=tag.id))
+def categorize_article(db: Session, article: Article, category: Category) -> None:
+    assert article.id is not None and category.id is not None
+    db.add(ArticleCategory(article_id=article.id, category_id=category.id))
     db.commit()

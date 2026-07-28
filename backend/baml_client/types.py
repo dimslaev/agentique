@@ -37,13 +37,8 @@ def get_checks(checks: typing.Dict[CheckName, Check]) -> typing.List[Check]:
 def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
     return all(check.status == "succeeded" for check in get_checks(checks))
 # #########################################################################
-# Generated enums (2)
+# Generated enums (1)
 # #########################################################################
-
-class ArticleCategory(str, Enum):
-    Models = "Models"
-    Dev = "Dev"
-    Research = "Research"
 
 class ArticleKind(str, Enum):
     Repo = "Repo"
@@ -54,7 +49,7 @@ class ArticleKind(str, Enum):
     Announcement = "Announcement"
 
 # #########################################################################
-# Generated classes (16)
+# Generated classes (14)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -63,6 +58,15 @@ class ArticleInput(BaseModel):
     source: str
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
+
+class CategoryMatch(BaseModel):
+    url: str
+    categories: typing.List[str] = Field(description='0-3 slugs copied verbatim from the vocabulary; most relevant first. Empty means the article belongs in none of them.')
+
+class CategoryOption(BaseModel):
+    slug: str
+    name: str
+    description: str = Field(description='What belongs in this category, and the rule of thumb for it')
 
 class ClassifyKindResult(BaseModel):
     kind: ArticleKind
@@ -99,32 +103,14 @@ class ProfileVerdict(BaseModel):
     isAiRelated: bool
     confidence: int = Field(description='0-100 confidence that AI/ML/LLMs is the PRIMARY focus')
 
-class ScoredArticle(BaseModel):
-    url: str
-    score: int = Field(description='1-100 developer-actionability rating')
-
 class SearchCandidate(BaseModel):
     title: str
     url: str
     snippet: str
 
-class SummarizeAndCategorizeResult(BaseModel):
+class SummarizeResult(BaseModel):
     summary: str = Field(description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
     kind: ArticleKind
-
-class TagAssignment(BaseModel):
-    articleId: int
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class TagInput(BaseModel):
-    articleId: int
-    title: str
-    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
-
-class TagOption(BaseModel):
-    slug: str
-    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
 
 class TitleFix(BaseModel):
     url: str = Field(description='The exact URL from the matching input article - copy verbatim')

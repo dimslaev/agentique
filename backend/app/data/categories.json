@@ -1,0 +1,147 @@
+{
+  "_comment": [
+    "The controlled category vocabulary. Seven categories, deliberately orthogonal:",
+    "  AI Labs            - Who did it?",
+    "  Model Releases     - Was a new model released?",
+    "  Open Weights       - Can developers download the weights?",
+    "  Coding Agents      - Is it about AI for software development?",
+    "  Tool Use & MCP     - Can the model interact with external tools?",
+    "  Local AI           - Can developers run it on their own hardware?",
+    "  Inference & Optimization - Does it make AI faster, smaller, or cheaper?",
+    "",
+    "`description` is fed verbatim to the MatchCategories prompt — it is the",
+    "filter, so vagueness here is a bug. `exemplars` are short phrases averaged",
+    "into the category's prototype vector for the cheap static pre-filter; they",
+    "never reach the LLM. `position` orders the homepage lanes.",
+    "",
+    "An article matching no category is not stored at all. That is the point."
+  ],
+  "categories": [
+    {
+      "slug": "model-releases",
+      "name": "Model Releases",
+      "position": 1,
+      "description": "A new or updated AI model becomes available. This is about the release event itself, regardless of who made it or whether it is open or closed. Includes new foundation models, updated checkpoints, preview/beta/stable releases, reasoning models, embedding models, vision/image/audio/video model releases, and major model version updates. Rule of thumb: if a developer can say \"a new model just dropped\", it belongs here.",
+      "exemplars": [
+        "GPT-OSS 20B released",
+        "Mistral 14B is now available",
+        "Claude Sonnet update ships",
+        "Gemini 3 launches",
+        "DeepSeek R2 model release",
+        "Qwen 4 announced",
+        "FLUX image model update",
+        "Whisper v4 speech model released",
+        "new reasoning model checkpoint",
+        "embedding model version 2 available"
+      ]
+    },
+    {
+      "slug": "open-weights",
+      "name": "Open Weights",
+      "position": 2,
+      "description": "Models whose weights are publicly downloadable. The defining characteristic is that developers can obtain the model weights themselves, not just call an API. Includes open-weight foundation models, Hugging Face checkpoints, GGUF releases, fine-tuned checkpoints, community model releases, and weight updates. Does NOT include closed API-only models, and does NOT include open-source tooling that ships no model weights. Rule of thumb: if developers can download and run the weights themselves, it belongs here.",
+      "exemplars": [
+        "Llama weights on Hugging Face",
+        "Mistral open weights release",
+        "DeepSeek publishes checkpoints",
+        "Qwen open-weight model",
+        "GLM weights downloadable",
+        "Kimi open weights",
+        "GPT-OSS weights published",
+        "GGUF checkpoint uploaded",
+        "fine-tuned checkpoint released to the community",
+        "Apache 2.0 licensed model weights"
+      ]
+    },
+    {
+      "slug": "local-ai",
+      "name": "Local AI",
+      "position": 3,
+      "description": "AI models and tooling designed to run on local, edge, or on-device hardware instead of cloud APIs, including models whose primary value is that they are practical to run on consumer hardware. Includes Ollama, LM Studio, llama.cpp, MLX, Jan, on-device AI, offline AI, edge deployment, consumer GPUs, Apple Silicon, Raspberry Pi AI, NPUs, local RAG, small language models (SLMs), compact models intended for local use, mobile models, and GGUF releases intended for local inference. Rule of thumb: if the primary value of the story is that developers can run the model on their own hardware, it belongs here.",
+      "exemplars": [
+        "running GPT-OSS 20B on a MacBook",
+        "Mistral 14B optimized for Ollama",
+        "Phi-4 Mini for on-device use",
+        "Gemma 3 4B runs on a laptop",
+        "Qwen 3 8B local inference",
+        "new GGUF release for DeepSeek",
+        "Apple MLX support added",
+        "llama.cpp on consumer GPUs",
+        "offline assistant with no cloud calls",
+        "small language model for edge NPUs"
+      ]
+    },
+    {
+      "slug": "coding-agents",
+      "name": "Coding Agents",
+      "position": 4,
+      "description": "AI systems that help developers write, understand, review, and maintain software. The focus is software engineering rather than general chat. Includes IDE assistants, CLI coding agents, autonomous software engineering agents, code review, refactoring, bug fixing, PR generation, and SWE-focused benchmarks when centered on coding tools. Rule of thumb: if the primary user is a software developer writing code, it belongs here.",
+      "exemplars": [
+        "Claude Code adds a feature",
+        "Cursor launches background agents",
+        "Codex writes pull requests",
+        "GitHub Copilot update",
+        "Aider CLI coding agent",
+        "OpenCode release",
+        "Continue IDE assistant",
+        "autonomous agent fixes bugs in a repo",
+        "AI code review tool",
+        "SWE-bench results for a coding agent"
+      ]
+    },
+    {
+      "slug": "tool-use-mcp",
+      "name": "Tool Use & MCP",
+      "position": 5,
+      "description": "Models interacting with external software and systems. The defining feature is that the model performs actions beyond generating text. Includes Model Context Protocol (MCP), function calling, tool calling, API integrations, browser automation, computer use, agent frameworks, and workflow orchestration. Rule of thumb: if the model is using tools, APIs, or software to accomplish tasks, it belongs here.",
+      "exemplars": [
+        "new MCP server released",
+        "Model Context Protocol specification update",
+        "OpenAI function calling improvements",
+        "Anthropic tool use API",
+        "browser agent automates the web",
+        "computer-use agent controls a desktop",
+        "agent framework for multi-step workflows",
+        "workflow orchestration for LLM tools",
+        "structured tool calling schema",
+        "API integration layer for agents"
+      ]
+    },
+    {
+      "slug": "inference-optimization",
+      "name": "Inference & Optimization",
+      "position": 6,
+      "description": "Techniques, software, and infrastructure that make AI models faster, cheaper, or more efficient to train, deploy, or run. This is about performance engineering, not about whether a model can run locally. Includes quantization, distillation, pruning, FP8, INT4, GPTQ, AWQ, Flash Attention, speculative decoding, KV cache optimization, prefix caching, continuous batching, vLLM, SGLang, TensorRT-LLM, DeepGEMM, serving infrastructure, GPU optimization, throughput and latency improvements, memory optimization, and efficient fine-tuning such as LoRA and QLoRA. Rule of thumb: if the story is about making AI faster, smaller, cheaper, or more efficient — rather than introducing a new model or enabling local deployment — it belongs here.",
+      "exemplars": [
+        "vLLM introduces speculative decoding",
+        "Flash Attention 4 released",
+        "TensorRT-LLM benchmarks",
+        "AWQ quantization cuts VRAM",
+        "faster MoE inference kernel",
+        "new serving engine for LLMs",
+        "LoRA fine-tuning optimization",
+        "KV cache memory reduction",
+        "continuous batching throughput gains",
+        "FP8 training speedup on GPUs"
+      ]
+    },
+    {
+      "slug": "ai-labs",
+      "name": "AI Labs",
+      "position": 7,
+      "description": "News about AI companies as organizations, independent of any specific model release. Includes company announcements, leadership changes, funding, acquisitions, partnerships, product strategy, API and platform announcements, pricing changes, infrastructure announcements, and roadmaps. Rule of thumb: if the story is primarily about what an AI company is doing, it belongs here.",
+      "exemplars": [
+        "OpenAI launches a new Responses API",
+        "Anthropic raises funding",
+        "Google DeepMind announces its Gemini roadmap",
+        "Microsoft expands Azure AI",
+        "xAI acquires a company",
+        "AI lab changes API pricing",
+        "new datacenter buildout for model training",
+        "partnership between two AI companies",
+        "leadership change at an AI lab",
+        "developer platform strategy announcement"
+      ]
+    }
+  ]
+}

@@ -22,16 +22,17 @@ announcements.
 Base URL: `https://api.agentique.ch/api/v1`, no auth. The `api.` subdomain is
 required — the bare domain serves the SPA.
 
-- `GET /articles/?tag=<topic>&since=<YYYY-MM-DD>&sort=score-desc&limit=50` —
-  `since` = 14 days ago.
+- `GET /articles/?category=<slug>&since=<YYYY-MM-DD>&sort=published_at-desc&limit=50` —
+  `since` = 14 days ago. `GET /articles/categories` lists the slugs.
 - `GET /articles/search?q=<natural language query>&limit=30` — semantic search,
-  catches what the tag filter missed. Ignore results older than `since`.
+  catches what the category filter missed. Ignore results older than `since`.
 
 **Dedup:** never reuse a URL already cited in an existing post's `articles:`
 frontmatter.
 
-**Take the top three** by score that survive dedup, skipping duplicates of the
-same story. Three stories is the post.
+**Take the top three** — newest first — that survive dedup, skipping duplicates
+of the same story. There is no score any more; an article being in the feed at
+all means it matched a category. Three stories is the post.
 
 **Skip rule** (applies here and after research): whenever you're below 3 viable
 stories, try one other topic; if that fails too, stop without a PR. A thin post

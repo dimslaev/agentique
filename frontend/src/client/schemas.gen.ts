@@ -59,16 +59,16 @@ export const ArticleFacetsSchema = {
             type: 'array',
             title: 'Publishers'
         },
-        tags: {
+        categories: {
             items: {
-                '$ref': '#/components/schemas/TagFacet'
+                '$ref': '#/components/schemas/CategoryFacet'
             },
             type: 'array',
-            title: 'Tags'
+            title: 'Categories'
         }
     },
     type: 'object',
-    required: ['publishers', 'tags'],
+    required: ['publishers', 'categories'],
     title: 'ArticleFacets'
 } as const;
 
@@ -103,16 +103,12 @@ export const ArticlePublicSchema = {
             ],
             title: 'Summary'
         },
-        score: {
-            type: 'integer',
-            title: 'Score'
-        },
         kind: {
             '$ref': '#/components/schemas/ArticleKind'
         },
         categories: {
             items: {
-                '$ref': '#/components/schemas/Category'
+                '$ref': '#/components/schemas/CategoryPublic'
             },
             type: 'array',
             title: 'Categories'
@@ -144,13 +140,6 @@ export const ArticlePublicSchema = {
         publisher: {
             '$ref': '#/components/schemas/PublisherPublic'
         },
-        tags: {
-            items: {
-                '$ref': '#/components/schemas/TagPublic'
-            },
-            type: 'array',
-            title: 'Tags'
-        },
         like_count: {
             type: 'integer',
             title: 'Like Count',
@@ -163,7 +152,7 @@ export const ArticlePublicSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'title', 'url', 'score', 'kind', 'publisher'],
+    required: ['id', 'title', 'url', 'kind', 'publisher'],
     title: 'ArticlePublic'
 } as const;
 
@@ -243,10 +232,40 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
-export const CategorySchema = {
-    type: 'string',
-    enum: ['dev', 'models', 'research'],
-    title: 'Category'
+export const CategoryFacetSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name', 'count'],
+    title: 'CategoryFacet'
+} as const;
+
+export const CategoryPublicSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name'],
+    title: 'CategoryPublic'
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -423,42 +442,6 @@ export const PublisherPublicSchema = {
     type: 'object',
     required: ['id', 'slug', 'name', 'kind'],
     title: 'PublisherPublic'
-} as const;
-
-export const TagFacetSchema = {
-    properties: {
-        slug: {
-            type: 'string',
-            title: 'Slug'
-        },
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        count: {
-            type: 'integer',
-            title: 'Count'
-        }
-    },
-    type: 'object',
-    required: ['slug', 'name', 'count'],
-    title: 'TagFacet'
-} as const;
-
-export const TagPublicSchema = {
-    properties: {
-        slug: {
-            type: 'string',
-            title: 'Slug'
-        },
-        name: {
-            type: 'string',
-            title: 'Name'
-        }
-    },
-    type: 'object',
-    required: ['slug', 'name'],
-    title: 'TagPublic'
 } as const;
 
 export const TokenSchema = {

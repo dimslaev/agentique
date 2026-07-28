@@ -82,21 +82,6 @@ class BamlAsyncClient:
     def parse_stream(self):
       return self.__llm_stream_parser
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.TagAssignment"]:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.AssignTags(articles=articles,vocabulary=vocabulary,
-                baml_options=baml_options)
-            return await __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="AssignTags", args={
-                "articles": articles,"vocabulary": vocabulary,
-            })
-            return typing.cast(typing.List["types.TagAssignment"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     async def ClassifyKind(self, title: str,url: str,summary: typing.Optional[str] = None,
         baml_options: BamlCallOptions = {},
     ) -> types.ClassifyKindResult:
@@ -172,21 +157,21 @@ class BamlAsyncClient:
                 "articles": articles,
             })
             return typing.cast(typing.List["types.TitleFix"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    async def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
+    async def MatchCategories(self, articles: typing.List["types.ArticleInput"],categories: typing.List["types.CategoryOption"],
         baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.ScoredArticle"]:
+    ) -> typing.List["types.CategoryMatch"]:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
             # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.ScoreArticles(articles=articles,
+            __stream__ = self.stream.MatchCategories(articles=articles,categories=categories,
                 baml_options=baml_options)
             return await __stream__.get_final_response()
         else:
             # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="ScoreArticles", args={
-                "articles": articles,
+            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="MatchCategories", args={
+                "articles": articles,"categories": categories,
             })
-            return typing.cast(typing.List["types.ScoredArticle"], __result__.cast_to(types, types, stream_types, False, __runtime__))
+            return typing.cast(typing.List["types.CategoryMatch"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     async def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
         baml_options: BamlCallOptions = {},
     ) -> typing.List[int]:
@@ -232,21 +217,21 @@ class BamlAsyncClient:
                 "newArticles": newArticles,"existingArticles": existingArticles,
             })
             return typing.cast(typing.List["types.DedupMatch"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    async def SummarizeAndCategorize(self, title: str,content: str,
+    async def Summarize(self, title: str,content: str,
         baml_options: BamlCallOptions = {},
-    ) -> types.SummarizeAndCategorizeResult:
+    ) -> types.SummarizeResult:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
             # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.SummarizeAndCategorize(title=title,content=content,
+            __stream__ = self.stream.Summarize(title=title,content=content,
                 baml_options=baml_options)
             return await __stream__.get_final_response()
         else:
             # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="SummarizeAndCategorize", args={
+            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="Summarize", args={
                 "title": title,"content": content,
             })
-            return typing.cast(types.SummarizeAndCategorizeResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
+            return typing.cast(types.SummarizeResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -256,18 +241,6 @@ class BamlStreamClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
-        })
-        return baml_py.BamlStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]](
-          __result__,
-          lambda x: typing.cast(typing.List["stream_types.TagAssignment"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.TagAssignment"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
     def ClassifyKind(self, title: str,url: str,summary: typing.Optional[str] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlStream[stream_types.ClassifyKindResult, types.ClassifyKindResult]:
@@ -328,16 +301,16 @@ class BamlStreamClient:
           lambda x: typing.cast(typing.List["types.TitleFix"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
-    def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
+    def MatchCategories(self, articles: typing.List["types.ArticleInput"],categories: typing.List["types.CategoryOption"],
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[typing.List["stream_types.ScoredArticle"], typing.List["types.ScoredArticle"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="ScoreArticles", args={
-            "articles": articles,
+    ) -> baml_py.BamlStream[typing.List["stream_types.CategoryMatch"], typing.List["types.CategoryMatch"]]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="MatchCategories", args={
+            "articles": articles,"categories": categories,
         })
-        return baml_py.BamlStream[typing.List["stream_types.ScoredArticle"], typing.List["types.ScoredArticle"]](
+        return baml_py.BamlStream[typing.List["stream_types.CategoryMatch"], typing.List["types.CategoryMatch"]](
           __result__,
-          lambda x: typing.cast(typing.List["stream_types.ScoredArticle"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.ScoredArticle"], x.cast_to(types, types, stream_types, False, __runtime__)),
+          lambda x: typing.cast(typing.List["stream_types.CategoryMatch"], x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(typing.List["types.CategoryMatch"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
@@ -376,16 +349,16 @@ class BamlStreamClient:
           lambda x: typing.cast(typing.List["types.DedupMatch"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
-    def SummarizeAndCategorize(self, title: str,content: str,
+    def Summarize(self, title: str,content: str,
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[stream_types.SummarizeAndCategorizeResult, types.SummarizeAndCategorizeResult]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="SummarizeAndCategorize", args={
+    ) -> baml_py.BamlStream[stream_types.SummarizeResult, types.SummarizeResult]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="Summarize", args={
             "title": title,"content": content,
         })
-        return baml_py.BamlStream[stream_types.SummarizeAndCategorizeResult, types.SummarizeAndCategorizeResult](
+        return baml_py.BamlStream[stream_types.SummarizeResult, types.SummarizeResult](
           __result__,
-          lambda x: typing.cast(stream_types.SummarizeAndCategorizeResult, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(types.SummarizeAndCategorizeResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          lambda x: typing.cast(stream_types.SummarizeResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.SummarizeResult, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     
@@ -396,13 +369,6 @@ class BamlHttpRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
-        }, mode="request")
-        return __result__
     async def ClassifyKind(self, title: str,url: str,summary: typing.Optional[str] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -438,11 +404,11 @@ class BamlHttpRequestClient:
             "articles": articles,
         }, mode="request")
         return __result__
-    async def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
+    async def MatchCategories(self, articles: typing.List["types.ArticleInput"],categories: typing.List["types.CategoryOption"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="ScoreArticles", args={
-            "articles": articles,
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="MatchCategories", args={
+            "articles": articles,"categories": categories,
         }, mode="request")
         return __result__
     async def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
@@ -466,10 +432,10 @@ class BamlHttpRequestClient:
             "newArticles": newArticles,"existingArticles": existingArticles,
         }, mode="request")
         return __result__
-    async def SummarizeAndCategorize(self, title: str,content: str,
+    async def Summarize(self, title: str,content: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SummarizeAndCategorize", args={
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="Summarize", args={
             "title": title,"content": content,
         }, mode="request")
         return __result__
@@ -481,13 +447,6 @@ class BamlHttpStreamRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
-        }, mode="stream")
-        return __result__
     async def ClassifyKind(self, title: str,url: str,summary: typing.Optional[str] = None,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -523,11 +482,11 @@ class BamlHttpStreamRequestClient:
             "articles": articles,
         }, mode="stream")
         return __result__
-    async def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
+    async def MatchCategories(self, articles: typing.List["types.ArticleInput"],categories: typing.List["types.CategoryOption"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="ScoreArticles", args={
-            "articles": articles,
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="MatchCategories", args={
+            "articles": articles,"categories": categories,
         }, mode="stream")
         return __result__
     async def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
@@ -551,10 +510,10 @@ class BamlHttpStreamRequestClient:
             "newArticles": newArticles,"existingArticles": existingArticles,
         }, mode="stream")
         return __result__
-    async def SummarizeAndCategorize(self, title: str,content: str,
+    async def Summarize(self, title: str,content: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SummarizeAndCategorize", args={
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="Summarize", args={
             "title": title,"content": content,
         }, mode="stream")
         return __result__

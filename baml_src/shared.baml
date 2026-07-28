@@ -1,11 +1,5 @@
 // Shared types used by multiple BAML functions.
 
-enum ArticleCategory {
-  Models
-  Dev
-  Research
-}
-
 enum ArticleKind {
   Repo         // GitHub/GitLab repository
   Paper        // Academic paper, preprint, technical report
@@ -15,7 +9,7 @@ enum ArticleKind {
   Announcement // Official release post from a major AI lab
 }
 
-// Used as input to ScoreArticles, ImproveTitles, SemanticDedup.
+// Used as input to MatchCategories, ImproveTitles, SemanticDedup.
 // Mirrors the fields the existing formatArticles() helper emits.
 class ArticleInput {
   url string

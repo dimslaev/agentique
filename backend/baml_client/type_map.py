@@ -19,6 +19,12 @@ type_map = {
     "types.ArticleInput": types.ArticleInput,
     "stream_types.ArticleInput": stream_types.ArticleInput,
 
+    "types.CategoryMatch": types.CategoryMatch,
+    "stream_types.CategoryMatch": stream_types.CategoryMatch,
+
+    "types.CategoryOption": types.CategoryOption,
+    "stream_types.CategoryOption": stream_types.CategoryOption,
+
     "types.ClassifyKindResult": types.ClassifyKindResult,
     "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
 
@@ -43,29 +49,15 @@ type_map = {
     "types.ProfileVerdict": types.ProfileVerdict,
     "stream_types.ProfileVerdict": stream_types.ProfileVerdict,
 
-    "types.ScoredArticle": types.ScoredArticle,
-    "stream_types.ScoredArticle": stream_types.ScoredArticle,
-
     "types.SearchCandidate": types.SearchCandidate,
     "stream_types.SearchCandidate": stream_types.SearchCandidate,
 
-    "types.SummarizeAndCategorizeResult": types.SummarizeAndCategorizeResult,
-    "stream_types.SummarizeAndCategorizeResult": stream_types.SummarizeAndCategorizeResult,
-
-    "types.TagAssignment": types.TagAssignment,
-    "stream_types.TagAssignment": stream_types.TagAssignment,
-
-    "types.TagInput": types.TagInput,
-    "stream_types.TagInput": stream_types.TagInput,
-
-    "types.TagOption": types.TagOption,
-    "stream_types.TagOption": stream_types.TagOption,
+    "types.SummarizeResult": types.SummarizeResult,
+    "stream_types.SummarizeResult": stream_types.SummarizeResult,
 
     "types.TitleFix": types.TitleFix,
     "stream_types.TitleFix": stream_types.TitleFix,
 
-
-    "types.ArticleCategory": types.ArticleCategory,
 
     "types.ArticleKind": types.ArticleKind,
 

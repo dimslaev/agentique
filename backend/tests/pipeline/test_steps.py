@@ -1,101 +1,173 @@
-"""The pure cores of the scoring / persist / enrich steps.
+"""The pure cores of the categorize / persist / enrich steps.
 
-These carry the decisions that silently change what gets published — which
-article wins a duplicate URL, what counts as passing, whether an LLM rewrite is
-allowed to replace a title — so they are pulled out of the I/O steps and pinned
-here.
+These carry the decisions that silently change what gets published — what counts
+as a match, which article wins a duplicate URL, whether an LLM rewrite is allowed
+to replace a title — so they are pulled out of the I/O steps and pinned here.
 """
 
 from __future__ import annotations
 
+import numpy as np
 import pytest
 
+from pipeline.steps.categorize import apply_matches, max_similarity
 from pipeline.steps.enrich import accept_title
 from pipeline.steps.persist import best_per_url
-from pipeline.steps.score import apply_scores
+
+VALID = frozenset({"ai-labs", "local-ai", "open-weights"})
 
 
 def _article(url: str, source: str = "Hacker News", **extra) -> dict:
     return {"title": "A title", "url": url, "source": source, **extra}
 
 
-# ─── apply_scores ────────────────────────────────────────────────────────────
+# ─── apply_matches ───────────────────────────────────────────────────────────
 
 
-def test_attaches_each_articles_score_by_url():
+def test_attaches_each_articles_categories_by_url():
     articles = [_article("u1"), _article("u2")]
-    scored = apply_scores(articles, {"u1": 80, "u2": 40})
-    assert {s["url"]: s["score"] for s in scored} == {"u1": 80, "u2": 40}
+    matched = apply_matches(
+        articles, {"u1": ["ai-labs"], "u2": ["local-ai", "open-weights"]}, VALID
+    )
+    assert {m["url"]: m["categories"] for m in matched} == {
+        "u1": ["ai-labs"],
+        "u2": ["local-ai", "open-weights"],
+    }
 
 
-def test_article_the_scorer_omitted_scores_zero():
-    """A missing score must read as a reject, never as a pass — the scorer
-    dropping an item from its response should not let it through unrated."""
-    scored = apply_scores([_article("u1")], {})
-    assert scored[0]["score"] == 0
+def test_article_matching_no_category_is_dropped():
+    """The whole editorial policy in one assertion: no category, not stored."""
+    assert apply_matches([_article("u1")], {"u1": []}, VALID) == []
 
 
-def test_sorted_best_first():
-    articles = [_article("low"), _article("high"), _article("mid")]
-    scored = apply_scores(articles, {"low": 10, "high": 90, "mid": 50})
-    assert [s["url"] for s in scored] == ["high", "mid", "low"]
+def test_article_the_matcher_omitted_is_dropped():
+    """A missing answer must read as a reject, never as a pass — the matcher
+    dropping an item from its response must not let it through unjudged."""
+    assert apply_matches([_article("u1")], {}, VALID) == []
 
 
-def test_bens_bites_gets_a_source_bonus():
-    scored = apply_scores([_article("u1", source="Ben's Bites")], {"u1": 70})
-    assert scored[0]["score"] == 80
+def test_off_list_categories_cannot_admit_an_article():
+    """If every returned slug is invented, the article has no valid category and
+    must not survive on the strength of a hallucination."""
+    assert apply_matches([_article("u1")], {"u1": ["robotics", "rag"]}, VALID) == []
 
 
-def test_source_bonus_cannot_push_a_score_past_100():
-    scored = apply_scores([_article("u1", source="Ben's Bites")], {"u1": 95})
-    assert scored[0]["score"] == 100
-
-
-def test_other_sources_get_no_bonus():
-    scored = apply_scores([_article("u1", source="Hacker News")], {"u1": 70})
-    assert scored[0]["score"] == 70
+def test_keeps_an_article_whose_only_valid_category_survives_validation():
+    matched = apply_matches([_article("u1")], {"u1": ["robotics", "ai-labs"]}, VALID)
+    assert matched[0]["categories"] == ["ai-labs"]
 
 
 def test_does_not_mutate_the_articles_it_is_given():
     articles = [_article("u1")]
-    apply_scores(articles, {"u1": 80})
-    assert "score" not in articles[0]
+    apply_matches(articles, {"u1": ["ai-labs"]}, VALID)
+    assert "categories" not in articles[0]
 
 
 def test_preserves_the_rest_of_the_article():
-    scored = apply_scores([_article("u1", publisher_id=7, content="body")], {"u1": 80})
-    assert scored[0]["publisher_id"] == 7
-    assert scored[0]["content"] == "body"
+    matched = apply_matches(
+        [_article("u1", publisher_id=7, content="body")], {"u1": ["ai-labs"]}, VALID
+    )
+    assert matched[0]["publisher_id"] == 7
+    assert matched[0]["content"] == "body"
+
+
+# ─── max_similarity ──────────────────────────────────────────────────────────
+
+
+def test_max_similarity_picks_the_closest_prototype():
+    prototypes = np.array([[1.0, 0.0], [0.0, 1.0]], dtype=np.float32)
+    vecs = np.array([[2.0, 0.0], [0.0, 5.0]], dtype=np.float32)
+    assert np.allclose(max_similarity(vecs, prototypes), [1.0, 1.0])
+
+
+def test_max_similarity_is_scale_invariant():
+    """Article vectors are normalised inside, so a longer article does not clear
+    the gate just by having a bigger vector."""
+    prototypes = np.array([[1.0, 0.0]], dtype=np.float32)
+    short = max_similarity(np.array([[1.0, 1.0]], dtype=np.float32), prototypes)
+    long = max_similarity(np.array([[50.0, 50.0]], dtype=np.float32), prototypes)
+    assert np.allclose(short, long)
+
+
+def test_max_similarity_scores_an_orthogonal_article_at_zero():
+    prototypes = np.array([[1.0, 0.0]], dtype=np.float32)
+    vecs = np.array([[0.0, 1.0]], dtype=np.float32)
+    assert np.allclose(max_similarity(vecs, prototypes), [0.0])
+
+
+def test_max_similarity_survives_a_zero_vector():
+    """A contentless item embeds to zeros; dividing by its norm must not blow up
+    the whole batch."""
+    prototypes = np.array([[1.0, 0.0]], dtype=np.float32)
+    vecs = np.array([[0.0, 0.0]], dtype=np.float32)
+    assert np.allclose(max_similarity(vecs, prototypes), [0.0])
+
+
+def test_max_similarity_on_empty_input():
+    prototypes = np.array([[1.0, 0.0]], dtype=np.float32)
+    assert len(max_similarity(np.empty((0, 2), dtype=np.float32), prototypes)) == 0
 
 
 # ─── best_per_url ────────────────────────────────────────────────────────────
 
 
-def test_same_url_from_two_sources_keeps_the_higher_score():
+def test_same_url_from_two_sources_unions_their_categories():
     """Two sources can surface one URL in a run (an HN post and a feed item for
-    the same post); the URL is the identity, so the better score wins."""
+    the same post). Both judgements were made about the same article, so
+    dropping one would lose a lane for no reason."""
     items = [
-        _article("dupe", source="Hacker News", score=40),
-        _article("dupe", source="Feeds", score=90),
+        _article("dupe", source="Hacker News", categories=["ai-labs"]),
+        _article("dupe", source="Feeds", categories=["open-weights"]),
     ]
     best = best_per_url(items)
     assert len(best) == 1
-    assert best[0]["score"] == 90
-    assert best[0]["source"] == "Feeds"
+    assert best[0]["categories"] == ["ai-labs", "open-weights"]
 
 
-def test_higher_score_wins_regardless_of_order():
-    items = [_article("dupe", score=90), _article("dupe", score=40)]
-    assert best_per_url(items)[0]["score"] == 90
+def test_union_does_not_duplicate_a_shared_category():
+    items = [
+        _article("dupe", categories=["ai-labs", "local-ai"]),
+        _article("dupe", categories=["local-ai"]),
+    ]
+    assert best_per_url(items)[0]["categories"] == ["ai-labs", "local-ai"]
+
+
+def test_union_is_capped_at_three():
+    items = [
+        _article("dupe", categories=["ai-labs", "local-ai"]),
+        _article("dupe", categories=["open-weights", "tool-use-mcp"]),
+    ]
+    assert len(best_per_url(items)[0]["categories"]) == 3
+
+
+def test_first_occurrence_wins_on_everything_but_categories():
+    """No score to break the tie any more, so the earlier item keeps the row."""
+    items = [
+        _article("dupe", source="Hacker News", categories=["ai-labs"]),
+        _article("dupe", source="Feeds", categories=["local-ai"]),
+    ]
+    assert best_per_url(items)[0]["source"] == "Hacker News"
 
 
 def test_distinct_urls_all_survive():
-    items = [_article("u1", score=80), _article("u2", score=70)]
+    items = [
+        _article("u1", categories=["ai-labs"]),
+        _article("u2", categories=["local-ai"]),
+    ]
     assert len(best_per_url(items)) == 2
 
 
 def test_empty_input():
     assert best_per_url([]) == []
+
+
+def test_does_not_mutate_the_items_it_is_given():
+    items = [
+        _article("dupe", categories=["ai-labs"]),
+        _article("dupe", categories=["local-ai"]),
+    ]
+    best_per_url(items)
+    assert items[0]["categories"] == ["ai-labs"]
 
 
 # ─── accept_title ────────────────────────────────────────────────────────────

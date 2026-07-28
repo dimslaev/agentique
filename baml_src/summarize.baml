@@ -1,6 +1,5 @@
-class SummarizeAndCategorizeResult {
+class SummarizeResult {
   summary string @description("2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.")
-  categories ArticleCategory[] @description("1-2 categories")
   kind ArticleKind
 }
 
@@ -8,7 +7,9 @@ class ClassifyKindResult {
   kind ArticleKind
 }
 
-function SummarizeAndCategorize(title: string, content: string) -> SummarizeAndCategorizeResult {
+// Runs after an article is already accepted, so this only writes the card —
+// what the article *is about* was decided by MatchCategories before insert.
+function Summarize(title: string, content: string) -> SummarizeResult {
   client Nvidia
   prompt #"
     {{ _.role("system") }}
@@ -31,13 +32,7 @@ function SummarizeAndCategorize(title: string, content: string) -> SummarizeAndC
        - Plain text only. The source is often markdown - do NOT copy its
          formatting. No **bold**, no backticks, no headings, no bullets.
        - Never truncate mid-word or mid-sentence.
-    2. Assign 1-2 categories.
-    3. Assign a kind.
-
-    Category definitions:
-    - Models: New model releases, benchmarks, evals, model cards, model comparisons
-    - Dev: Repos, tools, product launches, developer blogs, tutorials, how-tos, fine-tuning guides, deployment recipes, infrastructure updates
-    - Research: Papers, breakthroughs, novel techniques with practical implications
+    2. Assign a kind.
 
     Kind definitions:
     - Repo: GitHub or GitLab repository
@@ -77,17 +72,10 @@ function ClassifyKind(title: string, url: string, summary: string?) -> ClassifyK
 }
 
 test summarize_basic {
-  functions [SummarizeAndCategorize]
+  functions [Summarize]
   args {
     title "Anthropic releases Claude 4"
     content "Anthropic today launched Claude 4, a new flagship model. It features improved reasoning, a 1M-token context window, and native tool use. The model is available via API and Claude.ai starting today."
-  }
-}
-
-test categorize_only_basic {
-  functions [CategorizeOnly]
-  args {
-    title "OpenAI releases GPT-5 with 2M context"
   }
 }
 
@@ -100,7 +88,7 @@ test categorize_only_basic {
 // Run: cd baml_src && baml-cli test
 
 test regression_markdown_source_not_echoed {
-  functions [SummarizeAndCategorize]
+  functions [Summarize]
   args {
     title "sqlsure: deterministic SQL validation"
     content #"
@@ -125,7 +113,7 @@ test regression_markdown_source_not_echoed {
 }
 
 test regression_cjk_source_not_echoed {
-  functions [SummarizeAndCategorize]
+  functions [Summarize]
   args {
     title "Meta sizes up GPT-5.5 with Watermelon"
     content #"
@@ -140,7 +128,7 @@ test regression_cjk_source_not_echoed {
 }
 
 test regression_summary_stays_short {
-  functions [SummarizeAndCategorize]
+  functions [Summarize]
   args {
     title "OpenAI Build Week"
     content #"

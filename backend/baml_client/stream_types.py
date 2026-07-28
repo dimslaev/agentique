@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (16)
+# Generated classes (14)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -32,6 +32,15 @@ class ArticleInput(BaseModel):
     source: typing.Optional[str] = None
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
+
+class CategoryMatch(BaseModel):
+    url: typing.Optional[str] = None
+    categories: typing.List[str] = Field(description='0-3 slugs copied verbatim from the vocabulary; most relevant first. Empty means the article belongs in none of them.')
+
+class CategoryOption(BaseModel):
+    slug: typing.Optional[str] = None
+    name: typing.Optional[str] = None
+    description: typing.Optional[str] = Field(default=None, description='What belongs in this category, and the rule of thumb for it')
 
 class ClassifyKindResult(BaseModel):
     kind: typing.Optional[types.ArticleKind] = None
@@ -68,32 +77,14 @@ class ProfileVerdict(BaseModel):
     isAiRelated: typing.Optional[bool] = None
     confidence: typing.Optional[int] = Field(default=None, description='0-100 confidence that AI/ML/LLMs is the PRIMARY focus')
 
-class ScoredArticle(BaseModel):
-    url: typing.Optional[str] = None
-    score: typing.Optional[int] = Field(default=None, description='1-100 developer-actionability rating')
-
 class SearchCandidate(BaseModel):
     title: typing.Optional[str] = None
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = None
 
-class SummarizeAndCategorizeResult(BaseModel):
+class SummarizeResult(BaseModel):
     summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
     kind: typing.Optional[types.ArticleKind] = None
-
-class TagAssignment(BaseModel):
-    articleId: typing.Optional[int] = None
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class TagInput(BaseModel):
-    articleId: typing.Optional[int] = None
-    title: typing.Optional[str] = None
-    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
-
-class TagOption(BaseModel):
-    slug: typing.Optional[str] = None
-    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
 
 class TitleFix(BaseModel):
     url: typing.Optional[str] = Field(default=None, description='The exact URL from the matching input article - copy verbatim')

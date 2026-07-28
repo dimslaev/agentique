@@ -15,7 +15,7 @@ def get_datetime_utc() -> datetime:
 
 
 def slugify(name: str) -> str:
-    """Publisher/tag slug: ASCII-fold, lowercase, non-alnum -> single hyphen.
+    """Publisher/category slug: ASCII-fold, lowercase, non-alnum -> single hyphen.
 
     Used to map a fetched item's source name -> a Publisher.slug so the pipeline
     can look the publisher up (or auto-create it). Deterministic and stable.
@@ -147,12 +147,6 @@ class ArticleKind(StrEnum):
     model = "model"
 
 
-class Category(StrEnum):
-    dev = "dev"
-    models = "models"
-    research = "research"
-
-
 class LinkPlatform(StrEnum):
     website = "website"
     rss = "rss"
@@ -206,11 +200,7 @@ class ArticleBase(SQLModel):
         default=None,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
-    score: int
     kind: ArticleKind = ArticleKind.blog
-    categories: list[Category] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=False)
-    )
     summary: str | None = None
     content: str | None = None
 
@@ -229,8 +219,8 @@ class Article(ArticleBase, table=True):
 
 # ─── Read API shapes ───────────────────────────────────────────────────────
 # Consumer-facing views. `publisher` is nested (replaces the old `source` string)
-# and `tags` come from the article_tag join. Pipeline provenance and bulk fields
-# (content, embedding, links, trust) stay internal.
+# and `categories` come from the article_category join. Pipeline provenance and
+# bulk fields (content, embedding, links, trust) stay internal.
 
 
 class PublisherPublic(SQLModel):
@@ -241,7 +231,7 @@ class PublisherPublic(SQLModel):
     image: str | None = None
 
 
-class TagPublic(SQLModel):
+class CategoryPublic(SQLModel):
     slug: str
     name: str
 
@@ -251,13 +241,13 @@ class ArticlePublic(SQLModel):
     title: str
     url: str
     summary: str | None = None
-    score: int
     kind: ArticleKind
-    categories: list[Category] = Field(default_factory=list)
+    # 1-3 categories. An article with none is never stored, so this is never
+    # empty for a row that came out of the pipeline.
+    categories: list[CategoryPublic] = Field(default_factory=list)
     published_at: datetime | None = None
     created_at: datetime | None = None
     publisher: PublisherPublic
-    tags: list[TagPublic] = Field(default_factory=list)
     like_count: int = 0
     liked_by_me: bool = False
 
@@ -276,7 +266,7 @@ class PublisherFacet(SQLModel):
     count: int
 
 
-class TagFacet(SQLModel):
+class CategoryFacet(SQLModel):
     slug: str
     name: str
     count: int
@@ -284,24 +274,38 @@ class TagFacet(SQLModel):
 
 class ArticleFacets(SQLModel):
     publishers: list[PublisherFacet]
-    tags: list[TagFacet]
+    categories: list[CategoryFacet]
 
 
-# ─── Tag ───────────────────────────────────────────────────────────────────
+# ─── Category ──────────────────────────────────────────────────────────────
 
 
-class Tag(SQLModel, table=True):
+class Category(SQLModel, table=True):
+    """One of the handful of categories that define what the site ingests.
+
+    Not a label applied after the fact — the pipeline stores an article only if
+    it matches at least one of these, so this table is the editorial filter.
+    `description` is the text fed to the MatchCategories prompt; `exemplars`
+    are short phrases averaged into the static pre-filter's prototype vector
+    and never reach the LLM.
+    """
+
     id: int | None = Field(default=None, primary_key=True)
     slug: str = Field(unique=True)
     name: str
-    # "when to apply this tag" — fed to the AssignTags prompt as the vocabulary
-    description: str | None = None
+    description: str
+    exemplars: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+    # Homepage lane order.
+    position: int = 0
+    is_active: bool = True
 
 
-class ArticleTag(SQLModel, table=True):
-    __tablename__ = "article_tag"
+class ArticleCategory(SQLModel, table=True):
+    __tablename__ = "article_category"
     article_id: int = Field(foreign_key="article.id", primary_key=True)
-    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
+    category_id: int = Field(foreign_key="category.id", primary_key=True)
 
 
 # ─── ArticleLike ─────────────────────────────────────────────────────────────

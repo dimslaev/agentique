@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Session, col, select
 
 from app.api.article_view import (
@@ -16,13 +15,13 @@ from app.api.article_view import (
 from app.api.deps import CurrentUserOptional, SessionDep
 from app.models import (
     Article,
+    ArticleCategory,
     ArticleFacets,
     ArticlesPublic,
-    ArticleTag,
+    Category,
+    CategoryFacet,
     Publisher,
     PublisherFacet,
-    Tag,
-    TagFacet,
 )
 
 router = APIRouter(prefix="/articles", tags=["articles"])
@@ -59,12 +58,10 @@ def read_articles(
     limit: int = Query(default=20, ge=1, le=50),
     since: str | None = None,
     q: str | None = None,
-    min_score: int | None = Query(default=None, ge=1, le=10),
     category: str | None = None,
     kind: str | None = None,
-    tag: str | None = None,
     publisher: str | None = None,
-    sort: str = Query(default="score-desc"),
+    sort: str = Query(default="published_at-desc"),
 ) -> Any:
     # Missing `since` means "all time" (no lower bound).
     since_dt: datetime | None = None
@@ -81,20 +78,17 @@ def read_articles(
         conditions.append(
             col(Article.title).ilike(f"%{q}%") | col(Article.content).ilike(f"%{q}%")
         )
-    if min_score is not None:
-        conditions.append(col(Article.score) >= min_score)
     if kind is not None:
         conditions.append(col(Article.kind) == kind)
+    # A homepage lane is exactly this: one category, newest first. The old
+    # frontend had to union several tag queries and merge them client-side;
+    # membership is now decided at ingest, so it is one indexed join.
     if category is not None:
         conditions.append(
-            cast(Article.categories, JSONB).contains([category])  # type: ignore[arg-type]
-        )
-    if tag is not None:
-        conditions.append(
             col(Article.id).in_(
-                select(ArticleTag.article_id)
-                .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
-                .where(Tag.slug == tag)
+                select(ArticleCategory.article_id)
+                .join(Category, col(Category.id) == col(ArticleCategory.category_id))
+                .where(Category.slug == category)
             )
         )
     if publisher is not None:
@@ -116,17 +110,15 @@ def read_articles(
         .where(*conditions)
     )
 
-    if sort == "published_at-desc":
+    if sort == "likes-desc":
         joined_statement = joined_statement.order_by(
-            col(Article.published_at).desc(), col(Article.id).desc()
-        )
-    elif sort == "likes-desc":
-        joined_statement = joined_statement.order_by(
-            like_count_expr.desc(), col(Article.score).desc(), col(Article.id).desc()
+            like_count_expr.desc(),
+            col(Article.published_at).desc(),
+            col(Article.id).desc(),
         )
     else:
         joined_statement = joined_statement.order_by(
-            col(Article.score).desc(), col(Article.id).desc()
+            col(Article.published_at).desc(), col(Article.id).desc()
         )
     joined_statement = joined_statement.limit(limit)
 
@@ -186,19 +178,30 @@ def _publisher_facets(
     return [PublisherFacet(slug=s, name=n, count=c) for s, n, c in rows]
 
 
-def _tag_facets(session: Session, q: str | None, limit: int) -> list[TagFacet]:
-    count_expr = func.count(col(ArticleTag.article_id))
+def _category_facets(
+    session: Session, q: str | None, limit: int
+) -> list[CategoryFacet]:
+    """Every active category with its article count, in lane order.
+
+    Ordered by `position`, not by count: the category list is the site's fixed
+    editorial shape, so it should not reshuffle as articles arrive. Categories
+    with no articles yet are included — an empty lane is information.
+    """
+    count_expr = func.count(col(ArticleCategory.article_id))
     statement = (
-        select(Tag.slug, Tag.name, count_expr.label("count"))
-        .join(ArticleTag, col(ArticleTag.tag_id) == col(Tag.id))
-        .group_by(col(Tag.id))
-        .order_by(count_expr.desc())
+        select(Category.slug, Category.name, count_expr.label("count"))
+        .outerjoin(
+            ArticleCategory, col(ArticleCategory.category_id) == col(Category.id)
+        )
+        .where(col(Category.is_active).is_(True))
+        .group_by(col(Category.id))
+        .order_by(col(Category.position))
         .limit(limit)
     )
     if q:
-        statement = statement.where(col(Tag.name).ilike(f"%{q}%"))
+        statement = statement.where(col(Category.name).ilike(f"%{q}%"))
     rows = session.exec(statement).all()
-    return [TagFacet(slug=s, name=n, count=c) for s, n, c in rows]
+    return [CategoryFacet(slug=s, name=n, count=c) for s, n, c in rows]
 
 
 @router.get("/facets", response_model=ArticleFacets)
@@ -207,7 +210,7 @@ def article_facets(
 ) -> Any:
     return ArticleFacets(
         publishers=_publisher_facets(session, None, limit),
-        tags=_tag_facets(session, None, limit),
+        categories=_category_facets(session, None, limit),
     )
 
 
@@ -220,13 +223,13 @@ def search_publishers(
     return _publisher_facets(session, q, limit)
 
 
-@router.get("/tags", response_model=list[TagFacet])
-def search_tags(
+@router.get("/categories", response_model=list[CategoryFacet])
+def search_categories(
     session: SessionDep,
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> Any:
-    return _tag_facets(session, q, limit)
+    return _category_facets(session, q, limit)
 
 
 @router.get("/stats")

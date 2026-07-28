@@ -1,10 +1,12 @@
 # agentique
 
-AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, scores and deduplicates them with an LLM, extracts full content, summarizes and categorizes each piece, and stores vector embeddings for semantic search.
+AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, deduplicates them, and keeps only the ones that match one of a small set of editorial categories — everything else is discarded rather than stored. What survives is summarized and embedded for semantic search.
 
 ## How it works
 
-A cron-scheduled pipeline fetches articles from configured sources and runs each batch through a sequence of BAML-powered steps: deduplication, LLM scoring, content extraction, summarization, categorization, and vector embedding. Results are served via a FastAPI REST API and a React frontend.
+A cron-scheduled pipeline fetches articles and runs each batch through gates ordered cheapest-first: a distilled keep/drop classifier and a static category pre-filter (both numpy over `potion-base-8M`), then LLM deduplication, then the category matcher. An article that matches no category is never stored, so the category list is not a view over the corpus — it is the filter that defines it. Survivors are summarized and embedded. Results are served via a FastAPI REST API and a React frontend.
+
+The categories live in the `category` table (seeded from `backend/app/data/categories.json`); each one's description is the text fed to the matcher, so editing a category changes what gets ingested from that point on.
 
 The stack:
 

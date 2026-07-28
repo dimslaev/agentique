@@ -41,7 +41,10 @@ PROBE_URL_BY_SOURCE = {
 @dataclass
 class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
-    fetched → known → dead → dup → below-threshold → inserted."""
+    fetched → known → dead → dup → unmatched → inserted.
+
+    `unmatched` covers both static gates and the LLM matcher: an article no
+    category claimed, however it was ruled out."""
 
     # TODO(new-schema): `source` here is the run-level fetcher label (Hacker
     # News / AI News / Newsletter / Feeds), not a publisher. Fine as a stats
@@ -53,7 +56,7 @@ class SourceStats:
     filtered_known: int = 0
     filtered_dead: int = 0
     deduped: int = 0
-    below_threshold: int = 0
+    unmatched: int = 0
     inserted: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -235,7 +238,7 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
             f"→ known -{s.filtered_known} "
             f"→ dead -{s.filtered_dead} "
             f"→ dup -{s.deduped} "
-            f"→ below-threshold -{s.below_threshold} "
+            f"→ unmatched -{s.unmatched} "
             f"→ inserted {s.inserted}"
         )
         if s.errors:

@@ -4,10 +4,11 @@ export type Filters = {
   search: string
   dateRange: string
   sort: string
+  /** Category slug from the server vocabulary. Replaces the old free-text
+   *  dev/models/research enum and the separate tag filter. */
   category: string
   kind: string
   publisher: string
-  tag: string
 }
 
 type FiltersContextType = {
@@ -25,7 +26,6 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     category: "",
     kind: "",
     publisher: "",
-    tag: "",
   })
 
   const setFilter = (key: keyof Filters, value: string) => {

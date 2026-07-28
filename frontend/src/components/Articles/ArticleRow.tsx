@@ -6,12 +6,6 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
     <li data-testid="article-row" className="py-5">
       <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
         <span>{article.publisher.name}</span>
-        {article.score != null && (
-          <>
-            <span>·</span>
-            <span>score {article.score}</span>
-          </>
-        )}
         {article.published_at && (
           <>
             <span>·</span>
@@ -46,24 +40,12 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {article.categories && article.categories.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {article.categories.map((cat: string) => (
+            {article.categories.map((category) => (
               <span
-                key={cat}
+                key={category.slug}
                 className="text-xs px-2 py-0.5 rounded-full bg-muted"
               >
-                {cat}
-              </span>
-            ))}
-          </div>
-        )}
-        {article.tags && article.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {article.tags.map((tag) => (
-              <span
-                key={tag.slug}
-                className="text-xs px-2 py-0.5 rounded-full border border-muted text-muted-foreground"
-              >
-                {tag.name}
+                {category.name}
               </span>
             ))}
           </div>

@@ -15,10 +15,10 @@ from app.core.security import create_access_token
 from app.main import app
 from app.models import Article
 from tests.utils.article import (
+    categorize_article,
     create_random_article,
+    create_random_category,
     create_random_publisher,
-    create_random_tag,
-    tag_article,
 )
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import random_email
@@ -58,7 +58,7 @@ READ_ENDPOINTS = [
     "/search?q=agents",
     "/facets",
     "/publishers",
-    "/tags",
+    "/categories",
     "/stats",
 ]
 
@@ -110,28 +110,43 @@ def test_read_articles_default(auth_client: TestClient) -> None:
     assert len(data["data"]) > 0
     article = data["data"][0]
     assert "title" in article
-    assert "score" in article
     assert article["publisher"]["name"]
     assert article["publisher"]["slug"]
-    assert isinstance(article["tags"], list)
+    assert isinstance(article["categories"], list)
+    # score is gone: relevance is expressed by which categories claimed the
+    # article, not by a number
+    assert "score" not in article
     # the old flat source columns must not leak back into the response
     assert "source" not in article
     assert "source_type" not in article
 
 
-def test_read_articles_filter_category(auth_client: TestClient) -> None:
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"category": "dev", "limit": 50})
+def test_read_articles_filter_category(auth_client: TestClient, db: Session) -> None:
+    """One category, newest first — this is exactly a homepage lane."""
+    now = datetime.now(UTC)
+    category = create_random_category(db)
+    inside = create_random_article(db, published_at=now)
+    create_random_article(db, published_at=now)
+    categorize_article(db, inside, category)
+
+    r = auth_client.get(
+        f"{ARTICLES_URL}/", params={"category": category.slug, "limit": 50}
+    )
     assert r.status_code == 200
     data = r.json()
-    assert data["count"] > 0
-    assert all("dev" in a["categories"] for a in data["data"])
+    assert [a["id"] for a in data["data"]] == [inside.id]
+    assert data["count"] == 1
+    assert [c["slug"] for c in data["data"][0]["categories"]] == [category.slug]
 
 
-def test_read_articles_filter_min_score(auth_client: TestClient) -> None:
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"min_score": 8, "limit": 50})
+def test_read_articles_filter_unknown_category_returns_nothing(
+    auth_client: TestClient,
+) -> None:
+    r = auth_client.get(
+        f"{ARTICLES_URL}/", params={"category": "no-such-category", "limit": 50}
+    )
     assert r.status_code == 200
-    data = r.json()
-    assert all(a["score"] >= 8 for a in data["data"])
+    assert r.json()["count"] == 0
 
 
 def test_read_articles_filter_kind(auth_client: TestClient) -> None:
@@ -142,32 +157,9 @@ def test_read_articles_filter_kind(auth_client: TestClient) -> None:
     assert all(a["kind"] == "repo" for a in data["data"])
 
 
-def test_read_articles_filter_tag(auth_client: TestClient, db: Session) -> None:
-    now = datetime.now(UTC)
-    tag = create_random_tag(db)
-    tagged = create_random_article(db, published_at=now)
-    create_random_article(db, published_at=now)
-    tag_article(db, tagged, tag)
-
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"tag": tag.slug, "limit": 50})
-    assert r.status_code == 200
-    data = r.json()
-    assert [a["id"] for a in data["data"]] == [tagged.id]
-    assert data["count"] == 1
-    assert [t["slug"] for t in data["data"][0]["tags"]] == [tag.slug]
-
-
-def test_read_articles_filter_unknown_tag_returns_nothing(
-    auth_client: TestClient,
-) -> None:
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"tag": "no-such-tag", "limit": 50})
-    assert r.status_code == 200
-    assert r.json()["count"] == 0
-
-
 def test_read_articles_filter_never_increases_count(auth_client: TestClient) -> None:
     base = auth_client.get(f"{ARTICLES_URL}/").json()["count"]
-    filtered = auth_client.get(f"{ARTICLES_URL}/", params={"min_score": 5}).json()[
+    filtered = auth_client.get(f"{ARTICLES_URL}/", params={"kind": "repo"}).json()[
         "count"
     ]
     assert filtered <= base
@@ -182,10 +174,14 @@ def test_read_articles_sort_published_at_desc(auth_client: TestClient) -> None:
     assert dates == sorted(dates, reverse=True)
 
 
-def test_read_articles_sort_default_is_score_desc(auth_client: TestClient) -> None:
+def test_read_articles_sort_default_is_published_at_desc(
+    auth_client: TestClient,
+) -> None:
+    """With score gone, newest-first is the only sensible default — and it is
+    what every homepage lane asks for anyway."""
     r = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50})
-    scores = [a["score"] for a in r.json()["data"]]
-    assert scores == sorted(scores, reverse=True)
+    dates = [a["published_at"] for a in r.json()["data"]]
+    assert dates == sorted(dates, reverse=True)
 
 
 def test_read_articles_since_narrows_results(auth_client: TestClient) -> None:
@@ -334,17 +330,18 @@ def test_article_facets(auth_client: TestClient) -> None:
     assert r.status_code == 200
     data = r.json()
     assert isinstance(data["publishers"], list)
-    assert isinstance(data["tags"], list)
+    assert isinstance(data["categories"], list)
     assert len(data["publishers"]) > 0
-    assert len(data["tags"]) > 0
+    assert len(data["categories"]) > 0
     for p in data["publishers"]:
         assert p["count"] >= 1
-    for t in data["tags"]:
-        assert t["count"] >= 1
     publisher_counts = [p["count"] for p in data["publishers"]]
-    tag_counts = [t["count"] for t in data["tags"]]
     assert publisher_counts == sorted(publisher_counts, reverse=True)
-    assert tag_counts == sorted(tag_counts, reverse=True)
+    # Unlike publishers, category counts are NOT sorted descending — the list
+    # comes back in fixed lane order, because the category list is the site's
+    # editorial shape and must not reshuffle as articles arrive.
+    slugs = [c["slug"] for c in data["categories"]]
+    assert len(slugs) == len(set(slugs))
 
 
 def test_article_facets_respects_limit(auth_client: TestClient) -> None:
@@ -352,7 +349,7 @@ def test_article_facets_respects_limit(auth_client: TestClient) -> None:
     assert r.status_code == 200
     data = r.json()
     assert len(data["publishers"]) <= 2
-    assert len(data["tags"]) <= 2
+    assert len(data["categories"]) <= 2
 
 
 def test_search_publishers(auth_client: TestClient, db: Session) -> None:
@@ -375,23 +372,38 @@ def test_search_publishers_no_match(auth_client: TestClient) -> None:
     assert r.json() == []
 
 
-def test_search_tags(auth_client: TestClient, db: Session) -> None:
-    tag = create_random_tag(db, name="Zzz Unique Tag")
+def test_search_categories(auth_client: TestClient, db: Session) -> None:
+    category = create_random_category(db, name="Zzz Unique Category")
     article = create_random_article(db)
-    tag_article(db, article, tag)
+    categorize_article(db, article, category)
 
-    r = auth_client.get(f"{ARTICLES_URL}/tags", params={"q": "unique"})
+    r = auth_client.get(f"{ARTICLES_URL}/categories", params={"q": "unique"})
     assert r.status_code == 200
     data = r.json()
-    found = next((t for t in data if t["slug"] == tag.slug), None)
+    found = next((c for c in data if c["slug"] == category.slug), None)
     assert found is not None
     assert found["count"] == 1
 
 
-def test_search_tags_no_match(auth_client: TestClient) -> None:
-    r = auth_client.get(f"{ARTICLES_URL}/tags", params={"q": "no-such-tag-xyz"})
+def test_search_categories_no_match(auth_client: TestClient) -> None:
+    r = auth_client.get(
+        f"{ARTICLES_URL}/categories", params={"q": "no-such-category-xyz"}
+    )
     assert r.status_code == 200
     assert r.json() == []
+
+
+def test_category_facets_include_empty_categories(
+    auth_client: TestClient, db: Session
+) -> None:
+    """A lane with nothing in it yet is information, not something to hide."""
+    category = create_random_category(db, name="Zzz Empty Category")
+
+    r = auth_client.get(f"{ARTICLES_URL}/categories", params={"limit": 50})
+    assert r.status_code == 200
+    found = next((c for c in r.json() if c["slug"] == category.slug), None)
+    assert found is not None
+    assert found["count"] == 0
 
 
 def test_article_stats(auth_client: TestClient) -> None:
@@ -417,8 +429,8 @@ def test_read_articles_liked_by_me_true_only_for_liked(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
     now = datetime.now(UTC)
-    liked = create_random_article(db, score=9, published_at=now)
-    unliked = create_random_article(db, score=9, published_at=now)
+    liked = create_random_article(db, published_at=now)
+    unliked = create_random_article(db, published_at=now)
 
     r = client.put(f"{ARTICLES_URL}/{liked.id}/like", headers=normal_user_token_headers)
     assert r.status_code == 200
@@ -437,32 +449,29 @@ def test_read_articles_liked_by_me_true_only_for_liked(
 
 def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
     now = datetime.now(UTC)
-    low_score_more_likes = create_random_article(db, score=3, published_at=now)
-    high_score_no_likes = create_random_article(db, score=9, published_at=now)
-    tied_score_a = create_random_article(db, score=5, published_at=now)
-    tied_score_b = create_random_article(db, score=5, published_at=now)
+    # Ties now fall back to published_at desc, so give them distinct times.
+    older_more_likes = create_random_article(db, published_at=now - timedelta(hours=3))
+    newer_no_likes = create_random_article(db, published_at=now - timedelta(hours=1))
+    tied_a = create_random_article(db, published_at=now - timedelta(hours=2))
 
     headers_list = [
         authentication_token_from_email(client=client, email=random_email(), db=db)
         for _ in range(2)
     ]
     for headers in headers_list:
-        client.put(f"{ARTICLES_URL}/{low_score_more_likes.id}/like", headers=headers)
-    client.put(f"{ARTICLES_URL}/{tied_score_a.id}/like", headers=headers_list[0])
+        client.put(f"{ARTICLES_URL}/{older_more_likes.id}/like", headers=headers)
+    client.put(f"{ARTICLES_URL}/{tied_a.id}/like", headers=headers_list[0])
 
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"sort": "likes-desc", "limit": 50, "since": RECENT_SINCE},
         headers=headers_list[0],
     )
-    data = r.json()["data"]
-    ids = [a["id"] for a in data]
+    ids = [a["id"] for a in r.json()["data"]]
 
-    assert ids.index(low_score_more_likes.id) < ids.index(high_score_no_likes.id)
-    # tied like counts (both 0) fall back to score desc
-    assert ids.index(high_score_no_likes.id) < ids.index(tied_score_b.id)
-    # tied_score_a has 1 like, tied_score_b has 0 -> a before b despite equal score
-    assert ids.index(tied_score_a.id) < ids.index(tied_score_b.id)
+    # 2 likes beats 1 like beats 0, regardless of date
+    assert ids.index(older_more_likes.id) < ids.index(tied_a.id)
+    assert ids.index(tied_a.id) < ids.index(newer_no_likes.id)
 
 
 def test_search_articles_has_like_count_and_liked_by_me(

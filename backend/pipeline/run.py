@@ -4,6 +4,21 @@ Orchestration only — each step lives in pipeline.steps.* and owns its own
 logging and commits. This file's job is the funnel: for every source, run the
 steps in order, record the counts, and make sure one bad source cannot take the
 others down with it.
+
+The funnel is ordered cheapest-first, and every gate in it answers a narrower
+question than the one before:
+
+    fetch      poll the source, fill content, resolve the publisher
+    known      have we seen this URL?                        (db)
+    dead       does the domain resolve?                      (dns)
+    gate 0     is this AI developer news at all?             (numpy)
+    gate 1     is it near any category we cover?             (numpy)
+    dedup      do we already carry this story?               (llm)
+    gate 2     which categories, specifically?               (llm)
+    insert     store it, with the categories that admitted it
+
+An article that matches no category is never stored. That is the whole
+editorial policy — there is no score, and no "keep it around in case".
 """
 
 from __future__ import annotations
@@ -12,20 +27,19 @@ import sys
 
 from sqlmodel import Session
 
+from pipeline.categories import load_vocabulary
 from pipeline.db import get_engine
 from pipeline.health import RunStats, check_liveness, record_run, verify_run
 from pipeline.publishers import PublisherResolver
-from pipeline.steps.enrich import (
-    assign_tags,
-    embed_articles,
-    improve_titles,
-    summarize_and_categorize,
+from pipeline.steps.categorize import (
+    match_categories,
+    prefilter_categories,
+    prefilter_keep_drop,
 )
+from pipeline.steps.enrich import embed_articles, improve_titles, summarize
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
 from pipeline.steps.filter import dedup_semantic, filter_dead_domains, filter_known_urls
 from pipeline.steps.persist import insert_articles
-from pipeline.steps.score import prefilter_keep_drop, score_articles
-from pipeline.tags import load_vocabulary
 from pipeline.utils import log
 
 
@@ -34,7 +48,10 @@ def run_pipeline(stats: RunStats) -> None:
 
     with Session(get_engine()) as session:
         resolver = PublisherResolver(session=session)
+        # Raises on an empty category table: with no vocabulary nothing can
+        # match, and the run would quietly store zero articles all night.
         vocab = load_vocabulary(session)
+        log(f"Loaded {len(vocab.slugs)} categories: {', '.join(vocab.slugs_ordered)}")
 
         for source in build_sources(session):
             log(f"\n=== Processing {source.label} ===")
@@ -52,26 +69,26 @@ def run_pipeline(stats: RunStats) -> None:
                 alive = filter_dead_domains(fresh, source.label)
                 s.filtered_dead = len(fresh) - len(alive)
 
-                # Pre-filter obvious junk before the dedup LLM call: cuts the
-                # new-article side dedup has to check, and junk-that-is-a-dup
-                # gets recorded in ScoredUrl instead of silently dropped by
-                # dedup.
-                candidates = prefilter_keep_drop(session, alive)
-                prefiltered = len(alive) - len(candidates)
+                # Both static gates run before the dedup LLM call: they cut the
+                # new-article side dedup has to check, and an off-topic item
+                # that is also a dupe gets recorded in ScoredUrl instead of
+                # silently vanishing into dedup.
+                kept = prefilter_keep_drop(session, alive)
+                on_topic = prefilter_categories(session, kept, vocab)
+                gated = len(alive) - len(on_topic)
 
-                unique = dedup_semantic(session, candidates, source.label)
-                s.deduped = len(candidates) - len(unique)
+                unique = dedup_semantic(session, on_topic, source.label)
+                s.deduped = len(on_topic) - len(unique)
 
-                scored = score_articles(session, unique)
-                # below_threshold = pre-filter drops + LLM sub-threshold
-                s.below_threshold = prefiltered + (len(unique) - len(scored))
+                matched = match_categories(session, unique, vocab)
+                # unmatched = static-gate drops + articles the matcher rejected
+                s.unmatched = gated + (len(unique) - len(matched))
 
-                inserted = insert_articles(session, scored)
+                inserted = insert_articles(session, matched, vocab)
                 s.inserted = len(inserted)
 
                 improve_titles(session, inserted)
-                processed = summarize_and_categorize(session, inserted)
-                assign_tags(session, processed, vocab)
+                processed = summarize(session, inserted)
                 embed_articles(session, processed)
             except Exception as e:
                 # One source failing must not sink the others — record and move on.
