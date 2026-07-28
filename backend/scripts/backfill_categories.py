@@ -9,9 +9,9 @@ articles and writes the join rows.
 
 Two deliberate differences from the pipeline:
 
-- It reads `summary` rather than raw content when a summary exists. These
-  articles are already summarized, and the summary is a cleaner signal than the
-  first 200 characters of a markdown README.
+- It reads the stored `excerpt` when there is one, falling back to raw content.
+  The excerpt is already sanitized, so it is a cleaner signal than the first few
+  hundred characters of a markdown README.
 - It does NOT delete articles that match nothing. The pipeline refuses to store
   them in the first place, but silently deleting published rows out from under
   the site is a different and much larger decision. They stay, uncategorised, and
@@ -54,7 +54,7 @@ def uncategorized(
     """(id, title, source name, snippet) for articles with no category yet."""
     statement = (
         select(
-            Article.id, Article.title, Publisher.name, Article.summary, Article.content
+            Article.id, Article.title, Publisher.name, Article.excerpt, Article.content
         )
         .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .where(col(Article.id).not_in(select(ArticleCategory.article_id)))
@@ -64,8 +64,8 @@ def uncategorized(
         statement = statement.limit(limit)
     rows = session.exec(statement).all()
     return [
-        (aid, title, source or "", ((summary or content or "").strip())[:SNIPPET_CAP])
-        for aid, title, source, summary, content in rows
+        (aid, title, source or "", ((excerpt or content or "").strip())[:SNIPPET_CAP])
+        for aid, title, source, excerpt, content in rows
         if aid is not None
     ]
 

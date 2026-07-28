@@ -49,7 +49,7 @@ class ArticleKind(str, Enum):
     Announcement = "Announcement"
 
 # #########################################################################
-# Generated classes (14)
+# Generated classes (12)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -62,14 +62,12 @@ class ArticleInput(BaseModel):
 class CategoryMatch(BaseModel):
     url: str
     categories: typing.List[str] = Field(description='0-3 slugs copied verbatim from the vocabulary; most relevant first. Empty means the article belongs in none of them.')
+    kind: ArticleKind = Field(description='The article\'s format. Independent of its categories.')
 
 class CategoryOption(BaseModel):
     slug: str
     name: str
     description: str = Field(description='What belongs in this category, and the rule of thumb for it')
-
-class ClassifyKindResult(BaseModel):
-    kind: ArticleKind
 
 class DedupMatch(BaseModel):
     url: str = Field(description='URL of the new article')
@@ -107,10 +105,6 @@ class SearchCandidate(BaseModel):
     title: str
     url: str
     snippet: str
-
-class SummarizeResult(BaseModel):
-    summary: str = Field(description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    kind: ArticleKind
 
 class TitleFix(BaseModel):
     url: str = Field(description='The exact URL from the matching input article - copy verbatim')

@@ -7,8 +7,9 @@ this documents and typo-checks step signatures, it does not enforce stage
 ordering (a step reading a not-yet-populated key is still a runtime KeyError,
 same as before).
 
-``summarize`` reshapes into the narrower, fully-populated ``ProcessedArticle``
-that ``embed_articles`` consumes.
+One dict all the way through now. There used to be a second, narrower
+``ProcessedArticle`` that the summarize step reshaped into; with summarization
+gone there is nothing left to reshape.
 """
 
 from __future__ import annotations
@@ -29,13 +30,9 @@ class FetchedArticle(TypedDict, total=False):
     # set by match_categories — 1-3 category slugs. An article that reaches
     # insert always has at least one; that is the whole admission rule.
     categories: list[str]
-    # set by _insert_articles
+    # set by match_categories — the model's guess at the article's format.
+    # Only a hint: persist prefers the URL host when that is conclusive.
+    kind_hint: str | None
+    # set by insert_articles — the sanitized, trimmed card text
+    excerpt: str
     id: int
-
-
-class ProcessedArticle(TypedDict):
-    id: int
-    url: str
-    title: str
-    summary: str
-    categories: list[str]

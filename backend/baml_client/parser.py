@@ -23,12 +23,6 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def ClassifyKind(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.ClassifyKindResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ClassifyKind", llm_response=llm_response, mode="request")
-        return typing.cast(types.ClassifyKindResult, __result__)
-
     def ClassifyProfiles(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> typing.List["types.ProfileVerdict"]:
@@ -77,12 +71,6 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="request")
         return typing.cast(typing.List["types.DedupMatch"], __result__)
 
-    def Summarize(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.SummarizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Summarize", llm_response=llm_response, mode="request")
-        return typing.cast(types.SummarizeResult, __result__)
-
     
 
 class LlmStreamParser:
@@ -90,12 +78,6 @@ class LlmStreamParser:
 
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
-
-    def ClassifyKind(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.ClassifyKindResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ClassifyKind", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.ClassifyKindResult, __result__)
 
     def ClassifyProfiles(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -144,11 +126,5 @@ class LlmStreamParser:
     ) -> typing.List["stream_types.DedupMatch"]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List["stream_types.DedupMatch"], __result__)
-
-    def Summarize(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.SummarizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Summarize", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.SummarizeResult, __result__)
 
     

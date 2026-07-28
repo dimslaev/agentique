@@ -10,9 +10,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from app.models import ArticleKind
 from pipeline.steps.categorize import apply_matches, max_similarity
 from pipeline.steps.enrich import accept_title
-from pipeline.steps.persist import best_per_url
+from pipeline.steps.persist import best_per_url, resolve_kind
 
 VALID = frozenset({"ai-labs", "local-ai", "open-weights"})
 
@@ -24,10 +25,17 @@ def _article(url: str, source: str = "Hacker News", **extra) -> dict:
 # ─── apply_matches ───────────────────────────────────────────────────────────
 
 
+def _match(categories, kind="Blog"):
+    """One MatchCategories response entry, as apply_matches consumes it."""
+    return (categories, kind)
+
+
 def test_attaches_each_articles_categories_by_url():
     articles = [_article("u1"), _article("u2")]
     matched = apply_matches(
-        articles, {"u1": ["ai-labs"], "u2": ["local-ai", "open-weights"]}, VALID
+        articles,
+        {"u1": _match(["ai-labs"]), "u2": _match(["local-ai", "open-weights"])},
+        VALID,
     )
     assert {m["url"]: m["categories"] for m in matched} == {
         "u1": ["ai-labs"],
@@ -37,7 +45,7 @@ def test_attaches_each_articles_categories_by_url():
 
 def test_article_matching_no_category_is_dropped():
     """The whole editorial policy in one assertion: no category, not stored."""
-    assert apply_matches([_article("u1")], {"u1": []}, VALID) == []
+    assert apply_matches([_article("u1")], {"u1": _match([])}, VALID) == []
 
 
 def test_article_the_matcher_omitted_is_dropped():
@@ -49,23 +57,39 @@ def test_article_the_matcher_omitted_is_dropped():
 def test_off_list_categories_cannot_admit_an_article():
     """If every returned slug is invented, the article has no valid category and
     must not survive on the strength of a hallucination."""
-    assert apply_matches([_article("u1")], {"u1": ["robotics", "rag"]}, VALID) == []
+    assert (
+        apply_matches([_article("u1")], {"u1": _match(["robotics", "rag"])}, VALID)
+        == []
+    )
 
 
 def test_keeps_an_article_whose_only_valid_category_survives_validation():
-    matched = apply_matches([_article("u1")], {"u1": ["robotics", "ai-labs"]}, VALID)
+    matched = apply_matches(
+        [_article("u1")], {"u1": _match(["robotics", "ai-labs"])}, VALID
+    )
     assert matched[0]["categories"] == ["ai-labs"]
+
+
+def test_carries_the_kind_hint_through():
+    """Format rides on the same response as the categories, so it costs no
+    extra call — but it is only a hint until persist resolves it."""
+    matched = apply_matches(
+        [_article("u1")], {"u1": _match(["ai-labs"], kind="Paper")}, VALID
+    )
+    assert matched[0]["kind_hint"] == "Paper"
 
 
 def test_does_not_mutate_the_articles_it_is_given():
     articles = [_article("u1")]
-    apply_matches(articles, {"u1": ["ai-labs"]}, VALID)
+    apply_matches(articles, {"u1": _match(["ai-labs"])}, VALID)
     assert "categories" not in articles[0]
 
 
 def test_preserves_the_rest_of_the_article():
     matched = apply_matches(
-        [_article("u1", publisher_id=7, content="body")], {"u1": ["ai-labs"]}, VALID
+        [_article("u1", publisher_id=7, content="body")],
+        {"u1": _match(["ai-labs"])},
+        VALID,
     )
     assert matched[0]["publisher_id"] == 7
     assert matched[0]["content"] == "body"
@@ -168,6 +192,45 @@ def test_does_not_mutate_the_items_it_is_given():
     ]
     best_per_url(items)
     assert items[0]["categories"] == ["ai-labs"]
+
+
+# ─── resolve_kind ────────────────────────────────────────────────────────────
+
+
+def test_url_host_beats_the_models_guess():
+    """A github.com link is a repo. No model gets a vote on that."""
+    assert resolve_kind("https://github.com/a/b", "", "Blog") == ArticleKind.repo
+    assert resolve_kind("https://arxiv.org/abs/1", "", "Product") == ArticleKind.paper
+    assert resolve_kind("https://huggingface.co/x", "", "Blog") == ArticleKind.model
+
+
+def test_falls_back_to_the_hint_when_the_host_says_nothing():
+    assert resolve_kind("https://example.com/x", "", "Paper") == ArticleKind.paper
+
+
+def test_hint_is_case_insensitive():
+    assert resolve_kind("https://example.com/x", "", "ANNOUNCEMENT") == (
+        ArticleKind.announcement
+    )
+
+
+def test_unknown_hint_falls_back_to_blog_rather_than_raising():
+    assert resolve_kind("https://example.com/x", "", "Newsletter") == ArticleKind.blog
+
+
+def test_missing_hint_falls_back_to_blog():
+    assert resolve_kind("https://example.com/x", "", None) == ArticleKind.blog
+
+
+def test_a_blog_that_links_a_repo_is_a_repo():
+    content = "Check out https://github.com/owner/project for the code."
+    assert resolve_kind("https://example.com/x", content, "Blog") == ArticleKind.repo
+
+
+def test_repo_link_does_not_override_a_more_specific_hint():
+    """Every paper announcement links its code. That does not make it a repo."""
+    content = "Code at https://github.com/owner/project"
+    assert resolve_kind("https://example.com/x", content, "Paper") == ArticleKind.paper
 
 
 # ─── accept_title ────────────────────────────────────────────────────────────

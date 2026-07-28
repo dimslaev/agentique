@@ -3,7 +3,7 @@
 Agentique (agentique.ch) is an AI news feed for people building with AI: developers,
 founders, and tech leads who want the signal without wading through hype. Instead of
 scrolling ten newsletters and three subreddits, you get one feed of articles that have
-already been filtered down to seven subjects the site actually covers, then summarized
+already been filtered down to seven subjects the site actually covers
 — and you can semantically search across all of it.
 
 Think of it as an automated editorial desk: a robot intern that reads everything on the
@@ -19,7 +19,7 @@ static marketing page, not backed by the live article API; a separate agent keep
 source data current.
 
 **A filtered article feed (`/feed`, public — no account needed).** Lists recent articles
-newest-first (or by popularity). Each entry shows a 2–3 line factual summary, its
+newest-first (or by popularity). Each entry shows a short excerpt of the article, its
 categories, and a "kind" (repo, paper, model, blog, product, announcement). You can
 filter by category, kind, publisher, and time window (last 3 days / week / month).
 
@@ -68,10 +68,12 @@ newsletters), and runs each fresh batch through a chain of small, focused steps:
    tightens up clickbait-y or vague titles into something plain and informative.
 6. **Pull the full article text** — for sources that only gave us a link, the pipeline
    fetches and extracts the actual article body (skipping paywalled junk, ads, nav).
-7. **Summarize** — another LLM pass turns the full text into the 2–3 line summary and
-   the "kind" shown in the feed. What the article is *about* was already settled in
-   step 4.
-8. **Embed** — a small, fast local embedding model turns the title + summary into a
+7. **Excerpt** — the card text is a sanitized slice of the article's own opening:
+   markup, entities, emoji and README banner art stripped, trimmed on a word
+   boundary. No LLM. This used to be an LLM summary; it was the pipeline's most
+   reliable source of garbled text, and an excerpt cannot invent anything the
+   source did not say.
+8. **Embed** — a small, fast local embedding model turns the title + excerpt into a
    vector, which is what powers semantic search.
 
 All the LLM steps are defined declaratively as prompt functions (via BAML) rather than
@@ -90,7 +92,7 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
 - **Database**: Postgres with the pgvector extension — one table holds articles plus
   their embedding vectors, so relevance search is just a SQL query.
 - **Pipeline**: a separate scheduled Python process (cron-style, once a day) that does
-  the fetch → filter → match → summarize → embed work described above.
+  the fetch → filter → match → excerpt → embed work described above.
 - **Embeddings**: model2vec — a tiny, fast, CPU-only static embedding model, no GPU or
   external API call needed for search.
 - **Frontend**: React + Vite + Tailwind, talking to the backend through a generated

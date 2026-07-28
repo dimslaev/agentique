@@ -1,10 +1,18 @@
-"""Replace tags + score with the category vocabulary
+"""Replace tags + score with the category vocabulary; summary -> excerpt
 
 The pipeline no longer scores articles 1-100 and no longer assigns tags from a
 43-entry vocabulary. It asks one question instead — does this article match one
 of our categories? — and stores nothing that matches none. So the score column,
 the dev/models/research `categories` JSON, and the whole tag vocabulary go, and
 a `category` table plus an `article_category` join take their place.
+
+`summary` is renamed to `excerpt` because it stopped being one: the LLM
+summarization pass is gone and the card text is now a sanitized, trimmed slice
+of the article itself. The rename keeps existing rows' text rather than blanking
+it — an old summary still reads fine on a card — so the column holds summaries
+for anything ingested before this and excerpts after. Run
+`scripts/backfill_excerpts.py` to regenerate the old ones from stored content if
+you want it uniform.
 
 Destructive: `tag`, `article_tag`, `article.score` and `article.categories` are
 dropped along with their data. Existing articles survive with no categories
@@ -62,8 +70,12 @@ def upgrade():
     op.drop_column("article", "score")
     op.drop_column("article", "categories")
 
+    op.alter_column("article", "summary", new_column_name="excerpt")
+
 
 def downgrade():
+    op.alter_column("article", "excerpt", new_column_name="summary")
+
     op.add_column(
         "article",
         sa.Column("score", sa.Integer(), nullable=False, server_default="0"),

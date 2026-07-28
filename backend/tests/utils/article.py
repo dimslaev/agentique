@@ -51,7 +51,7 @@ def create_random_article(db: Session, **overrides: object) -> Article:
     defaults: dict[str, object] = {
         "title": random_lower_string(),
         "url": f"https://example.com/{random_lower_string()}",
-        "summary": random_lower_string(),
+        "excerpt": random_lower_string(),
         "kind": ArticleKind.blog,
         "content": random_lower_string(),
     }

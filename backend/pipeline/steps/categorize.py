@@ -33,7 +33,7 @@ from pipeline.config import category_gate_threshold
 from pipeline.embedding import get_model
 from pipeline.steps import to_baml_input
 from pipeline.types import FetchedArticle
-from pipeline.utils import log, wait_ms
+from pipeline.utils import enum_value, log, wait_ms
 
 # Articles per MatchCategories call. Larger than the old scoring batch of 5: the
 # per-article payload is just title + snippet, and the vocabulary — the bulk of
@@ -177,21 +177,26 @@ def category_options(vocab: Vocabulary) -> list[CategoryOption]:
 
 def apply_matches(
     articles: list[FetchedArticle],
-    categories_by_url: dict[str, list[str]],
+    matches_by_url: dict[str, tuple[list[str], str | None]],
     valid: frozenset[str],
 ) -> list[FetchedArticle]:
-    """Stamp each article with its validated categories and keep the matches.
-    Pure: no I/O.
+    """Stamp each article with its validated categories and format, and keep the
+    matches. Pure: no I/O.
 
     An article the matcher did not return at all gets no categories and is
     therefore dropped — a missing answer is a reject, never a pass. This mirrors
     how the old scorer treated a missing score as 0.
+
+    ``kind`` rides along on the same response rather than costing its own call.
+    It is only a hint here: `persist` prefers the URL host when that is
+    conclusive.
     """
     matched: list[FetchedArticle] = []
     for a in articles:
-        slugs = validate_categories(categories_by_url.get(a["url"], []), valid)
+        raw_slugs, raw_kind = matches_by_url.get(a["url"], ([], None))
+        slugs = validate_categories(raw_slugs, valid)
         if slugs:
-            matched.append({**a, "categories": slugs})
+            matched.append({**a, "categories": slugs, "kind_hint": raw_kind})
     return matched
 
 
@@ -212,7 +217,7 @@ def match_categories(
     log(f"  Matching {len(articles)} articles against {len(vocab.slugs)} categories...")
     options = category_options(vocab)
 
-    categories_by_url: dict[str, list[str]] = {}
+    matches_by_url: dict[str, tuple[list[str], str | None]] = {}
     failed_urls: set[str] = set()
     for i in range(0, len(articles), MATCH_BATCH):
         batch = articles[i : i + MATCH_BATCH]
@@ -224,11 +229,13 @@ def match_categories(
             )
             failed_urls.update(a["url"] for a in batch)
             continue
-        categories_by_url.update({m.url: list(m.categories) for m in matches})
+        matches_by_url.update(
+            {m.url: (list(m.categories), enum_value(m.kind)) for m in matches}
+        )
         if i + MATCH_BATCH < len(articles):
             wait_ms(MATCH_BATCH_PAUSE_MS)
 
-    matched = apply_matches(articles, categories_by_url, vocab.slugs)
+    matched = apply_matches(articles, matches_by_url, vocab.slugs)
     matched_urls = {a["url"] for a in matched}
 
     # Judged and rejected -> remember it. Never judged (batch failed) -> leave it

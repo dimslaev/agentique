@@ -1,18 +1,25 @@
-"""Step 4: insert the articles that matched a category, with their categories."""
+"""Step 4: insert the articles that matched a category.
+
+Everything an article carries is settled here — categories, excerpt, format.
+There is no LLM pass after insert any more except the title rewrite, so a row
+is complete the moment it exists.
+"""
 
 from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models import Article
+from app.models import Article, ArticleKind
 from pipeline.categories import (
     MAX_CATEGORIES_PER_ARTICLE,
     Vocabulary,
     write_article_categories,
 )
+from pipeline.excerpt import to_excerpt
+from pipeline.heuristics import github_repo_from_content, kind_from_url
 from pipeline.llm_text import sanitize_llm_text
 from pipeline.types import FetchedArticle
-from pipeline.utils import log, parse_date
+from pipeline.utils import enum_value, log, parse_date
 
 
 def best_per_url(matched: list[FetchedArticle]) -> list[FetchedArticle]:
@@ -41,6 +48,28 @@ def best_per_url(matched: list[FetchedArticle]) -> list[FetchedArticle]:
     return list(by_url.values())
 
 
+def resolve_kind(url: str, content: str, hint: str | None) -> ArticleKind:
+    """The article's format.
+
+    The URL host wins when it is conclusive — a github.com link is a repo, and
+    no model gets a vote on that. Otherwise take the matcher's hint, and fall
+    back to blog. A blog-looking post that links a repo is a repo.
+    """
+    from_url = kind_from_url(url)
+    if from_url:
+        return from_url
+
+    kind = ArticleKind.blog
+    if hint:
+        try:
+            kind = ArticleKind(enum_value(hint).lower())
+        except ValueError:
+            log(f"  Dropped unknown kind {hint!r}")
+    if kind == ArticleKind.blog and github_repo_from_content(content):
+        return ArticleKind.repo
+    return kind
+
+
 def insert_articles(
     session: Session, matched: list[FetchedArticle], vocab: Vocabulary
 ) -> list[FetchedArticle]:
@@ -56,6 +85,11 @@ def insert_articles(
             publisher_id=item["publisher_id"],
             url=item["url"],
             published_at=parse_date(item.get("published_date")),
+            # Deterministic, computed from the content we already have. This
+            # used to be an LLM summary written in a later step; see
+            # pipeline/excerpt.py for why it is not any more.
+            excerpt=to_excerpt(content),
+            kind=resolve_kind(item["url"], content, item.get("kind_hint")),
             content=content,
         )
         session.add(article)
@@ -67,7 +101,15 @@ def insert_articles(
         write_article_categories(session, article.id, item["categories"], vocab)
 
         log(f"  Inserted #{article.id}: [{', '.join(item['categories'])}] {title}")
-        inserted.append({**item, "id": article.id, "title": title, "content": content})
+        inserted.append(
+            {
+                **item,
+                "id": article.id,
+                "title": title,
+                "content": content,
+                "excerpt": article.excerpt,
+            }
+        )
 
     session.commit()
     return inserted

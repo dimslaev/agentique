@@ -14,8 +14,8 @@ question than the one before:
     gate 0     is this AI developer news at all?             (numpy)
     gate 1     is it near any category we cover?             (numpy)
     dedup      do we already carry this story?               (llm)
-    gate 2     which categories, specifically?               (llm)
-    insert     store it, with the categories that admitted it
+    gate 2     which categories (and what format)?           (llm)
+    insert     store it, with its categories and its excerpt
 
 An article that matches no category is never stored. That is the whole
 editorial policy — there is no score, and no "keep it around in case".
@@ -36,7 +36,7 @@ from pipeline.steps.categorize import (
     prefilter_categories,
     prefilter_keep_drop,
 )
-from pipeline.steps.enrich import embed_articles, improve_titles, summarize
+from pipeline.steps.enrich import embed_articles, improve_titles
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
 from pipeline.steps.filter import dedup_semantic, filter_dead_domains, filter_known_urls
 from pipeline.steps.persist import insert_articles
@@ -88,8 +88,7 @@ def run_pipeline(stats: RunStats) -> None:
                 s.inserted = len(inserted)
 
                 improve_titles(session, inserted)
-                processed = summarize(session, inserted)
-                embed_articles(session, processed)
+                embed_articles(session, inserted)
             except Exception as e:
                 # One source failing must not sink the others — record and move on.
                 s.errors.append(f"{type(e).__name__}: {e}")

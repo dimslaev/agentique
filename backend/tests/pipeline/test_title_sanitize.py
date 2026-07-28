@@ -8,7 +8,6 @@ import pytest
 
 from pipeline.llm_text import (
     is_corrupted,
-    is_valid_summary,
     is_valid_title,
     sanitize_llm_text,
     strip_title_wrappers,
@@ -156,48 +155,6 @@ def test_is_valid_title_accepts(title: str) -> None:
     assert is_valid_title(title) is True
 
 
-# ─── is_valid_summary ───────────────────────────────────────────────────────
-
-
-@pytest.mark.parametrize(
-    ("summary", "why"),
-    [
-        ("", "empty"),
-        ("Too short.", "under the word floor"),
-        ("x" * 1200, "too long"),
-        # prod: the actual corrupted summaries behind the bad titles
-        (
-            "GPT-5.6 supports autonomous agents.\n伊律(Meagle) this highlights durable workflows.",
-            "cjk drift",
-        ),
-        (
-            "Meta shares details on Watermelon.\n这是一个内部实验框架。",
-            "cjk drift",
-        ),
-        ('Some summary" : "value', "json fragment"),
-    ],
-)
-def test_is_valid_summary_rejects(summary: str, why: str) -> None:
-    assert is_valid_summary(summary) is False, f"should reject: {why}"
-
-
-@pytest.mark.parametrize(
-    "summary",
-    [
-        "Meta made its Muse image model free.\nIt is available on Instagram and WhatsApp.\nAPI access is included.",
-        "sqlsure detects logical errors in AI-written SQL before execution.\nIt uses team-declared schema rules to validate joins.",
-    ],
-)
-def test_is_valid_summary_accepts(summary: str) -> None:
-    assert is_valid_summary(summary) is True
-
-
-def test_valid_summary_is_multiline() -> None:
-    """Unlike titles, summaries legitimately contain newlines."""
-    s = "Line one is here.\nLine two is here.\nLine three is here."
-    assert is_valid_summary(s) is True
-
-
 # ─── full chains ────────────────────────────────────────────────────────────
 
 
@@ -229,20 +186,6 @@ def test_unrecoverable_title_garbage_fails_validation(raw: str) -> None:
     """Cleanup cannot save these — the gate must reject so the caller keeps the
     original title rather than overwriting it with garbage."""
     assert is_valid_title(clean_title(raw)) is False
-
-
-def test_markdown_summary_is_recovered_not_dropped() -> None:
-    """Markdown echoed from a README is strippable — don't lose the summary."""
-    raw = "Meta shares details on **Watermelon**, an internal framework.\nIt tests `scalability` of large models."
-    cleaned = sanitize_llm_text(raw)
-    assert "**" not in cleaned and "`" not in cleaned
-    assert is_valid_summary(cleaned) is True
-
-
-def test_cjk_summary_is_dropped() -> None:
-    """Language drift is not strippable — drop the summary entirely."""
-    raw = "Meta shares details on Watermelon.\n这是一个内部实验框架。"
-    assert is_valid_summary(sanitize_llm_text(raw)) is False
 
 
 def test_clean_title_survives_full_chain_unchanged() -> None:

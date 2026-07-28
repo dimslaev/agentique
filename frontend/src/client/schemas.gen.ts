@@ -92,7 +92,7 @@ export const ArticlePublicSchema = {
             type: 'string',
             title: 'Url'
         },
-        summary: {
+        excerpt: {
             anyOf: [
                 {
                     type: 'string'
@@ -101,7 +101,7 @@ export const ArticlePublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Summary'
+            title: 'Excerpt'
         },
         kind: {
             '$ref': '#/components/schemas/ArticleKind'

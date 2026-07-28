@@ -32,9 +32,9 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
       >
         {article.title}
       </a>
-      {article.summary && (
+      {article.excerpt && (
         <p className="mt-1 text-sm text-muted-foreground line-clamp-3">
-          {article.summary}
+          {article.excerpt}
         </p>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-2">

@@ -201,7 +201,10 @@ class ArticleBase(SQLModel):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     kind: ArticleKind = ArticleKind.blog
-    summary: str | None = None
+    # Sanitized, trimmed opening of the article — plain text, no markup, no
+    # emoji. Computed at insert from `content`; not an LLM summary. See
+    # pipeline/excerpt.py.
+    excerpt: str | None = None
     content: str | None = None
 
 
@@ -240,7 +243,7 @@ class ArticlePublic(SQLModel):
     id: int
     title: str
     url: str
-    summary: str | None = None
+    excerpt: str | None = None
     kind: ArticleKind
     # 1-3 categories. An article with none is never stored, so this is never
     # empty for a row that came out of the pipeline.

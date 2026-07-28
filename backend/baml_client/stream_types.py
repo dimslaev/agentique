@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (14)
+# Generated classes (12)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -36,14 +36,12 @@ class ArticleInput(BaseModel):
 class CategoryMatch(BaseModel):
     url: typing.Optional[str] = None
     categories: typing.List[str] = Field(description='0-3 slugs copied verbatim from the vocabulary; most relevant first. Empty means the article belongs in none of them.')
+    kind: typing.Optional[types.ArticleKind] = Field(default=None, description='The article\'s format. Independent of its categories.')
 
 class CategoryOption(BaseModel):
     slug: typing.Optional[str] = None
     name: typing.Optional[str] = None
     description: typing.Optional[str] = Field(default=None, description='What belongs in this category, and the rule of thumb for it')
-
-class ClassifyKindResult(BaseModel):
-    kind: typing.Optional[types.ArticleKind] = None
 
 class DedupMatch(BaseModel):
     url: typing.Optional[str] = Field(default=None, description='URL of the new article')
@@ -81,10 +79,6 @@ class SearchCandidate(BaseModel):
     title: typing.Optional[str] = None
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = None
-
-class SummarizeResult(BaseModel):
-    summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    kind: typing.Optional[types.ArticleKind] = None
 
 class TitleFix(BaseModel):
     url: typing.Optional[str] = Field(default=None, description='The exact URL from the matching input article - copy verbatim')

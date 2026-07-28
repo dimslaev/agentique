@@ -24,7 +24,7 @@ const RESPONSE_SHAPE = `{
       "title": "string",
       "url": "string",
       "published_at": "ISO datetime | null",
-      "summary": "string | null",
+      "excerpt": "string | null",
       "categories": [{ "slug": "string", "name": "string" }],
       "kind": "string",
       "created_at": "ISO datetime | null",

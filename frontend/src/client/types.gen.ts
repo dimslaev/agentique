@@ -21,7 +21,7 @@ export type ArticlePublic = {
     id: number;
     title: string;
     url: string;
-    summary?: (string | null);
+    excerpt?: (string | null);
     kind: ArticleKind;
     categories?: Array<CategoryPublic>;
     published_at?: (string | null);

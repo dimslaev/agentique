@@ -7,6 +7,7 @@ class CategoryOption {
 class CategoryMatch {
   url string
   categories string[] @description("0-3 slugs copied verbatim from the vocabulary; most relevant first. Empty means the article belongs in none of them.")
+  kind ArticleKind @description("The article's format. Independent of its categories.")
 }
 
 // The whole editorial filter, in one call. An article matching no category is
@@ -49,6 +50,17 @@ function MatchCategories(articles: ArticleInput[], categories: CategoryOption[])
     - "EU passes new AI regulation" -> (empty)
     - "How we rewrote our CRDT merge algorithm" -> (empty)
     - "A survey of prompt engineering techniques" -> (empty)
+
+    Separately, and independently of the categories, label each article's FORMAT:
+    - Repo: GitHub or GitLab repository
+    - Paper: academic paper, preprint, or long-form technical report
+    - Model: model card or model release page (e.g. HuggingFace)
+    - Blog: developer blog post, tutorial, how-to, or opinion piece
+    - Product: product launch page or product website
+    - Announcement: official release post from a major AI lab
+
+    Format is not a category and does not influence one. An article you assign
+    no categories to still gets a format.
 
     Return one CategoryMatch per input article, echoing its url exactly.
 
@@ -101,6 +113,7 @@ test match_open_weight_release {
   @@assert(found_release, {{ "model-releases" in this[0].categories }})
   @@assert(found_weights, {{ "open-weights" in this[0].categories }})
   @@assert(capped, {{ this[0].categories|length <= 3 }})
+  @@assert(has_kind, {{ this[0].kind|length > 0 }})
 }
 
 // The rejection path is the one that matters most: a filter that never says no
@@ -135,6 +148,10 @@ test match_rejects_off_beat {
     ]
   }
   @@assert(rejected, {{ this[0].categories|length == 0 }})
+  // Format is independent of category: a rejected article still has one, and
+  // the pipeline never sees it, but a model that returns nothing here is
+  // conflating the two judgements.
+  @@assert(kind_still_set, {{ this[0].kind|length > 0 }})
 }
 
 // A passing mention of a coding agent must not pull the article into that lane.

@@ -1,4 +1,4 @@
-"""Cleanup and validation for every LLM-authored field (titles, summaries).
+"""Cleanup and validation for LLM-authored text.
 
 Two steps, applied to every LLM-authored field:
 
@@ -23,7 +23,7 @@ def sanitize_llm_text(text: str) -> str:
     s = regex.sub(r"→", "->", s)
     s = regex.sub(r"←", "<-", s)
     s = regex.sub(r"↔", "<->", s)
-    s = regex.sub(r"[–—]", "-", s)
+    s = regex.sub(r"[–—‑]", "-", s)
     s = regex.sub(r"…", "...", s)
     s = regex.sub(r"[•‣◦▪▫]", "-", s)
     s = regex.sub(
@@ -89,23 +89,3 @@ def is_valid_title(text: str) -> bool:
     if regex.search(r"https?://", s) or not regex.search(r"\p{L}", s):
         return False
     return MIN_TITLE_WORDS <= len(s.split()) <= MAX_TITLE_WORDS
-
-
-# ─── Summaries ──────────────────────────────────────────────────────────────
-
-MIN_SUMMARY_WORDS = 5
-MAX_SUMMARY_CHARS = 1000
-
-
-def is_valid_summary(text: str) -> bool:
-    """Gate an LLM summary. False means store no summary at all.
-
-    Unlike a title there is no original to fall back to, so the choice is a
-    clean summary or none — never a corrupted one.
-    """
-    s = text.strip()
-    if not s or len(s) > MAX_SUMMARY_CHARS or is_corrupted(s):
-        return False
-    if not regex.search(r"\p{L}", s):
-        return False
-    return len(s.split()) >= MIN_SUMMARY_WORDS

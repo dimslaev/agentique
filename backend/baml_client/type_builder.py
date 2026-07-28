@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["ArticleInput","CategoryMatch","CategoryOption","ClassifyKindResult","DedupMatch","ExistingArticle","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","SearchCandidate","SummarizeResult","TitleFix",]
+          ["ArticleInput","CategoryMatch","CategoryOption","DedupMatch","ExistingArticle","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","SearchCandidate","TitleFix",]
         ), enums=set(
           ["ArticleKind",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -35,7 +35,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 14
+    # Generated classes 12
     # #########################################################################
 
     @property
@@ -49,10 +49,6 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def CategoryOption(self) -> "CategoryOptionViewer":
         return CategoryOptionViewer(self)
-
-    @property
-    def ClassifyKindResult(self) -> "ClassifyKindResultViewer":
-        return ClassifyKindResultViewer(self)
 
     @property
     def DedupMatch(self) -> "DedupMatchViewer":
@@ -85,10 +81,6 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def SearchCandidate(self) -> "SearchCandidateViewer":
         return SearchCandidateViewer(self)
-
-    @property
-    def SummarizeResult(self) -> "SummarizeResultViewer":
-        return SummarizeResultViewer(self)
 
     @property
     def TitleFix(self) -> "TitleFixViewer":
@@ -160,7 +152,7 @@ class ArticleKindValues:
 
 
 # #########################################################################
-# Generated classes 14
+# Generated classes 12
 # #########################################################################
 
 class ArticleInputAst:
@@ -222,7 +214,7 @@ class CategoryMatchAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
         self._bldr = _tb.class_("CategoryMatch")
-        self._properties: typing.Set[str] = set([  "url",  "categories",  ])
+        self._properties: typing.Set[str] = set([  "url",  "categories",  "kind",  ])
         self._props = CategoryMatchProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
@@ -257,6 +249,10 @@ class CategoryMatchProperties:
     @property
     def categories(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("categories"))
+    
+    @property
+    def kind(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
     
     
 
@@ -304,45 +300,6 @@ class CategoryOptionProperties:
     @property
     def description(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
-    
-    
-
-
-class ClassifyKindResultAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ClassifyKindResult")
-        self._properties: typing.Set[str] = set([  "kind",  ])
-        self._props = ClassifyKindResultProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ClassifyKindResultProperties":
-        return self._props
-
-
-class ClassifyKindResultViewer(ClassifyKindResultAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ClassifyKindResultProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def kind(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
     
     
 
@@ -707,49 +664,6 @@ class SearchCandidateProperties:
     @property
     def snippet(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("snippet"))
-    
-    
-
-
-class SummarizeResultAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("SummarizeResult")
-        self._properties: typing.Set[str] = set([  "summary",  "kind",  ])
-        self._props = SummarizeResultProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "SummarizeResultProperties":
-        return self._props
-
-
-class SummarizeResultViewer(SummarizeResultAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class SummarizeResultProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def summary(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("summary"))
-    
-    @property
-    def kind(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
     
     
 

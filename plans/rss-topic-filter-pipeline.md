@@ -114,9 +114,39 @@ retried next run. A provider timeout must not silently blacklist good articles.
 
 ## What survivors still get
 
-`improve_titles`, `Summarize` (summary + kind), `embed_articles`. Summaries
-stay — the cards are unreadable without them, and it is the only per-article
-LLM call left after insert.
+`improve_titles` and `embed_articles`. That is it — one LLM call after insert,
+batched, for titles.
+
+### The excerpt replaced the summary
+
+There was a `Summarize` call, one per article, producing the card text and the
+article's `kind`. Both are gone from the LLM path:
+
+- **Card text** is now `pipeline/excerpt.py` — a sanitized slice of the
+  article's own opening. Strips HTML and entities (two passes, because feeds
+  double-escape), fenced code, markdown, emoji, README banner art
+  (`\u2500-\u259F`, 290 occurrences in the dump), and zero-width characters;
+  collapses whitespace; trims to `EXCERPT_CHARS` on a word boundary. Pure and
+  deterministic.
+
+  Worse text, better properties. An excerpt is the article's opening rather
+  than its point — but it is free, it cannot invent anything, and its failure
+  mode (a truncated sentence) is visibly ugly rather than quietly wrong. The
+  summarizer's failures were the quiet kind: echoed markdown, leaked CJK, its
+  own JSON envelope — all of which the title-rewriter then copied into titles.
+
+  CJK is deliberately kept. The old summarizer rejected it as corruption
+  because the *model* was drifting out of English; an excerpt only repeats the
+  source, so a Chinese article reads as Chinese.
+
+- **`kind`** rides on the `MatchCategories` response instead, costing no extra
+  call. It stays a hint: `persist.resolve_kind` prefers the URL host when that
+  is conclusive (github → repo, arxiv → paper, hf → model), and a blog that
+  links a repo is a repo.
+
+The `summary` column is renamed `excerpt` and keeps its text, so pre-migration
+rows still show their old summaries. `scripts/backfill_excerpts.py` regenerates
+them from stored content — no LLM, safe to re-run after tuning the sanitizer.
 
 ## Schema
 
@@ -126,7 +156,7 @@ article_category(article_id, category_id)     -- <= 3 rows per article
 ```
 
 Dropped: `article.score`, `article.categories` (the dev/models/research JSON),
-`tag`, `article_tag`.
+`tag`, `article_tag`. Renamed: `article.summary` -> `article.excerpt`.
 
 Migration `c3d4e5f6a7b8`. Destructive — the tag vocabulary and every score go
 with it. Existing articles survive uncategorised until

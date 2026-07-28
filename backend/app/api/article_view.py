@@ -75,7 +75,7 @@ def to_public(
         id=article.id,
         title=article.title,
         url=article.url,
-        summary=article.summary,
+        excerpt=article.excerpt,
         kind=article.kind,
         categories=categories,
         published_at=article.published_at,

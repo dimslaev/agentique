@@ -84,7 +84,7 @@ def make_sample_articles(publisher_ids: list[int]) -> list[Article]:
                 publisher_id=rng.choice(publisher_ids),
                 url=f"https://example.com/articles/{i + 1}",
                 published_at=_published_at(rng, i),
-                summary=f"Summary for sample article {i + 1}.",
+                excerpt=f"Excerpt for sample article {i + 1}.",
                 kind=rng.choice(KINDS),
                 content=f"Content body for sample article {i + 1}.",
                 embedding=_normalized_embedding(rng),

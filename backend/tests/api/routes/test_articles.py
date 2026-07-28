@@ -235,21 +235,21 @@ def test_read_articles_old_since_ok_logged_in(
     assert r.status_code == 200
 
 
-def test_read_articles_q_filters_title_or_summary(
+def test_read_articles_q_filters_title_or_content(
     auth_client: TestClient, db: Session
 ) -> None:
     now = datetime.now(UTC)
     marker = "zzqqxxmarker"
     by_title = create_random_article(db, title=f"A {marker} headline", published_at=now)
-    by_summary = create_random_article(
-        db, summary=f"body mentions {marker} here", published_at=now
+    by_content = create_random_article(
+        db, content=f"body mentions {marker} here", published_at=now
     )
     create_random_article(db, published_at=now)
 
     r = auth_client.get(f"{ARTICLES_URL}/", params={"q": marker, "limit": 50})
     assert r.status_code == 200
     ids = {a["id"] for a in r.json()["data"]}
-    assert ids == {by_title.id, by_summary.id}
+    assert ids == {by_title.id, by_content.id}
 
 
 def test_search_is_unbounded_for_anonymous(

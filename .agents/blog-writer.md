@@ -40,12 +40,12 @@ is worse than no post.
 
 ## 3. Research the three
 
-Don't fetch the article URLs — work from the API's `summary` plus **web
+Don't fetch the article URLs — work from the API's `excerpt` plus **web
 search**. Three or four searches per story, not one: start broad
 (`<product> <feature> announcement`), then chase specifics — pricing,
 benchmarks, `<x> vs <y>`, hacker news, limitations.
 
-**The insight is the post.** You're searching for what the summary can't tell
+**The insight is the post.** You're searching for what the excerpt can't tell
 you: what the thing actually *is*, what problem it solves, who has that
 problem, what they did before it existed, what using it looks like in practice,
 where it falls down. If you can't say what it's *for*, you haven't researched
@@ -53,7 +53,7 @@ it yet.
 
 **Evidence rules** — these govern every claim in the post:
 
-- Every number, version, price and detail comes from the API summary or a
+- Every number, version, price and detail comes from the API excerpt or a
   search result you saw. Nothing from memory — your knowledge of these products
   is stale, and the post is about this week.
 - Two independent sources → state it plainly. One source, or vendor-only →
@@ -146,7 +146,7 @@ short on time, and is looking for a reason to close the tab. Fix what you find;
 cut what you can't fix.
 
 **Sourcing** — re-check every claim against the evidence rules in step 3: point
-at the summary or search result each detail came from, attribute single-source
+at the excerpt or search result each detail came from, attribute single-source
 claims, cut any sentence implying you ran or read something.
 
 **Substance**
@@ -179,7 +179,7 @@ claims, cut any sentence implying you ran or read something.
   One post per PR, nothing else in the diff.
 - PR body: topic, the three stories, one line on why this was worth writing.
   Then, so the reviewer knows exactly what they're vetting:
-  - **"Written from feed summaries plus web search — source pages not read."**
+  - **"Written from feed excerpts plus web search — source pages not read."**
     Say it every time.
   - per story: what the research added beyond the announcement.
   - anything cited on a single source, or where sources disagreed.

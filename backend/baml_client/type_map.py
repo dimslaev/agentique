@@ -25,9 +25,6 @@ type_map = {
     "types.CategoryOption": types.CategoryOption,
     "stream_types.CategoryOption": stream_types.CategoryOption,
 
-    "types.ClassifyKindResult": types.ClassifyKindResult,
-    "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
-
     "types.DedupMatch": types.DedupMatch,
     "stream_types.DedupMatch": stream_types.DedupMatch,
 
@@ -51,9 +48,6 @@ type_map = {
 
     "types.SearchCandidate": types.SearchCandidate,
     "stream_types.SearchCandidate": stream_types.SearchCandidate,
-
-    "types.SummarizeResult": types.SummarizeResult,
-    "stream_types.SummarizeResult": stream_types.SummarizeResult,
 
     "types.TitleFix": types.TitleFix,
     "stream_types.TitleFix": stream_types.TitleFix,
