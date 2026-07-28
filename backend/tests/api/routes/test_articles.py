@@ -170,7 +170,11 @@ def test_read_articles_sort_published_at_desc(auth_client: TestClient) -> None:
         f"{ARTICLES_URL}/", params={"sort": "published_at-desc", "limit": 50}
     )
     data = r.json()["data"]
-    dates = [datetime.fromisoformat(a["published_at"]) for a in data]
+    dates = [
+        datetime.fromisoformat(a["published_at"])
+        for a in data
+        if a["published_at"] is not None
+    ]
     assert dates == sorted(dates, reverse=True)
 
 
@@ -180,8 +184,30 @@ def test_read_articles_sort_default_is_published_at_desc(
     """With score gone, newest-first is the only sensible default — and it is
     what every homepage lane asks for anyway."""
     r = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50})
-    dates = [a["published_at"] for a in r.json()["data"]]
+    dates = [a["published_at"] for a in r.json()["data"] if a["published_at"]]
     assert dates == sorted(dates, reverse=True)
+
+
+def test_articles_without_a_published_date_sort_last(
+    auth_client: TestClient, db: Session
+) -> None:
+    """Postgres sorts NULLs FIRST on a DESC order, and `parse_date` returns None
+    whenever a feed omits or malforms its pubDate. Now that newest-first is the
+    default sort, one undated article would otherwise sit at the top of the feed
+    and of every homepage lane forever."""
+    undated = create_random_article(db, published_at=None)
+    dated = create_random_article(db, published_at=datetime.now(UTC))
+
+    ids = [
+        a["id"]
+        for a in auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50}).json()[
+            "data"
+        ]
+    ]
+    assert dated.id in ids
+    if undated.id in ids:
+        assert ids.index(dated.id) < ids.index(undated.id)
+    assert ids[0] != undated.id
 
 
 def test_read_articles_since_narrows_results(auth_client: TestClient) -> None:
@@ -239,7 +265,9 @@ def test_read_articles_q_filters_title_or_content(
     auth_client: TestClient, db: Session
 ) -> None:
     now = datetime.now(UTC)
-    marker = "zzqqxxmarker"
+    # Unique per run: a literal marker also matches the rows this test left
+    # behind on a previous run against the same database.
+    marker = f"zzqq{uuid.uuid4().hex[:12]}"
     by_title = create_random_article(db, title=f"A {marker} headline", published_at=now)
     by_content = create_random_article(
         db, content=f"body mentions {marker} here", published_at=now

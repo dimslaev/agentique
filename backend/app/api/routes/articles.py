@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-from sqlalchemy import cast, func
+from sqlalchemy import cast, func, nullslast
 from sqlmodel import Session, col, select
 
 from app.api.article_view import (
@@ -110,15 +110,22 @@ def read_articles(
         .where(*conditions)
     )
 
+    # NULLS LAST is load-bearing, not decoration. Postgres sorts NULLs FIRST on
+    # a DESC order, `published_at` is nullable, and `parse_date` returns None
+    # whenever a feed omits or malforms its pubDate. Since newest-first is now
+    # the default sort, one undated article would otherwise pin itself to the
+    # top of the feed and of every homepage lane, permanently.
+    newest_first = nullslast(col(Article.published_at).desc())
+
     if sort == "likes-desc":
         joined_statement = joined_statement.order_by(
             like_count_expr.desc(),
-            col(Article.published_at).desc(),
+            newest_first,
             col(Article.id).desc(),
         )
     else:
         joined_statement = joined_statement.order_by(
-            col(Article.published_at).desc(), col(Article.id).desc()
+            newest_first, col(Article.id).desc()
         )
     joined_statement = joined_statement.limit(limit)
 

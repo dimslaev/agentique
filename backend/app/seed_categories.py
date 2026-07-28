@@ -24,7 +24,8 @@ CATEGORIES_FILE = Path(__file__).parent / "data" / "categories.json"
 
 def load_categories() -> list[dict[str, Any]]:
     with CATEGORIES_FILE.open() as f:
-        return json.load(f)["categories"]
+        data: dict[str, Any] = json.load(f)
+    return list(data["categories"])
 
 
 def seed(session: Session) -> None:
@@ -34,7 +35,13 @@ def seed(session: Session) -> None:
     for entry in entries:
         category = existing.get(entry["slug"])
         if category is None:
-            category = Category(slug=entry["slug"])
+            category = Category(
+                slug=entry["slug"],
+                name=entry["name"],
+                description=entry["description"],
+            )
+        # Re-applied every run, so editing categories.json and re-seeding is the
+        # whole workflow for changing what a category means.
         category.name = entry["name"]
         category.description = entry["description"]
         category.exemplars = entry.get("exemplars", [])

@@ -298,8 +298,9 @@ the tag set steers away from it.
   next run edits a file that no longer exists.
 - **`/feed` filters need to be URL-addressable** before any box can offer
   "see all".
-- **Backend does not boot on the pinned Python.** `.python-version` is
-  `3.14`, the only interpreter uv offers here is `3.14.0rc2`, and pydantic
-  2.13.4 calls `typing._eval_type(..., prefer_fwd_module=...)` which that RC
-  does not accept. Unrelated to this change, but it blocks running the API
-  locally.
+- ~~**Backend does not boot on the pinned Python.**~~ Fixed: the project is
+  pinned to 3.13. pydantic 2.13.4 could not run on 3.14.0rc2 (the only 3.14
+  uv offers), so nothing that imports the app would start — no tests, no
+  client generation. The only 3.14-only syntax in the tree was two
+  unparenthesized `except A, B:` clauses (PEP 758) in `app/api/deps.py`;
+  `requires-python` is now `>=3.13,<4.0`, so a 3.14 host still works.
