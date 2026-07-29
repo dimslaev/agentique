@@ -17,9 +17,9 @@ from pipeline.health import RunStats, check_liveness, record_run, verify_run
 from pipeline.publishers import PublisherResolver
 from pipeline.steps.enrich import (
     assign_tags,
+    categorize_articles,
     embed_articles,
     improve_titles,
-    summarize_and_categorize,
 )
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
 from pipeline.steps.filter import dedup_semantic, filter_dead_domains, filter_known_urls
@@ -70,7 +70,7 @@ def run_pipeline(stats: RunStats) -> None:
                 s.inserted = len(inserted)
 
                 improve_titles(session, inserted)
-                processed = summarize_and_categorize(session, inserted)
+                processed = categorize_articles(session, inserted)
                 assign_tags(session, processed, vocab)
                 embed_articles(session, processed)
             except Exception as e:

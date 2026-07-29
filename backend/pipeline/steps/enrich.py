@@ -1,10 +1,9 @@
 """Step 5: everything we do to an article after it is in the DB.
 
-Titles, summary + categories + kind, tags, embedding. Content is already full by
-now (the fetch step fills it and drops anything it cannot), so summarize works
-from the real article, not a teaser. Each part is best-effort and commits its
-own work: a failure here costs one field, never the article, and never the rest
-of the run.
+Titles, categories + kind, tags, embedding. Content is already full by now (the
+fetch step fills it and drops anything it cannot), so categorize works from the
+real article, not a teaser. Each part is best-effort and commits its own work: a
+failure here costs one field, never the article, and never the rest of the run.
 """
 
 from __future__ import annotations
@@ -22,12 +21,11 @@ from pipeline.heuristics import (
     kind_from_url,
 )
 from pipeline.llm_text import (
-    is_valid_summary,
     is_valid_title,
     sanitize_llm_text,
     strip_title_wrappers,
 )
-from pipeline.steps import to_baml_input
+from pipeline.steps import SNIPPET_CAP, to_baml_input
 from pipeline.tags import Vocabulary, validate_tags, write_article_tags
 from pipeline.types import FetchedArticle, ProcessedArticle
 from pipeline.utils import enum_value, log, wait_ms
@@ -37,7 +35,7 @@ from pipeline.utils import enum_value, log, wait_ms
 # costs the whole batch.
 TITLE_BATCH = 10
 BATCH_PAUSE_MS = 1000
-# Pause between the per-article summarize / tag calls. These run one article at
+# Pause between the per-article categorize / tag calls. These run one article at
 # a time (not batched) so a slow or failed call costs a single article, never a
 # whole batch — the delay keeps us under the provider's rate limit.
 CALL_PAUSE_MS = 1000
@@ -107,7 +105,7 @@ def improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
         session.commit()
 
 
-# ─── Summary, categories, kind ───────────────────────────────────────────────
+# ─── Categories, kind ─────────────────────────────────────────────────────────
 
 
 def _to_categories(baml_categories) -> list[Category]:
@@ -132,56 +130,48 @@ def _to_kind(baml_kind) -> ArticleKind | None:
         return None
 
 
-def summarize_and_categorize(
+def categorize_articles(
     session: Session, items: list[FetchedArticle]
 ) -> list[ProcessedArticle]:
-    """Summarize + assign categories/kind from each article's content.
+    """Assign categories/kind from each article's content.
 
     Content is always full by the time an article gets here (the fetch step
-    fills it and drops anything it cannot), so a single ``SummarizeAndCategorize``
-    call per article produces the summary, categories, and kind together. One
-    LLM call per article with a delay between them: no batching, so a slow or
-    failed call costs a single article. An article that somehow still has no
-    content is dropped and logged rather than summarized from a bare title.
+    fills it and drops anything it cannot), so a single ``Categorize`` call per
+    article produces the categories and kind together. One LLM call per article
+    with a delay between them: no batching, so a slow or failed call costs a
+    single article. An article that somehow still has no content is dropped and
+    logged rather than categorized from a bare title.
     """
     if not items:
         return []
 
-    log(f"  Summarizing and categorizing {len(items)} articles...")
+    log(f"  Categorizing {len(items)} articles...")
     processed: list[ProcessedArticle] = []
 
     for idx, item in enumerate(items):
         art_id = item["id"]
         content = item.get("content") or ""
         if not content.strip():
-            log(f"  Drop #{art_id}: no content to summarize")
+            log(f"  Drop #{art_id}: no content to categorize")
             continue
 
-        summary = ""
         categories: list[Category] = []
         # The URL host is authoritative when it is conclusive (a github.com link
         # is a repo); only ask the LLM when it is not.
         kind: ArticleKind | None = kind_from_url(item["url"])
 
         try:
-            result = b.SummarizeAndCategorize(
-                item["title"], content[:PROMPT_CONTENT_CAP]
-            )
-            summary = sanitize_llm_text(result.summary or "")
-            if summary and not is_valid_summary(summary):
-                log(f'  Drop summary #{art_id} (malformed): "{summary[:80]}"')
-                summary = ""
+            result = b.Categorize(item["title"], content[:PROMPT_CONTENT_CAP])
             categories = _to_categories(result.categories)
             if not kind:
                 kind = _to_kind(result.kind)
             if kind == ArticleKind.blog and github_repo_from_content(content):
                 kind = ArticleKind.repo
         except Exception as e:
-            log(f"  Summarize/categorize failed for #{art_id}: {e}")
+            log(f"  Categorize failed for #{art_id}: {e}")
 
         article = session.get(Article, art_id)
         if article:
-            article.summary = summary
             article.categories = categories
             if kind:
                 article.kind = kind
@@ -193,7 +183,7 @@ def summarize_and_categorize(
                 "url": item["url"],
                 "title": item["title"],
                 "score": item["score"],
-                "summary": summary,
+                "snippet": content[:SNIPPET_CAP],
                 "categories": categories,
             }
         )
@@ -201,7 +191,7 @@ def summarize_and_categorize(
             wait_ms(CALL_PAUSE_MS)
 
     session.commit()
-    log("  Done summarizing and categorizing")
+    log("  Done categorizing")
     return processed
 
 
@@ -216,7 +206,8 @@ def assign_tags(
     batched) so a slow or failed call costs a single article. The vocabulary is
     passed to the LLM as a parameter, and output is validated against it —
     off-list tags are dropped and no tag is ever created at runtime (see
-    pipeline.tags). The article's summary is passed as the signal to tag from."""
+    pipeline.tags). The article's content snippet is passed as the signal to
+    tag from."""
     if not items:
         return
 
@@ -231,7 +222,7 @@ def assign_tags(
         input_ = TagInput(
             articleId=it["id"],
             title=it["title"],
-            summary=it.get("summary") or None,
+            snippet=it.get("snippet") or None,
         )
         try:
             assignments = b.AssignTags([input_], options)
@@ -261,7 +252,7 @@ def embed_articles(session: Session, items: list[ProcessedArticle]) -> None:
     # Built by keep_drop so the string is identical to the one its weights were
     # distilled against — the pre-filter and this step must embed the same text.
     texts = [
-        keep_drop.to_embedding_text(item["title"], item.get("summary"))
+        keep_drop.to_embedding_text(item["title"], item.get("snippet"))
         for item in items
     ]
     try:

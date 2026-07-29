@@ -64,6 +64,10 @@ class ArticleInput(BaseModel):
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
 
+class CategorizeResult(BaseModel):
+    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
+    kind: ArticleKind
+
 class ClassifyKindResult(BaseModel):
     kind: ArticleKind
 
@@ -108,11 +112,6 @@ class SearchCandidate(BaseModel):
     url: str
     snippet: str
 
-class SummarizeAndCategorizeResult(BaseModel):
-    summary: str = Field(description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
-    kind: ArticleKind
-
 class TagAssignment(BaseModel):
     articleId: int
     tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
@@ -120,7 +119,7 @@ class TagAssignment(BaseModel):
 class TagInput(BaseModel):
     articleId: int
     title: str
-    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
+    snippet: typing.Optional[str] = Field(default=None, description='Short content teaser, if available')
 
 class TagOption(BaseModel):
     slug: str

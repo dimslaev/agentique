@@ -33,6 +33,10 @@ class ArticleInput(BaseModel):
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
 
+class CategorizeResult(BaseModel):
+    categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
+    kind: typing.Optional[types.ArticleKind] = None
+
 class ClassifyKindResult(BaseModel):
     kind: typing.Optional[types.ArticleKind] = None
 
@@ -77,11 +81,6 @@ class SearchCandidate(BaseModel):
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = None
 
-class SummarizeAndCategorizeResult(BaseModel):
-    summary: typing.Optional[str] = Field(default=None, description='2-3 short factual lines of plain English, separated by \\n. No markdown, no other language.')
-    categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
-    kind: typing.Optional[types.ArticleKind] = None
-
 class TagAssignment(BaseModel):
     articleId: typing.Optional[int] = None
     tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
@@ -89,7 +88,7 @@ class TagAssignment(BaseModel):
 class TagInput(BaseModel):
     articleId: typing.Optional[int] = None
     title: typing.Optional[str] = None
-    summary: typing.Optional[str] = Field(default=None, description='Short factual summary, if available')
+    snippet: typing.Optional[str] = Field(default=None, description='Short content teaser, if available')
 
 class TagOption(BaseModel):
     slug: typing.Optional[str] = None

@@ -38,11 +38,6 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
       >
         {article.title}
       </a>
-      {article.summary && (
-        <p className="mt-1 text-sm text-muted-foreground line-clamp-3">
-          {article.summary}
-        </p>
-      )}
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {article.categories && article.categories.length > 0 && (
           <div className="flex flex-wrap gap-1">

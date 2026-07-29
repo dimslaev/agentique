@@ -19,6 +19,9 @@ type_map = {
     "types.ArticleInput": types.ArticleInput,
     "stream_types.ArticleInput": stream_types.ArticleInput,
 
+    "types.CategorizeResult": types.CategorizeResult,
+    "stream_types.CategorizeResult": stream_types.CategorizeResult,
+
     "types.ClassifyKindResult": types.ClassifyKindResult,
     "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
 
@@ -48,9 +51,6 @@ type_map = {
 
     "types.SearchCandidate": types.SearchCandidate,
     "stream_types.SearchCandidate": stream_types.SearchCandidate,
-
-    "types.SummarizeAndCategorizeResult": types.SummarizeAndCategorizeResult,
-    "stream_types.SummarizeAndCategorizeResult": stream_types.SummarizeAndCategorizeResult,
 
     "types.TagAssignment": types.TagAssignment,
     "stream_types.TagAssignment": stream_types.TagAssignment,

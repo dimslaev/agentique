@@ -1,7 +1,7 @@
 class TagInput {
   articleId int
   title string
-  summary string? @description("Short factual summary, if available")
+  snippet string? @description("Short content teaser, if available")
 }
 
 class TagOption {
@@ -31,7 +31,7 @@ function AssignTags(articles: TagInput[], vocabulary: TagOption[]) -> TagAssignm
     {% for a in articles %}
     --- Article {{ a.articleId }} ---
     title: {{ a.title }}
-    {% if a.summary %}summary: {{ a.summary }}{% endif %}
+    {% if a.snippet %}snippet: {{ a.snippet }}{% endif %}
     {% endfor %}
 
     {{ ctx.output_format }}
@@ -45,7 +45,7 @@ test assign_tags_basic {
       {
         articleId 1
         title "Running Llama 3 locally with 4-bit quantization on a laptop"
-        summary "A guide to GGUF quantization for on-device inference."
+        snippet "A guide to GGUF quantization for on-device inference."
       }
     ]
     vocabulary [

@@ -13,7 +13,7 @@ SCORE_THRESHOLD = 76
 PROMPT_CONTENT_CAP = 1500
 
 # Below this, content is a teaser/blurb rather than an article, and the
-# summarizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide
+# categorizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide
 # whether a fetched item still needs a network re-fetch of its full text.
 MIN_CONTENT_CHARS = 500
 
