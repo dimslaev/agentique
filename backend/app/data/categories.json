@@ -1,15 +1,24 @@
 {
   "_comment": [
-    "The controlled category vocabulary. Seven categories, deliberately orthogonal:",
-    "  AI Labs            - Who did it?",
+    "The controlled category vocabulary. Nine categories, deliberately orthogonal:",
     "  Model Releases     - Was a new model released?",
     "  Open Weights       - Can developers download the weights?",
-    "  Coding Agents      - Is it about AI for software development?",
-    "  Tool Use & MCP     - Can the model interact with external tools?",
     "  Local AI           - Can developers run it on their own hardware?",
+    "  Coding Agents      - Is it about AI for software development?",
+    "  Tool Use & MCP     - Can the model invoke external software?",
+    "  RAG                - Does it retrieve knowledge into the context?",
+    "  Multimodal         - Is a non-text modality the point?",
     "  Inference & Optimization - Does it make AI faster, smaller, or cheaper?",
+    "  Security & Safety  - Is something going wrong, or being stopped?",
     "",
-    "`description` is fed verbatim to the MatchCategories prompt — it is the",
+    "There is deliberately no AI Labs category. It was tried and removed: 365",
+    "articles in the prod dump matched it, but 293 of those already matched",
+    "another category, so it uniquely held only 72 - pure corporate news",
+    "(funding, pricing, acquisitions, leadership) that is not what this site",
+    "is for. Dropping it and adding these three RAISED corpus coverage from",
+    "78% to 85%.",
+    "",
+    "`description` is fed verbatim to the MatchCategories prompt - it is the",
     "filter, so vagueness here is a bug. `exemplars` are short phrases averaged",
     "into the category's prototype vector for the cheap static pre-filter; they",
     "never reach the LLM. `position` orders the homepage lanes.",
@@ -108,9 +117,45 @@
       ]
     },
     {
+      "slug": "rag",
+      "name": "RAG",
+      "description": "Retrieval-augmented generation: pulling external knowledge into a model's context before it answers. Includes vector databases and vector search, embedding models used for retrieval, chunking strategies, rerankers, hybrid and semantic search, knowledge bases, document grounding, citation and attribution, and agent memory (persistent or long-term recall across sessions). The distinction from Tool Use & MCP is what the model does with the external system: retrieving KNOWLEDGE to read is RAG, invoking an ACTION is tool use. Rule of thumb: if the system looks something up and puts it in the context window, it belongs here.",
+      "exemplars": [
+        "retrieval-augmented generation pipeline",
+        "vector database release",
+        "new embedding model for search",
+        "reranker improves retrieval accuracy",
+        "chunking strategy for long documents",
+        "hybrid semantic and keyword search",
+        "agent memory across sessions",
+        "grounding answers in a knowledge base",
+        "citations and source attribution for LLM answers",
+        "context window packing for retrieval"
+      ],
+      "position": 6
+    },
+    {
+      "slug": "multimodal",
+      "name": "Multimodal",
+      "description": "AI that works in any modality other than text: image, video, audio, speech, or several at once. Includes image and video generation and diffusion models, vision-language models, OCR and document understanding, text-to-speech, speech-to-text, voice agents and real-time voice, music and sound generation, and cross-modal systems that combine them. Rule of thumb: if a non-text modality is the point of the story, it belongs here. A model release in one of these modalities is both this and Model Releases.",
+      "exemplars": [
+        "text-to-image diffusion model",
+        "video generation model release",
+        "vision language model reads screenshots",
+        "OCR and document understanding",
+        "text-to-speech voice model",
+        "speech recognition and transcription",
+        "real-time voice agent",
+        "music and sound effect generation",
+        "image editing model",
+        "model that takes both audio and images"
+      ],
+      "position": 7
+    },
+    {
       "slug": "inference-optimization",
       "name": "Inference & Optimization",
-      "position": 6,
+      "position": 8,
       "description": "Techniques, software, and infrastructure that make AI models faster, cheaper, or more efficient to train, deploy, or run. This is about performance engineering, not about whether a model can run locally. Includes quantization, distillation, pruning, FP8, INT4, GPTQ, AWQ, Flash Attention, speculative decoding, KV cache optimization, prefix caching, continuous batching, vLLM, SGLang, TensorRT-LLM, DeepGEMM, serving infrastructure, GPU optimization, throughput and latency improvements, memory optimization, and efficient fine-tuning such as LoRA and QLoRA. Rule of thumb: if the story is about making AI faster, smaller, cheaper, or more efficient — rather than introducing a new model or enabling local deployment — it belongs here.",
       "exemplars": [
         "vLLM introduces speculative decoding",
@@ -126,22 +171,22 @@
       ]
     },
     {
-      "slug": "ai-labs",
-      "name": "AI Labs",
-      "position": 7,
-      "description": "News about AI companies as organizations, independent of any specific model release. Includes company announcements, leadership changes, funding, acquisitions, partnerships, product strategy, API and platform announcements, pricing changes, infrastructure announcements, and roadmaps. Rule of thumb: if the story is primarily about what an AI company is doing, it belongs here.",
+      "slug": "security-safety",
+      "name": "Security & Safety",
+      "description": "Keeping models and agents from causing harm, and keeping attackers out of them. Includes prompt injection, jailbreaks, adversarial attacks, red-teaming, model and agent alignment, guardrails and refusals, sandboxing and isolated execution for agent-run code (microVMs, containment), supply-chain and MCP-server risk, misuse prevention, privacy, PII handling, and confidential inference. Sandboxing belongs here rather than in Tool Use & MCP: the story is the containment, not the capability. Rule of thumb: if the subject is something going wrong, or being stopped from going wrong, it belongs here.",
       "exemplars": [
-        "OpenAI launches a new Responses API",
-        "Anthropic raises funding",
-        "Google DeepMind announces its Gemini roadmap",
-        "Microsoft expands Azure AI",
-        "xAI acquires a company",
-        "AI lab changes API pricing",
-        "new datacenter buildout for model training",
-        "partnership between two AI companies",
-        "leadership change at an AI lab",
-        "developer platform strategy announcement"
-      ]
+        "prompt injection attack on an agent",
+        "jailbreak bypasses model guardrails",
+        "red-teaming results for a frontier model",
+        "sandboxing agent-executed code in a microVM",
+        "malicious MCP server supply chain risk",
+        "model alignment and refusal behavior",
+        "adversarial examples fool a vision model",
+        "PII leakage from a model",
+        "confidential inference in a secure enclave",
+        "agent escapes its permission boundary"
+      ],
+      "position": 9
     }
   ]
 }

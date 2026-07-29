@@ -3,7 +3,7 @@
 Agentique (agentique.ch) is an AI news feed for people building with AI: developers,
 founders, and tech leads who want the signal without wading through hype. Instead of
 scrolling ten newsletters and three subreddits, you get one feed of articles that have
-already been filtered down to seven subjects the site actually covers
+already been filtered down to nine subjects the site actually covers
 — and you can semantically search across all of it.
 
 Think of it as an automated editorial desk: a robot intern that reads everything on the
@@ -23,10 +23,14 @@ newest-first (or by popularity). Each entry shows a short excerpt of the article
 categories, and a "kind" (repo, paper, model, blog, product, announcement). You can
 filter by category, kind, publisher, and time window (last 3 days / week / month).
 
-The seven categories are the whole editorial policy: AI Labs, Model Releases, Open
-Weights, Coding Agents, Tool Use & MCP, Local AI, and Inference & Optimization. An
-article that matches none of them is not stored at all — so unlike a tag, a category is
-not a label added after the fact, it is the reason the article is in the database.
+The nine categories are the whole editorial policy: Model Releases, Open Weights,
+Local AI, Coding Agents, Tool Use & MCP, RAG, Multimodal, Inference & Optimization, and
+Security & Safety. An article that matches none of them is not stored at all — so unlike
+a tag, a category is not a label added after the fact, it is the reason the article is in
+the database.
+
+There is deliberately no category for AI-company news. Funding rounds, pricing changes,
+acquisitions and leadership moves are not what this site is for, so they are not stored.
 
 **Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
 query and finds the nearest articles in vector space, so "how do I run a model locally"
@@ -60,7 +64,7 @@ newsletters), and runs each fresh batch through a chain of small, focused steps:
    the wording or source differs.
 4. **Match against the categories** — two cheap local checks first (a distilled
    keep/drop classifier, then a similarity check against each category), and then an
-   LLM is asked which of the seven categories the article belongs to. Matching none is
+   LLM is asked which of the nine categories the article belongs to. Matching none is
    a normal, common answer, and an article that matches none is never stored. This is
    the main noise filter, and it replaced an older 1–100 relevance score: "how good is
    this?" let through articles that belonged nowhere on the site.

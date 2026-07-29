@@ -47,13 +47,20 @@ def categories_by_article(
 
     Ordered by `Category.position` so an article's categories read in the same
     order as the homepage lanes, rather than alphabetically.
+
+    Retired categories are excluded. Deactivating one keeps its join rows — so
+    the change is reversible — but the card must not advertise a category that
+    has no lane and appears in no filter list.
     """
     if not article_ids:
         return {}
     rows = session.exec(
         select(ArticleCategory.article_id, Category.slug, Category.name)
         .join(Category, col(Category.id) == col(ArticleCategory.category_id))
-        .where(col(ArticleCategory.article_id).in_(article_ids))
+        .where(
+            col(ArticleCategory.article_id).in_(article_ids),
+            col(Category.is_active).is_(True),
+        )
         .order_by(col(ArticleCategory.article_id), col(Category.position))
     ).all()
     out: dict[int, list[CategoryPublic]] = defaultdict(list)

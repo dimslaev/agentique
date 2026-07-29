@@ -421,6 +421,43 @@ def test_search_categories_no_match(auth_client: TestClient) -> None:
     assert r.json() == []
 
 
+def test_retired_category_disappears_from_reads(
+    auth_client: TestClient, db: Session
+) -> None:
+    """Retiring a category is how the vocabulary shrinks — `seed_categories`
+    deactivates rather than deletes, so the join rows survive and the change is
+    reversible. But nothing user-facing may still advertise it: no lane, no
+    chip on a card, and a stale `?category=` link returns nothing rather than a
+    corner of the archive no link points at."""
+    now = datetime.now(UTC)
+    category = create_random_category(db)
+    article = create_random_article(db, published_at=now)
+    categorize_article(db, article, category)
+
+    live = auth_client.get(
+        f"{ARTICLES_URL}/", params={"category": category.slug, "limit": 50}
+    ).json()
+    assert [a["id"] for a in live["data"]] == [article.id]
+    assert category.slug in {c["slug"] for c in live["data"][0]["categories"]}
+
+    category.is_active = False
+    db.add(category)
+    db.commit()
+
+    retired = auth_client.get(
+        f"{ARTICLES_URL}/", params={"category": category.slug, "limit": 50}
+    ).json()
+    assert retired["count"] == 0
+
+    facets = auth_client.get(f"{ARTICLES_URL}/categories", params={"limit": 50}).json()
+    assert category.slug not in {c["slug"] for c in facets}
+
+    # The article itself survives; it just no longer wears the retired chip.
+    listed = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50}).json()["data"]
+    row = next(a for a in listed if a["id"] == article.id)
+    assert category.slug not in {c["slug"] for c in row["categories"]}
+
+
 def test_category_facets_include_empty_categories(
     auth_client: TestClient, db: Session
 ) -> None:

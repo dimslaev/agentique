@@ -15,7 +15,7 @@ from pipeline.steps.categorize import apply_matches, max_similarity
 from pipeline.steps.enrich import accept_title
 from pipeline.steps.persist import best_per_url, resolve_kind
 
-VALID = frozenset({"ai-labs", "local-ai", "open-weights"})
+VALID = frozenset({"rag", "local-ai", "open-weights"})
 
 
 def _article(url: str, source: str = "Hacker News", **extra) -> dict:
@@ -34,11 +34,11 @@ def test_attaches_each_articles_categories_by_url():
     articles = [_article("u1"), _article("u2")]
     matched = apply_matches(
         articles,
-        {"u1": _match(["ai-labs"]), "u2": _match(["local-ai", "open-weights"])},
+        {"u1": _match(["rag"]), "u2": _match(["local-ai", "open-weights"])},
         VALID,
     )
     assert {m["url"]: m["categories"] for m in matched} == {
-        "u1": ["ai-labs"],
+        "u1": ["rag"],
         "u2": ["local-ai", "open-weights"],
     }
 
@@ -58,37 +58,39 @@ def test_off_list_categories_cannot_admit_an_article():
     """If every returned slug is invented, the article has no valid category and
     must not survive on the strength of a hallucination."""
     assert (
-        apply_matches([_article("u1")], {"u1": _match(["robotics", "rag"])}, VALID)
+        apply_matches(
+            [_article("u1")], {"u1": _match(["robotics", "sovereign-ai"])}, VALID
+        )
         == []
     )
 
 
 def test_keeps_an_article_whose_only_valid_category_survives_validation():
     matched = apply_matches(
-        [_article("u1")], {"u1": _match(["robotics", "ai-labs"])}, VALID
+        [_article("u1")], {"u1": _match(["robotics", "rag"])}, VALID
     )
-    assert matched[0]["categories"] == ["ai-labs"]
+    assert matched[0]["categories"] == ["rag"]
 
 
 def test_carries_the_kind_hint_through():
     """Format rides on the same response as the categories, so it costs no
     extra call — but it is only a hint until persist resolves it."""
     matched = apply_matches(
-        [_article("u1")], {"u1": _match(["ai-labs"], kind="Paper")}, VALID
+        [_article("u1")], {"u1": _match(["rag"], kind="Paper")}, VALID
     )
     assert matched[0]["kind_hint"] == "Paper"
 
 
 def test_does_not_mutate_the_articles_it_is_given():
     articles = [_article("u1")]
-    apply_matches(articles, {"u1": _match(["ai-labs"])}, VALID)
+    apply_matches(articles, {"u1": _match(["rag"])}, VALID)
     assert "categories" not in articles[0]
 
 
 def test_preserves_the_rest_of_the_article():
     matched = apply_matches(
         [_article("u1", publisher_id=7, content="body")],
-        {"u1": _match(["ai-labs"])},
+        {"u1": _match(["rag"])},
         VALID,
     )
     assert matched[0]["publisher_id"] == 7
@@ -140,25 +142,25 @@ def test_same_url_from_two_sources_unions_their_categories():
     the same post). Both judgements were made about the same article, so
     dropping one would lose a lane for no reason."""
     items = [
-        _article("dupe", source="Hacker News", categories=["ai-labs"]),
+        _article("dupe", source="Hacker News", categories=["rag"]),
         _article("dupe", source="Feeds", categories=["open-weights"]),
     ]
     best = best_per_url(items)
     assert len(best) == 1
-    assert best[0]["categories"] == ["ai-labs", "open-weights"]
+    assert best[0]["categories"] == ["rag", "open-weights"]
 
 
 def test_union_does_not_duplicate_a_shared_category():
     items = [
-        _article("dupe", categories=["ai-labs", "local-ai"]),
+        _article("dupe", categories=["rag", "local-ai"]),
         _article("dupe", categories=["local-ai"]),
     ]
-    assert best_per_url(items)[0]["categories"] == ["ai-labs", "local-ai"]
+    assert best_per_url(items)[0]["categories"] == ["rag", "local-ai"]
 
 
 def test_union_is_capped_at_three():
     items = [
-        _article("dupe", categories=["ai-labs", "local-ai"]),
+        _article("dupe", categories=["rag", "local-ai"]),
         _article("dupe", categories=["open-weights", "tool-use-mcp"]),
     ]
     assert len(best_per_url(items)[0]["categories"]) == 3
@@ -167,7 +169,7 @@ def test_union_is_capped_at_three():
 def test_first_occurrence_wins_on_everything_but_categories():
     """No score to break the tie any more, so the earlier item keeps the row."""
     items = [
-        _article("dupe", source="Hacker News", categories=["ai-labs"]),
+        _article("dupe", source="Hacker News", categories=["rag"]),
         _article("dupe", source="Feeds", categories=["local-ai"]),
     ]
     assert best_per_url(items)[0]["source"] == "Hacker News"
@@ -175,7 +177,7 @@ def test_first_occurrence_wins_on_everything_but_categories():
 
 def test_distinct_urls_all_survive():
     items = [
-        _article("u1", categories=["ai-labs"]),
+        _article("u1", categories=["rag"]),
         _article("u2", categories=["local-ai"]),
     ]
     assert len(best_per_url(items)) == 2
@@ -187,11 +189,11 @@ def test_empty_input():
 
 def test_does_not_mutate_the_items_it_is_given():
     items = [
-        _article("dupe", categories=["ai-labs"]),
+        _article("dupe", categories=["rag"]),
         _article("dupe", categories=["local-ai"]),
     ]
     best_per_url(items)
-    assert items[0]["categories"] == ["ai-labs"]
+    assert items[0]["categories"] == ["rag"]
 
 
 # ─── resolve_kind ────────────────────────────────────────────────────────────

@@ -8,26 +8,46 @@ homepage then reassembled lanes from tag unions and tag∩kind crosses in
 frontend TS.
 
 New pipeline: fetch → two static gates → dedup → **does this article match one
-of 7 categories?** → insert only if yes, with the categories attached. Lane =
+of 9 categories?** → insert only if yes, with the categories attached. Lane =
 `where category_id = X order by published_at desc`. No score, no tags, no
 dev/models/research enum.
 
 The category list stops being a *view* over the corpus and becomes the *filter
 that defines* it.
 
-## The 7 categories
+## The 9 categories
 
 Orthogonal by construction — each answers a different question:
 
 | Category | The question it answers |
 |---|---|
-| AI Labs | Who did it? |
 | Model Releases | Was a new model released? |
 | Open Weights | Can developers download the weights? |
-| Coding Agents | Is it about AI for software development? |
-| Tool Use & MCP | Can the model interact with external tools? |
 | Local AI | Can developers run it on their own hardware? |
-| Inference & Optimization | Does it improve speed, efficiency, or cost? |
+| Coding Agents | Is it about AI for software development? |
+| Tool Use & MCP | Can the model invoke external software? |
+| RAG | Does it retrieve knowledge into the context? |
+| Multimodal | Is a non-text modality the point? |
+| Inference & Optimization | Does it make AI faster, smaller, or cheaper? |
+| Security & Safety | Is something going wrong, or being stopped? |
+
+### Why there is no AI Labs category
+
+It shipped in the first cut and was removed. The measurement that settled it:
+365 articles in the dump matched AI Labs, but **293 of them already matched
+another category** — so it uniquely held only **72**, and those 72 are pure
+corporate news (funding, pricing, acquisitions, leadership). The old scorer
+explicitly bottom-tiered exactly that content.
+
+Removing it and adding RAG, Multimodal and Security & Safety **raised** corpus
+coverage from 78% to 85%. Narrower beat, more of the corpus with a home — the
+"AI Labs is 32% of the corpus" figure was measuring lane *overlap*, not unique
+contribution.
+
+Voice, vision and cross-modal are one category rather than three. Separately
+they were the overlap problem in the original 17-topic sketch (Multi Modal ate
+both single-modality lanes); together they are 145 articles and one clean
+question.
 
 Definitions live in `backend/app/data/categories.json` → the `category` table.
 The `description` field *is* the prompt, so vagueness in it is a bug. Editing a
@@ -38,28 +58,25 @@ Up to 3 categories per article. Zero categories = not stored.
 
 ### What this drops
 
-Nothing outside those 7 gets in. Measured on the prod dump by mapping the old
-43-tag vocabulary onto the new categories, ~22% of the corpus (254 of 1131)
-has no home — and that is the *generous* estimate, since the tag proxy is
-looser than a strict LLM match. Biggest orphans: `multimodal` 117,
-`security` 87, `evaluation` 60, `rag` 48, `voice-speech` 34, `robotics` 22.
+Nothing outside those 9 gets in. Measured on the prod dump by mapping the old
+43-tag vocabulary onto the new categories, ~15% of the corpus (165 of 1131) has
+no home. Biggest remaining orphans: `enterprise-ai` 70, `evaluation` 60,
+`context-optimization` 41, `fine-tuning` 32, `prompt-engineering` 26,
+`robotics` 22 — plus the 72 pure-corporate-news articles AI Labs used to hold.
 
-Deliberate. The site gets visibly smaller and much more focused.
+Deliberate. The site gets smaller and much more focused.
 
 ## Measurements that shaped it
 
 Proxy-mapped on the prod dump (1131 articles, 43 tags, 2.14 tags/article):
 
-- **Lane sizes**: AI Labs 365, Tool Use 192, Inference 190, Coding Agents 185,
-  Model Releases 131, Open Weights 125, Local AI 110.
-- **AI Labs is 32% of the corpus** and, as defined, a catch-all — funding,
-  pricing, acquisitions, leadership. The old scorer explicitly bottom-tiered
-  that content (`31-40: Funding rounds without product details`). It is placed
-  last in lane order for this reason.
+- **Lane sizes**: Tool Use 192, Inference 190, Coding Agents 185,
+  Security & Safety 155, Multimodal 145, Model Releases 131, Open Weights 125,
+  Local AI 110, RAG 87. No thin lanes — the smallest is still 4x the size that
+  killed Sovereign AI in the original sketch.
 - **The 3-category cap barely binds**: 52 of 877 articles reach 3, 4 reach 4.
   It is a guard against a padding model, not a routine constraint.
-- **Lanes overlap more than the taxonomy implies**: 49% of Model Releases is
-  also AI Labs; 35% of Tool Use is also AI Labs; 25% of Open Weights is also
+- **Lanes overlap more than the taxonomy implies**: 25% of Open Weights is also
   Model Releases. Orthogonal *definitions*, correlated *content*. The lane UI
   shows an article's other categories, which turns that overlap into
   cross-links rather than noise.
@@ -78,16 +95,16 @@ existed and already runs first.
 ### Gate 1 — static category floor (`potion-base-8M`, no LLM)
 
 Per category, a **prototype vector**: the mean embedding of
-name + description + ~10 exemplar phrases. Per article, cosine against all 7;
-below the floor, drop.
+name + description + ~10 exemplar phrases. Per article, cosine against all of
+them; below the floor, drop.
 
-Prototypes are computed per run, not stored. Seven encodes cost nothing, and a
+Prototypes are computed per run, not stored. Nine encodes cost nothing, and a
 stored vector could go stale against an edited description — the failure mode
 where a category quietly stops matching.
 
 No top-k shortlisting. That was in the original 17-topic sketch to keep the
-prompt small; with 7 categories the whole vocabulary fits, and shortlisting
-would only add a recall risk for no saving.
+prompt small; at this size the whole vocabulary fits, and shortlisting would
+only add a recall risk for no saving.
 
 **Ships disabled (`CATEGORY_GATE_THRESHOLD=0`).** The right floor is a property
 of the embedding model and the category wording, and guessing it means silently
@@ -147,6 +164,16 @@ article's `kind`. Both are gone from the LLM path:
 The `summary` column is renamed `excerpt` and keeps its text, so pre-migration
 rows still show their old summaries. `scripts/backfill_excerpts.py` regenerates
 them from stored content — no LLM, safe to re-run after tuning the sanitizer.
+
+## Retiring a category
+
+`seed_categories` deactivates categories missing from `categories.json` rather
+than deleting them, so `article_category` rows survive and the change is
+reversible by putting the entry back. Everything user-facing filters on
+`is_active`: no lane, no facet, no chip on a card, and a stale `?category=`
+link returns nothing rather than a corner of the archive no link points at.
+
+That is how AI Labs was removed — no migration, no data loss.
 
 ## Schema
 

@@ -12,24 +12,24 @@ from __future__ import annotations
 
 from pipeline.categories import normalize_category, validate_categories
 
-VALID = frozenset({"ai-labs", "local-ai", "tool-use-mcp"})
+VALID = frozenset({"rag", "local-ai", "tool-use-mcp"})
 
 
 def test_keeps_categories_in_the_vocabulary():
-    assert validate_categories(["ai-labs", "local-ai"], VALID) == [
-        "ai-labs",
+    assert validate_categories(["rag", "local-ai"], VALID) == [
+        "rag",
         "local-ai",
     ]
 
 
 def test_drops_categories_outside_the_vocabulary():
-    assert validate_categories(["ai-labs", "robotics"], VALID) == ["ai-labs"]
+    assert validate_categories(["rag", "robotics"], VALID) == ["rag"]
 
 
 def test_dedupes_preserving_first_occurrence_order():
-    assert validate_categories(["local-ai", "ai-labs", "local-ai"], VALID) == [
+    assert validate_categories(["local-ai", "rag", "local-ai"], VALID) == [
         "local-ai",
-        "ai-labs",
+        "rag",
     ]
 
 
@@ -39,10 +39,10 @@ def test_caps_at_three_even_if_more_are_valid():
 
 
 def test_normalizes_casing_and_underscores_before_validating():
-    assert validate_categories(["AI Labs", "local_ai"], VALID) == [
-        "ai-labs",
-        "local-ai",
-    ]
+    """The model echoes the display name ("Local AI") or an underscored variant
+    at least as often as it copies the slug."""
+    assert validate_categories(["Local AI", "RAG"], VALID) == ["local-ai", "rag"]
+    assert validate_categories(["local_ai"], VALID) == ["local-ai"]
 
 
 def test_normalizes_a_display_name_with_an_ampersand():
@@ -67,6 +67,6 @@ def test_normalize_category_rejects_none():
 
 def test_normalize_category_tolerates_an_enum_like_value():
     class _Category:
-        value = "ai-labs"
+        value = "rag"
 
-    assert normalize_category(_Category(), VALID) == "ai-labs"
+    assert normalize_category(_Category(), VALID) == "rag"

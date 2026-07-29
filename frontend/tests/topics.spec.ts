@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test"
 
 // Lane slugs are category slugs now, and the lane list comes from the server
 // vocabulary (`app/data/categories.json`, seeded into the `category` table) in
-// `position` order. `model-releases` is position 1, `ai-labs` is last.
+// `position` order. `model-releases` is position 1, `security-safety` is last.
 const FIRST_LANE = "topic-lane-model-releases"
-const LAST_LANE = "topic-lane-ai-labs"
+const LAST_LANE = "topic-lane-security-safety"
 
 test("Landing page renders topic lanes with articles", async ({ page }) => {
   await page.goto("/")

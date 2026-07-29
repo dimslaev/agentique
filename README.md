@@ -1,6 +1,6 @@
 # agentique
 
-AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, deduplicates them, and keeps only the ones that match one of a small set of editorial categories — everything else is discarded rather than stored. What survives keeps a sanitized excerpt of its own text and an embedding for semantic search.
+AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, deduplicates them, and keeps only the ones that match one of nine editorial categories — everything else is discarded rather than stored. What survives keeps a sanitized excerpt of its own text and an embedding for semantic search.
 
 ## How it works
 

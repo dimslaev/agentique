@@ -83,12 +83,16 @@ def read_articles(
     # A homepage lane is exactly this: one category, newest first. The old
     # frontend had to union several tag queries and merge them client-side;
     # membership is now decided at ingest, so it is one indexed join.
+    #
+    # Retired categories match nothing, so a stale bookmark to a lane that no
+    # longer exists returns an empty list rather than a hidden corner of the
+    # archive that no link on the site points at.
     if category is not None:
         conditions.append(
             col(Article.id).in_(
                 select(ArticleCategory.article_id)
                 .join(Category, col(Category.id) == col(ArticleCategory.category_id))
-                .where(Category.slug == category)
+                .where(Category.slug == category, col(Category.is_active).is_(True))
             )
         )
     if publisher is not None:
