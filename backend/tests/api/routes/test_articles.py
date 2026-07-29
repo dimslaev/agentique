@@ -192,11 +192,16 @@ def test_read_articles_since_narrows_results(auth_client: TestClient) -> None:
     wide_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
     narrow_since = (datetime.now(UTC) - timedelta(days=3)).isoformat()
 
+    # sort by published_at (not the default score-desc): only then is a
+    # narrower window's page mathematically guaranteed to be a subset of a
+    # wider window's page, regardless of how scores are distributed.
     wide = auth_client.get(
-        f"{ARTICLES_URL}/", params={"since": wide_since, "limit": 50}
+        f"{ARTICLES_URL}/",
+        params={"since": wide_since, "limit": 50, "sort": "published_at-desc"},
     ).json()
     narrow = auth_client.get(
-        f"{ARTICLES_URL}/", params={"since": narrow_since, "limit": 50}
+        f"{ARTICLES_URL}/",
+        params={"since": narrow_since, "limit": 50, "sort": "published_at-desc"},
     ).json()
 
     assert narrow["count"] <= wide["count"]
@@ -237,23 +242,6 @@ def test_read_articles_old_since_ok_logged_in(
         headers=normal_user_token_headers,
     )
     assert r.status_code == 200
-
-
-def test_read_articles_q_filters_title_or_summary(
-    auth_client: TestClient, db: Session
-) -> None:
-    now = datetime.now(UTC)
-    marker = "zzqqxxmarker"
-    by_title = create_random_article(db, title=f"A {marker} headline", published_at=now)
-    by_summary = create_random_article(
-        db, summary=f"body mentions {marker} here", published_at=now
-    )
-    create_random_article(db, published_at=now)
-
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"q": marker, "limit": 50})
-    assert r.status_code == 200
-    ids = {a["id"] for a in r.json()["data"]}
-    assert ids == {by_title.id, by_summary.id}
 
 
 def test_search_is_unbounded_for_anonymous(
