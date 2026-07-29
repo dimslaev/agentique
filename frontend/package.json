@@ -13,6 +13,8 @@
     "test:ui": "bunx playwright test --ui"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource/ibm-plex-mono": "^5.3.0",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-avatar": "^1.1.12",
     "@radix-ui/react-checkbox": "^1.3.4",

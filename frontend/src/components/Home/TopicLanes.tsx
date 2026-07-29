@@ -1,23 +1,29 @@
 import { TopicLane } from "./TopicLane"
 import { TOPICS } from "./topics"
 
-// TOPICS.length % 3 === 1 leaves a single box alone on the last row at the
-// 3-column breakpoint — center it in the middle column instead of letting it
-// hug the left edge.
-const lastAlone = TOPICS.length % 3 === 1
-
 export function TopicLanes() {
   return (
-    <section className="w-full">
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {TOPICS.map((topic, i) => (
-          <TopicLane
-            key={topic.slug}
-            topic={topic}
-            className={
-              lastAlone && i === TOPICS.length - 1 ? "lg:col-start-2" : undefined
-            }
-          />
+    <section className="w-full pb-8">
+      {/* Legend, not decoration: it is the only place the rail's colour rule
+          is stated, so the bars mean something on first read. */}
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-wire pb-3">
+        <h2 className="font-wire text-[11px] uppercase tracking-[0.16em] text-paper">
+          Today&apos;s wire
+        </h2>
+        <div className="flex items-center gap-5 font-wire text-[10px] uppercase tracking-[0.1em] text-dim">
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-0.5 shrink-0 bg-signal" />
+            scores 92+
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-0.5 shrink-0 bg-paper/40" />
+            bar height = score
+          </span>
+        </div>
+      </div>
+      <div className="grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        {TOPICS.map((topic) => (
+          <TopicLane key={topic.slug} topic={topic} />
         ))}
       </div>
     </section>

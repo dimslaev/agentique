@@ -1,19 +1,30 @@
 import { ChevronDown, ChevronUp } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 
 import type { ArticlePublic } from "@/client"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInView } from "@/hooks/useInView"
 import { cn } from "@/lib/utils"
-import { BOX_LIMIT, type TopicDef } from "./topics"
+import type { TopicDef } from "./topics"
 import { useTopicArticles } from "./useTopicArticles"
 
-function monogram(name: string): string {
-  return name
-    .replace(/[^a-zA-Z]/g, "")
-    .slice(0, 2)
-    .toLowerCase()
+// Rows per page, and per box by default. Paging swaps which slice of
+// `articles` renders — there's no scroll container, so mouse wheel, trackpad,
+// and touch scroll can't fight the pager the way they did with scroll-snap.
+const PAGE_SIZE = 3
+
+// The pipeline's scores occupy 76-100 in practice, not the schema's nominal
+// 1-100. Normalizing against the real band is what makes the rail readable —
+// against 0-100 every bar would sit in the top quarter and look identical.
+const SCORE_FLOOR = 76
+const SCORE_CEIL = 100
+// p75 of the live distribution. Above it a row is worth the reader's hour, and
+// earns the one hot colour on the page.
+const SCORE_STANDOUT = 92
+
+function scoreFraction(score: number): number {
+  const clamped = Math.min(Math.max(score, SCORE_FLOOR), SCORE_CEIL)
+  return (clamped - SCORE_FLOOR) / (SCORE_CEIL - SCORE_FLOOR)
 }
 
 function formatDate(iso: string): string {
@@ -33,138 +44,126 @@ export function TopicLane({
   const { ref, inView } = useInView<HTMLDivElement>()
   const { articles, isPending, isError } = useTopicArticles(topic, inView)
 
-  const listRef = useRef<HTMLUListElement>(null)
-  const [canScrollUp, setCanScrollUp] = useState(false)
-  const [canScrollDown, setCanScrollDown] = useState(false)
-
-  const updateScrollState = useCallback(() => {
-    const el = listRef.current
-    if (!el) return
-    setCanScrollUp(el.scrollTop > 4)
-    setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 4)
-  }, [])
-
-  useEffect(() => {
-    updateScrollState()
-    window.addEventListener("resize", updateScrollState)
-    return () => window.removeEventListener("resize", updateScrollState)
-  }, [updateScrollState])
-
-  // Content height changes once real rows replace the skeleton (or a lane
-  // turns out to have fewer than BOX_LIMIT articles) — recompute then too,
-  // not just on scroll and resize.
-  useEffect(() => {
-    updateScrollState()
-  }, [articles, isPending, updateScrollState])
-
-  const page = useCallback((direction: 1 | -1) => {
-    const el = listRef.current
-    if (!el) return
-    const max = el.scrollHeight - el.clientHeight
-    const target = Math.min(
-      Math.max(el.scrollTop + direction * el.clientHeight, 0),
-      max,
-    )
-    el.scrollTo({ top: target, behavior: "smooth" })
-  }, [])
+  const [page, setPage] = useState(0)
+  const pageCount = Math.max(1, Math.ceil(articles.length / PAGE_SIZE))
+  // Clamp rather than reset in an effect: articles can shrink (fewer than
+  // BOX_LIMIT results) after the page was already advanced.
+  const currentPage = Math.min(page, pageCount - 1)
+  const visible = articles.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE,
+  )
 
   return (
     <div
       ref={ref}
       data-testid={`topic-lane-${topic.slug}`}
-      className={cn("flex flex-col rounded-xl border bg-card py-5", className)}
+      className={cn("flex flex-col border-t border-wire pt-4", className)}
     >
-      <div className="flex h-16 shrink-0 flex-col justify-center gap-0.5 px-5">
-        <div className="line-clamp-1 font-medium leading-tight">
+      <div className="flex h-14 shrink-0 flex-col justify-start gap-1">
+        <h2 className="line-clamp-1 font-display text-[13px] font-bold uppercase tracking-[0.1em] text-paper">
           {topic.label}
-        </div>
-        <div className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+        </h2>
+        <p className="line-clamp-2 text-xs leading-snug text-dim">
           {topic.blurb}
-        </div>
+        </p>
       </div>
 
       <ul
-        ref={listRef}
-        onScroll={updateScrollState}
-        className="mt-2 flex h-[21rem] snap-y snap-mandatory flex-col overflow-y-auto scrollbar-thin"
+        key={currentPage}
+        className="flex h-[19.5rem] flex-col animate-in fade-in duration-200"
       >
         {isPending ? (
           <LaneSkeleton />
         ) : articles.length === 0 ? (
-          <li className="flex h-full items-center justify-center px-5 text-sm text-muted-foreground">
+          <li className="flex h-full items-center text-sm text-dim">
             {isError ? "Couldn't load this one." : "Nothing new here yet."}
           </li>
         ) : (
-          articles.map((article) => (
+          visible.map((article) => (
             <LaneRow key={article.id} article={article} />
           ))
         )}
       </ul>
 
-      <div className="mt-1 flex h-8 shrink-0 items-center justify-center gap-2">
+      <div className="flex h-8 shrink-0 items-center gap-1">
         <button
           type="button"
           aria-label={`Show earlier ${topic.label} items`}
-          disabled={!canScrollUp}
-          onClick={() => page(-1)}
-          className="flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:text-foreground disabled:invisible"
+          disabled={currentPage === 0}
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+          className="flex h-6 w-6 items-center justify-center text-dim transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:invisible"
         >
           <ChevronUp className="h-3.5 w-3.5" />
         </button>
         <button
           type="button"
           aria-label={`Show more ${topic.label} items`}
-          disabled={!canScrollDown}
-          onClick={() => page(1)}
-          className="flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:text-foreground disabled:invisible"
+          disabled={currentPage >= pageCount - 1}
+          onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+          className="flex h-6 w-6 items-center justify-center text-dim transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:invisible"
         >
           <ChevronDown className="h-3.5 w-3.5" />
         </button>
+        {pageCount > 1 && (
+          <span className="ml-1 font-wire text-[10px] tabular-nums text-dim">
+            {currentPage + 1}/{pageCount}
+          </span>
+        )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The score rail: a hairline track in the row's left gutter, filled from the
+ * bottom in proportion to the article's score. Stacked rows read as a ragged
+ * skyline, so a lane's shape tells you how strong its week was before you read
+ * a single headline. Standouts (p75+) take the page's only hot colour.
+ */
+function ScoreRail({ score }: { score: number }) {
+  const standout = score >= SCORE_STANDOUT
+  return (
+    <div
+      aria-hidden
+      // The unfilled track has to stay visible: it is the baseline that makes
+      // one row's fill comparable to the row above it.
+      className="relative w-0.5 shrink-0 self-stretch bg-paper/12"
+    >
+      <div
+        className={cn(
+          "absolute inset-x-0 bottom-0",
+          standout ? "bg-signal" : "bg-paper/40",
+        )}
+        style={{ height: `${10 + scoreFraction(score) * 90}%` }}
+      />
     </div>
   )
 }
 
 function LaneRow({ article }: { article: ArticlePublic }) {
   return (
-    <li className="flex h-28 shrink-0 snap-start flex-col justify-center overflow-hidden border-b px-5 last:border-b-0">
-      <div className="mb-1 flex items-center gap-1.5">
-        <Avatar className="size-3.5 rounded-sm">
-          {article.publisher.image && (
-            <AvatarImage
-              src={article.publisher.image}
-              alt={article.publisher.name}
-            />
+    <li className="group flex h-26 shrink-0 gap-3 border-b border-wire py-3 last:border-b-0">
+      <ScoreRail score={article.score} />
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
+        <a
+          href={article.url}
+          target="_blank"
+          rel="noreferrer"
+          className="line-clamp-2 text-sm font-medium leading-snug text-paper decoration-signal underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+        >
+          {article.title}
+        </a>
+        <div className="mt-1.5 flex items-center gap-1.5 overflow-hidden font-wire text-[10px] uppercase tracking-[0.08em] text-dim">
+          <span className="truncate">{article.publisher.name}</span>
+          <span className="shrink-0">/</span>
+          <span className="shrink-0">{article.kind}</span>
+          {article.published_at && (
+            <span className="ml-auto shrink-0 tabular-nums normal-case">
+              {formatDate(article.published_at)}
+            </span>
           )}
-          <AvatarFallback className="rounded-sm text-[8px]">
-            {monogram(article.publisher.name)}
-          </AvatarFallback>
-        </Avatar>
-        <span className="truncate font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-          {article.publisher.name}
-        </span>
-      </div>
-      <a
-        href={article.url}
-        target="_blank"
-        rel="noreferrer"
-        className="line-clamp-2 text-sm font-medium leading-snug hover:underline"
-      >
-        {article.title}
-      </a>
-      <div className="mt-1.5 flex items-center gap-1.5 overflow-hidden text-[11px] uppercase tracking-wide text-muted-foreground">
-        <span className="shrink-0">{article.kind}</span>
-        {article.tags?.[0] && (
-          <>
-            <span className="shrink-0">·</span>
-            <span className="truncate">{article.tags[0].name}</span>
-          </>
-        )}
-        {article.published_at && (
-          <span className="ml-auto shrink-0 font-mono normal-case">
-            {formatDate(article.published_at)}
-          </span>
-        )}
+        </div>
       </div>
     </li>
   )
@@ -173,14 +172,17 @@ function LaneRow({ article }: { article: ArticlePublic }) {
 function LaneSkeleton() {
   return (
     <>
-      {Array.from({ length: BOX_LIMIT }, (_, i) => (
+      {Array.from({ length: PAGE_SIZE }, (_, i) => (
         <li
           key={i}
-          className="flex h-28 shrink-0 snap-start flex-col justify-center gap-1.5 border-b px-5 last:border-b-0"
+          className="flex h-26 shrink-0 gap-3 border-b border-wire py-3 last:border-b-0"
         >
-          <Skeleton className="h-2.5 w-20" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
+          <div className="w-px shrink-0 self-stretch bg-wire" />
+          <div className="flex flex-1 flex-col justify-center gap-2">
+            <Skeleton className="h-3.5 w-full bg-wire" />
+            <Skeleton className="h-3.5 w-2/3 bg-wire" />
+            <Skeleton className="mt-1 h-2 w-24 bg-wire" />
+          </div>
         </li>
       ))}
     </>

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Landing-page display/data face and body face. Self-hosted (no CDN request)
+   and loaded here so Tailwind's @theme can reference the family names. */
+@import "@fontsource-variable/archivo/index.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource-variable/ibm-plex-sans/index.css";
 @plugin "@tailwindcss/typography";
 /* Prerendered blog pages (scripts/prerender-blog.ts) build their markup in
    template literals — make sure Tailwind scans them for class names. */
@@ -43,6 +49,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Landing-page palette and type. Deliberately NOT wired into the shadcn
+     tokens above — /feed and the app shell keep their own look. */
+  --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-wire: "IBM Plex Mono", ui-monospace, monospace;
+  --font-body: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-wire: var(--wire);
+  --color-dim: var(--dim);
+  --color-signal: var(--signal);
 }
 
 :root {
@@ -78,6 +95,15 @@
   --sidebar-accent-foreground: oklch(0.2868 0.0084 75.2489);
   --sidebar-border: oklch(0.9172 0.0121 101.4942);
   --sidebar-ring: oklch(0.3441 0.0111 67.4468);
+
+  /* Landing palette, light. Warm paper rather than the neutral app grey. */
+  --ink: #f6f4ec;
+  --paper: #16180f;
+  --wire: #d5d3c2;
+  --dim: #6d6f5c;
+  /* Darker than the dark-theme signal so the cream button label clears 4.5:1
+     against it. */
+  --signal: #b8410f;
 }
 
 .dark {
@@ -112,6 +138,13 @@
   --sidebar-accent-foreground: oklch(0.966 0.0093 99.9842);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.9355 0.0213 85.9449);
+
+  /* Landing palette, dark. Ink is warm/olive-tinted, not neutral black. */
+  --ink: #14160e;
+  --paper: #edeade;
+  --wire: #33362a;
+  --dim: #8a8c77;
+  --signal: #ff7a3d;
 }
 
 @layer base {
@@ -145,6 +178,37 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--color-muted-foreground);
     border-radius: 9999px;
+  }
+}
+
+@layer components {
+  /* Scopes the landing look. Everything inside opts into the wire palette and
+     body face; the rest of the app keeps the shadcn tokens. */
+  .landing {
+    background-color: var(--ink);
+    color: var(--paper);
+    font-family: var(--font-body);
+  }
+
+  /* Terminal caret after the headline. Steps, not a fade — a fading caret
+     reads as a generic pulse effect; a hard on/off reads as a real prompt. */
+  .caret {
+    animation: caret-blink 1.1s steps(1) infinite;
+  }
+  @keyframes caret-blink {
+    0%,
+    50% {
+      opacity: 1;
+    }
+    50.01%,
+    100% {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .caret {
+      animation: none;
+    }
   }
 }
 
