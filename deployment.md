@@ -36,6 +36,7 @@ cd /opt/agentique && docker compose up -d
 
 - The volume is `agentique_app-db-data`. Never run `docker compose down -v` on prod — `-v` deletes it.
 - Postgres is published on loopback only. For remote inspection, tunnel: `ssh -L 5432:localhost:5432 <vps>` and point a client at `localhost:5432`.
+- Without ssh (cloud session, phone, CI), use the **Prod SQL** workflow — `workflow_dispatch` with a `sql` input and `mode: read|write`, run by the self-hosted runner on the box. Writes also need `confirm=WRITE`. Details and the box-side install in [`deploy/README.md`](./deploy/README.md#remote-sql).
 - Backups: `docker compose exec db pg_dump -U <user> <db> > dump.sql`, copy it off the box.
 
 ## URLs

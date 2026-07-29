@@ -7,6 +7,8 @@ Install targets:
 - `agentique-backend.service` → `/etc/systemd/system/` (FastAPI, 4 workers, 127.0.0.1:8000)
 - `agentique-pipeline.service` + `.timer` → `/etc/systemd/system/` (daily 04:00)
 - `agentique-backup.service` + `.timer` → `/etc/systemd/system/` (daily 03:30, db dump to kDrive — needs `KDRIVE_API_TOKEN` + `KDRIVE_DRIVE_ID` in `.env`)
+- `agentique-sql` → `/usr/local/bin/` (`root:root 755`, backs the Prod SQL workflow — see below)
+- `sql-roles.sql` → run once against the db (creates the two login roles `agentique-sql` uses)
 
 ## Layout
 
@@ -18,7 +20,26 @@ Install targets:
 
 - `agentique` — runs both services, `HOME=/var/lib/agentique`.
 - `ubuntu` — self-hosted runner user, owns `/opt/agentique`. `.env` is `ubuntu:agentique 640`, not `agentique:agentique 600` — CI's prestart step runs as `ubuntu` and needs to read it too.
-- Sudoers (`/etc/sudoers.d/agentique-deploy`): `ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend`
+- Sudoers (`/etc/sudoers.d/agentique-deploy`):
+
+  ```
+  ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend
+  ubuntu ALL=(root) NOPASSWD: /usr/local/bin/agentique-sql read, /usr/local/bin/agentique-sql write
+  ```
+
+  The second rule pins both arguments, so the runner gets those two commands and nothing else.
+
+## Remote SQL
+
+`.github/workflows/prod-sql.yml` (`workflow_dispatch`) is how you read and update the prod db without opening a port: the runner is already on the box, so the job pipes the SQL into `sudo agentique-sql read|write`, which runs `psql` inside the `db` container. Output lands in the job log and the run summary; the Actions history is the audit trail.
+
+- `read` → `agentique_ro`, `write` → `agentique_rw`. Roles carry their own `statement_timeout`/`lock_timeout` and the read role is forced `default_transaction_read_only` (`sql-roles.sql`).
+- Write runs also need input `confirm=WRITE`, so a misclick can't mutate prod.
+- All statements run in one transaction (`psql -1`) — a failure rolls the batch back, and `CREATE INDEX CONCURRENTLY`/`VACUUM` won't work. Schema changes stay in alembic.
+- Both roles are passwordless and the postgres image only trusts the local socket, so they cannot log in over the ssh tunnel.
+- `agentique-sql` is root-owned outside `/opt/agentique` deliberately: the runner user can rewrite everything under `/opt/agentique`, so a NOPASSWD rule pointing there would hand it root. Copy the file by hand after changing it.
+
+For interactive poking, the ssh tunnel from [`deployment.md`](../deployment.md#database) is still the better tool.
 
 ## One-time setup
 
@@ -54,6 +75,12 @@ cd /opt/agentique && uv sync --frozen --package app
 cd /opt/agentique/backend && uv run --env-file ../.env bash scripts/prestart.sh
 
 # stop/remove any old app stack now, before starting units — see the memory note above
+
+# remote-sql wrapper + its roles (see "Remote SQL" above)
+install -o root -g root -m 755 /opt/agentique/deploy/agentique-sql /usr/local/bin/agentique-sql
+set -a; . /opt/agentique/.env; set +a
+docker exec -i agentique-db-1 psql -v ON_ERROR_STOP=1 \
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" < /opt/agentique/deploy/sql-roles.sql
 
 # units + caddy
 cp /opt/agentique/deploy/agentique-*.{service,timer} /etc/systemd/system/

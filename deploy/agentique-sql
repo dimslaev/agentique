@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Install target: /usr/local/bin/agentique-sql — root:root 0755.
+#
+# Runs SQL from stdin against the prod db inside the `db` container. Lives
+# outside /opt/agentique on purpose: the runner user can rewrite anything under
+# /opt/agentique, so a wrapper there plus a NOPASSWD sudoers rule would be a
+# free root shell. Root owns this copy; update it by hand when this file
+# changes (same deal as the unit files and the Caddyfile).
+#
+# Called by .github/workflows/prod-sql.yml as:
+#   printf '%s' "$SQL" | sudo /usr/local/bin/agentique-sql read|write
+#
+# The mode picks the login role, and the role carries its own guardrails
+# (read-only flag, statement/lock timeouts) — see deploy/sql-roles.sql. Local
+# socket connections are `trust` in the postgres image, which is why no
+# password is needed here and why both roles are passwordless: without a
+# password they cannot log in over TCP, so the ssh tunnel path is unaffected.
+set -euo pipefail
+
+env_file=/opt/agentique/.env
+container=agentique-db-1
+
+mode=${1:-}
+case "$mode" in
+	read) role=agentique_ro ;;
+	write) role=agentique_rw ;;
+	*)
+		echo "usage: agentique-sql read|write   (sql on stdin)" >&2
+		exit 2
+		;;
+esac
+
+# Grep the db name out rather than sourcing: .env is writable by the runner
+# user, and sourcing it here would run whatever it contains as root.
+db=$(sed -n 's/^POSTGRES_DB=//p' "$env_file" | tail -n1)
+: "${db:?POSTGRES_DB not found in $env_file}"
+
+# -1: whole input is one transaction, so a failure halfway rolls back. Rules
+# out CREATE INDEX CONCURRENTLY / VACUUM — those belong in a migration anyway.
+# -e echoes each statement before its result, so the job log is a full record.
+exec docker exec -i "$container" \
+	psql -X -e -1 -v ON_ERROR_STOP=1 --pset pager=off -U "$role" -d "$db"
