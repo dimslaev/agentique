@@ -1,9 +1,11 @@
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ArticlePublic } from "@/client"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInView } from "@/hooks/useInView"
+import { cn } from "@/lib/utils"
 import { BOX_LIMIT, type TopicDef } from "./topics"
 import { useTopicArticles } from "./useTopicArticles"
 
@@ -21,51 +23,77 @@ function formatDate(iso: string): string {
   })
 }
 
-export function TopicLane({ topic }: { topic: TopicDef }) {
+export function TopicLane({
+  topic,
+  className,
+}: {
+  topic: TopicDef
+  className?: string
+}) {
   const { ref, inView } = useInView<HTMLDivElement>()
   const { articles, isPending, isError } = useTopicArticles(topic, inView)
 
   const listRef = useRef<HTMLUListElement>(null)
-  // macOS Safari ignores ::-webkit-scrollbar styling on overlay scrollbars, so
-  // the thin scrollbar alone isn't a reliable cue. This fade is the
-  // OS-independent fallback, shown only while content remains below the fold.
-  const [showFade, setShowFade] = useState(false)
+  const [canScrollUp, setCanScrollUp] = useState(false)
+  const [canScrollDown, setCanScrollDown] = useState(false)
 
-  const updateFade = useCallback(() => {
+  const updateScrollState = useCallback(() => {
     const el = listRef.current
     if (!el) return
-    setShowFade(el.scrollHeight - el.scrollTop - el.clientHeight > 4)
+    setCanScrollUp(el.scrollTop > 4)
+    setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 4)
   }, [])
 
   useEffect(() => {
-    updateFade()
-    window.addEventListener("resize", updateFade)
-    return () => window.removeEventListener("resize", updateFade)
-  }, [updateFade])
+    updateScrollState()
+    window.addEventListener("resize", updateScrollState)
+    return () => window.removeEventListener("resize", updateScrollState)
+  }, [updateScrollState])
+
+  // Content height changes once real rows replace the skeleton (or a lane
+  // turns out to have fewer than BOX_LIMIT articles) — recompute then too,
+  // not just on scroll and resize.
+  useEffect(() => {
+    updateScrollState()
+  }, [articles, isPending, updateScrollState])
+
+  const page = useCallback((direction: 1 | -1) => {
+    const el = listRef.current
+    if (!el) return
+    const max = el.scrollHeight - el.clientHeight
+    const target = Math.min(
+      Math.max(el.scrollTop + direction * el.clientHeight, 0),
+      max,
+    )
+    el.scrollTo({ top: target, behavior: "smooth" })
+  }, [])
 
   return (
-    // The height is reserved before the query runs. Boxes load as they scroll
-    // into view, so a card that sized itself from its contents would reflow the
-    // grid under the reader on every scroll tick.
     <div
       ref={ref}
       data-testid={`topic-lane-${topic.slug}`}
-      className="relative flex flex-col rounded-lg border bg-card py-4 md:h-[26rem]"
+      className={cn("flex flex-col rounded-xl border bg-card py-5", className)}
     >
-      <div className="shrink-0 px-4">
-        <div className="font-medium leading-tight">{topic.label}</div>
-        <div className="mt-0.5 text-xs text-muted-foreground">
+      <div className="flex h-16 shrink-0 flex-col justify-center gap-0.5 px-5">
+        <div className="line-clamp-1 font-medium leading-tight">
+          {topic.label}
+        </div>
+        <div className="line-clamp-2 text-xs leading-snug text-muted-foreground">
           {topic.blurb}
         </div>
       </div>
 
       <ul
         ref={listRef}
-        onScroll={updateFade}
-        className="mt-2 min-h-0 flex-1 divide-y overflow-visible scrollbar-thin md:overflow-y-auto"
+        onScroll={updateScrollState}
+        className="mt-2 flex h-[21rem] snap-y snap-mandatory flex-col overflow-y-auto scrollbar-thin"
       >
         {isPending ? (
           <LaneSkeleton />
+        ) : articles.length === 0 ? (
+          <li className="flex h-full items-center justify-center px-5 text-sm text-muted-foreground">
+            {isError ? "Couldn't load this one." : "Nothing new here yet."}
+          </li>
         ) : (
           articles.map((article) => (
             <LaneRow key={article.id} article={article} />
@@ -73,25 +101,33 @@ export function TopicLane({ topic }: { topic: TopicDef }) {
         )}
       </ul>
 
-      {/* Never unmount a thin or failed box: it would yank content out from
-          under a reader who has already scrolled to it. Keep the slot, say
-          what happened inside it. */}
-      {!isPending && articles.length === 0 && (
-        <p className="px-4 py-3 text-sm text-muted-foreground">
-          {isError ? "Couldn't load this one." : "Nothing new here yet."}
-        </p>
-      )}
-
-      {showFade && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 hidden h-8 bg-gradient-to-t from-card to-transparent md:block" />
-      )}
+      <div className="mt-1 flex h-8 shrink-0 items-center justify-center gap-2">
+        <button
+          type="button"
+          aria-label={`Show earlier ${topic.label} items`}
+          disabled={!canScrollUp}
+          onClick={() => page(-1)}
+          className="flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:text-foreground disabled:invisible"
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          aria-label={`Show more ${topic.label} items`}
+          disabled={!canScrollDown}
+          onClick={() => page(1)}
+          className="flex h-6 w-6 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:text-foreground disabled:invisible"
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   )
 }
 
 function LaneRow({ article }: { article: ArticlePublic }) {
   return (
-    <li className="px-4 py-3">
+    <li className="flex h-28 shrink-0 snap-start flex-col justify-center overflow-hidden border-b px-5 last:border-b-0">
       <div className="mb-1 flex items-center gap-1.5">
         <Avatar className="size-3.5 rounded-sm">
           {article.publisher.image && (
@@ -112,24 +148,20 @@ function LaneRow({ article }: { article: ArticlePublic }) {
         href={article.url}
         target="_blank"
         rel="noreferrer"
-        className="text-sm font-medium leading-snug hover:underline"
+        className="line-clamp-2 text-sm font-medium leading-snug hover:underline"
       >
         {article.title}
       </a>
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px]">
-          {article.kind}
-        </span>
-        {article.tags?.slice(0, 2).map((tag) => (
-          <span
-            key={tag.slug}
-            className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground"
-          >
-            {tag.name}
-          </span>
-        ))}
+      <div className="mt-1.5 flex items-center gap-1.5 overflow-hidden text-[11px] uppercase tracking-wide text-muted-foreground">
+        <span className="shrink-0">{article.kind}</span>
+        {article.tags?.[0] && (
+          <>
+            <span className="shrink-0">·</span>
+            <span className="truncate">{article.tags[0].name}</span>
+          </>
+        )}
         {article.published_at && (
-          <span className="ml-auto font-mono text-[11px] text-muted-foreground">
+          <span className="ml-auto shrink-0 font-mono normal-case">
             {formatDate(article.published_at)}
           </span>
         )}
@@ -142,10 +174,13 @@ function LaneSkeleton() {
   return (
     <>
       {Array.from({ length: BOX_LIMIT }, (_, i) => (
-        <li key={i} className="px-4 py-3">
+        <li
+          key={i}
+          className="flex h-28 shrink-0 snap-start flex-col justify-center gap-1.5 border-b px-5 last:border-b-0"
+        >
           <Skeleton className="h-2.5 w-20" />
-          <Skeleton className="mt-2 h-4 w-full" />
-          <Skeleton className="mt-1.5 h-4 w-2/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
         </li>
       ))}
     </>
