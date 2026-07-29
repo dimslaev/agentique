@@ -1,10 +1,10 @@
 # agentique
 
-AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, scores and deduplicates them with an LLM, extracts full content, summarizes and categorizes each piece, and stores vector embeddings for semantic search.
+AI-powered article aggregation and intelligence feed. Fetches articles from configured sources, drops known/dead URLs, scores them with an LLM, extracts full content, categorizes and tags each piece, and stores vector embeddings for semantic search.
 
 ## How it works
 
-A cron-scheduled pipeline fetches articles from configured sources and runs each batch through a sequence of BAML-powered steps: deduplication, LLM scoring, content extraction, summarization, categorization, and vector embedding. Results are served via a FastAPI REST API and a React frontend.
+A cron-scheduled pipeline fetches articles from configured sources and runs each batch through a sequence of BAML-powered steps: known/dead-URL filtering, LLM scoring, content extraction, categorization + tagging, and vector embedding. Results are served via a FastAPI REST API and a React frontend.
 
 The stack:
 

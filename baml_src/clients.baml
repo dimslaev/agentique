@@ -15,9 +15,9 @@ client<llm> GptOss {
 client<llm> Ministral {
   provider openai-generic
   options {
-    base_url "https://integrate.api.nvidia.com/v1"
-    api_key env.NVIDIA_NIM_API_KEY
-    model "mistralai/ministral-14b-instruct-2512"
+    base_url "https://api.infomaniak.com/2/ai/7/openai/v1"
+    api_key env.IK_AI_KEY
+    model "mistralai/Ministral-3-14B-Instruct-2512"
     timeout 120
   }
 }
@@ -39,6 +39,6 @@ client<llm> Gemini {
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [Gemini, GptOss, Ministral]
+    strategy [Ministral, GptOss, Gemini]
   }
 }

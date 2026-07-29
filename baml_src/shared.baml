@@ -15,7 +15,7 @@ enum ArticleKind {
   Announcement // Official release post from a major AI lab
 }
 
-// Used as input to ScoreArticles, ImproveTitles, SemanticDedup.
+// Used as input to ScoreArticles, ImproveTitles.
 // Mirrors the fields the existing formatArticles() helper emits.
 class ArticleInput {
   url string
@@ -23,11 +23,4 @@ class ArticleInput {
   source string
   snippet string? @description("First ~200 chars of the article content, if any")
   trust string? @description("\"high\" | \"medium\" | \"low\" - source trust tag")
-}
-
-// Used as input to SemanticDedup for rows already in the DB.
-class ExistingArticle {
-  url string
-  title string
-  source string
 }

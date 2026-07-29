@@ -1,9 +1,10 @@
 """Step 5: everything we do to an article after it is in the DB.
 
-Titles, categories + kind, tags, embedding. Content is already full by now (the
-fetch step fills it and drops anything it cannot), so categorize works from the
-real article, not a teaser. Each part is best-effort and commits its own work: a
-failure here costs one field, never the article, and never the rest of the run.
+Titles, categories + kind + tags, embedding. Content is already full by now
+(the fetch step fills it and drops anything it cannot), so categorize works
+from the real article, not a teaser. Each part is best-effort and commits its
+own work: a failure here costs one field, never the article, and never the
+rest of the run.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from sqlmodel import Session
 
 from app.models import Article, ArticleKind, Category
 from baml_client.sync_client import b
-from baml_client.types import TagInput, TagOption
+from baml_client.types import TagOption
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
 from pipeline.heuristics import (
@@ -35,7 +36,7 @@ from pipeline.utils import enum_value, log, wait_ms
 # costs the whole batch.
 TITLE_BATCH = 10
 BATCH_PAUSE_MS = 1000
-# Pause between the per-article categorize / tag calls. These run one article at
+# Pause between the per-article categorize+tag calls. These run one article at
 # a time (not batched) so a slow or failed call costs a single article, never a
 # whole batch — the delay keeps us under the provider's rate limit.
 CALL_PAUSE_MS = 1000
@@ -105,7 +106,7 @@ def improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
         session.commit()
 
 
-# ─── Categories, kind ─────────────────────────────────────────────────────────
+# ─── Categories, kind, tags ───────────────────────────────────────────────────
 
 
 def _to_categories(baml_categories) -> list[Category]:
@@ -130,23 +131,28 @@ def _to_kind(baml_kind) -> ArticleKind | None:
         return None
 
 
-def categorize_articles(
-    session: Session, items: list[FetchedArticle]
+def categorize_and_tag_articles(
+    session: Session, items: list[FetchedArticle], vocab: Vocabulary
 ) -> list[ProcessedArticle]:
-    """Assign categories/kind from each article's content.
+    """Assign categories/kind/tags from each article's content.
 
     Content is always full by the time an article gets here (the fetch step
-    fills it and drops anything it cannot), so a single ``Categorize`` call per
-    article produces the categories and kind together. One LLM call per article
-    with a delay between them: no batching, so a slow or failed call costs a
-    single article. An article that somehow still has no content is dropped and
-    logged rather than categorized from a bare title.
+    fills it and drops anything it cannot), so a single ``CategorizeAndTag``
+    call per article produces categories, kind, and tags together. One LLM
+    call per article with a delay between them: no batching, so a slow or
+    failed call costs a single article. An article that somehow still has no
+    content is dropped and logged rather than categorized from a bare title.
     """
     if not items:
         return []
 
-    log(f"  Categorizing {len(items)} articles...")
+    log(f"  Categorizing and tagging {len(items)} articles ({len(vocab.slugs)} tags)...")
     processed: list[ProcessedArticle] = []
+
+    options = [
+        TagOption(slug=slug, description=desc or None)
+        for slug, desc in sorted(vocab.slug_to_description.items())
+    ]
 
     for idx, item in enumerate(items):
         art_id = item["id"]
@@ -156,19 +162,23 @@ def categorize_articles(
             continue
 
         categories: list[Category] = []
+        slugs: list[str] = []
         # The URL host is authoritative when it is conclusive (a github.com link
         # is a repo); only ask the LLM when it is not.
         kind: ArticleKind | None = kind_from_url(item["url"])
 
         try:
-            result = b.Categorize(item["title"], content[:PROMPT_CONTENT_CAP])
+            result = b.CategorizeAndTag(
+                item["title"], content[:PROMPT_CONTENT_CAP], options
+            )
             categories = _to_categories(result.categories)
+            slugs = validate_tags(list(result.tags), vocab.slugs)
             if not kind:
                 kind = _to_kind(result.kind)
             if kind == ArticleKind.blog and github_repo_from_content(content):
                 kind = ArticleKind.repo
         except Exception as e:
-            log(f"  Categorize failed for #{art_id}: {e}")
+            log(f"  Categorize/tag failed for #{art_id}: {e}")
 
         article = session.get(Article, art_id)
         if article:
@@ -176,6 +186,7 @@ def categorize_articles(
             if kind:
                 article.kind = kind
             session.add(article)
+        write_article_tags(session, art_id, slugs, vocab)
 
         processed.append(
             {
@@ -191,53 +202,8 @@ def categorize_articles(
             wait_ms(CALL_PAUSE_MS)
 
     session.commit()
-    log("  Done categorizing")
+    log("  Done categorizing and tagging")
     return processed
-
-
-# ─── Tags ────────────────────────────────────────────────────────────────────
-
-
-def assign_tags(
-    session: Session, items: list[ProcessedArticle], vocab: Vocabulary
-) -> None:
-    """Assign 1-3 tags per article from the DB-backed vocabulary and write
-    ArticleTag rows. One LLM call per article with a delay between them (not
-    batched) so a slow or failed call costs a single article. The vocabulary is
-    passed to the LLM as a parameter, and output is validated against it —
-    off-list tags are dropped and no tag is ever created at runtime (see
-    pipeline.tags). The article's content snippet is passed as the signal to
-    tag from."""
-    if not items:
-        return
-
-    log(f"  Assigning tags to {len(items)} articles ({len(vocab.slugs)} tags)...")
-
-    options = [
-        TagOption(slug=slug, description=desc or None)
-        for slug, desc in sorted(vocab.slug_to_description.items())
-    ]
-
-    for idx, it in enumerate(items):
-        input_ = TagInput(
-            articleId=it["id"],
-            title=it["title"],
-            snippet=it.get("snippet") or None,
-        )
-        try:
-            assignments = b.AssignTags([input_], options)
-        except Exception as e:
-            log(f"  Tag assignment failed for #{it['id']}: {e}")
-            continue
-
-        for a in assignments:
-            slugs = validate_tags(list(a.tags), vocab.slugs)
-            write_article_tags(session, a.articleId, slugs, vocab)
-        if idx + 1 < len(items):
-            wait_ms(CALL_PAUSE_MS)
-
-    session.commit()
-    log("  Done assigning tags")
 
 
 # ─── Embedding ───────────────────────────────────────────────────────────────

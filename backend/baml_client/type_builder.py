@@ -20,7 +20,7 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["ArticleInput","CategorizeResult","ClassifyKindResult","DedupMatch","ExistingArticle","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","TagAssignment","TagInput","TagOption","TitleFix",]
+          ["ArticleInput","CategorizeAndTagResult","ClassifyKindResult","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","TagOption","TitleFix",]
         ), enums=set(
           ["ArticleCategory","ArticleKind",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
@@ -39,7 +39,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
     # #########################################################################
-    # Generated classes 16
+    # Generated classes 12
     # #########################################################################
 
     @property
@@ -47,20 +47,12 @@ class TypeBuilder(type_builder.TypeBuilder):
         return ArticleInputViewer(self)
 
     @property
-    def CategorizeResult(self) -> "CategorizeResultViewer":
-        return CategorizeResultViewer(self)
+    def CategorizeAndTagResult(self) -> "CategorizeAndTagResultViewer":
+        return CategorizeAndTagResultViewer(self)
 
     @property
     def ClassifyKindResult(self) -> "ClassifyKindResultViewer":
         return ClassifyKindResultViewer(self)
-
-    @property
-    def DedupMatch(self) -> "DedupMatchViewer":
-        return DedupMatchViewer(self)
-
-    @property
-    def ExistingArticle(self) -> "ExistingArticleViewer":
-        return ExistingArticleViewer(self)
 
     @property
     def ExtractedLink(self) -> "ExtractedLinkViewer":
@@ -89,14 +81,6 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def SearchCandidate(self) -> "SearchCandidateViewer":
         return SearchCandidateViewer(self)
-
-    @property
-    def TagAssignment(self) -> "TagAssignmentViewer":
-        return TagAssignmentViewer(self)
-
-    @property
-    def TagInput(self) -> "TagInputViewer":
-        return TagInputViewer(self)
 
     @property
     def TagOption(self) -> "TagOptionViewer":
@@ -218,7 +202,7 @@ class ArticleKindValues:
 
 
 # #########################################################################
-# Generated classes 16
+# Generated classes 12
 # #########################################################################
 
 class ArticleInputAst:
@@ -276,22 +260,22 @@ class ArticleInputProperties:
     
 
 
-class CategorizeResultAst:
+class CategorizeAndTagResultAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("CategorizeResult")
-        self._properties: typing.Set[str] = set([  "categories",  "kind",  ])
-        self._props = CategorizeResultProperties(self._bldr, self._properties)
+        self._bldr = _tb.class_("CategorizeAndTagResult")
+        self._properties: typing.Set[str] = set([  "categories",  "kind",  "tags",  ])
+        self._props = CategorizeAndTagResultProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
         return self._bldr.field()
 
     @property
-    def props(self) -> "CategorizeResultProperties":
+    def props(self) -> "CategorizeAndTagResultProperties":
         return self._props
 
 
-class CategorizeResultViewer(CategorizeResultAst):
+class CategorizeAndTagResultViewer(CategorizeAndTagResultAst):
     def __init__(self, tb: type_builder.TypeBuilder):
         super().__init__(tb)
 
@@ -301,7 +285,7 @@ class CategorizeResultViewer(CategorizeResultAst):
     
 
 
-class CategorizeResultProperties:
+class CategorizeAndTagResultProperties:
     def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
         self.__bldr = bldr
         self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
@@ -315,6 +299,10 @@ class CategorizeResultProperties:
     @property
     def kind(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
+    
+    @property
+    def tags(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("tags"))
     
     
 
@@ -354,96 +342,6 @@ class ClassifyKindResultProperties:
     @property
     def kind(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
-    
-    
-
-
-class DedupMatchAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("DedupMatch")
-        self._properties: typing.Set[str] = set([  "url",  "existingUrl",  ])
-        self._props = DedupMatchProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "DedupMatchProperties":
-        return self._props
-
-
-class DedupMatchViewer(DedupMatchAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class DedupMatchProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def url(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("url"))
-    
-    @property
-    def existingUrl(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("existingUrl"))
-    
-    
-
-
-class ExistingArticleAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("ExistingArticle")
-        self._properties: typing.Set[str] = set([  "url",  "title",  "source",  ])
-        self._props = ExistingArticleProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "ExistingArticleProperties":
-        return self._props
-
-
-class ExistingArticleViewer(ExistingArticleAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class ExistingArticleProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def url(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("url"))
-    
-    @property
-    def title(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("title"))
-    
-    @property
-    def source(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("source"))
     
     
 
@@ -757,96 +655,6 @@ class SearchCandidateProperties:
     @property
     def url(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("url"))
-    
-    @property
-    def snippet(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("snippet"))
-    
-    
-
-
-class TagAssignmentAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("TagAssignment")
-        self._properties: typing.Set[str] = set([  "articleId",  "tags",  ])
-        self._props = TagAssignmentProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "TagAssignmentProperties":
-        return self._props
-
-
-class TagAssignmentViewer(TagAssignmentAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class TagAssignmentProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def articleId(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("articleId"))
-    
-    @property
-    def tags(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("tags"))
-    
-    
-
-
-class TagInputAst:
-    def __init__(self, tb: type_builder.TypeBuilder):
-        _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("TagInput")
-        self._properties: typing.Set[str] = set([  "articleId",  "title",  "snippet",  ])
-        self._props = TagInputProperties(self._bldr, self._properties)
-
-    def type(self) -> baml_py.FieldType:
-        return self._bldr.field()
-
-    @property
-    def props(self) -> "TagInputProperties":
-        return self._props
-
-
-class TagInputViewer(TagInputAst):
-    def __init__(self, tb: type_builder.TypeBuilder):
-        super().__init__(tb)
-
-    
-    def list_properties(self) -> typing.List[typing.Tuple[str, type_builder.ClassPropertyViewer]]:
-        return [(name, type_builder.ClassPropertyViewer(self._bldr.property(name))) for name in self._properties]
-    
-
-
-class TagInputProperties:
-    def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
-        self.__bldr = bldr
-        self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
-
-    
-    
-    @property
-    def articleId(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("articleId"))
-    
-    @property
-    def title(self) -> type_builder.ClassPropertyViewer:
-        return type_builder.ClassPropertyViewer(self.__bldr.property("title"))
     
     @property
     def snippet(self) -> type_builder.ClassPropertyViewer:

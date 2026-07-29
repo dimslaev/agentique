@@ -19,17 +19,11 @@ type_map = {
     "types.ArticleInput": types.ArticleInput,
     "stream_types.ArticleInput": stream_types.ArticleInput,
 
-    "types.CategorizeResult": types.CategorizeResult,
-    "stream_types.CategorizeResult": stream_types.CategorizeResult,
+    "types.CategorizeAndTagResult": types.CategorizeAndTagResult,
+    "stream_types.CategorizeAndTagResult": stream_types.CategorizeAndTagResult,
 
     "types.ClassifyKindResult": types.ClassifyKindResult,
     "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
-
-    "types.DedupMatch": types.DedupMatch,
-    "stream_types.DedupMatch": stream_types.DedupMatch,
-
-    "types.ExistingArticle": types.ExistingArticle,
-    "stream_types.ExistingArticle": stream_types.ExistingArticle,
 
     "types.ExtractedLink": types.ExtractedLink,
     "stream_types.ExtractedLink": stream_types.ExtractedLink,
@@ -51,12 +45,6 @@ type_map = {
 
     "types.SearchCandidate": types.SearchCandidate,
     "stream_types.SearchCandidate": stream_types.SearchCandidate,
-
-    "types.TagAssignment": types.TagAssignment,
-    "stream_types.TagAssignment": stream_types.TagAssignment,
-
-    "types.TagInput": types.TagInput,
-    "stream_types.TagInput": stream_types.TagInput,
 
     "types.TagOption": types.TagOption,
     "stream_types.TagOption": stream_types.TagOption,

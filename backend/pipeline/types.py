@@ -7,8 +7,8 @@ from the start -- this documents and typo-checks step signatures, it does not
 enforce stage ordering (a step reading a not-yet-populated key is still a
 runtime KeyError, same as before).
 
-``categorize_articles`` reshapes into the narrower, fully-populated
-``ProcessedArticle`` that ``assign_tags``/``embed_articles`` consume.
+``categorize_and_tag_articles`` reshapes into the narrower, fully-populated
+``ProcessedArticle`` that ``embed_articles`` consumes.
 """
 
 from __future__ import annotations

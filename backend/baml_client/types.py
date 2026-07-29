@@ -54,7 +54,7 @@ class ArticleKind(str, Enum):
     Announcement = "Announcement"
 
 # #########################################################################
-# Generated classes (16)
+# Generated classes (12)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -64,21 +64,13 @@ class ArticleInput(BaseModel):
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
 
-class CategorizeResult(BaseModel):
+class CategorizeAndTagResult(BaseModel):
     categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
     kind: ArticleKind
+    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
 
 class ClassifyKindResult(BaseModel):
     kind: ArticleKind
-
-class DedupMatch(BaseModel):
-    url: str = Field(description='URL of the new article')
-    existingUrl: str = Field(description='URL of the existing article it duplicates')
-
-class ExistingArticle(BaseModel):
-    url: str
-    title: str
-    source: str
 
 class ExtractedLink(BaseModel):
     title: str
@@ -111,15 +103,6 @@ class SearchCandidate(BaseModel):
     title: str
     url: str
     snippet: str
-
-class TagAssignment(BaseModel):
-    articleId: int
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class TagInput(BaseModel):
-    articleId: int
-    title: str
-    snippet: typing.Optional[str] = Field(default=None, description='Short content teaser, if available')
 
 class TagOption(BaseModel):
     slug: str

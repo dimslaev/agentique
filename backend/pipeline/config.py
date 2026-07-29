@@ -59,18 +59,6 @@ def keep_drop_threshold() -> float:
     return float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
 
 
-def dedup_dist_threshold() -> float:
-    """Cosine-distance cutoff for the dedup embedding shortlist. Same-story
-    pairs empirically sit at 0.29-0.35; kept generous above that band to
-    favor recall since the LLM still makes the final call."""
-    return float(os.environ.get("DEDUP_DIST_THRESHOLD", "0.45"))
-
-
-def dedup_topk() -> int:
-    """Max shortlisted existing-article candidates per new article."""
-    return int(os.environ.get("DEDUP_TOPK", "5"))
-
-
 @dataclass(frozen=True)
 class AlertConfig:
     resend_api_key: str | None

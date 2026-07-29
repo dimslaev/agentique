@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (16)
+# Generated classes (12)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -33,21 +33,13 @@ class ArticleInput(BaseModel):
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
 
-class CategorizeResult(BaseModel):
+class CategorizeAndTagResult(BaseModel):
     categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
     kind: typing.Optional[types.ArticleKind] = None
+    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
 
 class ClassifyKindResult(BaseModel):
     kind: typing.Optional[types.ArticleKind] = None
-
-class DedupMatch(BaseModel):
-    url: typing.Optional[str] = Field(default=None, description='URL of the new article')
-    existingUrl: typing.Optional[str] = Field(default=None, description='URL of the existing article it duplicates')
-
-class ExistingArticle(BaseModel):
-    url: typing.Optional[str] = None
-    title: typing.Optional[str] = None
-    source: typing.Optional[str] = None
 
 class ExtractedLink(BaseModel):
     title: typing.Optional[str] = None
@@ -80,15 +72,6 @@ class SearchCandidate(BaseModel):
     title: typing.Optional[str] = None
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = None
-
-class TagAssignment(BaseModel):
-    articleId: typing.Optional[int] = None
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class TagInput(BaseModel):
-    articleId: typing.Optional[int] = None
-    title: typing.Optional[str] = None
-    snippet: typing.Optional[str] = Field(default=None, description='Short content teaser, if available')
 
 class TagOption(BaseModel):
     slug: typing.Optional[str] = None

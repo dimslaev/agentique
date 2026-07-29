@@ -82,36 +82,21 @@ class BamlAsyncClient:
     def parse_stream(self):
       return self.__llm_stream_parser
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+    async def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
         baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.TagAssignment"]:
+    ) -> types.CategorizeAndTagResult:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
             # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.AssignTags(articles=articles,vocabulary=vocabulary,
+            __stream__ = self.stream.CategorizeAndTag(title=title,content=content,vocabulary=vocabulary,
                 baml_options=baml_options)
             return await __stream__.get_final_response()
         else:
             # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="AssignTags", args={
-                "articles": articles,"vocabulary": vocabulary,
+            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="CategorizeAndTag", args={
+                "title": title,"content": content,"vocabulary": vocabulary,
             })
-            return typing.cast(typing.List["types.TagAssignment"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    async def Categorize(self, title: str,content: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.CategorizeResult:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.Categorize(title=title,content=content,
-                baml_options=baml_options)
-            return await __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="Categorize", args={
-                "title": title,"content": content,
-            })
-            return typing.cast(types.CategorizeResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
+            return typing.cast(types.CategorizeAndTagResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
     async def ClassifyKind(self, title: str,url: str,
         baml_options: BamlCallOptions = {},
     ) -> types.ClassifyKindResult:
@@ -232,21 +217,6 @@ class BamlAsyncClient:
                 "productName": productName,"productDescription": productDescription,"candidates": candidates,
             })
             return typing.cast(types.ProductLinkChoice, __result__.cast_to(types, types, stream_types, False, __runtime__))
-    async def SemanticDedup(self, newArticles: typing.List["types.ArticleInput"],existingArticles: typing.List["types.ExistingArticle"],
-        baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.DedupMatch"]:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            # Use streaming internally when on_tick is provided
-            __stream__ = self.stream.SemanticDedup(newArticles=newArticles,existingArticles=existingArticles,
-                baml_options=baml_options)
-            return await __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = await self.__options.merge_options(baml_options).call_function_async(function_name="SemanticDedup", args={
-                "newArticles": newArticles,"existingArticles": existingArticles,
-            })
-            return typing.cast(typing.List["types.DedupMatch"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -256,28 +226,16 @@ class BamlStreamClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+    def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
         baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
+    ) -> baml_py.BamlStream[stream_types.CategorizeAndTagResult, types.CategorizeAndTagResult]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="CategorizeAndTag", args={
+            "title": title,"content": content,"vocabulary": vocabulary,
         })
-        return baml_py.BamlStream[typing.List["stream_types.TagAssignment"], typing.List["types.TagAssignment"]](
+        return baml_py.BamlStream[stream_types.CategorizeAndTagResult, types.CategorizeAndTagResult](
           __result__,
-          lambda x: typing.cast(typing.List["stream_types.TagAssignment"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.TagAssignment"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
-    def Categorize(self, title: str,content: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[stream_types.CategorizeResult, types.CategorizeResult]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="Categorize", args={
-            "title": title,"content": content,
-        })
-        return baml_py.BamlStream[stream_types.CategorizeResult, types.CategorizeResult](
-          __result__,
-          lambda x: typing.cast(stream_types.CategorizeResult, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(types.CategorizeResult, x.cast_to(types, types, stream_types, False, __runtime__)),
+          lambda x: typing.cast(stream_types.CategorizeAndTagResult, x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(types.CategorizeAndTagResult, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     def ClassifyKind(self, title: str,url: str,
@@ -376,18 +334,6 @@ class BamlStreamClient:
           lambda x: typing.cast(types.ProductLinkChoice, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
-    def SemanticDedup(self, newArticles: typing.List["types.ArticleInput"],existingArticles: typing.List["types.ExistingArticle"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlStream[typing.List["stream_types.DedupMatch"], typing.List["types.DedupMatch"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_async_stream(function_name="SemanticDedup", args={
-            "newArticles": newArticles,"existingArticles": existingArticles,
-        })
-        return baml_py.BamlStream[typing.List["stream_types.DedupMatch"], typing.List["types.DedupMatch"]](
-          __result__,
-          lambda x: typing.cast(typing.List["stream_types.DedupMatch"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.DedupMatch"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
     
 
 class BamlHttpRequestClient:
@@ -396,18 +342,11 @@ class BamlHttpRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+    async def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
-        }, mode="request")
-        return __result__
-    async def Categorize(self, title: str,content: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="Categorize", args={
-            "title": title,"content": content,
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="CategorizeAndTag", args={
+            "title": title,"content": content,"vocabulary": vocabulary,
         }, mode="request")
         return __result__
     async def ClassifyKind(self, title: str,url: str,
@@ -464,13 +403,6 @@ class BamlHttpRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SelectProductLink", args={
             "productName": productName,"productDescription": productDescription,"candidates": candidates,
-        }, mode="request")
-        return __result__
-    async def SemanticDedup(self, newArticles: typing.List["types.ArticleInput"],existingArticles: typing.List["types.ExistingArticle"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SemanticDedup", args={
-            "newArticles": newArticles,"existingArticles": existingArticles,
         }, mode="request")
         return __result__
     
@@ -481,18 +413,11 @@ class BamlHttpStreamRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    async def AssignTags(self, articles: typing.List["types.TagInput"],vocabulary: typing.List["types.TagOption"],
+    async def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="AssignTags", args={
-            "articles": articles,"vocabulary": vocabulary,
-        }, mode="stream")
-        return __result__
-    async def Categorize(self, title: str,content: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="Categorize", args={
-            "title": title,"content": content,
+        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="CategorizeAndTag", args={
+            "title": title,"content": content,"vocabulary": vocabulary,
         }, mode="stream")
         return __result__
     async def ClassifyKind(self, title: str,url: str,
@@ -549,13 +474,6 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SelectProductLink", args={
             "productName": productName,"productDescription": productDescription,"candidates": candidates,
-        }, mode="stream")
-        return __result__
-    async def SemanticDedup(self, newArticles: typing.List["types.ArticleInput"],existingArticles: typing.List["types.ExistingArticle"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = await self.__options.merge_options(baml_options).create_http_request_async(function_name="SemanticDedup", args={
-            "newArticles": newArticles,"existingArticles": existingArticles,
         }, mode="stream")
         return __result__
     

@@ -257,7 +257,7 @@ def main() -> None:
     print(
         "Next: name each real gap and add it to app/data/tags.json, then "
         "re-run `python -m app.seed_tags`.\nBackfill tags on affected articles "
-        "with the pipeline's assign_tags step."
+        "with the pipeline's categorize_and_tag_articles step."
     )
 
 

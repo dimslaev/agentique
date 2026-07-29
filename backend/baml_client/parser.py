@@ -23,17 +23,11 @@ class LlmResponseParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AssignTags(
+    def CategorizeAndTag(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.TagAssignment"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="request")
-        return typing.cast(typing.List["types.TagAssignment"], __result__)
-
-    def Categorize(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.CategorizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Categorize", llm_response=llm_response, mode="request")
-        return typing.cast(types.CategorizeResult, __result__)
+    ) -> types.CategorizeAndTagResult:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="CategorizeAndTag", llm_response=llm_response, mode="request")
+        return typing.cast(types.CategorizeAndTagResult, __result__)
 
     def ClassifyKind(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -83,12 +77,6 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectProductLink", llm_response=llm_response, mode="request")
         return typing.cast(types.ProductLinkChoice, __result__)
 
-    def SemanticDedup(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.DedupMatch"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="request")
-        return typing.cast(typing.List["types.DedupMatch"], __result__)
-
     
 
 class LlmStreamParser:
@@ -97,17 +85,11 @@ class LlmStreamParser:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def AssignTags(
+    def CategorizeAndTag(
         self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["stream_types.TagAssignment"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="AssignTags", llm_response=llm_response, mode="stream")
-        return typing.cast(typing.List["stream_types.TagAssignment"], __result__)
-
-    def Categorize(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.CategorizeResult:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="Categorize", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.CategorizeResult, __result__)
+    ) -> stream_types.CategorizeAndTagResult:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="CategorizeAndTag", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.CategorizeAndTagResult, __result__)
 
     def ClassifyKind(
         self, llm_response: str, baml_options: BamlCallOptions = {},
@@ -156,11 +138,5 @@ class LlmStreamParser:
     ) -> stream_types.ProductLinkChoice:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectProductLink", llm_response=llm_response, mode="stream")
         return typing.cast(stream_types.ProductLinkChoice, __result__)
-
-    def SemanticDedup(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["stream_types.DedupMatch"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SemanticDedup", llm_response=llm_response, mode="stream")
-        return typing.cast(typing.List["stream_types.DedupMatch"], __result__)
 
     
