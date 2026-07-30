@@ -107,12 +107,10 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
       }}
       className={cn(
         "flex items-center gap-1 text-xs transition-colors",
-        liked
-          ? "text-orange-500"
-          : "text-muted-foreground hover:text-orange-500",
+        liked ? "text-primary" : "text-muted-foreground hover:text-primary",
       )}
     >
-      <Flame className={cn("h-3.5 w-3.5", liked && "fill-orange-500")} />
+      <Flame className={cn("h-3.5 w-3.5", liked && "fill-primary")} />
       <span data-testid="like-count">{count}</span>
     </button>
   )

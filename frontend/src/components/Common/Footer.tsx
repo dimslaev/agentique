@@ -46,14 +46,14 @@ export function Footer() {
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3 px-4 py-4">
         <div className="flex items-center gap-4">
           {total > 0 && (
-            <span className="font-mono text-[11px] text-muted-foreground">
+            <span className="font-wire text-[11px] text-muted-foreground">
               {total.toLocaleString()} articles curated
             </span>
           )}
           {updatedLabel && (
             <>
               <span className="text-border">·</span>
-              <span className="font-mono text-[11px] text-muted-foreground">
+              <span className="font-wire text-[11px] text-muted-foreground">
                 {updatedLabel}
               </span>
             </>

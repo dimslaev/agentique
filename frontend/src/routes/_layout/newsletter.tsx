@@ -16,7 +16,7 @@ function Newsletter() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="font-display text-2xl font-bold tracking-tight">
           Every AI story that matters. For devs.
         </h1>
         <p className="text-muted-foreground mt-2">
@@ -31,7 +31,7 @@ function Newsletter() {
       <Separator />
 
       <section>
-        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+        <h2 className="font-wire text-muted-foreground text-xs tracking-[0.1em] uppercase">
           Who it&apos;s for
         </h2>
         <p className="mt-3 text-sm">
@@ -55,7 +55,7 @@ function Newsletter() {
       <Separator />
 
       <section>
-        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+        <h2 className="font-wire text-muted-foreground text-xs tracking-[0.1em] uppercase">
           The sources
         </h2>
         <p className="mt-3 text-sm">
@@ -78,7 +78,7 @@ function Newsletter() {
       <Separator />
 
       <section>
-        <h2 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+        <h2 className="font-wire text-muted-foreground text-xs tracking-[0.1em] uppercase">
           The pipeline
         </h2>
         <p className="mt-3 text-sm">

@@ -63,7 +63,9 @@ function LandingHeader() {
             type="button"
             data-testid="theme-button"
             aria-label="Toggle theme"
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+            onClick={() =>
+              setTheme(resolvedTheme === "dark" ? "light" : "dark")
+            }
             className="flex h-7 w-7 items-center justify-center text-dim transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
           >
             {resolvedTheme === "dark" ? (

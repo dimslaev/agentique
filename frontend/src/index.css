@@ -63,38 +63,18 @@
 }
 
 :root {
-  --radius: 0.375rem;
-  --background: oklch(0.9818 0.0054 95.0986);
-  --foreground: oklch(0.2868 0.0084 75.2489);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2868 0.0084 75.2489);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2868 0.0084 75.2489);
-  --primary: oklch(0.3441 0.0111 67.4468);
-  --primary-foreground: oklch(0.966 0.0093 99.9842);
-  --secondary: oklch(0.9485 0.0109 95.1664);
-  --secondary-foreground: oklch(0.2868 0.0084 75.2489);
-  --muted: oklch(0.9485 0.0109 95.1664);
-  --muted-foreground: oklch(0.6188 0.0104 100.0882);
-  --accent: oklch(0.9485 0.0109 95.1664);
-  --accent-foreground: oklch(0.2868 0.0084 75.2489);
+  /* Square, wire-drawing corners everywhere — matches the homepage, which
+     never rounds a border. --radius-sm/md/lg/xl below (in @theme inline)
+     derive from this, and those are what Tailwind's rounded-sm/md/lg/xl
+     utilities actually read, so every card/input/dialog/popover/table/tabs
+     squares off without touching those component files. */
+  --radius: 0rem;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9172 0.0121 101.4942);
-  --input: oklch(0.9172 0.0121 101.4942);
-  --ring: oklch(0.3441 0.0111 67.4468);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.966 0.0093 99.9842);
-  --sidebar-foreground: oklch(0.2868 0.0084 75.2489);
-  --sidebar-primary: oklch(0.3441 0.0111 67.4468);
-  --sidebar-primary-foreground: oklch(0.966 0.0093 99.9842);
-  --sidebar-accent: oklch(0.9361 0.0122 96.4284);
-  --sidebar-accent-foreground: oklch(0.2868 0.0084 75.2489);
-  --sidebar-border: oklch(0.9172 0.0121 101.4942);
-  --sidebar-ring: oklch(0.3441 0.0111 67.4468);
 
   /* Landing palette, light. Warm paper rather than the neutral app grey. */
   --ink: #f6f4ec;
@@ -104,42 +84,52 @@
   /* Darker than the dark-theme signal so the cream button label clears 4.5:1
      against it. */
   --signal: #b8410f;
+
+  /* Shadcn tokens re-pointed at the landing palette above, so every
+     component built on them (Button, Card, Input, Dialog, Tabs, Sidebar,
+     …) picks up the homepage's look app-wide. These reference --ink/
+     --paper/--wire/--dim/--signal rather than duplicating values, so the
+     .dark block below only needs to redeclare those five — the derived
+     tokens here resolve against whichever value is cascaded at use time. */
+  --background: var(--ink);
+  --foreground: var(--paper);
+  --card: var(--ink);
+  --card-foreground: var(--paper);
+  --popover: var(--ink);
+  --popover-foreground: var(--paper);
+  --primary: var(--signal);
+  --primary-foreground: var(--ink);
+  --secondary: var(--wire);
+  --secondary-foreground: var(--paper);
+  --muted: var(--wire);
+  --muted-foreground: var(--dim);
+  --accent: var(--wire);
+  --accent-foreground: var(--paper);
+  --border: var(--wire);
+  --input: var(--wire);
+  --ring: var(--signal);
+  --sidebar: var(--ink);
+  --sidebar-foreground: var(--paper);
+  --sidebar-primary: var(--signal);
+  --sidebar-primary-foreground: var(--ink);
+  --sidebar-accent: var(--wire);
+  --sidebar-accent-foreground: var(--paper);
+  --sidebar-border: var(--wire);
+  --sidebar-ring: var(--signal);
 }
 
 .dark {
-  --background: oklch(0.2679 0.0036 106.6427);
-  --foreground: oklch(0.966 0.0093 99.9842);
-  --card: oklch(0.3085 0.0035 106.6039);
-  --card-foreground: oklch(0.966 0.0093 99.9842);
-  --popover: oklch(0.3085 0.0035 106.6039);
-  --popover-foreground: oklch(0.966 0.0093 99.9842);
-  --primary: oklch(0.9355 0.0213 85.9449);
-  --primary-foreground: oklch(0.3441 0.0111 67.4468);
-  --secondary: oklch(0.3207 0.0071 95.2817);
-  --secondary-foreground: oklch(0.966 0.0093 99.9842);
-  --muted: oklch(0.3207 0.0071 95.2817);
-  --muted-foreground: oklch(0.725 0.0088 91.5131);
-  --accent: oklch(0.3207 0.0071 95.2817);
-  --accent-foreground: oklch(0.966 0.0093 99.9842);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.9355 0.0213 85.9449);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.2354 0.0041 84.5865);
-  --sidebar-foreground: oklch(0.966 0.0093 99.9842);
-  --sidebar-primary: oklch(0.9355 0.0213 85.9449);
-  --sidebar-primary-foreground: oklch(0.3441 0.0111 67.4468);
-  --sidebar-accent: oklch(0.285 0.0056 91.5701);
-  --sidebar-accent-foreground: oklch(0.966 0.0093 99.9842);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.9355 0.0213 85.9449);
 
-  /* Landing palette, dark. Ink is warm/olive-tinted, not neutral black. */
+  /* Landing palette, dark. Ink is warm/olive-tinted, not neutral black.
+     Redeclaring only these five is enough — every shadcn token in :root
+     that reads var(--ink)/var(--paper)/etc. re-resolves against these dark
+     values wherever an element under .dark uses it. */
   --ink: #14160e;
   --paper: #edeade;
   --wire: #33362a;
@@ -153,6 +143,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
   }
   button,
   [role="button"] {
@@ -182,8 +173,9 @@
 }
 
 @layer components {
-  /* Scopes the landing look. Everything inside opts into the wire palette and
-     body face; the rest of the app keeps the shadcn tokens. */
+  /* No longer scopes anything — --background/--foreground are the wire
+     palette app-wide now, so this just restates the default. Left in place
+     since LandingPage.tsx still carries the class name. */
   .landing {
     background-color: var(--ink);
     color: var(--paper);

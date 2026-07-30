@@ -61,6 +61,22 @@ export function ArticlesList() {
 
   return (
     <div className="relative">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border pb-3">
+        <h1 className="font-display text-sm font-bold uppercase tracking-[0.1em]">
+          The wire
+        </h1>
+        <div className="flex items-center gap-5 font-wire text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-0.5 shrink-0 bg-primary" />
+            scores 92+
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="inline-block h-3 w-0.5 shrink-0 bg-foreground/40" />
+            bar height = score
+          </span>
+        </div>
+      </div>
+
       {articles.length === 0 ? (
         <div
           data-testid="articles-empty"
@@ -72,7 +88,7 @@ export function ArticlesList() {
         <ul
           data-testid="articles-list"
           className={cn(
-            "divide-y divide-border/40 transition-opacity duration-200",
+            "transition-opacity duration-200",
             isFetching && "opacity-50",
           )}
         >
@@ -83,7 +99,7 @@ export function ArticlesList() {
       )}
 
       {!isFetching && articles.length > 0 && (
-        <p className="pt-4 text-xs text-muted-foreground">
+        <p className="pt-4 font-wire text-xs text-muted-foreground">
           {articles.length} article{articles.length !== 1 ? "s" : ""}
         </p>
       )}
