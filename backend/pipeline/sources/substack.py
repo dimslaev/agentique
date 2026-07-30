@@ -82,7 +82,7 @@ def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     raise RuntimeError("Exhausted retries")
 
 
-def _fetch_source(source: dict) -> list[FetchedArticle]:
+def _fetch_source(source: dict) -> tuple[list[FetchedArticle], str | None]:
     name = source["name"]
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
@@ -107,34 +107,44 @@ def _fetch_source(source: dict) -> list[FetchedArticle]:
                 "source": name,
             }
             for it in within
-        ]
+        ], None
     except Exception as e:
         log(f"  FAILED {name}: {e}")
-        return []
+        return [], f"{type(e).__name__}: {e}"
 
 
-def fetch_feeds(sources: list[dict]) -> list[FetchedArticle]:
+def fetch_feeds(sources: list[dict]) -> tuple[list[FetchedArticle], dict[str, str]]:
     """Fetch a list of RSS/substack feeds in parallel.
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
     from the DB (active publishers with rss/substack links) via
     ``pipeline.publishers.feed_sources_from_db``. The caller resolves each
     ``source`` name to a Publisher row.
+
+    Returns ``(articles, errors)`` where ``errors`` maps a feed's ``name`` to
+    the exception message for any feed that failed outright (e.g. a 403) —
+    this is what lets per-publisher health tell "that feed is broken" apart
+    from "that feed just had nothing new".
     """
     if not sources:
         log("Feeds: no active feed publishers")
-        return []
+        return [], {}
 
     _log_proxy_status_once()
 
     articles: list[FetchedArticle] = []
+    errors: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(_fetch_source, src): src for src in sources}
         for future in as_completed(futures):
+            name = futures[future]["name"]
             try:
-                articles.extend(future.result())
-            except Exception:
-                pass
+                items, error = future.result()
+                articles.extend(items)
+                if error:
+                    errors[name] = error
+            except Exception as e:
+                errors[name] = f"{type(e).__name__}: {e}"
 
     log(f"Feeds: {len(articles)} articles")
-    return articles
+    return articles, errors
