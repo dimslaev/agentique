@@ -26,7 +26,7 @@ function ItemLabel({ item, isActive }: { item: Item; isActive: boolean }) {
     <>
       <span
         className={cn(
-          "flex h-[18px] w-[18px] shrink-0 items-center justify-center border font-mono text-[10px] leading-none tabular-nums transition-colors duration-200",
+          "flex h-[18px] w-[18px] shrink-0 items-center justify-center border font-wire text-[10px] leading-none tabular-nums transition-colors duration-200",
           isActive
             ? "border-foreground bg-foreground text-background"
             : "border-border/60 text-muted-foreground group-hover/menu-button:border-foreground group-hover/menu-button:text-foreground",

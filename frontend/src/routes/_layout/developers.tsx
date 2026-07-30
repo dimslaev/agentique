@@ -59,7 +59,9 @@ function DevelopersPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Pro plan</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Pro plan
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Programmatic access to curated AI news. $10/mo.
         </p>
@@ -130,7 +132,7 @@ function DevelopersPage() {
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h2 className="font-wire text-xs uppercase tracking-[0.1em] text-muted-foreground">
           Response
         </h2>
         <CodeBlock code={RESPONSE_SHAPE} />
@@ -154,8 +156,10 @@ function EndpointCard({
     <div className="rounded-lg border bg-card p-5 space-y-4">
       <div className="space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-primary">{method}</span>
-          <code className="font-mono text-sm text-foreground">{path}</code>
+          <span className="font-wire text-xs font-bold text-primary">
+            {method}
+          </span>
+          <code className="font-wire text-sm text-foreground">{path}</code>
         </div>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
@@ -163,7 +167,7 @@ function EndpointCard({
       <dl className="space-y-2">
         {params.map(({ name, description: desc }) => (
           <div key={name} className="flex gap-4 text-xs">
-            <dt className="font-mono text-foreground w-28 shrink-0">{name}</dt>
+            <dt className="font-wire text-foreground w-28 shrink-0">{name}</dt>
             <dd className="text-muted-foreground">{desc}</dd>
           </div>
         ))}
@@ -196,7 +200,7 @@ function CodeBlock({ code }: { code: string }) {
           {copied ? "copied" : "copy"}
         </button>
       </div>
-      <pre className="overflow-x-auto px-4 py-3 font-mono text-xs leading-relaxed text-foreground">
+      <pre className="overflow-x-auto px-4 py-3 font-wire text-xs leading-relaxed text-foreground">
         {code}
       </pre>
     </div>

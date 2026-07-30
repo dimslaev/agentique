@@ -49,7 +49,7 @@ function LikedArticles() {
   }
 
   return (
-    <ul data-testid="liked-articles-list" className="divide-y divide-border/40">
+    <ul data-testid="liked-articles-list">
       {articles.map((article) => (
         <ArticleRow key={article.id} article={article} />
       ))}
@@ -61,7 +61,9 @@ function Profile() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Profile
+        </h1>
         <p className="text-muted-foreground">
           Manage your liked articles and account settings
         </p>
