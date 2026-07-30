@@ -342,6 +342,10 @@ class PipelineRun(SQLModel, table=True):
     sources: list[dict] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
+    # per-publisher fetch/insert counts within the "Feeds" source: [{name, fetched, inserted, error}]
+    publishers: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
 
 
 class AnalyticsEvent(SQLModel, table=True):

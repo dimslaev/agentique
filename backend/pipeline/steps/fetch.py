@@ -23,10 +23,19 @@ from pipeline.utils import log
 @dataclass(frozen=True)
 class Source:
     """One channel to poll. ``label`` is the stats/health grouping key, not a
-    publisher — "Feeds" and "Newsletter" each cover many publishers."""
+    publisher — "Feeds" and "Newsletter" each cover many publishers.
+
+    ``fetcher`` returns ``(articles, errors)`` — ``errors`` maps a publisher
+    name to a hard-failure message (e.g. a 403). ``publisher_names`` is the
+    full set of publishers this source is expected to poll this run; it's
+    only populated for "Feeds" (the one source that's actually an aggregate
+    of many named publishers) so per-publisher health can be recorded for
+    each of them, including ones that silently fetched nothing.
+    """
 
     label: str
-    fetcher: Callable[[], list[FetchedArticle]]
+    fetcher: Callable[[], tuple[list[FetchedArticle], dict[str, str]]]
+    publisher_names: tuple[str, ...] = ()
 
 
 def build_sources(session: Session) -> list[Source]:
@@ -41,19 +50,24 @@ def build_sources(session: Session) -> list[Source]:
     its own content inline (see ``sources/ainews.py``), so it doesn't need the
     re-fetch path either.
     """
+    feed_sources = feed_sources_from_db(session)
     return [
-        Source("Feeds", lambda: fetch_feeds(feed_sources_from_db(session))),
-        Source("Hacker News", fetch_hn),
-        Source("AI News", fetch_ai_news),
+        Source(
+            "Feeds",
+            lambda: fetch_feeds(feed_sources),
+            publisher_names=tuple(s["name"] for s in feed_sources),
+        ),
+        Source("Hacker News", lambda: (fetch_hn(), {})),
+        Source("AI News", lambda: (fetch_ai_news(), {})),
     ]
 
 
-def fetch_source(source: Source) -> list[FetchedArticle]:
-    articles = source.fetcher()
+def fetch_source(source: Source) -> tuple[list[FetchedArticle], dict[str, str]]:
+    articles, errors = source.fetcher()
     if not articles:
         log(f"No articles from {source.label}")
-        return articles
-    return _with_content(articles, source.label)
+        return articles, errors
+    return _with_content(articles, source.label), errors
 
 
 def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:

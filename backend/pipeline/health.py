@@ -26,6 +26,10 @@ YIELD_DROP_RATIO = 0.3  # inserted < 30% of average → yield-drop flag
 MIN_AVG_FETCH_FOR_DOWN = 3.0  # only call "source down" if it normally fetches > this
 MIN_AVG_INSERT_FOR_YIELD = 2.0  # ignore yield drops on sources that barely insert
 
+# A single feed publisher fetches far less than the aggregate "Feeds" source,
+# so it gets its own (much lower) bar for "this normally produces something".
+MIN_AVG_FETCH_FOR_PUBLISHER_DOWN = 0.3
+
 # Representative URL to probe when a source suddenly fetches nothing. Aggregate
 # sources (Substack = many feeds) have no single URL, so they're omitted and the
 # report just says so.
@@ -43,11 +47,9 @@ class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
     fetched → known → dead → dup → below-threshold → inserted."""
 
-    # TODO(new-schema): `source` here is the run-level fetcher label (Hacker
-    # News / AI News / Newsletter / Feeds), not a publisher. Fine as a stats
-    # grouping key, but if per-publisher health is wanted, group by publisher_id.
-    # PROBE_URL_BY_SOURCE stays keyed by the aggregator labels. Left as-is
-    # (non-trivial) — see REFACTOR_NOTES.md.
+    # `source` here is the run-level fetcher label (Hacker News / AI News /
+    # Feeds), not a publisher — see `PublisherStats` below for per-publisher
+    # granularity within "Feeds".
     source: str
     fetched: int = 0
     filtered_known: int = 0
@@ -59,17 +61,60 @@ class SourceStats:
 
 
 @dataclass
+class PublisherStats:
+    """Fetch/insert counts for one publisher within the "Feeds" source in one
+    run — the granularity ``SourceStats`` can't give, since "Feeds" aggregates
+    every RSS/substack publisher under one label."""
+
+    name: str
+    fetched: int = 0
+    inserted: int = 0
+    error: str | None = None
+
+
+@dataclass
 class RunStats:
     started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     finished_at: datetime | None = None
     duration_ms: int | None = None
     ok: bool = False
     sources: list[SourceStats] = field(default_factory=list)
+    publishers: list[PublisherStats] = field(default_factory=list)
 
     def source(self, label: str) -> SourceStats:
         s = SourceStats(source=label)
         self.sources.append(s)
         return s
+
+    def record_publishers(
+        self,
+        expected_names: tuple[str, ...],
+        fetched: list[dict],
+        inserted: list[dict],
+        errors: dict[str, str],
+    ) -> None:
+        """Record per-publisher fetch/insert counts for one source's run.
+
+        ``expected_names`` is every publisher this source was supposed to
+        poll, so a publisher that fetched nothing still gets a row (fetched=0)
+        instead of silently disappearing from the stats.
+        """
+        fetched_counts: dict[str, int] = {}
+        for a in fetched:
+            fetched_counts[a["source"]] = fetched_counts.get(a["source"], 0) + 1
+        inserted_counts: dict[str, int] = {}
+        for a in inserted:
+            inserted_counts[a["source"]] = inserted_counts.get(a["source"], 0) + 1
+
+        for name in expected_names:
+            self.publishers.append(
+                PublisherStats(
+                    name=name,
+                    fetched=fetched_counts.get(name, 0),
+                    inserted=inserted_counts.get(name, 0),
+                    error=errors.get(name),
+                )
+            )
 
     def finish(self, ok: bool) -> None:
         self.finished_at = datetime.now(UTC)
@@ -90,6 +135,7 @@ def record_run(session: Session, stats: RunStats) -> PipelineRun:
         duration_ms=stats.duration_ms,
         ok=stats.ok,
         sources=[asdict(s) for s in stats.sources],
+        publishers=[asdict(p) for p in stats.publishers],
     )
     session.add(row)
     session.commit()
@@ -106,7 +152,7 @@ def _load_history(session: Session, exclude_started_at: datetime) -> list[dict]:
         .order_by(col(PipelineRun.started_at).desc())
         .limit(HISTORY_WINDOW)
     ).all()
-    return [{"sources": r.sources, "ok": r.ok} for r in runs]
+    return [{"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs]
 
 
 # ─── Dead-man's-switch (runs at the START of each run) ─────────────────────────
@@ -152,6 +198,8 @@ def verify_run(session: Session, stats: RunStats) -> None:
         anomalies.append("Pipeline run did NOT complete (crashed mid-run).")
     for s in stats.sources:
         anomalies.extend(_check_source(s, history))
+    for p in stats.publishers:
+        anomalies.extend(_check_publisher(p, history))
 
     subject = (
         "Pipeline health: anomalies detected" if anomalies else "Pipeline run report"
@@ -189,12 +237,42 @@ def _check_source(s: SourceStats, history: list[dict]) -> list[str]:
     return flags
 
 
+def _check_publisher(p: PublisherStats, history: list[dict]) -> list[str]:
+    """Same idea as ``_check_source`` but one feed publisher at a time — this
+    is what catches a single dead feed (e.g. a 403) that the aggregate
+    "Feeds" numbers hide because every other feed is still healthy."""
+    if p.error:
+        return [f"{p.name}: fetch failed — {p.error}"]
+
+    prev = _publisher_rows(history, p.name)
+    avg_fetch = _avg(prev, "fetched")
+    if (
+        avg_fetch is not None
+        and avg_fetch > MIN_AVG_FETCH_FOR_PUBLISHER_DOWN
+        and p.fetched == 0
+    ):
+        return [
+            f"{p.name}: fetched 0 (30-run avg {avg_fetch:.1f}) — no error, "
+            "feed returned nothing this run"
+        ]
+    return []
+
+
 def _source_rows(history: list[dict], label: str) -> list[dict]:
     rows: list[dict] = []
     for run in history:
         for src in run.get("sources", []):
             if src.get("source") == label:
                 rows.append(src)
+    return rows
+
+
+def _publisher_rows(history: list[dict], name: str) -> list[dict]:
+    rows: list[dict] = []
+    for run in history:
+        for pub in run.get("publishers", []):
+            if pub.get("name") == name:
+                rows.append(pub)
     return rows
 
 

@@ -40,7 +40,7 @@ def run_pipeline(stats: RunStats) -> None:
             s = stats.source(source.label)
 
             try:
-                fetched = fetch_source(source)
+                fetched, fetch_errors = fetch_source(source)
                 s.fetched = len(fetched)
 
                 resolve_publishers(fetched, resolver)
@@ -63,6 +63,11 @@ def run_pipeline(stats: RunStats) -> None:
 
                 inserted = insert_articles(session, scored)
                 s.inserted = len(inserted)
+
+                if source.publisher_names:
+                    stats.record_publishers(
+                        source.publisher_names, fetched, inserted, fetch_errors
+                    )
 
                 improve_titles(session, inserted)
                 processed = categorize_and_tag_articles(session, inserted, vocab)
