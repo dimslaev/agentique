@@ -7,19 +7,10 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
 import { SidebarFilters } from "./Filters"
-import { type Item, Main } from "./Main"
 import { User } from "./User"
-
-const navItems: Item[] = [
-  { index: "01", title: "Feed", path: "/feed" },
-  { index: "02", title: "API", path: "/developers" },
-  // Prerendered static pages, not SPA routes — full page load by design.
-  { index: "03", title: "Blog", path: "/blog/", external: true },
-]
 
 export function AppSidebar() {
   const { user: currentUser } = useAuth()
@@ -32,14 +23,10 @@ export function AppSidebar() {
         <Logo expandable />
       </SidebarHeader>
       <SidebarContent className="overflow-x-hidden max-md:pt-4">
-        <Main items={navItems} />
         {isHome && (
-          <>
-            <SidebarSeparator className="mx-2 opacity-100 transition-opacity group-data-[collapsible=icon]:opacity-0" />
-            <div className="w-[var(--sidebar-width)] shrink-0 overflow-hidden px-2 py-2 opacity-100 transition-opacity group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
-              <SidebarFilters />
-            </div>
-          </>
+          <div className="w-[var(--sidebar-width)] shrink-0 overflow-hidden px-2 py-2 opacity-100 transition-opacity group-data-[collapsible=icon]:pointer-events-none group-data-[collapsible=icon]:opacity-0">
+            <SidebarFilters />
+          </div>
         )}
       </SidebarContent>
       <SidebarFooter>
