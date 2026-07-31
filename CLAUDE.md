@@ -20,3 +20,9 @@ ACTIVE EVERY RESPONSE. No revert after many turns. No filler drift. Still active
 
 ## Prod
 - After `sudo`-touching `/opt/agentique/.env` (`chown ubuntu:agentique`, `chmod 640`) or `/var/lib/agentique/` (`chown -R agentique:agentique`), restore perms or agentique-backend/pipeline crash-loops
+
+## Prod DB/VPS access
+- Detect env first: `test -f ~/.ssh/agentique && echo local || echo cloud`
+- Local (key present): `ssh agentique-prod "..."` direct
+- Cloud (no key): `gh workflow run prod-sql.yml -f sql="..." -f mode=read|write` (write also needs `-f confirm=WRITE`)
+- Same rule for any prod SQL, not just VPS shell access

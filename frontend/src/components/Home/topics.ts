@@ -33,27 +33,27 @@ export const BOX_LIMIT = 10
 /** Newest first, matching /feed's own default. */
 export const BOX_SORT = "published_at-desc"
 
-// Order matters twice over. Boxes load as they scroll into view, so the first
-// row decides both what a visitor sees first and what the page costs on first
-// paint. Leading with the strongest boxes alone was measurably wrong: harness,
-// make-it-fast and open-challengers expand to 6+4+6 requests, and putting them
-// up top fired 22 of the page's 30 requests before the reader scrolled at all.
-//
-// So the first row is boxes that are strong *and* single-request; the wide
-// multi-tag lanes sit below the fold where their cost is paid on scroll.
+// Order is curated by hand, 3 per row (grid wraps at lg:grid-cols-3):
+// labs first, then model-news, then the smaller-scope lanes, then
+// launches/papers/leftovers last.
 export const TOPICS: TopicDef[] = [
-  {
-    slug: "open-source-drops",
-    label: "Open source drops",
-    blurb: "New repos worth cloning",
-    kinds: ["repo"],
-    category: "dev",
-  },
   {
     slug: "anthropic",
     label: "Anthropic",
     blurb: "Claude, Claude Code, and everything around them",
     tags: ["anthropic"],
+  },
+  {
+    slug: "openai",
+    label: "OpenAI",
+    blurb: "Models, products and research from OpenAI",
+    tags: ["openai"],
+  },
+  {
+    slug: "google",
+    label: "Google",
+    blurb: "Gemini, Gemma and DeepMind",
+    tags: ["google"],
   },
   {
     slug: "new-models",
@@ -63,11 +63,22 @@ export const TOPICS: TopicDef[] = [
     category: "models",
   },
   {
-    slug: "harness",
-    label: "Agent harnesses",
-    blurb: "The tooling wrapped around the model — runners, loops, CLIs",
-    tags: ["orchestration", "agents", "coding-assistants"],
-    kinds: ["repo", "product"],
+    slug: "open-challengers",
+    label: "Open challengers",
+    blurb: "The open labs chasing the frontier",
+    tags: ["kimi", "deepseek", "qwen", "glm", "mistral", "llama"],
+  },
+  {
+    slug: "small-models",
+    label: "Small models",
+    blurb: "Distilled, quantized, and small enough to run yourself",
+    tags: ["model-distillation", "quantization", "local-ai"],
+  },
+  {
+    slug: "generative-media",
+    label: "Beyond text",
+    blurb: "Vision, video, audio and voice models",
+    tags: ["multimodal", "media-generation", "voice-speech"],
   },
   {
     slug: "make-it-fast",
@@ -81,18 +92,6 @@ export const TOPICS: TopicDef[] = [
     ],
   },
   {
-    slug: "generative-media",
-    label: "Beyond text",
-    blurb: "Vision, video, audio and voice models",
-    tags: ["multimodal", "media-generation", "voice-speech"],
-  },
-  {
-    slug: "small-models",
-    label: "Small models",
-    blurb: "Distilled, quantized, and small enough to run yourself",
-    tags: ["model-distillation", "quantization", "local-ai"],
-  },
-  {
     slug: "launches",
     label: "Launches",
     blurb: "Products shipping for developers",
@@ -100,23 +99,18 @@ export const TOPICS: TopicDef[] = [
     category: "dev",
   },
   {
-    slug: "open-challengers",
-    label: "Open challengers",
-    blurb: "The open labs chasing the frontier",
-    tags: ["kimi", "deepseek", "qwen", "glm", "mistral", "llama"],
+    slug: "open-source-drops",
+    label: "Open source drops",
+    blurb: "New repos worth cloning",
+    kinds: ["repo"],
+    category: "dev",
   },
   {
-    slug: "open-model-drops",
-    label: "Open weights",
-    blurb: "Open-weight releases, not commentary about them",
-    tags: ["open-weights"],
-    kinds: ["model", "announcement"],
-  },
-  {
-    slug: "openai",
-    label: "OpenAI",
-    blurb: "Models, products and research from OpenAI",
-    tags: ["openai"],
+    slug: "harness",
+    label: "Agent harnesses",
+    blurb: "The tooling wrapped around the model — runners, loops, CLIs",
+    tags: ["orchestration", "agents", "coding-assistants"],
+    kinds: ["repo", "product"],
   },
   {
     slug: "papers",
@@ -124,11 +118,5 @@ export const TOPICS: TopicDef[] = [
     blurb: "Research worth the read",
     kinds: ["paper"],
     category: "research",
-  },
-  {
-    slug: "google",
-    label: "Google",
-    blurb: "Gemini, Gemma and DeepMind",
-    tags: ["google"],
   },
 ]
