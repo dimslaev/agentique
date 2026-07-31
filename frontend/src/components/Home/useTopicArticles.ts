@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query"
 
 import { type ArticlePublic, ArticlesService } from "@/client"
-import { BOX_LIMIT, BOX_SORT, type TopicDef } from "./topics"
+import { BOX_LIMIT, BOX_SORT, BOX_WINDOW_DAYS, type TopicDef } from "./topics"
 
 type QueryPart = {
   tag?: string
@@ -26,16 +26,22 @@ export function expandTopic(def: TopicDef): QueryPart[] {
   return parts
 }
 
-function publishedDesc(a: ArticlePublic, b: ArticlePublic): number {
-  // `published_at` is nullable in the schema (zero nulls in practice) —
-  // sort any that appear to the bottom rather than to 1970.
-  const left = a.published_at
-    ? Date.parse(a.published_at)
-    : Number.NEGATIVE_INFINITY
-  const right = b.published_at
-    ? Date.parse(b.published_at)
-    : Number.NEGATIVE_INFINITY
-  return right - left || b.id - a.id
+/**
+ * Start of the window, snapped to midnight UTC. Snapping matters: the value
+ * goes into the query key, so a raw `now - 14d` would mint a new key on every
+ * render and refetch every box forever.
+ */
+function windowStart(): string {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - BOX_WINDOW_DAYS)
+  d.setUTCHours(0, 0, 0, 0)
+  return d.toISOString()
+}
+
+// Must match BOX_SORT: the merge only recovers a box's true top-10 if the
+// client orders the union the same way the API ordered each part.
+function scoreDesc(a: ArticlePublic, b: ArticlePublic): number {
+  return b.score - a.score || b.id - a.id
 }
 
 export type TopicArticles = {
@@ -52,17 +58,23 @@ export function useTopicArticles(
   def: TopicDef,
   enabled: boolean,
 ): TopicArticles {
+  const since = windowStart()
+
   return useQueries({
     queries: expandTopic(def).map((part) => ({
       // Keyed by the request, not by the box, so boxes sharing a tag share a
       // fetch — `quantization` appears in both make-it-fast and small-models,
       // and react-query dedupes identical keys for free.
-      queryKey: ["articles", { ...part, limit: BOX_LIMIT, sort: BOX_SORT }],
+      queryKey: [
+        "articles",
+        { ...part, limit: BOX_LIMIT, sort: BOX_SORT, since },
+      ],
       queryFn: () =>
         ArticlesService.readArticles({
           ...part,
           limit: BOX_LIMIT,
           sort: BOX_SORT,
+          since,
         }),
       enabled,
       staleTime: 5 * 60 * 1000,
@@ -76,7 +88,7 @@ export function useTopicArticles(
       }
 
       return {
-        articles: [...byId.values()].sort(publishedDesc).slice(0, BOX_LIMIT),
+        articles: [...byId.values()].sort(scoreDesc).slice(0, BOX_LIMIT),
         // A disabled query reports `pending`, which is what we want: a box
         // that has not scrolled into view yet should render as loading.
         isPending: results.some((result) => result.isPending),
