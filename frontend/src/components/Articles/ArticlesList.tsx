@@ -3,6 +3,7 @@ import { ArticlesService } from "@/client"
 import { useFilters } from "@/context/filters"
 import { cn } from "@/lib/utils"
 import { ArticleRow } from "./ArticleRow"
+import { SCORE_STANDOUT } from "./ScoreRail"
 
 const PUBLISHED_DAYS: Record<string, number> = { "3d": 3, "1w": 7, "1m": 30 }
 
@@ -66,7 +67,7 @@ export function ArticlesList() {
         <div className="flex items-center gap-5 font-wire text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-0.5 shrink-0 bg-primary" />
-            scores 92+
+            scores {SCORE_STANDOUT}+
           </span>
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-0.5 shrink-0 bg-foreground/40" />
