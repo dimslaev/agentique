@@ -31,7 +31,7 @@ export function ArticleRow({ article }: { article: ArticlePublic }) {
           href={article.url}
           target="_blank"
           rel="noreferrer"
-          className="font-medium leading-snug decoration-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="font-medium leading-snug no-underline transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {article.title}
         </a>

@@ -16,9 +16,7 @@ export function ArticlesList() {
   const { filters } = useFilters()
   const { search, dateRange, sort, category, kind, publisher, tag } = filters
 
-  // "all time" -> omit `since` (backend treats missing as all-time).
-  const since =
-    dateRange === "all" ? undefined : cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
+  const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: [

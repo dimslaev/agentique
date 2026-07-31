@@ -140,7 +140,7 @@ function ContactDialog({
           <a
             href={`mailto:${SPONSOR_EMAIL}?subject=Sponsoring%20agentique`}
             onClick={() => trackEvent("sponsor_contact_mail")}
-            className="flex min-w-0 flex-1 items-center px-4 font-wire text-sm text-paper underline decoration-signal underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+            className="flex min-w-0 flex-1 items-center px-4 font-wire text-sm text-paper no-underline transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
           >
             <span className="truncate">{SPONSOR_EMAIL}</span>
           </a>

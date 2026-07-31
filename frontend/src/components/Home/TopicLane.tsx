@@ -111,7 +111,7 @@ function LaneRow({ article }: { article: ArticlePublic }) {
           href={article.url}
           target="_blank"
           rel="noreferrer"
-          className="line-clamp-2 text-sm font-medium leading-snug text-paper decoration-signal underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+          className="line-clamp-2 text-sm font-medium leading-snug text-paper no-underline transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
         >
           {article.title}
         </a>

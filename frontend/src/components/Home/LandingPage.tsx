@@ -57,7 +57,7 @@ function LandingHeader() {
         <nav className="flex items-center gap-5">
           <Link
             to="/feed"
-            className="font-wire text-[11px] uppercase tracking-[0.12em] text-dim transition-colors hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+            className="font-wire text-[11px] uppercase tracking-[0.12em] text-dim transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
           >
             Feed
           </Link>
@@ -170,7 +170,7 @@ function NewsletterSignup() {
         Or{" "}
         <Link
           to="/feed"
-          className="text-paper underline decoration-signal underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+          className="text-paper no-underline transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
         >
           browse the full feed
         </Link>{" "}

@@ -10,7 +10,6 @@ const DATE_OPTIONS = [
   { value: "3d", label: "Last 3 days" },
   { value: "1w", label: "Last week" },
   { value: "1m", label: "Last month" },
-  { value: "all", label: "All time" },
 ]
 
 const SORT_OPTIONS = [
