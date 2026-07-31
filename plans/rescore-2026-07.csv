@@ -1,0 +1,331 @@
+id,pipeline_score,my_score,source,title,reason
+1218,95,97,Moonshot AI,Kimi K3 open 3T-class model,biggest release of the month; open weights
+1088,92,92,Hacker News,GPT-5.6 family GA,major frontier release from the vendor page
+1071,96,88,Hugging Face Blog,vLLM integrates HF Transformers backend,major official infra integration
+1185,95,88,Mistral AI Blog,Leanstral 1.5 Apache-2.0,strong open release; PutnamBench 587/672; found real bugs
+1251,95,88,Google DeepMind,Gemini 3.6 Flash and 3.5 Flash-Lite,major lab release
+934,89,88,Hacker News,Claude Sonnet 5: More agentic model with planning and tool use,
+1303,88,88,Google DeepMind Blog,"Introducing Gemini 3.6 Flash, 3.5 Flash-Lite, and 3.5 Flash Cyber",
+1274,84,88,Hacker News,Claude Opus 5,
+939,97,85,The Kaitchup,MiniMax M3 GGUF quantization 852GB to 150GB,measured quantization work from a credible source
+1101,95,85,Hacker News,Flash-MSA sparse attention training kernels,first open-source kernels for Hopper/Blackwell
+933,93,85,Hacker News,TurboPrefill 2.7x faster than llama.cpp PP,upstream llama.cpp PR with numbers
+1170,95,84,Ahead of AI,Controlling Reasoning Effort in LLMs,Raschka; credible deep explainer
+1260,95,84,Hugging Face Blog,Nunchaku 4-bit diffusion in Diffusers,real integration you can use today
+1273,85,84,Hacker News,What's new in Claude Opus 5,
+1326,84,84,Hacker News,Bringing MCP 2026-07-28 to Claude,
+1040,98,82,Hacker News,Ternlight 7MB browser embedding model,real artifact with concrete numbers and npm package
+1072,95,82,Hugging Face Blog,PyTorch attention memory profiling,solid technical series with actionable method
+1223,95,82,Hacker News,Anthropic large-scale code migrations with Claude Code,official practical playbook
+1299,95,82,MarkTechPost,AgentENV distributed agentic RL,real infra release from Moonshot/kvcache-ai
+1162,93,82,The Kaitchup,Qwen3.6-27B KV cache quantization in vLLM,measured accuracy/memory/speed comparison
+1054,88,82,Hacker News,Prompt Injection Vulnerability Exposes GitHub Agentic Workflows Private Repo Data,
+1068,82,82,The Batch,Introducing OpenAI's Latest High-Performance Language Models: Post-Preview Release Details,
+1277,78,82,Hacker News,The new rules of context engineering for Claude 5 generation models,
+979,95,80,Hacker News,Claude Code is steganographically marking requests,specific verifiable finding of broad interest
+1184,95,80,Mistral AI Blog,Robostral Navigate 8B,real lab release with benchmark
+1228,95,80,Machine Learning At Scale,Composer 2 report benchmarks,substantial numbers and training infra detail
+1244,95,80,Hugging Face Blog,Cosmos 3 Edge 4B,real NVIDIA edge model release
+1315,95,80,Hugging Face Blog,LFM2.5-Encoders CPU long context,real Liquid AI release with benchmarks
+1282,94,80,MarkTechPost,OpenWorker local-first desktop agent,notable release from Andrew Ng
+1044,92,80,Hacker News,Pruned RAG context 68% at 96% recall,strong measured practical result
+1225,92,80,Hacker News,In-house LLM serving at Netflix,strong production engineering blog
+1344,87,80,MarkTechPost,Moonshot AI's MoonEP: Open-Source Expert Parallelism Library for Distributed Mixture-of-Experts Training,
+1067,85,80,The Batch,Gemini Omni-Flash: Text-to-Video and Image-to-Video with Audio Synthesis,
+1328,85,80,AI News,Hugging Face releases The Stack v3 - largest open code dataset yet,
+993,95,78,Hacker News,Is One Layer Enough? single-layer RL matches full-parameter,real research across 7 models and 3 algorithms
+1200,95,78,Microsoft Research,SkillOpt agent skills as trainable parameters,directly relevant to agent builders
+980,92,78,Hacker News,CVE-2026-55407 22x memory amp in Anthropic buffa,real CVE with vendor response
+1103,92,78,Hacker News,LiteRT.js on-device inference in browsers,real Google release with clear use
+1091,87,78,AI News,DeepSeek-V4-Flash GGUF Quantizations with Llama.cpp Checkpoint Fix (611),
+1077,85,78,Hugging Face Blog,LeRobot v0.6.0: Simplified RobotBenchmark API Integration for researchers,
+1345,85,78,MarkTechPost,Tencent Open-Sources AngelSpec for MTP and Block-Parallel speculative Decoding on Hy3 Draft Models,
+1178,80,78,Hugging Face Blog,Fine-tune video and image models at scale with NVIDIA NeMo Automodel and Diffusers,
+1167,78,78,Hugging Face Blog,"NVIDIA Nemotron 3 Embed Ranks #1 Overall on RTEB, Advancing Agentic Retrieval",
+1241,78,78,Hacker News,"Cursor, Codex, Gemini CLI, Antigravity hit by sandbox escapes",
+1119,93,76,Hacker News,DoorDash LLM juries for food metadata,real production engineering blog
+1245,93,76,ToxSec,Context bombs defensive prompt injection,real security research over 100+ sims
+1137,92,76,Hugging Face Blog,Model routing is simple until it isn't,measured over 417 tasks
+1290,91,76,ToxSec,Hacking Hugging Face to cheat a benchmark,notable real incident
+1018,87,76,Hacker News,"$85,000 in tokens later: What I learned from scaling agentic coding at Lovable",
+1284,86,76,MarkTechPost,Open Dreamer: JAX/Flax Implementation of Dreamer‑4 World Model with Training Recipe,
+1069,79,76,The Batch,"Google Gemini Omni API_features: Text-to-image, Editing & AI Workflows",
+1161,78,76,Hacker News,AI reviewers shipped secret-exfil code because a ticket said 'pre-approved',
+1275,78,76,Hacker News,Claude Cookbook,
+1026,93,75,Simon Willison,sqlite-utils 4.0rc2 authored by Claude,credible author; useful cost datapoint
+1332,93,75,The Kaitchup,Bonsai-27B 1-bit vs Qwen3.6,credible source; no content fetched
+1131,93,74,Hacker News,Gemma 4 26B at 5 tok/s on a 13-year-old Xeon,concrete and reproducible with exact flags
+1136,93,74,AI Disruption,Grok Build uploads full repo,real finding proven with mitmproxy
+1253,92,74,Google DeepMind,Gemini 3.5 Flash Cyber,lab release but limited access
+1172,91,74,The Kaitchup,Inkling Gemma 4 updates and 1-bit Qwen3.6,good technical roundup
+1312,88,74,Hacker News,Gemini Distillation Service,
+1104,87,74,Hacker News,Ploy's migration from Claude Opus to GPT-5.6 Sol in production,
+1159,85,74,Hacker News,German consortium releases open-source 30B Soofi S model,
+1180,85,74,Hacker News,VulnHunter: Capital One's agentic AI code security tool,
+1256,85,74,Hugging Face Blog,Grabette: an open system to record robot-manipulation data,
+1268,85,74,Trelis Research,Trelis Tara - Frontier Hindi Transcription,
+1083,80,74,Hugging Face Blog,SkyPilot Deep Integration: Zero-Egress Cloud Storage for Hugging Face Data,
+1346,79,74,Microsoft Research,Echoverse: Evolving Multiform Training Worlds for Maintaining Computer-Control Agent Skills,
+1019,78,74,Hacker News,Exploiting LLM Agent Supply Chains via Payload-less Skills,
+1313,78,74,Hacker News,"Measured LLM inference speeds on Apple Silicon, with raw data (CC BY 4.0)",
+1095,95,72,Hacker News,Distributed mesh LLM over iroh,real infra from a known team
+1219,95,72,Moonshot AI,PerceptionBench,real benchmark from a serious lab
+986,93,72,ByteByteGo,How OpenAI delivers low-latency voice at scale,good systems explainer
+1042,93,72,Hacker News,Otari LLM gateway,credible org (mozilla-ai) and useful
+1272,93,72,Hacker News,GigaToken ~1000x faster tokenization,big claim but concrete drop-in repo
+1301,91,72,The Kaitchup,Qwen3.8 hardware requirements,practical planning info
+1121,89,72,Hacker News,How a Model-Centric Compiler Reduces AI Agent Token Consumption by Optimizing Skill Targets,
+1060,88,72,Simon Willison’s Newsletter,SQLite-utils 4.0 Adds Schema Migration Support via sqlite-tools,
+1291,84,72,MarkTechPost,"Black Forest Labs Releases FLUX 3: A Multimodal Flow Model for Image, Video, Audio and Robot Action Prediction",
+937,79,72,Hacker News,Claude Sonnet 5 - benchmark results,
+1320,78,72,ByteByteGo Newsletter,"Why DoorDash, Instacart, and Uber Eats Integrated LLMs Into Search Three Different Ways",
+1048,95,70,The Kaitchup,DSpark and NVIDIA Qwen3.6 NVFP4 models,short but factual release notes
+1236,95,70,Hacker News,Cue AI cuts voice latency 44% with local Gemma 4,concrete result on an official page
+1279,95,70,Hacker News,28.9M LLM on an $8 microcontroller,well-documented hack; low practical utility
+1017,93,70,Hacker News,Dispersion loss vs embedding condensation,real research; narrow application
+1348,93,70,Hacker News,Censorship transfer when distilling Chinese LLMs,interesting research; no content fetched
+996,92,70,Hacker News,Kimi K2.7 Code GA in GitHub Copilot,useful platform availability news
+1158,92,70,Hacker News,LM Studio Bionic,relevant product launch for local-model users
+987,91,70,ToxSec,Google SAIF agent security map,useful framework from a credible source
+1350,87,70,Hacker News,"Go LLM SDK for Streaming, Tool-Calling AI Applications with React Pairing",
+1164,85,70,ToxSec - AI and Cybersecurity,Canary Tokens for Prompt Injection Detection,
+1173,85,70,Simon Willison’s Newsletter,"Kimi K3, and what we can still learn from the pelican benchmark",
+1329,82,70,AI News,"AntLing-3.0-flash is now live on OpenRouter, and free to use through August 3, 2026",
+1084,80,70,Hugging Face Blog,Improved ML Workflows: Hugging Face Kernels Feature Enhancements for Jupyter & Colab,
+1145,78,70,Hugging Face Blog,What building Shippy taught us about building agents,
+1182,78,70,Hacker News,AI Meets Cryptography 2: What AI Found in OpenVM's ZkVM,
+1287,78,70,MarkTechPost,"Datalab Marker v2 vs MinerU, Docling, and Liteparse: Benchmark Breakdown",
+1041,95,68,Hacker News,Subtext real-time LM verbal workspace visualizer,niche but has paper demo and source
+1171,95,68,ByteByteGo,MCP vs A2A vs ACP,popular explainer of moderate depth
+1322,94,68,Hacker News,Writekin fine-tune local LLM on your writing,real actionable Mac/MLX tool
+1102,93,68,Hacker News,Ollama vs llama-server on Tesla V100,concrete reproducible micro-benchmark
+983,87,68,Hacker News,Codex reasoning-token clustering at 516 may be leading to degraded performance,
+1002,85,68,Hacker News,No LLM Code in Dependencies,
+1286,84,68,MarkTechPost,Fugu-Cyber Orchestration Model Achieves 86.9% CyberGym and 72.1% CTI‑REALM Scores,
+1318,83,68,Hugging Face Blog,The OlmoEarth Platform: Geospatial inference at planetary scale,
+1292,82,68,MarkTechPost,"KwaiKAT Team Releases KAT-Coder-V2.5: An Agentic Coding Model Trained on 100,000+ Verifiable Repository Environments",
+1087,78,68,Import AI,Fable Compiler Generates CUDA GPU Kernels Automatically,
+1261,93,66,ByteByteGo,Best practices for production AI agents,decent explainer; low novelty
+1020,78,66,Hacker News,New serious vulnerabilities spiked around release of Claude Mythos Preview,
+1198,95,65,Microsoft Research,Aurora 1.5 weather foundation model,real science but not dev-actionable
+1238,95,65,Hacker News,LoRA Speedrun leaderboard,concrete and verifiable but niche
+1130,94,65,Hacker News,libargus local LLM runner via Java Panama FFM,real niche engineering
+1262,92,65,The Kaitchup,Nanbeige4.2-3B and Laguna S2.1,useful model notes
+1333,92,65,MarkTechPost,Liquid AI LFM2.5-Encoder,duplicate coverage of 1315 from a content farm
+1073,88,65,AI Hero,Optimizing Claude 3 Code's System Prompt for Efficiency and Output Quality,
+1078,85,65,ToxSec - AI and Cybersecurity,Cisco Agent Runtime SDK Integrates Policy Enforcement at Build Time for LLM Agent Frameworks,
+1122,85,65,Hacker News,Evaluating Ruby Coalesecense Detection Across AI Models in Existing Rails Codebases (Benchmark Results),
+1285,85,65,MarkTechPost,"TileLang for High-Performance GPU Kernels: Tensor-Core GEMM, Fused Softmax, FlashAttention, Autotuning",
+1100,78,64,Machine Learning At Scale,Target Leakage Inducing False NDCG Improvements in Recommendation Systems,
+994,95,62,Hacker News,Declaw Arena agent CTF in a microVM,interesting niche product with published stats
+1052,95,62,Hacker News,GeosQL local geospatial LLM assistant,real niche tool you can install
+1183,95,62,Mistral AI Blog,Prompts and skills need a system of record,vendor product announcement
+995,93,62,Hacker News,claude-real-video local video processing,useful small tool
+1316,92,62,MarkTechPost,Fireworks Nexus routing,vendor product news
+1046,87,62,Hacker News,OfficeCLI: Office suite for AI agents to read and edit Microsoft Office files,
+1334,86,62,Console,GoMLX: A Machine Learning Framework for Go,
+1001,85,62,Hacker News,I built an open-source alternative to Claude Cowork,
+1115,85,62,Machine Learning At Scale,How Reinforcement Learning Training Loops Reveal Distributed Systems Challenges,
+1325,84,62,Hacker News,OpenReviewer: A Specialized LLM for Generating Critical Scientific Paper Reviews,
+982,78,62,Token Contributions,Unreachable Tokens in Unigram Tokenization,
+1143,78,62,AI Superhero,Two Open Models vs the Security Benchmark That Humbles the Frontier,
+1147,78,62,ByteByteGo Newsletter,How LLMs Learn to Be Helpful (RLHF vs DPO),
+1276,78,62,Hacker News,Claude-thermos keeps your Claude session warm for you,
+1288,78,62,MarkTechPost,Building End-to-End OCR Pipeline with Baidu Unlimited-OCR for High-Resolution Images and PDFs,
+1281,76,62,Hacker News,"I scanned my AI agent framework for destructive/consequential actions, and wow",
+1337,97,60,Hacker News,Lessons Improving Evaluation for a 1.2B Local LLM,personal blog; no content fetched; narrow
+1199,95,60,Microsoft Research,Flint visualization language,open source but narrow relevance
+1237,95,60,Hacker News,1-Bit LLM in the Browser,fun HF space demo; thin writeup
+1045,92,60,Hacker News,Not everything should cost a token,good argument; low novelty
+997,87,60,Hacker News,Short-Leash AI Method for Secure Software Development,
+1023,87,60,Hacker News,Reverse-engineered Claude Design system prompt and skill library,
+1000,85,60,Hacker News,CLI that helps AI agents avoid vulnerable dependencies,
+1055,85,60,Hacker News,Flint: A Declarative Language for Building Interactive Agent Charts and Dashboards,
+1307,85,60,ByteByteGo Newsletter,How NVIDIA Builds Open Models for the Age of AI,
+1308,85,60,MarkTechPost,Perplexity Releases pplx CLI for Search API,
+1150,80,60,Hacker News,Fuse - an open source MCP/CLI tool to speed up Claude Code on C# codebases,
+1038,78,60,Elevate by Addy Osmani,Working Model of Autonomy Levels for Agentic Engineering,
+1133,78,60,Hacker News,"Aict - Unix coreutils that output XML/JSON, built for AI agents",
+1156,78,60,Console,Mellea Beta for Testing and Reasoning about LLM Calls,
+1336,78,60,MarkTechPost,"Building Non-Interactive Agentic Coding Workflows with Moonshot AI's Kimi CLI, JSONL Streaming, Testing, and Session Memory",
+1043,93,58,Hacker News,MakerChecker deny-by-default for agents,useful pattern; unknown author
+1120,93,58,Hacker News,Local file search without vector embeddings,reasonable tool; modest novelty
+1157,93,58,Hacker News,Train a kick drum diffusion model on 6GB VRAM,niche hobby project; concrete
+1028,92,58,ToxSec,Models sabotage shutdown scripts,alarmist framing but sourced
+1148,86,58,Hacker News,"Agentty - A drop-in alternative to claude-code, written in C++26. 11.0 MB binary",
+1056,78,58,Hacker News,Premiere-Style Browser Video Editor with Exposed Timeline API for AI Agents,
+1141,78,58,Cobus Greyling on LLMs,Grok Voice Agent Builder,
+1125,98,55,Aligned News,DSpark speculative decoding for Kimi K2.6/2.7,vendor claim via tweet but real artifact + vLLM support
+1134,96,55,Ben's Bites,Using GPT-5.6 in Desktop App and Hosted Sites,newsletter roundup of a release
+1330,96,55,MarkTechPost,Deploying Bonsai-27B 1-bit with PrismML,content-farm tutorial; no content fetched
+1242,95,55,Aligned News,Qwen3.8 preview claims,news via tweet; no weights yet
+1243,95,55,Aligned News,docbank local-first document store,tweet but notable author
+1341,95,55,Hugging Face Blog,Dharma AI GPU utilization techniques,community blog; no content fetched
+1342,95,55,MarkTechPost,TokenSaver MCP extension,content-farm writeup of a small tool
+985,93,55,Vik's Newsletter,Qualcomm high bandwidth compute packaging,hardware analysis; not dev-actionable
+1007,92,55,The AI Engineer,7 real agent goal and loop examples,practical listicle
+1008,92,55,The AI Break,Claude Sonnet 5 priced at $2 per million,thin but relevant pricing news
+1224,92,55,Hacker News,Ollama announces support for open models,vacuous summary of a small announcement
+1229,91,55,Nate's Substack,Run AI offline with private files,newsletter with real company examples
+1302,91,55,MarkTechPost,Skill-driven financial analysis agents,content-farm tutorial
+1089,87,55,Hacker News,How to Select an AI Agent Memory Strategy Using a Decision Tree,
+1096,85,55,Hacker News,Deterministic SQL Semantic Validation for AI-Generated Queries: Detecting Hidden join aggregation & logical errors,
+1106,85,55,AI News,"OpenAI Rolls Out GPT‑5.6 Variants Sol, Terra, Luna for ChatGPT, API, and Codex",
+1112,85,55,Aligned News,Direct GPU PCIe BAR Mapping in Tinygrad Avoids Kernel-Level Drivers,
+1226,85,55,Hacker News,OpenAI reduces Codex Model Context Size from 372k to 272k,
+1240,85,55,Hacker News,A Pipeline for Making 10-minute AI Movies with Claude Code and Seedance,
+1269,85,55,Console,CodeAlmanac: AI Agent Codebase Wiki,
+1304,85,55,Cobus Greyling on LLMs,NVIDIA Nemotron 3 Embed,
+1152,84,55,Aligned News,PyTorch-Triton 3.7 adds runtime compiler extensions without requiring forks or recompilation,
+1181,84,55,Hacker News,"Setting up your spare Mac for Claude Code to control, a step-by-step guide",
+1092,83,55,AI News,"Benchmark: Local LLM Accuracy vs Memory Efficiency Across 7,648 MCQ Tests",
+1165,82,55,The Neuron,Watch: Opening AI's black box,
+1179,78,55,Aligned News,"Cantina Research: Grok build, SpaceXAI's coding agent, was uploading more repository data to SpaceXAI's storage than needed for any coding task - challenging a common assumption about AI",
+1280,78,55,Hacker News,Pyshackle: A hard pre-execution gate for AI agent tool calls (open source),
+1126,88,52,Aligned News,FAL Open-Sources Ideogram-V4 Fast and Instant Image Models for Free Testing,
+1283,87,52,MarkTechPost,"Building Self-Evolving AI Agents with OpenSpace Using Skills, MCP, Lineage, and Low-Cost Reuse",
+1025,85,52,Hacker News,"Sidenote - comment on your rendered blog, an LLM writes the Git diff",
+1324,85,52,Hacker News,BrowserAct: Browser Layer for Your AI Agent,
+1155,78,52,Aligned News,"Perplexity unveils SPACE, the isolated runtime already carrying all Computer production traffic",
+1314,78,52,Hacker News,"Call Me, your AI agents ring you with no extra carrier costs",
+1294,95,50,Hacker News,Wattage token-spend profiler,unknown repo; plausible utility
+1015,93,50,Hacker News,Mapping with in-memory layers to reduce LLM overload,niche personal project
+1053,93,50,Hacker News,Frugon LLM cost analyzer,unknown repo; thin
+1049,92,50,Limited Edition Jonathan,Toxic data propagation in multi-agent workflows,mid-depth experiment
+999,87,50,Hacker News,Enola-A deterministic architecture graph for developers and AI agents,
+1132,85,50,Hacker News,StyleSeed - a design-rules engine so AI agents stop building generic UI,
+1177,85,50,AI Disruption,"Kimi K3 Launched: #1 on Frontend, #3 Globally",
+1231,85,50,Aligned News,LTX-2.3 runs local camera control with a director workflow,
+1296,85,50,Hacker News,Wmux - A workspace multiplexer for AI agents,
+1149,84,50,Hacker News,Open-source voice-to-text tool with Whisper and Cloudflare AI,
+1081,82,50,Aligned News,Meta's Muse Image Model Now Free for Public Use on Instagram/WhatsApp with API Access,
+1235,79,50,Aligned News,GigaWorld-Policy-0.5 reports 85-millisecond local robot-control inference,
+1293,78,50,Machine Learning At Scale,Your RAG stack has about a year left.,
+1340,78,50,AI News,Evaluating Claude Opus 5 Performance Against Frontier Coding Benchmarks,
+1022,88,48,Hacker News,Handoff - a verified context bridge between Claude Code sessions,
+1230,88,48,Aligned News,EgoScale shares first-person robot data with hand-motion annotations,
+998,87,48,Hacker News,CLI tool for detecting non-exact code duplication with embedding models,
+1174,85,48,AI Newsletter,"AI Agents Weekly: Kimi K3, Thinking Machines Inkling, Agentic Misalignment, Perplexity SPACE, Sunday ACT-2, GPT-Red, and More",
+1175,85,48,The Rundown AI,Moonshot's Kimi K3 closes the frontier gap,
+1249,85,48,The Neuron,Alibaba's 2.4T Qwen joins the AI race,
+1305,85,48,The Rundown AI,Anthropic Launches New Flagship Opus 5 Model,
+1306,85,48,AI Disruption,Qwen3.8-Max-Preview Released,
+1154,83,48,Aligned News,Elicit makes its API and MCP server generally available so research agents can use grounded evidence,
+1311,83,48,AI Newsletter,"AI Agents Weekly: Claude Opus 5, OpenAI Breach, Gemini Flash",
+1033,82,48,AI Newsletter,"AI Agents Weekly: Claude Sonnet 5, Grok Voice Agent Builder, LongCat-2.0, Hosted X MCP, Cursor for iOS, Claude Science, and More",
+1085,78,48,Aligned News,Linear's AI Automates PR Creation by Writing Code from Delegated Issues per Seat ($20 Credits),
+1160,78,48,Hacker News,Skyportal SRE - an open-source AI infrastructure engineer,
+1108,95,45,Senior Data Science Lead,How LayerNorm Residuals Feed-Forward work,textbook rehash part 5
+1239,95,45,Hacker News,LLMrPro free LLM balancer,unknown solo repo; common idea
+1298,95,45,Nate's Substack,AI Model Bakeoff Guide,newsletter promise-post
+1338,95,45,Hacker News,Merge queue for parallel Claude Code agents,unknown repo; no content fetched
+1347,95,45,Hacker News,Voice coding for Claude Code,product landing page
+1005,93,45,AI Superhero,Text Is a Terrible Way to Store Text,musing on DeepSeek-OCR
+1016,93,45,Hacker News,Speck spec-driven agentic compiler,unknown repo in a crowded category
+1300,93,45,AI Disruption,Claude Code /fork,feature note stretched into a post
+1349,93,45,Hacker News,Why OpenAI GPT-2 weights beat mine 2 the bugfix,part-N personal learn-by-building series; scored blind
+1006,92,45,Ben's Bites,Fable is back,two-line newsletter item
+1027,92,45,The AI Maker,Claude Code workflow with Codex and MCP,generic setup post
+1109,92,45,Digital Thoughts,Optimizing Fable 5 with model routing,personal blog recap
+1098,88,45,Aligned News,Grok Automates UI Bug Discovery and Sol Agent-Managed LLM Fix Escalation,
+1110,86,45,Aligned News,OpenClaw Update Expands Personal-Agent Portability and Local Infrastructure,
+1127,86,45,Aligned News,Hyperbrowser integrates GPT-5.6 model tiers into its cloud browser sandboxes,
+984,85,45,Hacker News,Access Claude Fable 5 via free promotional subscription,
+990,85,45,AI Disruption,Anthropic launches Claude Sonnet 5 with lower pricing and new tools,
+1032,85,45,Cobus Greyling on LLMs,Building a Self‑Improving Knowledge Base for LLMs,
+1075,85,45,Aligned News,"GPT-5.6 Enables Autonomous, Multi-Hour Agent Workflows Over Model Benchmarks",
+1111,85,45,AI in public,Claude Fable 5 Pricing Shift: Cost Breakdown and 6 Optimization Strategies,
+1163,85,45,The AI Break,The Biggest Open-Weights AI Model Yet Is Here (and It's Free),
+1309,84,45,The AI Break,Anthropic Launches Claude Opus 5,
+1310,84,45,Loop Engineering,The Ultimate Guide to Kimi K3,
+1079,83,45,Aligned News,HKUST-Meituan-NUS AI Image Generator Improves via Self-Comparison of Generative Failures,
+1035,82,45,Senior Data Science Lead,Claude Code: Prioritize Planning and Goal Modes Over Thinking Levels,
+1234,80,45,Department of Product,Examples of Kimi K3 in action and Claude Artifacts gets new powers,
+1086,78,45,AI Disruption,"Meta's Muse Spark 1.1 Adds Agentic Reasoning, Extended Context, andaginator API Access at Lower Cost",
+1117,78,45,AI Newsletter,"Weekly Release Highlights: GPT-5.6, Meta Muse Spark 1.1, Grok 4.5 and Tools Updates",
+1129,78,45,Aligned News,"Resend integrates with Claude for email sending, log debugging, and Figma-to-campaign workflows",
+1142,78,45,AI in public,How to run GPT-5.6 Inside Claude Code,
+1319,78,45,Product Growth,"How to Build Frontier-Lab Quality Evals with Daniel McKinnon, ex-PM at Meta, Google",
+1058,89,42,AI Superhero,Nanoclaw AI Agent Security Flaw Exposed via Filename Vulnerability,
+1099,85,42,Aligned News,Seedance 2.0: Cross-Model Comparison of GPT 5.6 Sol vs Fable 5 Video Generation,
+1128,85,42,Aligned News,Julius and Browserbase Collaborate on Action-Capable Browser Agent for Web Tasks,
+1037,78,42,Machine Learning Pills,The Agent Eval Metrics Most Teams Forget,
+1118,77,42,Aligned News,Lithos introduces an agentic inference engine based on Kimi K2.7 open-source programming model,
+1107,98,40,Aligned News,Image-based token compression for Claude context,unverified tweet trick
+1090,95,40,AI News,Fable 5 orchestration 96% perf at 46% cost,unverified claim attached to a random repo
+1227,95,40,Aligned News,RazerAI local browser TTS,tweet repost
+1252,95,40,AI Disruption,Deep dive into mattpocock/skills,substack review of someone else's repo
+1289,95,40,AI Superhero,Building My-Little-Substack on-device feed lens,personal project post
+1135,93,40,Prosper,I Built My Own Local WisprFlow,substack promo for a prompt download
+1343,92,40,Machine Learning Pills,Tree-based approaches for tabular ML,classic ML tutorial; not AI-builder content
+1057,90,40,AI in public,8 unseen token consumption issues in Fable 5,listicle with unverifiable claims
+1105,86,40,Hacker News,"Adaptive Memory System for AI Agents with Persistent, Learning-Based Recall",
+1074,85,40,The AI Break,Comparing Claude Models: Daily Use Cases & Model Selection Guidelines,
+1232,85,40,Aligned News,AI Arena opens VLA training for a simulated robotic arm,
+1323,85,40,Hacker News,Lean4 Datalog DSL Based on Google Zanzibar for AI Projects,
+1151,84,40,Aligned News,Cencori launches a Voice API across six providers with African-language support and no new configuration,
+1153,83,40,Aligned News,Daytona ships a one-command coding-agent stack through Stripe Projects with live previews and Vercel deployment,
+1034,82,40,Machine Learning Pills,"Frontier Model Access Becomes Production Dependency, Agentic Coding Measured",
+1050,82,40,AI in public,"Fable 5 Prompting Guide: Capabilities, Patterns, and 3D Site Prompt",
+1097,80,40,Hacker News,Anthropic Retires IP Tracker Code After Reinforcing Privacy Commitments,
+1065,79,40,Hacker News,Apple Silicon Manager Cites Mac mini and Mac Studio's Strong AI Agent Performance,
+1123,78,40,Hacker News,ContextVault - Shared memory layer for your AI and your team,
+1140,78,40,The AI Architect,"Shorter Prompts, Better Results. OpenAI Just Reversed Everything You Learned About Prompting",
+1146,78,40,AI Disruption,Source Code Comparison Shows Why 254k-Star Tool Lost to One-Line Skill,
+1271,78,40,Artificial Corner,NotebookLM: The Complete Guide (now Gemini Notebook),
+1062,85,38,The AI Maker,Reverse-Engineering the X API and Integrating It with Claude Code,
+1080,83,38,The Rundown AI,Reducing Token Usage with GPT Orchestrator Workarounds,
+1070,99,35,Standout Systems by Teodora,Local AI Agentic Assistant with OpenClaw/Gemma 2/Docker,generic substack tutorial on an old model
+1339,95,35,AI News,Claude 5 context rules simplified,reddit repost
+1021,94,35,Hacker News,SigMap cuts prompt count 49%,extraordinary claims with no repo or method
+1066,92,35,The Batch,NanoBanana-2 Lite,content-farm URL behind a trusted source name
+1029,87,35,Prosper,"Build Your First Claude Code Artifact Using System, Prompts, Starter Kits",
+1076,85,35,Ben's Bites,**'GPT-5.6,
+1116,85,35,AI blew my mind,Automating Claude Cowork Tasks via Cloud Execution While Laptop Is Off,
+1176,85,35,The AI Engineer,Evaluating Hermes and OpenClaw AI Agents,
+1317,85,35,Prosper,Crash Course On Building Apps With Codex,
+1335,85,35,The Rundown AI,Moonshot lets history's largest open model loose,
+1327,83,35,Hacker News,"Segue - Save context in one AI, load it in another by a short handle",
+1082,82,35,The Rundown AI,Meta Unveils Watermelon:可能关联的内部GPT-5.5模型实验框架到,
+1030,87,32,Matt Paige,"Understanding Agent Loops: Concepts, Design, and Getting Started",
+1031,85,32,Nate's Substack,"Create AI workflow to structure, cite, and export document review packets",
+1138,85,32,The AI Architect,OpenAI ti ha appena detto di buttare metà dei tuoi prompt. E ha costruito un'AI che non accetta un no,
+1139,85,32,AI Disruption,Comet + OpenSpec + Superpowers = One Workflow,
+1278,78,32,Prosper,Claude Code App Changes and Loop Engineering Walkthrough,
+1014,95,30,Hacker News,Protect your right to run local AI,advocacy landing page; zero technical content
+1047,95,30,AI Disruption,Superpowers 6.0 tokens down 60%,hype post with unverifiable percentages
+1197,95,30,Microsoft Research,Verifying Rust cryptography in SymCrypt,formal verification not AI
+1010,85,30,Nate's Substack,"Stop paying frontier prices for work a cheaper AI would crush. Grab the model-picker prompt that routes the deck, the repo, and the call.",
+1114,85,30,Aligned News,Motion-Dependent Fonts Outpace Current Multimodal AI Text Detection,
+1254,85,30,All Agents Considered,How I Built A Substack API With Hermes And Codex,
+992,78,30,Matt Paige,"Day 5 of 30: Your AI Designs Everything From a Blank Page. This Claude Skill Gives It 600,000 Real Products Instead.",
+1063,78,30,Loop Engineering,Quick Start Guide to Claude 3 Fable Models: Deployment and Optimization,
+1003,76,30,Hacker News,"Claudoro, Pomodoro timer embedded in the Claude Code statusline",
+1059,88,28,Loop Engineering,"**'Building an Agentic OS: Claude Fable-5 Architecture, Code, and Optimization'**",
+1061,87,28,All Agents Considered,Debugging Hermes Confusion with Data Layer Inspection in Agent Systems,
+1051,78,28,AI blew my mind,How to Use Claude Fable 5 (Unlearn Your ChatGPT Habits),
+1321,78,28,Loop Engineering,"Block cut 40% of its workforce and then open-sourced Buzz, the AI Agent Workspace that makes it work ; Moonshot's Kimi K3 just made frontier AI something you can own",
+1004,95,25,Prompt-Led Product,The LLM Mental Model: Model Is the Brain,PM-newsletter metaphor piece; nothing to do
+1169,95,25,AI Weekender,Set Up a $0 Cloud VM for Hermes Agent Part 1,serial newsletter filler
+1295,95,25,Hacker News,SP/1.0 deterministic verdicts spec,spec slop from unknown author
+1331,95,25,Loop Engineering,Claude Opus 5 as a financial analyst,engagement-bait substack
+1093,93,25,AI Weekender,Running Hermes on free NVIDIA API and VM,third post of the same filler series
+950,92,25,All Agents Considered,Tear Down Your AI Workflow,newsletter filler
+1009,88,25,AI Weekender,My $0 Hermes Agent Setup,
+991,85,25,AI in public,Anthropic's Claude Sonnet 5 checks off every box,
+1011,85,25,AI blew my mind,How I Automated Trend Research Across 9 Platforms (and Stopped Scrolling for Ideas),
+1166,78,25,Loop Engineering,"Anthropic's Claude Code just made SaaS dashboards disposable ; Robinhood Chain is live, but its best product isn't available in the US",
+1168,78,25,AI blew my mind,Why Your AI Images Stall at 'Almost Right' (the Fix Isn't a Better Prompt),
+1064,77,25,The AI Maker,Building an AI-Assisted Reflection System with Podcasts in Obsidian using /reflect,
+1297,95,22,AI Weekender,Hermes + Telegram on $0 VM Part 2,serial newsletter filler
+988,88,22,Limited Edition Jonathan,Claude Sonnet 5 Just Dropped. Paste This Prompt to Find Out What It Means for YOU.,
+1270,80,22,Cash & Cache,The 3-Layer AI Accuracy Framework (Most People Only Use 1),
+1246,91,20,The Ai Rabbit Hole,Why human language is the new code,pure slop
+1113,85,20,Aligned News,GPT-5.6 and other AI models update deployment choices and capabilities,
+1036,82,20,Machine Learning At Scale,The system behind the $14K monthly discovery engine,
+1039,78,20,AI in public,15 Books Every AI Engineer Should Read in 2026,
+1013,82,18,Standout Systems by Teodora,Clinical Prompt Template for Asking AI Health Questions,
+1024,85,15,Hacker News,The AI Compass Quiz,
+1233,85,15,Aligned News,YouCam API Hackathon runs worldwide through August 16,
+1124,100,12,Aligned News,NEAR Confidential Intents via 1Click Swap API,crypto not AI; x.com repost
+1094,92,12,Aligned News,Build Week event highlights,broken title with leaked JSON; promo tweet
