@@ -1,3 +1,4 @@
+import { SCORE_STANDOUT } from "@/components/Articles/ScoreRail"
 import { TopicLane } from "./TopicLane"
 import { TOPICS } from "./topics"
 
@@ -13,7 +14,7 @@ export function TopicLanes() {
         <div className="flex items-center gap-5 font-wire text-[10px] uppercase tracking-[0.1em] text-dim">
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-0.5 shrink-0 bg-signal" />
-            scores 92+
+            scores {SCORE_STANDOUT}+
           </span>
           <span className="flex items-center gap-2">
             <span className="inline-block h-3 w-0.5 shrink-0 bg-paper/40" />

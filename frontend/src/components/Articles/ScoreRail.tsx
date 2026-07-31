@@ -1,13 +1,17 @@
 import { cn } from "@/lib/utils"
 
-// The pipeline's scores occupy 76-100 in practice, not the schema's nominal
-// 1-100. Normalizing against the real band is what makes the rail readable —
-// against 0-100 every bar would sit in the top quarter and look identical.
-const SCORE_FLOOR = 76
-const SCORE_CEIL = 100
-// p75 of the live distribution. Above it a row is worth the reader's hour, and
-// earns the one hot colour on the page.
-const SCORE_STANDOUT = 92
+// Scores occupy roughly 20-90 in practice, not the schema's nominal 1-100.
+// Normalizing against the real band is what makes the rail readable — against
+// 0-100 every bar would cluster mid-track and look identical. These three
+// numbers track the live distribution and have to be re-read whenever the
+// scoring rubric moves; they were 76/100/92 under the pre-recalibration
+// rubric, which put every stored article in the top quarter of the scale.
+const SCORE_FLOOR = 20
+const SCORE_CEIL = 90
+// p90 of the live distribution, and the foot of the rubric's "real technical
+// substance, actionable today" band. Above it a row is worth the reader's
+// hour, and earns the one hot colour on the page.
+export const SCORE_STANDOUT = 80
 
 export function scoreFraction(score: number): number {
   const clamped = Math.min(Math.max(score, SCORE_FLOOR), SCORE_CEIL)
@@ -18,7 +22,7 @@ export function scoreFraction(score: number): number {
  * The score rail: a hairline track in the row's left gutter, filled from the
  * bottom in proportion to the article's score. Stacked rows read as a ragged
  * skyline, so a lane's shape tells you how strong its week was before you read
- * a single headline. Standouts (p75+) take the page's only hot colour.
+ * a single headline. Standouts (p90+) take the page's only hot colour.
  */
 export function ScoreRail({ score }: { score: number }) {
   const standout = score >= SCORE_STANDOUT
