@@ -9,7 +9,10 @@ import re
 from app.models import ArticleKind
 from pipeline.utils import hostname
 
-SCORE_THRESHOLD = 76
+# Tied to the rubric in baml_src/score.baml: the median in-scope article sits
+# near 55 there, so this admits roughly the top third. Moving one without the
+# other either empties the feed or fills it with newsletter filler.
+SCORE_THRESHOLD = 65
 PROMPT_CONTENT_CAP = 1500
 
 # Below this, content is a teaser/blurb rather than an article, and the

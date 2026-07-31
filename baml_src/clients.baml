@@ -36,9 +36,14 @@ client<llm> Gemini {
 // gpt-oss first, drop to Ministral if it keeps failing, then Gemini as
 // last resort. Renaming would mean editing all 12 `client Nvidia` sites
 // for no gain; both NVIDIA clients keep their name for that reason.
+//
+// Order matters most for ScoreArticles: Ministral-3-14B judged with ±15
+// run-to-run variance on identical input and intermittently returned fewer
+// results than it was given, which the scorer reads as score 0. gpt-oss-120b
+// leads for that reason; see plans/scoring-recalibration.md.
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [Ministral, GptOss, Gemini]
+    strategy [GptOss, Ministral, Gemini]
   }
 }

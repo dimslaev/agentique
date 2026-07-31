@@ -7,14 +7,16 @@
 //
 // v1 is frontend-only: each box expands into one readArticles call per
 // tag x kind pair and merges client-side. That is provably correct for unions
-// and tag-and-kind boxes — if an article is in the merged top-10 by date, at
-// most 9 are newer overall, so at most 9 are newer within any single
-// constituent request, and it is therefore in that request's own top-10.
+// and tag-and-kind boxes — if an article is in the merged top-10 by score, at
+// most 9 outrank it overall, so at most 9 outrank it within any single
+// constituent request, and it is therefore in that request's own top-10. The
+// argument holds for any single total order the requests share; it held for
+// date before and holds for score now.
 //
-// It is NOT correct for tag-and-tag intersections: date sort gives the
-// constituent requests no shared ordering, and `agent-security` recovers 1 of
-// its true top-10 even when fetching the API maximum. Those boxes wait for the
-// backend endpoint. See plans/topic-boxes-homepage.md.
+// It is NOT correct for tag-and-tag intersections: the constituent requests
+// share no ordering there, and `agent-security` recovers 1 of its true top-10
+// even when fetching the API maximum. Those boxes wait for the backend
+// endpoint. See plans/topic-boxes-homepage.md.
 
 export type TopicDef = {
   slug: string
@@ -30,8 +32,18 @@ export type TopicDef = {
 /** Rows shown per box, and the page size of every underlying request. */
 export const BOX_LIMIT = 10
 
-/** Newest first, matching /feed's own default. */
-export const BOX_SORT = "published_at-desc"
+/**
+ * Best first. The landing page is a "what mattered" view, not a river —
+ * /feed is where you go for newest-first.
+ */
+export const BOX_SORT = "score-desc"
+
+/**
+ * How far back a box looks. Score sort with no window would pin the same
+ * high scorers to the page for months; 14 days keeps it moving without
+ * emptying the thinner boxes the way 7 does.
+ */
+export const BOX_WINDOW_DAYS = 14
 
 // Order is curated by hand, 3 per row (grid wraps at lg:grid-cols-3):
 // labs first, then model-news, then the smaller-scope lanes, then
