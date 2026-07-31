@@ -9,6 +9,7 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { trackEvent } from "@/lib/analytics"
 import { handleError } from "@/utils"
+import { SponsorRow } from "./SponsorRow"
 import { TopicLanes } from "./TopicLanes"
 
 export function LandingPage() {
@@ -18,6 +19,7 @@ export function LandingPage() {
       <main className="flex-1">
         <div className="mx-auto w-full max-w-5xl px-6 sm:px-8">
           <Hero />
+          <SponsorRow />
           <TopicLanes />
         </div>
       </main>
