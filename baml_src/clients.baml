@@ -1,19 +1,5 @@
-// Primary judge. Replaced gpt-oss-120b on 2026-08-06: NVIDIA NIM latency blew
-// out under load (single ScoreArticles calls took 52-285s, against ~13s earlier
-// the same morning), which serialised into hours of wall-clock because
-// score_articles runs its batches strictly in sequence.
-client<llm> Haiku {
-  provider anthropic
-  options {
-    api_key env.ANTHROPIC_API_KEY
-    model "claude-haiku-4-5-20251001"
-    max_tokens 4096
-    timeout 120
-  }
-}
-
-// Was the primary judge: highest-quality of the three below, but times out
-// under load, so it gets a generous timeout and falls back to Ministral.
+// Primary scorer: gpt-oss-120b is the highest-quality judge but times out under
+// load, so it gets a generous timeout and falls back to Ministral.
 client<llm> GptOss {
   provider openai-generic
   options {
@@ -47,17 +33,17 @@ client<llm> Gemini {
 }
 
 // The name every function already references. Now a fallback wrapper: try
-// Haiku first, then gpt-oss, then Ministral, with Gemini as last resort.
-// Renaming would mean editing all 12 `client Nvidia` sites for no gain, so
-// the name stays despite no longer leading with an NVIDIA-backed model.
+// gpt-oss first, drop to Ministral if it keeps failing, then Gemini as
+// last resort. Renaming would mean editing all 12 `client Nvidia` sites
+// for no gain; both NVIDIA clients keep their name for that reason.
 //
 // Order matters most for ScoreArticles: Ministral-3-14B judged with ±15
 // run-to-run variance on identical input and intermittently returned fewer
-// results than it was given, which the scorer reads as score 0. It stays last
-// of the judges for that reason; see plans/scoring-recalibration.md.
+// results than it was given, which the scorer reads as score 0. gpt-oss-120b
+// leads for that reason; see plans/scoring-recalibration.md.
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [Haiku, GptOss, Ministral, Gemini]
+    strategy [GptOss, Ministral, Gemini]
   }
 }
