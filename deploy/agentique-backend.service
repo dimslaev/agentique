@@ -18,7 +18,10 @@ EnvironmentFile=/opt/agentique/.env
 # /var/lib/agentique is real and writable (created by vps-setup.sh) — outside
 # /opt/agentique so the deploy rsync's --delete never touches it.
 Environment=HOME=/var/lib/agentique
-ExecStart=/opt/agentique/.venv/bin/fastapi run --workers 4 --host 127.0.0.1 --port 8000 app/main.py
+# 2 workers, not 4: the box has 1.9G and no swap, and each worker sits at
+# ~140M resident. Four held ~560M against a 436M-peak pipeline running
+# alongside a live API. At observed load (0.13, workers idle) two is ample.
+ExecStart=/opt/agentique/.venv/bin/fastapi run --workers 2 --host 127.0.0.1 --port 8000 app/main.py
 Restart=always
 RestartSec=5
 
