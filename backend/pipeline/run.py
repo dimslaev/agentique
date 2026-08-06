@@ -21,7 +21,11 @@ from pipeline.steps.enrich import (
     improve_titles,
 )
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
-from pipeline.steps.filter import filter_dead_domains, filter_known_urls
+from pipeline.steps.filter import (
+    dedup_semantic,
+    filter_dead_domains,
+    filter_known_urls,
+)
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
 from pipeline.tags import load_vocabulary
@@ -57,9 +61,15 @@ def run_pipeline(stats: RunStats) -> None:
                 candidates = prefilter_keep_drop(session, alive)
                 prefiltered = len(alive) - len(candidates)
 
-                scored = score_articles(session, candidates)
+                # Before scoring: a story we already carry must never cost an
+                # LLM call. Runs after the pre-filter so junk-that-is-a-dup is
+                # recorded in ScoredUrl rather than silently dropped here.
+                unique = dedup_semantic(session, candidates, source.label)
+                s.deduped = len(candidates) - len(unique)
+
+                scored = score_articles(session, unique)
                 # below_threshold = pre-filter drops + LLM sub-threshold
-                s.below_threshold = prefiltered + (len(candidates) - len(scored))
+                s.below_threshold = prefiltered + (len(unique) - len(scored))
 
                 inserted = insert_articles(session, scored)
                 s.inserted = len(inserted)

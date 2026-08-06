@@ -59,6 +59,19 @@ def keep_drop_threshold() -> float:
     return float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
 
 
+def dedup_dist_threshold() -> float:
+    """Cosine-distance cutoff below which two articles are the same story;
+    0 disables dedup entirely.
+
+    Same-story pairs empirically sit at 0.29-0.35. The old shortlist used 0.45
+    to favour recall because an LLM still made the final call — that call is
+    gone, so this now drops on its own and sits at the bottom of the band
+    instead. Erring tight costs a duplicate slipping through; erring loose
+    silently deletes a real article, which is the worse failure.
+    """
+    return float(os.environ.get("DEDUP_DIST_THRESHOLD", "0.30"))
+
+
 @dataclass(frozen=True)
 class AlertConfig:
     resend_api_key: str | None
