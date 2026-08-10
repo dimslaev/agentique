@@ -1,3 +1,4 @@
+import secrets
 from collections.abc import Generator
 from typing import Annotated
 
@@ -70,6 +71,28 @@ def get_current_user_optional(request: Request, session: SessionDep) -> User | N
 
 
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
+
+
+def verify_agent_token(request: Request) -> None:
+    """Gate for the curation agent's tool API.
+
+    One shared bearer token rather than a user session: the caller is a
+    process, not a person, and nothing under /agent is scoped to a user. Fails
+    closed — no configured token means the endpoints are off, not open.
+    """
+    expected = settings.AGENT_API_TOKEN
+    if not expected:
+        raise HTTPException(
+            status_code=503, detail="Agent API is disabled (AGENT_API_TOKEN unset)"
+        )
+
+    authorization = request.headers.get("Authorization") or ""
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not secrets.compare_digest(token, expected):
+        raise HTTPException(status_code=401, detail="Invalid agent token")
+
+
+AgentAuth = Depends(verify_agent_token)
 
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:

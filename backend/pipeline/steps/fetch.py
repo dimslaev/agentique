@@ -63,22 +63,32 @@ def build_sources(session: Session) -> list[Source]:
 
 
 def fetch_source(source: Source) -> tuple[list[FetchedArticle], dict[str, str]]:
+    """Poll one source, exactly as it emitted its items.
+
+    Content filling is a separate call (``fill_content``) so the agent's inbox
+    can record what the source actually returned, thin items included, before
+    the LLM funnel drops the ones it cannot work with.
+    """
     articles, errors = source.fetcher()
     if not articles:
         log(f"No articles from {source.label}")
-        return articles, errors
-    return _with_content(articles, source.label), errors
+    return articles, errors
 
 
-def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
+def fill_content(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
     """Fill each item's content at fetch time, then drop the ones still empty.
 
     Feeds already carry ``content:encoded``; thin items (< ``MIN_CONTENT_CHARS``)
     get a network re-fetch — direct, then residential proxy — via
     ``fetch_full_content``. An article with no usable content after that is
-    dropped and logged: downstream steps assume full content, so a contentless
+    dropped and logged: the LLM steps assume full content, so a contentless
     item has nothing to categorize and no point being scored or inserted.
+
+    Only the LLM funnel needs this. The agent's inbox is filled from the raw
+    fetch and keeps the thin items.
     """
+    if not articles:
+        return articles
     thin = [a for a in articles if len(a.get("content") or "") < MIN_CONTENT_CHARS]
     if thin:
         content_map = fetch_full_content([a["url"] for a in thin])

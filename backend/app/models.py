@@ -3,6 +3,7 @@ import unicodedata
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from pydantic import EmailStr
@@ -153,6 +154,18 @@ class Category(StrEnum):
     research = "research"
 
 
+class FeedItemStatus(StrEnum):
+    """Where a feed item sits in the curation agent's loop.
+
+    The agent is non-deterministic and its runs can die halfway, so a run only
+    ever picks up `new` rows — anything already decided is never reconsidered.
+    """
+
+    new = "new"
+    accepted = "accepted"
+    rejected = "rejected"
+
+
 class LinkPlatform(StrEnum):
     website = "website"
     rss = "rss"
@@ -223,6 +236,57 @@ class Article(ArticleBase, table=True):
     )
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+# ─── FeedItem ──────────────────────────────────────────────────────────────
+
+
+class FeedItemBase(SQLModel):
+    """One item a source emitted, stored with no judgment applied.
+
+    This is the curation agent's inbox. The pipeline that fills it does no
+    scoring, no categorizing and no content re-fetching — rows are thin on
+    purpose, and the agent fetches what it decides it needs. An accepted item
+    becomes an `article`; the feed item itself is kept as the audit trail and
+    pruned after 30 days.
+    """
+
+    # the item's identity: the pipeline skips a URL already in `feed_item` or
+    # `article`, so the same story never lands in the inbox twice.
+    url: str = Field(unique=True, index=True)
+    title: str
+    # feed-embedded text. Often empty (HN links, AI News recaps) — an empty
+    # content is a normal row, not a broken one.
+    content: str | None = None
+    published_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    # who *carried* the item, which is not necessarily who wrote it: HN and AI
+    # News are carriers. Resolving the first-party publisher is the agent's job.
+    feed_publisher_id: int | None = Field(default=None, foreign_key="publisher.id")
+    # pre-parsed outbound candidates, best-first: [{url, host, kind, text}].
+    # Only AI News fills this; everywhere else it is empty.
+    links: list[dict] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+
+
+class FeedItem(FeedItemBase, table=True):
+    __tablename__ = "feed_item"
+    id: int | None = Field(default=None, primary_key=True)
+    fetched_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        index=True,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    status: FeedItemStatus = Field(default=FeedItemStatus.new, index=True)
+    # the agent's one-line reason for the decision
+    decision: str | None = None
+    decided_at: datetime | None = Field(
+        default=None,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
 
@@ -402,3 +466,127 @@ class NewsletterSubscribeRequest(SQLModel):
 
 class NewsletterSubscribeResponse(SQLModel):
     ok: bool = True
+
+
+# ─── Agent tool API ────────────────────────────────────────────────────────
+# Request/response shapes for /api/v1/agent/*, the curation agent's toolbox.
+# Reads are wide (the agent decides what it needs); writes are typed, one shape
+# per thing it is allowed to create.
+
+
+class FeedItemPublic(FeedItemBase):
+    id: int
+    fetched_at: datetime
+    status: FeedItemStatus
+    decision: str | None = None
+    # the carrier's display name, so triaging a batch needs no second lookup
+    feed_publisher: str | None = None
+    # content is clipped on the way out (see the `content_chars` query param):
+    # a full Substack post is tens of thousands of characters and a batch of
+    # them would swallow the agent's context before it judged anything.
+    content_truncated: bool = False
+
+
+class FeedItemsPublic(SQLModel):
+    data: list[FeedItemPublic]
+    count: int
+
+
+class FeedItemDecision(SQLModel):
+    status: FeedItemStatus
+    decision: str = Field(max_length=500)
+
+
+class AgentPublisher(SQLModel):
+    id: int
+    slug: str
+    name: str
+    kind: PublisherKind
+    type: PublisherType
+    trust: TrustLevel
+    is_active: bool
+    description: str | None = None
+    links: dict[LinkPlatform, str] = Field(default_factory=dict)
+
+
+class PublisherUpsert(SQLModel):
+    slug: str
+    name: str
+    kind: PublisherKind
+    type: PublisherType = PublisherType.other
+    description: str | None = None
+    image: str | None = None
+    links: dict[LinkPlatform, str] = Field(default_factory=dict)
+    trust: TrustLevel = TrustLevel.medium
+    # A publisher with is_active=true and no rss/substack link is an
+    # attribution target the pipeline never polls — which is exactly what a
+    # first-party source discovered mid-run should be.
+    is_active: bool = True
+
+
+class AgentTag(SQLModel):
+    id: int
+    slug: str
+    name: str
+    description: str | None = None
+
+
+class TagCreate(SQLModel):
+    slug: str
+    name: str
+    description: str | None = None
+
+
+class SqlReadRequest(SQLModel):
+    query: str
+    limit: int | None = Field(default=None, ge=1)
+
+
+class SqlReadResult(SQLModel):
+    columns: list[str]
+    rows: list[list[Any]]
+    row_count: int
+    truncated: bool
+
+
+class FetchUrlRequest(SQLModel):
+    url: str
+
+
+class FetchUrlResult(SQLModel):
+    url: str
+    # false means "nothing readable came back" — a 403, a paywall, a JS-only
+    # page, or a host we skip. Not an error: the agent judges on what it has.
+    ok: bool
+    chars: int
+    text: str
+    truncated: bool
+
+
+class AgentArticleCreate(SQLModel):
+    url: str
+    title: str
+    # the *first-party* publisher, not whoever carried the item. Must already
+    # exist — mint it with upsert_publisher first if it doesn't.
+    publisher_slug: str
+    score: int = Field(ge=1, le=100)
+    kind: ArticleKind = ArticleKind.blog
+    categories: list[Category] = Field(default_factory=list)
+    summary: str | None = None
+    content: str | None = None
+    published_at: datetime | None = None
+    # slugs from the controlled vocabulary; unknown ones are rejected, never
+    # silently dropped, so a typo is visible instead of costing the tag.
+    tags: list[str] = Field(default_factory=list)
+
+
+class AgentArticleCreated(SQLModel):
+    id: int
+    url: str
+    title: str
+    score: int
+    publisher_slug: str
+    tags: list[str]
+    # false means the article was stored without a vector: it will not show up
+    # in `/articles/search`, so a later dedup check cannot see it.
+    embedded: bool

@@ -86,13 +86,16 @@ def extract_text(html: str, max_length: int | None = None) -> str:
     return text[:max_length] if max_length else text
 
 
-def _fetch_and_extract(url: str, max_length: int | None = None) -> str:
+def fetch_and_extract(url: str, max_length: int | None = None) -> str:
     """Fetch a URL directly, falling back to the residential proxy.
 
     An empty result from the direct attempt covers every failure mode we care
     about — connection error, 403/429, non-HTML body, or a paywall/login wall
     that ``_is_blocker`` caught — and all of them are worth a proxied retry.
     The proxy is metered, so it never runs first.
+
+    Public because the agent's ``fetch_url`` tool is exactly this call: one
+    URL, both attempts, readable text or "".
     """
     if _should_skip(url):
         return ""
@@ -122,7 +125,7 @@ def _fetch_texts(
         idx, url = idx_url
         if verbose:
             log(f"    [{idx + 1}/{total}] Fetching: {url}")
-        text = _fetch_and_extract(url, max_length)
+        text = fetch_and_extract(url, max_length)
         if verbose:
             size = f"OK ({len(text)} chars)" if text else "no content"
             log(f"    [{idx + 1}/{total}] {size}: {url}")

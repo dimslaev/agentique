@@ -5,7 +5,7 @@ share button or a link to the aggregator itself.
 
 from __future__ import annotations
 
-from pipeline.sources.ainews import _pick_primary
+from pipeline.sources.ainews import MAX_CANDIDATE_LINKS, _candidates, _pick_primary
 
 
 def _link(url: str, host: str, text: str = "") -> dict:
@@ -76,3 +76,50 @@ def test_unrecognised_host_falls_back_to_first_clean_link_as_other():
 def test_known_ai_lab_blog_host_is_classified_as_blog():
     links = [_link("https://www.anthropic.com/news/x", "anthropic.com")]
     assert _pick_primary(links)["kind"] == "blog"
+
+
+# ─── candidate lists ─────────────────────────────────────────────────────────
+# The picked link is a guess. The agent gets the whole ranked list so it can
+# override that guess when the first-party original is further down.
+
+
+def test_candidates_are_ranked_best_first():
+    links = [
+        _link("https://x.com/a", "x.com"),
+        _link("https://openai.com/blog/x", "openai.com"),
+        _link("https://github.com/foo/bar", "github.com"),
+    ]
+    assert [c["kind"] for c in _candidates(links)] == ["github", "blog", "tweet"]
+
+
+def test_candidates_keep_document_order_within_a_kind():
+    links = [
+        _link("https://github.com/a/one", "github.com"),
+        _link("https://github.com/b/two", "github.com"),
+    ]
+    assert [c["url"] for c in _candidates(links)] == [
+        "https://github.com/a/one",
+        "https://github.com/b/two",
+    ]
+
+
+def test_candidates_drop_junk_and_duplicates():
+    links = [
+        _link("https://news.smol.ai/issue", "news.smol.ai"),
+        _link("https://github.com/foo/bar", "github.com"),
+        _link("https://github.com/foo/bar", "github.com"),
+    ]
+    assert [c["url"] for c in _candidates(links)] == ["https://github.com/foo/bar"]
+
+
+def test_candidate_list_is_capped():
+    links = [_link(f"https://example.com/{i}", "example.com") for i in range(30)]
+    assert len(_candidates(links)) == MAX_CANDIDATE_LINKS
+
+
+def test_the_picked_link_is_the_first_candidate():
+    links = [
+        _link("https://x.com/a", "x.com"),
+        _link("https://huggingface.co/m", "huggingface.co"),
+    ]
+    assert _pick_primary(links)["url"] == _candidates(links)[0]["url"]

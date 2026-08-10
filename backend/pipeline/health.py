@@ -51,6 +51,10 @@ class SourceStats:
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
     # granularity within "Feeds".
     source: str
+    # rows added to the curation agent's inbox. Counted separately because it
+    # is not part of the funnel below — the inbox takes what the source emitted,
+    # before `fetched` drops the items with no content.
+    inboxed: int = 0
     fetched: int = 0
     filtered_known: int = 0
     filtered_dead: int = 0
@@ -152,7 +156,9 @@ def _load_history(session: Session, exclude_started_at: datetime) -> list[dict]:
         .order_by(col(PipelineRun.started_at).desc())
         .limit(HISTORY_WINDOW)
     ).all()
-    return [{"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs]
+    return [
+        {"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs
+    ]
 
 
 # ─── Dead-man's-switch (runs at the START of each run) ─────────────────────────
@@ -315,6 +321,7 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
             f"→ dup -{s.deduped} "
             f"→ below-threshold -{s.below_threshold} "
             f"→ inserted {s.inserted}"
+            f"   [inbox +{s.inboxed}]"
         )
         if s.errors:
             row += f"   [errors: {len(s.errors)}]"

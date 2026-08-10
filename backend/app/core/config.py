@@ -67,6 +67,23 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB,
         )
 
+    # ─── Curation agent tool API (/api/v1/agent/*) ────────────────────────
+    # Unset disables the whole router: a deploy that forgets the token serves
+    # 503s rather than an unauthenticated write API.
+    AGENT_API_TOKEN: str | None = None
+    # A DSN for a role with SELECT and nothing else, for the sql_read tool. The
+    # read-only transaction and the statement timeout are belt and braces on
+    # top of it; unset falls back to the app's own role, which is fine locally
+    # and is not fine in production.
+    AGENT_READONLY_DATABASE_URI: str | None = None
+    AGENT_SQL_ROW_CAP: int = 500
+    AGENT_SQL_TIMEOUT_MS: int = 5_000
+    # fetch_url runs inside the web worker that also serves the site, and the
+    # proxied path can sit on a slow exit node for 20s. Two at a time on a
+    # 2-worker box leaves room for page requests.
+    AGENT_FETCH_CONCURRENCY: int = 2
+    AGENT_FETCH_QUEUE_SECONDS: float = 30.0
+
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587

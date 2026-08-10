@@ -3,7 +3,214 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AgentListFeedItemsData, AgentListFeedItemsResponse, AgentMarkFeedItemData, AgentMarkFeedItemResponse, AgentListPublishersData, AgentListPublishersResponse, AgentUpsertPublisherData, AgentUpsertPublisherResponse, AgentListTagsResponse, AgentCreateTagData, AgentCreateTagResponse, AgentSqlReadData, AgentSqlReadResponse, AgentFetchUrlData, AgentFetchUrlResponse, AgentCreateArticleData, AgentCreateArticleResponse, AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, NewsletterSubscribeData, NewsletterSubscribeResponse2, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class AgentService {
+    /**
+     * List Feed Items
+     * The inbox, newest first. `count` is every item in that status, not just
+     * the ones on this page — it is how the agent knows how much is left.
+     * @param data The data for the request.
+     * @param data.status
+     * @param data.limit
+     * @param data.contentChars
+     * @returns FeedItemsPublic Successful Response
+     * @throws ApiError
+     */
+    public static listFeedItems(data: AgentListFeedItemsData = {}): CancelablePromise<AgentListFeedItemsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/agent/feed-items',
+            query: {
+                status: data.status,
+                limit: data.limit,
+                content_chars: data.contentChars
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Mark Feed Item
+     * Record the agent's verdict. Decided items never come back in a `new`
+     * batch, which is what makes a half-finished run safe to just re-run.
+     * @param data The data for the request.
+     * @param data.itemId
+     * @param data.requestBody
+     * @returns FeedItemPublic Successful Response
+     * @throws ApiError
+     */
+    public static markFeedItem(data: AgentMarkFeedItemData): CancelablePromise<AgentMarkFeedItemResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/feed-items/{item_id}/decision',
+            path: {
+                item_id: data.itemId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Publishers
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.limit
+     * @returns AgentPublisher Successful Response
+     * @throws ApiError
+     */
+    public static listPublishers(data: AgentListPublishersData = {}): CancelablePromise<AgentListPublishersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/agent/publishers',
+            query: {
+                q: data.q,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Upsert Publisher
+     * Create or update a publisher by slug.
+     *
+     * This is how a first-party source the agent found mid-run becomes an
+     * attribution target. Leave the links empty and the pipeline never polls it —
+     * it exists only so the article has the right byline.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AgentPublisher Successful Response
+     * @throws ApiError
+     */
+    public static upsertPublisher(data: AgentUpsertPublisherData): CancelablePromise<AgentUpsertPublisherResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/publishers',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * List Tags
+     * The whole controlled vocabulary — slug, name, and when to apply it.
+     * @returns AgentTag Successful Response
+     * @throws ApiError
+     */
+    public static listTags(): CancelablePromise<AgentListTagsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/agent/tags'
+        });
+    }
+    
+    /**
+     * Create Tag
+     * Mint a vocabulary entry. Rare by design: a tag that fits three articles
+     * a year is a worse filter than no tag.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AgentTag Successful Response
+     * @throws ApiError
+     */
+    public static createTag(data: AgentCreateTagData): CancelablePromise<AgentCreateTagResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/tags',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Sql Read
+     * Run one SELECT and return its rows.
+     *
+     * Open on purpose: the agent asking "what have we published from this
+     * publisher lately?" should not need a new endpoint every time it thinks of
+     * a new question. Bounded by a read-only transaction, a statement timeout,
+     * and a row cap.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns SqlReadResult Successful Response
+     * @throws ApiError
+     */
+    public static sqlRead(data: AgentSqlReadData): CancelablePromise<AgentSqlReadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/sql',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Fetch Url
+     * Fetch one URL and return its readable text.
+     *
+     * Direct first, residential proxy on failure, trafilatura for the extract —
+     * the same path the pipeline uses on its own sources. An empty result is an
+     * answer, not an error: plenty of pages will not give us text, and the agent
+     * still has the title to judge on.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FetchUrlResult Successful Response
+     * @throws ApiError
+     */
+    public static fetchUrl(data: AgentFetchUrlData): CancelablePromise<AgentFetchUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/fetch-url',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Article
+     * Publish one article.
+     *
+     * The agent never sends a vector and never sends SQL: it sends the fields it
+     * judged, and this validates them, embeds server-side, inserts, and links the
+     * tags. A duplicate URL is a 409 rather than a second row.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns AgentArticleCreated Successful Response
+     * @throws ApiError
+     */
+    public static createArticle(data: AgentCreateArticleData): CancelablePromise<AgentCreateArticleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/agent/articles',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class AnalyticsService {
     /**

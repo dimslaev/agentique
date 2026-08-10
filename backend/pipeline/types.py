@@ -25,6 +25,9 @@ class FetchedArticle(TypedDict, total=False):
     content: str
     published_date: str | None
     source: str
+    # pre-parsed outbound candidates for an aggregator item, best-first:
+    # [{url, host, kind, text}]. Only AI News sets it (see sources/ainews.py).
+    links: list[dict]
     # set by _resolve_publishers
     publisher_id: int
     trust: str

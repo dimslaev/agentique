@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
-from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -14,6 +13,7 @@ from app.api.article_view import (
     liked_article_ids,
 )
 from app.api.deps import CurrentUserOptional, SessionDep
+from app.embedding import embed
 from app.models import (
     Article,
     ArticleFacets,
@@ -30,26 +30,10 @@ router = APIRouter(prefix="/articles", tags=["articles"])
 # Reads are public and unbounded. A caller may still send a token — it only
 # decides whether `liked_by_me` is filled in.
 
-# Loaded once at module import — model2vec is CPU-only and tiny (~30 MB)
-_model: StaticModel | None = None
-
-
-def get_model() -> StaticModel:  # pragma: no cover
-    global _model
-    if _model is None:
-        _model = StaticModel.from_pretrained("minishlab/potion-base-8M")
-    return _model
-
 
 def _embed(text: str) -> list[float]:  # pragma: no cover
-    import numpy as np
-
-    model = get_model()
-    vec = model.encode([text])[0]
-    norm = np.linalg.norm(vec)
-    if norm > 0:
-        vec = vec / norm
-    return vec.tolist()
+    """Indirection kept so tests can swap the real model out by name."""
+    return embed(text)
 
 
 @router.get("/", response_model=ArticlesPublic)
@@ -59,7 +43,10 @@ def read_articles(
     limit: int = Query(default=20, ge=1, le=50),
     since: str | None = None,
     q: str | None = None,
-    min_score: int | None = Query(default=None, ge=1, le=10),
+    # Scores are 1-100 (see the rubric in agent/CLAUDE.md). This said le=10 for
+    # as long as the 1-100 scale has existed, so every min_score above 10 was a
+    # 422 and the filter has never actually worked.
+    min_score: int | None = Query(default=None, ge=1, le=100),
     category: str | None = None,
     kind: str | None = None,
     tag: str | None = None,

@@ -13,6 +13,9 @@ FEED_URL = "https://news.smol.ai/rss.xml"
 MAX_CONTENT_LENGTH = 1400
 MIN_REDDIT_BODY_LENGTH = 120
 MIN_TWITTER_TITLE_LENGTH = 10
+# Outbound candidates kept per story. A recap section links out a lot; the tail
+# is navigation and cross-references, and the whole list is stored as JSON.
+MAX_CANDIDATE_LINKS = 12
 
 
 # --- minimal RSS parsing (no feedparser dep for this source) ---
@@ -121,15 +124,34 @@ def _is_junk(link: dict) -> bool:
     return False
 
 
+def _candidates(links: list[dict]) -> list[dict]:
+    """Outbound links worth following, best-first, each tagged with its kind.
+
+    AI News is a carrier, not a publisher: every story it recaps has a
+    first-party original somewhere in its links. We pick one (``_pick_primary``)
+    but hand the whole ranked list downstream so the curation agent can override
+    that pick when the original is further down. Sorted by ``PRIMARY_PRIORITY``,
+    stably, so links of equal kind keep the order they appeared in the recap.
+    """
+    seen: set[str] = set()
+    clean: list[dict] = []
+    for lnk in links:
+        if _is_junk(lnk) or lnk["url"] in seen:
+            continue
+        seen.add(lnk["url"])
+        clean.append({**lnk, "kind": _classify_host(lnk["host"]) or "other"})
+
+    rank = {kind: i for i, kind in enumerate(PRIMARY_PRIORITY)}
+    return sorted(clean, key=lambda lnk: rank.get(lnk["kind"], len(rank)))[
+        :MAX_CANDIDATE_LINKS
+    ]
+
+
 def _pick_primary(links: list[dict]) -> dict:
-    clean = [lnk for lnk in links if not _is_junk(lnk)]
-    if not clean:
+    candidates = _candidates(links)
+    if not candidates:
         return {"url": "", "kind": "other"}
-    for kind in PRIMARY_PRIORITY:
-        hit = next((lnk for lnk in clean if _classify_host(lnk["host"]) == kind), None)
-        if hit:
-            return {"url": hit["url"], "kind": kind}
-    return {"url": clean[0]["url"], "kind": "other"}
+    return {"url": candidates[0]["url"], "kind": candidates[0]["kind"]}
 
 
 # --- Twitter Recap ---
@@ -144,8 +166,8 @@ def _extract_twitter_recap(html: str) -> dict | None:
     title = _first_bold(region)
     if not title or len(title) < MIN_TWITTER_TITLE_LENGTH:
         return None
-    primary = _pick_primary(_collect_links(region))
-    if not primary["url"]:
+    candidates = _candidates(_collect_links(region))
+    if not candidates:
         return None
     bullets = [
         _strip_tags(m.group(1)) for m in re.finditer(r"<li>([\s\S]*?)</li>", region)
@@ -153,8 +175,9 @@ def _extract_twitter_recap(html: str) -> dict | None:
     content = " ".join(bullets) or _strip_tags(region)
     return {
         "title": title,
-        "url": primary["url"],
+        "url": candidates[0]["url"],
         "content": content[:MAX_CONTENT_LENGTH],
+        "links": candidates,
     }
 
 
@@ -195,12 +218,13 @@ def _extract_reddit_recap(html: str) -> list[dict]:
         content = _strip_tags(body)
         if len(content) < MIN_REDDIT_BODY_LENGTH:
             continue
-        primary = _pick_primary(_collect_links(body))
+        candidates = _candidates(_collect_links(body))
         stories.append(
             {
                 "title": anchor["title"] or "(untitled)",
-                "url": primary["url"] or anchor["url"],
+                "url": candidates[0]["url"] if candidates else anchor["url"],
                 "content": content[:MAX_CONTENT_LENGTH],
+                "links": candidates,
             }
         )
     return stories

@@ -23,6 +23,7 @@ Notes:
 
 - GitHub side: just `DOMAIN_PRODUCTION` (used for the frontend build URL), in the `production` environment.
 - Box side: `/opt/agentique/.env`, hand-written once, never touched by CI. The VPS is the source of truth — back the file up to the password manager. It must set `ENVIRONMENT=production` and `POSTGRES_SERVER=localhost`.
+- `AGENT_API_TOKEN` gates `/api/v1/agent/*`, the curation agent's tool API. Unset means the whole router serves 503, which is the safe default — set it only when the agent is meant to run against that box. Pair it with `AGENT_READONLY_DATABASE_URI` (a SELECT-only role; see [`plans/agent-driven-curation.md`](./plans/agent-driven-curation.md#deployment)) so the agent's `sql_read` tool cannot reach the app's own role.
 
 ## Self-hosted runner
 

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    agent,
     analytics,
     articles,
     likes,
@@ -18,6 +19,7 @@ api_router.include_router(utils.router)
 api_router.include_router(articles.router)
 api_router.include_router(likes.router)
 api_router.include_router(analytics.router)
+api_router.include_router(agent.router)
 
 
 if settings.ENVIRONMENT == "development":

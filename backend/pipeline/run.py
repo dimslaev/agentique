@@ -20,12 +20,18 @@ from pipeline.steps.enrich import (
     embed_articles,
     improve_titles,
 )
-from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
+from pipeline.steps.fetch import (
+    build_sources,
+    fetch_source,
+    fill_content,
+    resolve_publishers,
+)
 from pipeline.steps.filter import (
     dedup_semantic,
     filter_dead_domains,
     filter_known_urls,
 )
+from pipeline.steps.inbox import prune_feed_items, record_feed_items
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
 from pipeline.tags import load_vocabulary
@@ -39,15 +45,30 @@ def run_pipeline(stats: RunStats) -> None:
         resolver = PublisherResolver(session=session)
         vocab = load_vocabulary(session)
 
+        # Best-effort: the inbox growing unbounded is a slow problem, a prune
+        # that throws is an immediate one.
+        try:
+            prune_feed_items(session)
+        except Exception as e:
+            log(f"Feed item prune failed, continuing: {e}")
+            session.rollback()
+
         for source in build_sources(session):
             log(f"\n=== Processing {source.label} ===")
             s = stats.source(source.label)
 
             try:
-                fetched, fetch_errors = fetch_source(source)
-                s.fetched = len(fetched)
+                raw, fetch_errors = fetch_source(source)
+                resolve_publishers(raw, resolver)
 
-                resolve_publishers(fetched, resolver)
+                # The curation agent's inbox: what the source actually emitted,
+                # thin items included, committed independently of everything
+                # below it. Runs alongside the LLM funnel for now — the funnel
+                # still owns what gets published.
+                s.inboxed = record_feed_items(session, raw, source.label)
+
+                fetched = fill_content(raw, source.label)
+                s.fetched = len(fetched)
 
                 fresh = filter_known_urls(session, fetched, source.label)
                 s.filtered_known = s.fetched - len(fresh)

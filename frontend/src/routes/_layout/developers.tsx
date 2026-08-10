@@ -98,7 +98,7 @@ function DevelopersPage() {
               name: "q",
               description: "string · optional · title/content match",
             },
-            { name: "min_score", description: "integer · 1-10 · optional" },
+            { name: "min_score", description: "integer · 1-100 · optional" },
             {
               name: "category",
               description: "models | dev | research · optional",
