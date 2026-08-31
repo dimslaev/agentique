@@ -45,13 +45,14 @@ PROBE_URL_BY_SOURCE = {
 @dataclass
 class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
-    fetched → known → dead → dup → below-threshold → inserted."""
+    fetched → off-topic → known → dead → dup → below-threshold → inserted."""
 
     # `source` here is the run-level fetcher label (Hacker News / AI News /
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
     # granularity within "Feeds".
     source: str
     fetched: int = 0
+    filtered_off_topic: int = 0
     filtered_known: int = 0
     filtered_dead: int = 0
     deduped: int = 0
@@ -152,7 +153,9 @@ def _load_history(session: Session, exclude_started_at: datetime) -> list[dict]:
         .order_by(col(PipelineRun.started_at).desc())
         .limit(HISTORY_WINDOW)
     ).all()
-    return [{"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs]
+    return [
+        {"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs
+    ]
 
 
 # ─── Dead-man's-switch (runs at the START of each run) ─────────────────────────
@@ -310,6 +313,7 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
     for s in stats.sources:
         row = (
             f"  {s.source}: fetched {s.fetched} "
+            f"→ off-topic -{s.filtered_off_topic} "
             f"→ known -{s.filtered_known} "
             f"→ dead -{s.filtered_dead} "
             f"→ dup -{s.deduped} "

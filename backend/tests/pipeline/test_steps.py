@@ -1,16 +1,18 @@
-"""The pure cores of the scoring / persist / enrich steps.
+"""The pure cores of the fetch / scoring / persist / enrich steps.
 
 These carry the decisions that silently change what gets published — which
-article wins a duplicate URL, what counts as passing, whether an LLM rewrite is
-allowed to replace a title — so they are pulled out of the I/O steps and pinned
-here.
+article wins a duplicate URL, what counts as passing, whether a broad
+publisher's post is on topic at all, whether an LLM rewrite is allowed to
+replace a title — so they are pulled out of the I/O steps and pinned here.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from pipeline.steps import fetch as fetch_step
 from pipeline.steps.enrich import accept_title
+from pipeline.steps.fetch import drop_off_topic
 from pipeline.steps.persist import best_per_url
 from pipeline.steps.score import apply_scores
 
@@ -148,3 +150,107 @@ def test_source_leak_check_is_case_insensitive():
 )
 def test_rejects_malformed_rewrites(given, why):
     assert accept_title(given, _CURRENT, _SOURCE) is None, why
+
+
+# ─── drop_off_topic ──────────────────────────────────────────────────────────
+
+_AI_TITLE = "Qwen3 weights land on Hugging Face"
+_OFF_TOPIC_TITLE = "How we cut our Postgres bill in half"
+
+
+def _from_publisher(title: str, topic_gated: bool) -> dict:
+    return {"title": title, "url": f"u:{title}", "topic_gated": topic_gated}
+
+
+def test_gated_publisher_drops_an_off_topic_title():
+    articles = [_from_publisher(_OFF_TOPIC_TITLE, topic_gated=True)]
+    assert drop_off_topic(articles, "Feeds") == []
+
+
+def test_gated_publisher_keeps_an_ai_title():
+    articles = [_from_publisher(_AI_TITLE, topic_gated=True)]
+    assert drop_off_topic(articles, "Feeds") == articles
+
+
+def test_ungated_publisher_keeps_both():
+    """The gate is opt-in: an AI publisher's off-topic-looking post is still
+    theirs to publish, and paying to score it is the point of carrying them."""
+    articles = [
+        _from_publisher(_AI_TITLE, topic_gated=False),
+        _from_publisher(_OFF_TOPIC_TITLE, topic_gated=False),
+    ]
+    assert drop_off_topic(articles, "Feeds") == articles
+
+
+def test_gates_only_the_gated_publisher_in_a_mixed_batch():
+    """One source ("Feeds") aggregates every publisher, so gated and ungated
+    items arrive in the same list and the flag must be read per article."""
+    gated_ai = _from_publisher(_AI_TITLE, topic_gated=True)
+    gated_off = _from_publisher(_OFF_TOPIC_TITLE, topic_gated=True)
+    ungated_off = {**_from_publisher(_OFF_TOPIC_TITLE, topic_gated=False), "url": "u2"}
+    kept = drop_off_topic([gated_ai, gated_off, ungated_off], "Feeds")
+    assert kept == [gated_ai, ungated_off]
+
+
+def test_missing_flag_is_treated_as_ungated():
+    """A source that never went through resolve_publishers must not have every
+    item silently dropped."""
+    articles = [{"title": _OFF_TOPIC_TITLE, "url": "u1"}]
+    assert drop_off_topic(articles, "Hacker News") == articles
+
+
+def test_does_not_mutate_or_copy_the_articles_it_keeps():
+    articles = [_from_publisher(_AI_TITLE, topic_gated=True)]
+    kept = drop_off_topic(articles, "Feeds")
+    assert kept[0] is articles[0]
+
+
+def test_gate_on_empty_input():
+    assert drop_off_topic([], "Feeds") == []
+
+
+# ─── build_sources ───────────────────────────────────────────────────────────
+# Which channels are live is a one-line edit that silently changes the whole
+# funnel's reach, so it is pinned rather than left to review.
+
+
+def _stub_db_sources(monkeypatch, feeds: list[dict], lab_watch: list[tuple[str, str]]):
+    monkeypatch.setattr(fetch_step, "feed_sources_from_db", lambda session: feeds)
+    monkeypatch.setattr(
+        fetch_step, "lab_watch_targets_from_db", lambda session: lab_watch
+    )
+
+
+def test_every_channel_is_polled(monkeypatch):
+    _stub_db_sources(monkeypatch, [], [])
+    labels = [s.label for s in fetch_step.build_sources(session=None)]
+    assert labels == ["Feeds", "Hacker News", "Reddit", "AI News", "Lab Watch"]
+
+
+def test_lab_watch_reports_its_targets_as_publishers(monkeypatch):
+    """Per-publisher health needs the full expected set, so a lab that returned
+    nothing still gets a row instead of vanishing from the stats."""
+    _stub_db_sources(monkeypatch, [], [("Anthropic", "anthropic.com")])
+    lab_watch = next(
+        s for s in fetch_step.build_sources(session=None) if s.label == "Lab Watch"
+    )
+    assert lab_watch.publisher_names == ("Anthropic",)
+
+
+def test_feeds_reports_its_publishers(monkeypatch):
+    _stub_db_sources(monkeypatch, [{"name": "Cloudflare", "rssUrl": "x"}], [])
+    feeds = next(
+        s for s in fetch_step.build_sources(session=None) if s.label == "Feeds"
+    )
+    assert feeds.publisher_names == ("Cloudflare",)
+
+
+def test_each_source_binds_its_own_db_config(monkeypatch):
+    """The fetchers are lambdas closing over lists read once per run — a shared
+    or late-bound one would poll the wrong set."""
+    _stub_db_sources(monkeypatch, [], [("Anthropic", "anthropic.com")])
+    monkeypatch.setattr(fetch_step, "fetch_lab_watch", lambda targets: targets)
+    lab_watch = next(
+        s for s in fetch_step.build_sources(session=None) if s.label == "Lab Watch"
+    )
+    assert lab_watch.fetcher() == ([("Anthropic", "anthropic.com")], {})

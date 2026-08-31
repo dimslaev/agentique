@@ -28,6 +28,7 @@ class FetchedArticle(TypedDict, total=False):
     # set by _resolve_publishers
     publisher_id: int
     trust: str
+    topic_gated: bool
     # set by _score_articles
     score: int
     # set by _insert_articles

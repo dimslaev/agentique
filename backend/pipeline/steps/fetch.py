@@ -7,14 +7,17 @@ from dataclasses import dataclass
 
 from sqlmodel import Session
 
-from pipeline.heuristics import MIN_CONTENT_CHARS
+from pipeline.heuristics import AI_TITLE_KEYWORDS, MIN_CONTENT_CHARS
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
+    lab_watch_targets_from_db,
 )
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.extract_content import fetch_full_content
 from pipeline.sources.hn import fetch_hn
+from pipeline.sources.lab_watch import fetch_lab_watch
+from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -41,16 +44,28 @@ class Source:
 def build_sources(session: Session) -> list[Source]:
     """Assemble the run's sources.
 
-    RSS/substack feeds, Hacker News and AI News are polled — "Feeds" covers
-    every active publisher with an rss or substack link (DB-driven via
-    ``feed_sources_from_db``). The IMAP/lab-watch channels (Newsletter, Lab
-    Watch) are intentionally disabled: they fetch thin items and blow up the
-    downstream LLM budget. HN items start thin too but the fetch step fills
-    their content (and drops any it cannot), so they survive. AI News extracts
-    its own content inline (see ``sources/ainews.py``), so it doesn't need the
-    re-fetch path either.
+    "Feeds" covers every active publisher with an rss or substack link
+    (DB-driven via ``feed_sources_from_db``); "Lab Watch" covers the labs that
+    publish no feed at all, discovered first-party via search (one Tavily call
+    per target per run, DB-driven via ``lab_watch_targets_from_db``).
+
+    Lab Watch was disabled for a while because its items arrive as a search
+    snippet and the thin ones were reaching the scorer. That is a fetch
+    problem, not a channel problem: ``_with_content`` re-fetches anything under
+    ``MIN_CONTENT_CHARS`` and drops what stays thin, which is the same path
+    that makes Hacker News (also thin at fetch) safe. So it is routed through
+    it like every other source. AI News extracts its own content inline (see
+    ``sources/ainews.py``), so it does not need the re-fetch path.
+
+    Hacker News and Reddit are firehoses rather than publishers: both filter
+    hard at the source (a keyword gate on HN, the subreddit itself on Reddit)
+    and both arrive thin, so they lean on the re-fetch path too.
+
+    The IMAP newsletter channel stays disabled — it has no source module wired
+    up here yet.
     """
     feed_sources = feed_sources_from_db(session)
+    lab_watch_targets = lab_watch_targets_from_db(session)
     return [
         Source(
             "Feeds",
@@ -58,7 +73,13 @@ def build_sources(session: Session) -> list[Source]:
             publisher_names=tuple(s["name"] for s in feed_sources),
         ),
         Source("Hacker News", lambda: (fetch_hn(), {})),
+        Source("Reddit", lambda: (fetch_reddit(), {})),
         Source("AI News", lambda: (fetch_ai_news(), {})),
+        Source(
+            "Lab Watch",
+            lambda: (fetch_lab_watch(lab_watch_targets), {}),
+            publisher_names=tuple(name for name, _ in lab_watch_targets),
+        ),
     ]
 
 
@@ -97,14 +118,41 @@ def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArt
 def resolve_publishers(
     articles: list[FetchedArticle], resolver: PublisherResolver
 ) -> None:
-    """Stamp each fetched item in place with publisher_id and trust.
+    """Stamp each fetched item in place with publisher_id, trust and topic_gated.
 
-    Both come from the Publisher row (resolved by source name, auto-quarantined
-    if unknown). Runs right after fetch so trust is available to the
-    scoring/dedup BAML calls.
+    All three come from the Publisher row (resolved by source name,
+    auto-quarantined if unknown). Runs right after fetch so trust is available
+    to the scoring/dedup BAML calls and ``topic_gated`` to ``drop_off_topic``.
     """
     for a in articles:
         publisher = resolver.resolve(a["source"])
         assert publisher.id is not None
         a["publisher_id"] = publisher.id
         a["trust"] = publisher.trust.value
+        a["topic_gated"] = publisher.topic_gated
+
+
+def drop_off_topic(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
+    """Drop off-topic items from publishers marked ``topic_gated``.
+
+    Some feeds worth carrying are broad engineering blogs that happen to post
+    about AI a few times a month (Stripe, Figma, Spotify). Without a gate every
+    one of their release notes and hiring posts reaches the scorer, and the LLM
+    bill scales with the feed, not with the signal. So a gated publisher's items
+    must match ``AI_TITLE_KEYWORDS`` on the title alone.
+
+    Title-only and deliberately early — before dedup's embeddings and before
+    ``prefilter_keep_drop`` — so a rejected item costs one regex and nothing
+    else. Publishers that are on-topic by definition (an AI lab's own blog) are
+    left ungated and pass through untouched; the recall/precision trade-off is
+    the same one documented on ``AI_TITLE_KEYWORDS`` itself.
+    """
+    kept = [
+        a
+        for a in articles
+        if not a.get("topic_gated") or AI_TITLE_KEYWORDS.search(a["title"])
+    ]
+    dropped = len(articles) - len(kept)
+    if dropped:
+        log(f"  {label}: dropped {dropped} off-topic item(s) from gated publishers")
+    return kept

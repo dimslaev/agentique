@@ -20,7 +20,12 @@ from pipeline.steps.enrich import (
     embed_articles,
     improve_titles,
 )
-from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
+from pipeline.steps.fetch import (
+    build_sources,
+    drop_off_topic,
+    fetch_source,
+    resolve_publishers,
+)
 from pipeline.steps.filter import (
     dedup_semantic,
     filter_dead_domains,
@@ -49,8 +54,14 @@ def run_pipeline(stats: RunStats) -> None:
 
                 resolve_publishers(fetched, resolver)
 
-                fresh = filter_known_urls(session, fetched, source.label)
-                s.filtered_known = s.fetched - len(fresh)
+                # First gate, and the cheapest: a title regex on the broad
+                # publishers. Ahead of every DB, DNS, embedding and LLM cost
+                # below, so an off-topic post from a gated feed costs nothing.
+                on_topic = drop_off_topic(fetched, source.label)
+                s.filtered_off_topic = s.fetched - len(on_topic)
+
+                fresh = filter_known_urls(session, on_topic, source.label)
+                s.filtered_known = len(on_topic) - len(fresh)
 
                 alive = filter_dead_domains(fresh, source.label)
                 s.filtered_dead = len(fresh) - len(alive)
