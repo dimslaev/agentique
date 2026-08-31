@@ -23,7 +23,7 @@ from pipeline.sources.http import tavily_search
 from pipeline.types import FetchedArticle
 from pipeline.utils import hostname, log
 
-WATCH_DAYS = 7  # look-back window per run; the nightly cadence covers this
+WATCH_DAYS = 2  # nightly cadence + one missed run of slack
 WATCH_CONCURRENCY = 5
 RESULTS_PER_LAB = 10
 

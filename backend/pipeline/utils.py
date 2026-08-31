@@ -14,7 +14,7 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 from urllib.parse import urlparse
 
-WINDOW_HOURS = 168
+WINDOW_HOURS = 48
 
 HN_PREFIX_RE = re.compile(r"^(?:Show|Launch|Ask|Tell) HN:\s*", re.IGNORECASE)
 
