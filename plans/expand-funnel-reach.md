@@ -22,7 +22,14 @@ run** — it is for a human to apply against prod, in the order given.
   public listing JSON, no key. The subreddit is the topic gate; posts are
   filtered on score, recency and having text to extract.
 - `SourceStats.filtered_off_topic` so the funnel still accounts for every drop.
-- `publishertype` gains `reddit` (migration `f4a5b6c7d8e9`), mirroring `hn`.
+- `publishertype` gains `reddit` (migration `f4a5b6c7d8e9`) *and* a matching
+  `PublisherType.reddit` member. Both halves are needed: the Postgres label
+  alone would let the row insert and then break every read — SQLAlchemy raises
+  `LookupError` for a label the StrEnum lacks, and `_active_publisher_links`
+  selects all active publishers, so one such row takes the run down.
+  `tests/test_models_enums.py` now fails if a migration adds an enum label
+  Python does not have. `PublisherPublic` does not expose `type`, so the
+  generated client is still unchanged.
 
 ## Order of operations
 
@@ -31,6 +38,16 @@ run** — it is for a human to apply against prod, in the order given.
 2. Run the insert SQL.
 3. First live run. Lab Watch costs one Tavily search per target per night;
    the target count goes from 5 to 19 with the inserts below.
+
+Deploy order is already safe: `deploy-production.yml` runs `prestart.sh`
+(`alembic upgrade head`) before `systemctl restart agentique-backend`, so the
+`topic_gated` column exists before any code that selects it starts.
+
+Verified end-to-end on a local restore of prod (prod head is `c1d2e3f4a5b6`,
+exactly this chain's `down_revision`): both migrations apply, the SQL inserts
+69 rows, a second run inserts 0, all 149 publishers load through the ORM, and
+`build_sources` sees 120 feed publishers, 19 Lab Watch targets and 11 gated
+publishers.
 
 ## 1. Zero-yield publishers
 

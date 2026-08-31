@@ -127,6 +127,7 @@ class PublisherType(StrEnum):
     substack = "substack"
     search = "search"
     hn = "hn"
+    reddit = "reddit"
     email = "email"
     ainews = "ainews"
     other = "other"
