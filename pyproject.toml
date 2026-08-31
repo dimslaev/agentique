@@ -29,3 +29,5 @@ extend-ignore-re = [
 
 [tool.typos.default.extend-identifiers]
 alls = "alls"
+# Publisher names carried in plans/*.sql and the pipeline's source list.
+HashiCorp = "HashiCorp"

@@ -171,4 +171,3 @@ from (values
    '{"website":"https://www.reddit.com"}')
 ) as v(slug, name, type, topic_gated, links)
 where not exists (select 1 from publisher p where p.slug = v.slug);
-
