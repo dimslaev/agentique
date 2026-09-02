@@ -5,6 +5,7 @@ plus the thresholds the steps are tuned around.
 from __future__ import annotations
 
 import re
+from urllib.parse import urlparse
 
 from app.models import ArticleKind
 from pipeline.utils import hostname
@@ -103,6 +104,84 @@ AI_TITLE_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
+# Domains where a post is the release itself rather than someone's writeup of
+# it. Two places lean on this: the scoring rubric floors these at 70, and the
+# Hacker News source lets them past its traction gate — a lab's own announcement
+# is real news at zero upvotes, and waiting for the votes would mean publishing
+# it a day late, which is the whole reason the "new" firehose is polled.
+FIRST_PARTY_HOSTS = frozenset(
+    {
+        "openai.com",
+        "anthropic.com",
+        "claude.com",
+        "deepmind.google",
+        "blog.google",
+        "ai.meta.com",
+        "ai.google.dev",
+        "mistral.ai",
+        "qwen.ai",
+        "kimi.com",
+        "moonshot.ai",
+        "deepseek.com",
+        "x.ai",
+        "cohere.com",
+        "ai21.com",
+        "stability.ai",
+        "allenai.org",
+        "nvidia.com",
+        "blogs.nvidia.com",
+        "developer.nvidia.com",
+        "research.google",
+        "microsoft.com",
+        "z.ai",
+    }
+)
+
+# Owners whose repos are infrastructure by definition — a release branch or a
+# PR under one of these is worth reading on day one, before it has stars of its
+# own. Skips the star lookup in ``steps.filter.filter_thin_repos``.
+KNOWN_REPO_OWNERS = frozenset(
+    {
+        "openai",
+        "anthropics",
+        "anthropic-experimental",
+        "google",
+        "google-deepmind",
+        "google-research",
+        "googleapis",
+        "meta-llama",
+        "facebookresearch",
+        "pytorch",
+        "tensorflow",
+        "huggingface",
+        "ggml-org",
+        "ggerganov",
+        "vllm-project",
+        "sgl-project",
+        "deepseek-ai",
+        "qwenlm",
+        "moonshotai",
+        "mistralai",
+        "nvidia",
+        "microsoft",
+        "modelcontextprotocol",
+        "ollama",
+        "langchain-ai",
+        "run-llama",
+        "unslothai",
+        "triton-lang",
+        "openvinotoolkit",
+        "mlx-explore",
+        "apple",
+        "allenai",
+        "eleutherai",
+        "bytedance",
+        "tencent",
+        "zai-org",
+        "baai-agents",
+    }
+)
+
 NON_REPO_OWNERS = {
     "features",
     "login",
@@ -133,6 +212,41 @@ def github_repo_from_content(content: str) -> str | None:
     if owner.lower() in NON_REPO_OWNERS:
         return None
     return f"https://github.com/{owner}/{repo}"
+
+
+def is_first_party(url: str) -> bool:
+    """True when the URL is a lab publishing on its own domain.
+
+    Matches subdomains too (``platform.claude.com``, ``blog.mistral.ai``), so a
+    lab moving its newsroom to a subdomain does not silently drop out of the
+    fast path. ``huggingface.co`` is deliberately absent as a bare host - it is
+    mostly user-uploaded - so only its editorial blog qualifies.
+    """
+    host = hostname(url)
+    if not host:
+        return False
+    if host in ("huggingface.co", "hf.co"):
+        return urlparse(url).path.startswith("/blog")
+    return any(host == h or host.endswith(f".{h}") for h in FIRST_PARTY_HOSTS)
+
+
+def github_repo_from_url(url: str) -> tuple[str, str] | None:
+    """``(owner, repo)`` for a github.com URL that names a repository, else None.
+
+    Handles every shape a link lands in — the repo root, a PR, an issue, a blob
+    or a tree path — because they all start ``/owner/repo``. Anything else on
+    the host (a user profile, ``/features``, gist.github.com) is not a repo and
+    returns None rather than a bogus pair.
+    """
+    if hostname(url) != "github.com":
+        return None
+    parts = [p for p in urlparse(url).path.split("/") if p]
+    if len(parts) < 2:
+        return None
+    owner, repo = parts[0], parts[1]
+    if owner.lower() in NON_REPO_OWNERS:
+        return None
+    return owner, repo.removesuffix(".git")
 
 
 def kind_from_url(url: str) -> ArticleKind | None:

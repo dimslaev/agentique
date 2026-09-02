@@ -59,6 +59,53 @@ def keep_drop_threshold() -> float:
     return float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
 
 
+def hn_min_points() -> int:
+    """Upvotes an aged-out Hacker News story needs before it is worth an
+    extraction and a scoring call. 0 disables the traction gate.
+
+    A Show HN for a two-star repo finishes its life at 1-4 points; anything the
+    community actually read clears 10 comfortably. See ``sources.hn`` for why
+    this only applies once a story has had time to accumulate votes.
+    """
+    return int(os.environ.get("HN_MIN_POINTS", "10"))
+
+
+def hn_min_comments() -> int:
+    """Alternative to ``hn_min_points``: a story that got discussed is real even
+    when the votes stayed flat. Either bar clears the gate."""
+    return int(os.environ.get("HN_MIN_COMMENTS", "5"))
+
+
+def hn_grace_hours() -> float:
+    """How long a story is exempt from having any traction yet.
+
+    Under this age a vote count says nothing - every story starts at 1 point.
+    Rather than admit them blind (which is what filled the feed with noise) the
+    source holds them back; the next run re-reads them with real numbers, still
+    inside the 48h window. See ``sources.hn``.
+    """
+    return float(os.environ.get("HN_GRACE_HOURS", "6"))
+
+
+def github_min_stars() -> int:
+    """Stars a GitHub repo needs before we treat it as something builders use.
+    0 disables the repo gate.
+
+    Aimed at the "solo repo with two stars, posted by its author" case, not at
+    ranking projects: a real tool that reaches an aggregator is well past this
+    by the time it does. Repos under an owner on
+    ``heuristics.KNOWN_REPO_OWNERS`` skip the check entirely.
+    """
+    return int(os.environ.get("GITHUB_MIN_STARS", "50"))
+
+
+def github_token() -> str | None:
+    """Optional PAT for the GitHub REST API. Unauthenticated is the default and
+    is enough (60 requests/hour/IP, above what one run needs); a token raises
+    that to 5000 if the pipeline ever polls harder."""
+    return os.environ.get("GITHUB_TOKEN") or None
+
+
 def dedup_dist_threshold() -> float:
     """Cosine-distance cutoff below which two articles are the same story;
     0 disables dedup entirely.

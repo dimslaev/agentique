@@ -1,6 +1,7 @@
-"""The HN source's two pure gates: the AI keyword pattern every title is
-matched against, and the item -> article conversion that applies it alongside
-the story/recency checks.
+"""The HN source's pure gates: the AI keyword pattern every title is matched
+against, the traction check that asks whether HN's own readers gave the story
+anything, and the item -> article conversion that applies both alongside the
+story/recency checks.
 """
 
 from __future__ import annotations
@@ -11,7 +12,9 @@ import pytest
 
 from pipeline.heuristics import AI_TITLE_KEYWORDS
 from pipeline.sources import hn
-from pipeline.sources.hn import _to_article
+from pipeline.sources.hn import _to_article, has_traction
+
+HOUR = 3600
 
 MATCHES = [
     # version suffixes glued to the name — the case bare \b boundaries miss
@@ -73,13 +76,20 @@ def test_skips_non_ai_titles(title: str) -> None:
 
 
 def _item(**overrides) -> dict:
-    """A firebase item as HN serves it, defaulted to one that passes."""
+    """A firebase item as HN serves it, defaulted to one that passes.
+
+    Aged past the grace window and carrying real points, because that is the
+    shape of a story worth keeping — the traction gate is exercised by the
+    tests that deliberately vary those two fields.
+    """
     return {
         "id": 42,
         "type": "story",
         "title": "Qwen3-Max is out",
         "url": "https://example.com/qwen3",
-        "time": int(time.time()),
+        "time": int(time.time()) - HOUR * 12,
+        "score": 120,
+        "descendants": 40,
         **overrides,
     }
 
@@ -173,3 +183,88 @@ def test_an_id_on_both_listings_is_fetched_once(monkeypatch):
 def test_both_listings_failing_yields_nothing(monkeypatch):
     _stub_hn(monkeypatch, {})
     assert hn.fetch_hn() == []
+
+
+# ─── traction gate ───────────────────────────────────────────────────────────
+#
+# The firehose is every submission, so points and comments are the only thing
+# separating a lab release from a two-star repo its author just posted. These
+# cover the three cases in ``has_traction``.
+
+
+def test_an_aged_story_nobody_read_is_held_back():
+    assert not has_traction(
+        _item(time=int(time.time()) - HOUR * 20, score=3, descendants=0)
+    )
+
+
+def test_points_alone_clear_the_gate():
+    assert has_traction(
+        _item(time=int(time.time()) - HOUR * 20, score=40, descendants=0)
+    )
+
+
+def test_discussion_alone_clears_the_gate():
+    """A story that got argued about is real even when the votes stayed flat."""
+    assert has_traction(
+        _item(time=int(time.time()) - HOUR * 20, score=2, descendants=25)
+    )
+
+
+def test_a_young_story_is_held_back_not_judged():
+    """Every story starts at 1 point, so nothing can be concluded yet. It is
+    held, not rejected — the source records nothing, so the next run sees the
+    same id again with settled numbers, still inside the 48h window."""
+    assert not has_traction(_item(time=int(time.time()) - HOUR, score=1, descendants=0))
+
+
+def test_a_young_first_party_release_goes_straight_through():
+    """The reason newstories is polled at all: a lab's own post is news at zero
+    points, and holding it for a day would publish it late."""
+    assert has_traction(
+        _item(
+            time=int(time.time()) - 60,
+            score=1,
+            descendants=0,
+            url="https://openai.com/index/gpt-5-6/",
+        )
+    )
+
+
+def test_first_party_matching_covers_subdomains():
+    assert has_traction(
+        _item(
+            time=int(time.time()) - 60,
+            score=1,
+            url="https://platform.claude.com/docs/en/about-claude/models",
+        )
+    )
+
+
+def test_the_gate_can_be_switched_off(monkeypatch):
+    monkeypatch.setattr(hn, "hn_min_points", lambda: 0)
+    assert has_traction(
+        _item(time=int(time.time()) - HOUR * 20, score=0, descendants=0)
+    )
+
+
+def test_a_story_without_traction_never_becomes_an_article():
+    assert (
+        _to_article(_item(time=int(time.time()) - HOUR * 20, score=1, descendants=0))
+        is None
+    )
+
+
+def test_the_article_carries_its_traction_to_the_scorer():
+    """Passed on as evidence, not only used as a gate: the scorer put unread
+    Show HN repos in the 90s while a title was all it could see.
+
+    Reported even for an article that skipped the gate — a first-party post
+    goes through on zero votes, and the scorer should still be told that is
+    what happened.
+    """
+    article = _to_article(
+        _item(url="https://openai.com/index/gpt-5-6/", score=7, descendants=1)
+    )
+    assert article is not None
+    assert article["traction"] == "7 points, 1 comments on Hacker News"

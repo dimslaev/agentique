@@ -30,6 +30,7 @@ from pipeline.steps.filter import (
     dedup_semantic,
     filter_dead_domains,
     filter_known_urls,
+    filter_thin_repos,
 )
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
@@ -66,11 +67,17 @@ def run_pipeline(stats: RunStats) -> None:
                 alive = filter_dead_domains(fresh, source.label)
                 s.filtered_dead = len(fresh) - len(alive)
 
+                # A repo nobody has starred is noise whichever source linked it,
+                # and one API call settles it — cheaper than the embedding and
+                # scoring calls below, so it goes ahead of them.
+                real = filter_thin_repos(session, alive, source.label)
+                s.filtered_thin_repo = len(alive) - len(real)
+
                 # Pre-filter obvious junk before the scoring LLM call: cuts what
                 # the scorer has to see, and junk gets recorded in ScoredUrl
                 # instead of silently dropped.
-                candidates = prefilter_keep_drop(session, alive)
-                prefiltered = len(alive) - len(candidates)
+                candidates = prefilter_keep_drop(session, real)
+                prefiltered = len(real) - len(candidates)
 
                 # Before scoring: a story we already carry must never cost an
                 # LLM call. Runs after the pre-filter so junk-that-is-a-dup is

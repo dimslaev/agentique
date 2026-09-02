@@ -51,16 +51,24 @@ newsletters), and runs each fresh batch through a chain of small, focused steps:
    and rejected before, are dropped immediately.
 2. **Drop dead links** — a quick DNS check filters out URLs whose domains no longer
    resolve.
-3. **Score for relevance** — an LLM rates each surviving article 1–100 on how
+3. **Ask whether anyone else thought it was news** — an aggregator hands us every
+   submission, not an edited selection, so a repo its author uploaded yesterday
+   arrives looking exactly like a release half the field depends on. Two outside
+   signals separate them: on Hacker News, the story's own points and comments (a
+   post nobody read is held back rather than published, and re-checked the next
+   day once the votes have settled); for anything linking to a GitHub repo, the
+   repo's star count. A lab publishing on its own domain skips both — that is
+   news at zero votes.
+4. **Score for relevance** — an LLM rates each surviving article 1–100 on how
    actionable it is for a developer building with AI right now. Only the top scorers
    (currently ≥76) make it into the database at all — this is the main noise filter.
-4. **Insert & clean up the title** — the article is saved, then a second LLM pass
+5. **Insert & clean up the title** — the article is saved, then a second LLM pass
    tightens up clickbait-y or vague titles into something plain and informative.
-5. **Pull the full article text** — for sources that only gave us a link, the pipeline
+6. **Pull the full article text** — for sources that only gave us a link, the pipeline
    fetches and extracts the actual article body (skipping paywalled junk, ads, nav).
-6. **Categorize & tag** — another LLM pass assigns category + kind and 1-3 tags from a
+7. **Categorize & tag** — another LLM pass assigns category + kind and 1-3 tags from a
    controlled vocabulary, shown in the feed.
-7. **Embed** — a small, fast local embedding model turns the title + a content snippet
+8. **Embed** — a small, fast local embedding model turns the title + a content snippet
    into a vector, which is what powers semantic search.
 
 All the LLM steps are defined declaratively as prompt functions (via BAML) rather than
