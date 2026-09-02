@@ -16,8 +16,10 @@ from sqlmodel import Session, select
 
 from app.models import Article, Publisher, ScoredUrl
 from pipeline import keep_drop
-from pipeline.config import dedup_dist_threshold
+from pipeline.config import dedup_dist_threshold, github_min_stars
 from pipeline.embedding import embed_batch
+from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
+from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
 from pipeline.types import FetchedArticle
 from pipeline.utils import log
@@ -94,6 +96,62 @@ def filter_dead_domains(
     if dead:
         log(f"  Filtered {len(dead)} dead-domain URLs from {label}")
     return alive
+
+
+def filter_thin_repos(
+    session: Session, articles: list[FetchedArticle], label: str
+) -> list[FetchedArticle]:
+    """Drop links to GitHub repos nobody uses.
+
+    An aggregator cannot tell a project from an upload: a repo with two stars,
+    posted by its author the day they created it, arrives with the same shape as
+    a runtime half the field depends on, and a scorer reading title and README
+    reliably rates it as if the pitch were the product. Stars are the outside
+    view, and one API call answers it.
+
+    Only repo URLs cost a lookup. Repos under ``KNOWN_REPO_OWNERS`` skip it —
+    a PR against llama.cpp is worth reading on its own merits, and it would pass
+    anyway. A lookup that fails or is rate-limited returns None and the article
+    is kept: the gate never deletes an article because GitHub was unreachable.
+
+    Drops are recorded in ``ScoredUrl``. Unlike the recency-based holds in the
+    Hacker News source, this verdict does not change inside a 48h window, so
+    re-fetching and re-checking the same repo tomorrow would just spend the
+    request budget again.
+    """
+    min_stars = github_min_stars()
+    if not articles or min_stars <= 0:
+        return articles
+
+    repo_by_index: dict[int, tuple[str, str]] = {}
+    for i, a in enumerate(articles):
+        repo = github_repo_from_url(a["url"])
+        if repo and repo[0].lower() not in KNOWN_REPO_OWNERS:
+            repo_by_index[i] = repo
+    if not repo_by_index:
+        return articles
+
+    stars = stars_for(list(repo_by_index.values()))
+
+    kept: list[FetchedArticle] = []
+    dropped = 0
+    for i, a in enumerate(articles):
+        repo = repo_by_index.get(i)
+        count = stars.get(repo) if repo else None
+        if repo and count is not None and count < min_stars:
+            log(f"  Dropped thin repo: {a['url']} ({count} stars < {min_stars})")
+            session.merge(ScoredUrl(url=a["url"]))
+            dropped += 1
+            continue
+        kept.append(a)
+
+    if dropped:
+        session.commit()
+        log(
+            f"  Filtered {dropped}/{len(repo_by_index)} GitHub repos under "
+            f"{min_stars} stars from {label}"
+        )
+    return kept
 
 
 def _cosine_dist_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:

@@ -23,7 +23,8 @@ SNIPPET_CAP = 200
 def to_baml_input(a: FetchedArticle) -> ArticleInput:
     """Build a BAML ArticleInput from a fetched-article dict.
 
-    ``trust`` is stamped by the fetch step from Publisher.trust.
+    ``trust`` is stamped by the fetch step from Publisher.trust; ``traction``
+    only by the aggregator sources that have one to report.
     """
     content = a.get("content") or ""
     return ArticleInput(
@@ -32,4 +33,5 @@ def to_baml_input(a: FetchedArticle) -> ArticleInput:
         source=a["source"],
         snippet=content[:SNIPPET_CAP] if content else None,
         trust=a.get("trust"),
+        traction=a.get("traction"),
     )

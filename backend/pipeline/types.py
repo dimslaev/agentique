@@ -25,6 +25,10 @@ class FetchedArticle(TypedDict, total=False):
     content: str
     published_date: str | None
     source: str
+    # Optional, set by the aggregator sources that carry a public reception
+    # signal (Hacker News points/comments). Passed to the scorer as evidence,
+    # not merely used as a gate — see sources/hn.py.
+    traction: str
     # set by _resolve_publishers
     publisher_id: int
     trust: str

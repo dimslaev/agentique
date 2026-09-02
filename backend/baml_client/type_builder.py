@@ -209,7 +209,7 @@ class ArticleInputAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
         self._bldr = _tb.class_("ArticleInput")
-        self._properties: typing.Set[str] = set([  "url",  "title",  "source",  "snippet",  "trust",  ])
+        self._properties: typing.Set[str] = set([  "url",  "title",  "source",  "snippet",  "trust",  "traction",  ])
         self._props = ArticleInputProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
@@ -256,6 +256,10 @@ class ArticleInputProperties:
     @property
     def trust(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("trust"))
+    
+    @property
+    def traction(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("traction"))
     
     
 

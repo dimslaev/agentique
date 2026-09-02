@@ -55,6 +55,7 @@ class SourceStats:
     filtered_off_topic: int = 0
     filtered_known: int = 0
     filtered_dead: int = 0
+    filtered_thin_repo: int = 0
     deduped: int = 0
     below_threshold: int = 0
     inserted: int = 0
@@ -316,6 +317,7 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
             f"→ off-topic -{s.filtered_off_topic} "
             f"→ known -{s.filtered_known} "
             f"→ dead -{s.filtered_dead} "
+            f"→ thin-repo -{s.filtered_thin_repo} "
             f"→ dup -{s.deduped} "
             f"→ below-threshold -{s.below_threshold} "
             f"→ inserted {s.inserted}"

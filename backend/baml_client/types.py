@@ -63,6 +63,7 @@ class ArticleInput(BaseModel):
     source: str
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
+    traction: typing.Optional[str] = Field(default=None, description='How the item was received where it was posted, e.g. "7 points, 1 comments on Hacker News". Absent for sources with no public reception signal.')
 
 class CategorizeAndTagResult(BaseModel):
     categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
