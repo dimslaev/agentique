@@ -40,11 +40,15 @@ RESOLVE_CONCURRENCY = 3
 
 # How far back to look. Selecting by date rather than by the unread flag keeps
 # the mailbox read-only and makes a run reproducible — the same window returns
-# the same issues however the mail was read. The pipeline runs daily, so this
-# will drop to 1 once the channel is trusted; 7 is a deliberate overlap while
-# it is being watched. Anything an earlier run already ingested is dropped
-# downstream by the URL/dedup steps, not here.
-LOOKBACK_DAYS = 7
+# the same issues however the mail was read.
+#
+# The pipeline runs daily at 04:00, so 2 is one day of real reach plus a day of
+# overlap: a run that fails, or a box that was down, costs nothing because the
+# next run still sees yesterday's issues. Re-reading an issue is cheap in the
+# way that matters — the URL/dedup steps drop what is already stored — but not
+# free, since extraction spends one LLM call per email either way. That is the
+# whole trade at 2 rather than 7.
+LOOKBACK_DAYS = 2
 
 # Never a product's first-party source: social posts, video, aggregators/content farms.
 DENY_DOMAINS = [
