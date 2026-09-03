@@ -65,17 +65,17 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ScoreArticles", llm_response=llm_response, mode="request")
         return typing.cast(typing.List["types.ScoredArticle"], __result__)
 
+    def SelectItemLink(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> types.ProductLinkChoice:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectItemLink", llm_response=llm_response, mode="request")
+        return typing.cast(types.ProductLinkChoice, __result__)
+
     def SelectNotableItems(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> typing.List[int]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectNotableItems", llm_response=llm_response, mode="request")
         return typing.cast(typing.List[int], __result__)
-
-    def SelectProductLink(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> types.ProductLinkChoice:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectProductLink", llm_response=llm_response, mode="request")
-        return typing.cast(types.ProductLinkChoice, __result__)
 
     
 
@@ -127,16 +127,16 @@ class LlmStreamParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ScoreArticles", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List["stream_types.ScoredArticle"], __result__)
 
+    def SelectItemLink(
+        self, llm_response: str, baml_options: BamlCallOptions = {},
+    ) -> stream_types.ProductLinkChoice:
+        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectItemLink", llm_response=llm_response, mode="stream")
+        return typing.cast(stream_types.ProductLinkChoice, __result__)
+
     def SelectNotableItems(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> typing.List[int]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectNotableItems", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List[int], __result__)
-
-    def SelectProductLink(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> stream_types.ProductLinkChoice:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="SelectProductLink", llm_response=llm_response, mode="stream")
-        return typing.cast(stream_types.ProductLinkChoice, __result__)
 
     

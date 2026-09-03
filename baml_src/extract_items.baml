@@ -108,21 +108,29 @@ class ProductLinkChoice {
   confidence float @description("0.0 - 1.0")
 }
 
-// Picks the best canonical URL for a product among search candidates, biased
-// hard toward the official / first-party source and away from social posts and
-// SEO/aggregator pages. Returns index 0 when nothing is clearly the product.
-// Products only — an article already carries its own link.
-function SelectProductLink(
-  productName: string,
-  productDescription: string,
+// Picks the best URL for an item among search candidates. Returns index 0 when
+// nothing is clearly the item, which is the common case and must stay cheap to
+// say — a wrong link is worse than no link.
+//
+// Used for every Product (they never carry a usable href) and for an Article
+// only when its link could not be resolved: some newsletters wrap links in a
+// Cloudflare-protected redirector that refuses the server's IP, leaving the
+// title as the only thing we know. The two kinds want opposite things from the
+// same candidate list — a product wants the vendor's page ABOUT it, an article
+// wants the post ITSELF, where a vendor's page would be the wrong result — so
+// the kind steers the instruction.
+function SelectItemLink(
+  itemKind: NewsletterItemKind,
+  itemName: string,
+  itemDescription: string,
   candidates: SearchCandidate[]
 ) -> ProductLinkChoice {
   client Nvidia
   prompt #"
     {{ _.role("user") }}
     A newsletter featured this item:
-      name: {{ productName }}
-      description: {{ productDescription }}
+      name: {{ itemName }}
+      description: {{ itemDescription }}
 
     Web search returned these candidate results:
     {% for c in candidates %}
@@ -131,6 +139,16 @@ function SelectProductLink(
        snippet: {{ c.snippet }}
     {% endfor %}
 
+    {% if itemKind == "Article" %}
+    Pick the ONE candidate that IS this article — the post itself, at its original source, by the author who wrote it.
+
+    PREFER the page whose title matches the article's, on the author's or publication's own domain.
+    REJECT (do not pick) when it is the best available:
+    - a syndicated copy, scrape, or reprint when the original is also listed
+    - a page that merely links to or summarizes the article (an aggregator, a newsletter archive, a "best of" roundup)
+    - social-media posts (x.com, twitter.com, linkedin.com, reddit.com, threads, mastodon) and videos (youtube.com)
+    - a DIFFERENT article that happens to share the topic — a matching subject is not a matching piece
+    {% else %}
     Pick the ONE candidate that is the canonical, first-party source for this exact product — its official site, product page, model card, repo, or the vendor's own announcement.
 
     PREFER the official / first-party domain that matches the product or its maker.
@@ -139,8 +157,9 @@ function SelectProductLink(
     - videos (youtube.com)
     - content-farm / SEO / generic aggregator or listicle pages that merely mention the product
     - a DIFFERENT product that happens to share the name
+    {% endif %}
 
-    Return the 1-based index of the best first-party result. If none of the candidates is clearly a first-party source for THIS product, return index 0.
+    Return the 1-based index of the best result. If none of the candidates is clearly the right one, return index 0.
 
     {{ ctx.output_format }}
   "#

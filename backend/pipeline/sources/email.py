@@ -90,6 +90,7 @@ REDIRECTOR_HOSTS = (
     "links.tldrnewsletter.com",
     "link.mail.beehiiv.com",
     "email.mg.substack.com",
+    "info.deeplearning.ai",  # HubSpot: answers 200 with a JS bounce page, not a 302
 )
 
 # TLDR-style trackers carry the destination inside their own path, either
@@ -211,7 +212,8 @@ def _unwrap_tracking_url(url: str) -> str | None:
 
 
 def _resolve_article(item: dict) -> FetchedArticle | None:
-    """One article -> its real URL, recovered from the newsletter's redirect.
+    """One article -> its real URL: unwrap the tracker, else follow it, else
+    search for the article by title.
 
     Unwrap first, follow only if that fails: most trackers spell the
     destination out in their path, and a request that teaches us nothing the
@@ -220,6 +222,12 @@ def _resolve_article(item: dict) -> FetchedArticle | None:
     for those it is a GET rather than a HEAD: these redirectors routinely
     answer a HEAD with a 405 or with no Location at all. httpx follows the
     chain, so the response's own url is the destination.
+
+    A redirector that answers without going anywhere — a Cloudflare challenge
+    on beehiiv, a JS bounce page on HubSpot, both of which refuse the server's
+    IP while working fine from a laptop — leaves the title as the only thing
+    known about the article, so it falls through to search rather than storing
+    a link that dies with the campaign.
     """
     name = item["name"]
     url = item["url"]
@@ -232,19 +240,27 @@ def _resolve_article(item: dict) -> FetchedArticle | None:
         try:
             resp = fetch_with_timeout(url, headers=BROWSER_HEADERS)
         except Exception as e:
-            log(f'    Redirect resolution failed for "{name}": {short_error(e)}')
-            return None
+            log(f'    "{name}": redirect failed ({short_error(e)}), searching instead')
+            return _resolve_by_search(item)
         final = str(resp.url)
+        # Same host and an error: the wrapper answered for itself and went
+        # nowhere. Checked by host rather than by name so a redirector nobody
+        # has catalogued yet still falls through to search.
+        if resp.status_code >= 400 and hostname(final) == hostname(url):
+            log(
+                f'    "{name}": {hostname(url)} returned {resp.status_code}, searching instead'
+            )
+            return _resolve_by_search(item)
         if resp.status_code >= 400:
-            # The redirect still resolved, so the destination is known and
-            # worth keeping — the content re-fetch in the fetch step decides
-            # whether it is reachable, and drops it if not.
+            # It did leave the wrapper, so the destination is known and worth
+            # keeping — the content re-fetch in the fetch step decides whether
+            # it is reachable, and drops it if not.
             log(f'    "{name}": {resp.status_code} from {hostname(final)}, kept')
 
     final = _canonical_url(final)
     if hostname(final) in REDIRECTOR_HOSTS:
-        log(f'    Dropped "{name}": still a redirect ({hostname(final)})')
-        return None
+        log(f'    "{name}": {hostname(final)} would not resolve, searching instead')
+        return _resolve_by_search(item)
     if _is_denied(final):
         log(f'    Dropped "{name}": resolved to a denied domain ({hostname(final)})')
         return None
@@ -258,10 +274,12 @@ def _resolve_article(item: dict) -> FetchedArticle | None:
     }
 
 
-def _resolve_product(product: dict) -> FetchedArticle | None:
-    """One product -> one canonical URL, or None if nothing is a clean first-party source."""
-    name = product["name"]
-    description = product["description"]
+def _resolve_by_search(item: dict) -> FetchedArticle | None:
+    """One item -> one URL rediscovered by search, or None if no candidate is
+    clearly it. The only path for a product, and the last resort for an article
+    whose link would not resolve."""
+    name = item["name"]
+    description = item["description"]
     query = f"{name} {description}".strip()
 
     try:
@@ -276,7 +294,8 @@ def _resolve_product(product: dict) -> FetchedArticle | None:
         return None
 
     try:
-        choice = b.SelectProductLink(
+        choice = b.SelectItemLink(
+            item["kind"],
             name,
             description,
             [
@@ -300,8 +319,8 @@ def _resolve_product(product: dict) -> FetchedArticle | None:
         "title": name,
         "url": _canonical_url(picked["url"]),
         "content": description,
-        "published_date": product["email_date"],
-        "source": product["newsletter_name"],
+        "published_date": item["email_date"],
+        "source": item["newsletter_name"],
     }
 
 
@@ -309,7 +328,7 @@ def _resolve_one(item: dict) -> FetchedArticle | None:
     """Route an item to the resolution its kind needs."""
     if item["kind"] == NewsletterItemKind.Article:
         return _resolve_article(item)
-    return _resolve_product(item)
+    return _resolve_by_search(item)
 
 
 def _resolve_items(raw: list[dict]) -> list[FetchedArticle]:
