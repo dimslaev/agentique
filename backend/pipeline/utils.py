@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 
 WINDOW_HOURS = 48
 
+# Cap on a stored/emailed error string — see ``short_error``.
+ERROR_CHARS = 500
+
 HN_PREFIX_RE = re.compile(r"^(?:Show|Launch|Ask|Tell) HN:\s*", re.IGNORECASE)
 
 
@@ -26,6 +29,21 @@ def log(message: str) -> None:
 
 def wait_ms(ms: int) -> None:
     time.sleep(ms / 1000)
+
+
+def short_error(e: BaseException, limit: int = ERROR_CHARS) -> str:
+    """``Type: message`` for an exception, capped at ``limit`` characters.
+
+    A provider error is not always one line: a BAML failure carries every
+    attempt's rendered prompt and whatever HTML the upstream served, which is
+    tens of KB. That text is stored in ``pipeline_run.sources`` and emailed by
+    the verifier, so it gets cut here rather than at each call site.
+    """
+    message = f"{type(e).__name__}: {e}"
+    collapsed = " ".join(message.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return f"{collapsed[:limit]}... [truncated, {len(collapsed)} chars]"
 
 
 def enum_value(raw: Any) -> str:
