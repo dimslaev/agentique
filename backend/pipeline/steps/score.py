@@ -16,7 +16,7 @@ from pipeline.embedding import get_model
 from pipeline.heuristics import SCORE_THRESHOLD
 from pipeline.steps import to_baml_input
 from pipeline.types import FetchedArticle
-from pipeline.utils import log, wait_ms
+from pipeline.utils import log, short_error, wait_ms
 
 SCORE_BATCH = 5
 # Pause between scoring batches to stay under the provider's rate limit.
@@ -92,15 +92,44 @@ def score_articles(
     log(f"  Scoring {len(articles)} articles in batches of {SCORE_BATCH}...")
 
     score_by_url: dict[str, int] = {}
+    # Only the articles a scoring call actually came back for. A batch whose
+    # call failed is left out entirely: apply_scores reads a missing score as 0
+    # and the sub-threshold URLs below get written to ScoredUrl, so scoring the
+    # batch anyway would turn a provider outage into a permanent drop.
+    judged: list[FetchedArticle] = []
+    failed = 0
+    last_error: Exception | None = None
     for i in range(0, len(articles), SCORE_BATCH):
         batch = articles[i : i + SCORE_BATCH]
-        result = b.ScoreArticles([to_baml_input(a) for a in batch])
-        score_by_url.update({r.url: r.score for r in result})
-        log(f"    batch {i // SCORE_BATCH + 1}/{batches} done")
+        try:
+            result = b.ScoreArticles([to_baml_input(a) for a in batch])
+        except Exception as e:
+            # One failed batch costs its own five articles, never the source:
+            # run.py treats a raise here as the whole source failing, which on
+            # 2026-09-03 cost 121 fetched Feeds articles over one bad call.
+            # They stay unrecorded, so the next run re-reads them.
+            failed += 1
+            last_error = e
+            log(f"    batch {i // SCORE_BATCH + 1}/{batches} failed: {short_error(e)}")
+        else:
+            judged.extend(batch)
+            score_by_url.update({r.url: r.score for r in result})
+            log(f"    batch {i // SCORE_BATCH + 1}/{batches} done")
         if i + SCORE_BATCH < len(articles):
             wait_ms(SCORE_BATCH_PAUSE_MS)
 
-    scored = apply_scores(articles, score_by_url)
+    if failed:
+        log(
+            f"  {failed}/{batches} scoring batches failed — "
+            "their articles are held for the next run"
+        )
+    # Every batch failing is not a bad call, it is the scorer being down. Let it
+    # out so the source records the error and the verifier alerts on it; a
+    # partial failure is left to the yield-drop check instead.
+    if last_error is not None and not judged:
+        raise last_error
+
+    scored = apply_scores(judged, score_by_url)
     kept = [s for s in scored if s["score"] >= SCORE_THRESHOLD]
     log(f"  {len(kept)} articles pass scoring (threshold: {SCORE_THRESHOLD})")
 

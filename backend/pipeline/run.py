@@ -35,7 +35,8 @@ from pipeline.steps.filter import (
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
 from pipeline.tags import load_vocabulary
-from pipeline.utils import log
+from pipeline.types import FetchedArticle
+from pipeline.utils import log, short_error
 
 
 def run_pipeline(stats: RunStats) -> None:
@@ -49,8 +50,16 @@ def run_pipeline(stats: RunStats) -> None:
             log(f"\n=== Processing {source.label} ===")
             s = stats.source(source.label)
 
+            # Held outside the try so the publisher stats below survive a
+            # failure in any step after the fetch.
+            fetched: list[FetchedArticle] = []
+            fetch_errors: dict[str, str] = {}
+            inserted: list[FetchedArticle] = []
+            fetched_ok = False
+
             try:
                 fetched, fetch_errors = fetch_source(source)
+                fetched_ok = True
                 s.fetched = len(fetched)
 
                 resolve_publishers(fetched, resolver)
@@ -92,19 +101,28 @@ def run_pipeline(stats: RunStats) -> None:
                 inserted = insert_articles(session, scored)
                 s.inserted = len(inserted)
 
-                if source.publisher_names:
-                    stats.record_publishers(
-                        source.publisher_names, fetched, inserted, fetch_errors
-                    )
-
                 improve_titles(session, inserted)
                 processed = categorize_and_tag_articles(session, inserted, vocab)
                 embed_articles(session, processed)
             except Exception as e:
-                # One source failing must not sink the others — record and move on.
-                s.errors.append(f"{type(e).__name__}: {e}")
-                log(f"  !! {source.label} failed: {e}")
+                # One source failing must not sink the others — record and move
+                # on. The message is truncated: a BAML failure carries every
+                # attempt's prompt and the upstream's HTML, and this string is
+                # stored in pipeline_run and emailed by the verifier.
+                message = short_error(e)
+                s.errors.append(message)
+                log(f"  !! {source.label} failed: {message}")
                 session.rollback()
+            finally:
+                # Per-publisher health is recorded whatever happened after the
+                # fetch. It used to sit mid-try, so the 2026-09-03 scoring
+                # failure took it with it and 99 feeds dropped out of the run's
+                # stats on exactly the night something was wrong. A fetch that
+                # itself failed records nothing: there are no counts to report.
+                if fetched_ok and source.publisher_names:
+                    stats.record_publishers(
+                        source.publisher_names, fetched, inserted, fetch_errors
+                    )
 
         if resolver.quarantined:
             log(
