@@ -20,13 +20,13 @@ from .globals import DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIM
 class TypeBuilder(type_builder.TypeBuilder):
     def __init__(self):
         super().__init__(classes=set(
-          ["ArticleInput","CategorizeAndTagResult","ClassifyKindResult","ExtractedLink","NewsletterProduct","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","TagOption","TitleFix",]
+          ["ArticleInput","CategorizeAndTagResult","ClassifyKindResult","ExtractedLink","NewsletterItem","ProductLinkChoice","ProfileInput","ProfileVerdict","ScoredArticle","SearchCandidate","TagOption","TitleFix",]
         ), enums=set(
-          ["ArticleCategory","ArticleKind",]
+          ["ArticleCategory","ArticleKind","NewsletterItemKind",]
         ), runtime=DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME)
 
     # #########################################################################
-    # Generated enums 2
+    # Generated enums 3
     # #########################################################################
 
     @property
@@ -36,6 +36,10 @@ class TypeBuilder(type_builder.TypeBuilder):
     @property
     def ArticleKind(self) -> "ArticleKindViewer":
         return ArticleKindViewer(self)
+
+    @property
+    def NewsletterItemKind(self) -> "NewsletterItemKindViewer":
+        return NewsletterItemKindViewer(self)
 
 
     # #########################################################################
@@ -59,8 +63,8 @@ class TypeBuilder(type_builder.TypeBuilder):
         return ExtractedLinkViewer(self)
 
     @property
-    def NewsletterProduct(self) -> "NewsletterProductViewer":
-        return NewsletterProductViewer(self)
+    def NewsletterItem(self) -> "NewsletterItemViewer":
+        return NewsletterItemViewer(self)
 
     @property
     def ProductLinkChoice(self) -> "ProductLinkChoiceViewer":
@@ -93,7 +97,7 @@ class TypeBuilder(type_builder.TypeBuilder):
 
 
 # #########################################################################
-# Generated enums 2
+# Generated enums 3
 # #########################################################################
 
 class ArticleCategoryAst:
@@ -196,6 +200,48 @@ class ArticleKindValues:
     @property
     def Announcement(self) -> type_builder.EnumValueViewer:
         return type_builder.EnumValueViewer(self.__bldr.value("Announcement"))
+    
+    
+
+
+class NewsletterItemKindAst:
+    def __init__(self, tb: type_builder.TypeBuilder):
+        _tb = tb._tb # type: ignore (we know how to use this private attribute)
+        self._bldr = _tb.enum("NewsletterItemKind")
+        self._values: typing.Set[str] = set([  "Product",  "Article",  ])
+        self._vals = NewsletterItemKindValues(self._bldr, self._values)
+
+    def type(self) -> baml_py.FieldType:
+        return self._bldr.field()
+
+    @property
+    def values(self) -> "NewsletterItemKindValues":
+        return self._vals
+
+
+class NewsletterItemKindViewer(NewsletterItemKindAst):
+    def __init__(self, tb: type_builder.TypeBuilder):
+        super().__init__(tb)
+
+    
+    def list_values(self) -> typing.List[typing.Tuple[str, type_builder.EnumValueViewer]]:
+        return [(name, type_builder.EnumValueViewer(self._bldr.value(name))) for name in self._values]
+    
+
+class NewsletterItemKindValues:
+    def __init__(self, enum_bldr: baml_py.EnumBuilder, values: typing.Set[str]):
+        self.__bldr = enum_bldr
+        self.__values = values # type: ignore (we know how to use this private attribute) # noqa: F821
+
+    
+    
+    @property
+    def Product(self) -> type_builder.EnumValueViewer:
+        return type_builder.EnumValueViewer(self.__bldr.value("Product"))
+    
+    @property
+    def Article(self) -> type_builder.EnumValueViewer:
+        return type_builder.EnumValueViewer(self.__bldr.value("Article"))
     
     
 
@@ -397,22 +443,22 @@ class ExtractedLinkProperties:
     
 
 
-class NewsletterProductAst:
+class NewsletterItemAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
-        self._bldr = _tb.class_("NewsletterProduct")
-        self._properties: typing.Set[str] = set([  "name",  "description",  ])
-        self._props = NewsletterProductProperties(self._bldr, self._properties)
+        self._bldr = _tb.class_("NewsletterItem")
+        self._properties: typing.Set[str] = set([  "kind",  "name",  "description",  "url",  ])
+        self._props = NewsletterItemProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
         return self._bldr.field()
 
     @property
-    def props(self) -> "NewsletterProductProperties":
+    def props(self) -> "NewsletterItemProperties":
         return self._props
 
 
-class NewsletterProductViewer(NewsletterProductAst):
+class NewsletterItemViewer(NewsletterItemAst):
     def __init__(self, tb: type_builder.TypeBuilder):
         super().__init__(tb)
 
@@ -422,12 +468,16 @@ class NewsletterProductViewer(NewsletterProductAst):
     
 
 
-class NewsletterProductProperties:
+class NewsletterItemProperties:
     def __init__(self, bldr: baml_py.ClassBuilder, properties: typing.Set[str]):
         self.__bldr = bldr
         self.__properties = properties # type: ignore (we know how to use this private attribute) # noqa: F821
 
     
+    
+    @property
+    def kind(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("kind"))
     
     @property
     def name(self) -> type_builder.ClassPropertyViewer:
@@ -436,6 +486,10 @@ class NewsletterProductProperties:
     @property
     def description(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("description"))
+    
+    @property
+    def url(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("url"))
     
     
 

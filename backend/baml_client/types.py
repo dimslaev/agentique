@@ -37,7 +37,7 @@ def get_checks(checks: typing.Dict[CheckName, Check]) -> typing.List[Check]:
 def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
     return all(check.status == "succeeded" for check in get_checks(checks))
 # #########################################################################
-# Generated enums (2)
+# Generated enums (3)
 # #########################################################################
 
 class ArticleCategory(str, Enum):
@@ -52,6 +52,10 @@ class ArticleKind(str, Enum):
     Blog = "Blog"
     Product = "Product"
     Announcement = "Announcement"
+
+class NewsletterItemKind(str, Enum):
+    Product = "Product"
+    Article = "Article"
 
 # #########################################################################
 # Generated classes (12)
@@ -78,9 +82,11 @@ class ExtractedLink(BaseModel):
     url: str
     snippet: str = Field(description='One-sentence description of the article')
 
-class NewsletterProduct(BaseModel):
-    name: str = Field(description='Exact product / tool / model / launch name')
+class NewsletterItem(BaseModel):
+    kind: NewsletterItemKind
+    name: str = Field(description='Product name, or the article\'s title')
     description: str = Field(description='Concise phrase: what it is and does, usable verbatim as a web search query')
+    url: typing.Optional[str] = Field(default=None, description='For an Article, the href of its link, copied verbatim including any tracking redirect. Omit for a Product.')
 
 class ProductLinkChoice(BaseModel):
     index: int = Field(description='1-based index of the best first-party result, or 0 if none qualifies')

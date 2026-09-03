@@ -47,9 +47,11 @@ class ExtractedLink(BaseModel):
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = Field(default=None, description='One-sentence description of the article')
 
-class NewsletterProduct(BaseModel):
-    name: typing.Optional[str] = Field(default=None, description='Exact product / tool / model / launch name')
+class NewsletterItem(BaseModel):
+    kind: typing.Optional[types.NewsletterItemKind] = None
+    name: typing.Optional[str] = Field(default=None, description='Product name, or the article\'s title')
     description: typing.Optional[str] = Field(default=None, description='Concise phrase: what it is and does, usable verbatim as a web search query')
+    url: typing.Optional[str] = Field(default=None, description='For an Article, the href of its link, copied verbatim including any tracking redirect. Omit for a Product.')
 
 class ProductLinkChoice(BaseModel):
     index: typing.Optional[int] = Field(default=None, description='1-based index of the best first-party result, or 0 if none qualifies')

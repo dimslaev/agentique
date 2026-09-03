@@ -136,6 +136,20 @@ class BamlSyncClient:
                 "profiles": profiles,
             })
             return typing.cast(typing.List["types.ProfileVerdict"], __result__.cast_to(types, types, stream_types, False, __runtime__))
+    def ExtractItems(self, newsletterText: str,
+        baml_options: BamlCallOptions = {},
+    ) -> typing.List["types.NewsletterItem"]:
+        # Check if on_tick is provided
+        if 'on_tick' in baml_options:
+            __stream__ = self.stream.ExtractItems(newsletterText=newsletterText,
+                baml_options=baml_options)
+            return __stream__.get_final_response()
+        else:
+            # Original non-streaming code
+            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractItems", args={
+                "newsletterText": newsletterText,
+            })
+            return typing.cast(typing.List["types.NewsletterItem"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     def ExtractLinks(self, emailHtml: str,
         baml_options: BamlCallOptions = {},
     ) -> typing.List["types.ExtractedLink"]:
@@ -150,20 +164,6 @@ class BamlSyncClient:
                 "emailHtml": emailHtml,
             })
             return typing.cast(typing.List["types.ExtractedLink"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def ExtractProducts(self, newsletterText: str,
-        baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.NewsletterProduct"]:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.ExtractProducts(newsletterText=newsletterText,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ExtractProducts", args={
-                "newsletterText": newsletterText,
-            })
-            return typing.cast(typing.List["types.NewsletterProduct"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
         baml_options: BamlCallOptions = {},
     ) -> typing.List["types.TitleFix"]:
@@ -192,18 +192,18 @@ class BamlSyncClient:
                 "articles": articles,
             })
             return typing.cast(typing.List["types.ScoredArticle"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
+    def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> typing.List[int]:
         # Check if on_tick is provided
         if 'on_tick' in baml_options:
-            __stream__ = self.stream.SelectNotableProducts(products=products,
+            __stream__ = self.stream.SelectNotableItems(items=items,
                 baml_options=baml_options)
             return __stream__.get_final_response()
         else:
             # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="SelectNotableProducts", args={
-                "products": products,
+            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="SelectNotableItems", args={
+                "items": items,
             })
             return typing.cast(typing.List[int], __result__.cast_to(types, types, stream_types, False, __runtime__))
     def SelectProductLink(self, productName: str,productDescription: str,candidates: typing.List["types.SearchCandidate"],
@@ -265,6 +265,18 @@ class BamlStreamClient:
           lambda x: typing.cast(typing.List["types.ProfileVerdict"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
+    def ExtractItems(self, newsletterText: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.BamlSyncStream[typing.List["stream_types.NewsletterItem"], typing.List["types.NewsletterItem"]]:
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractItems", args={
+            "newsletterText": newsletterText,
+        })
+        return baml_py.BamlSyncStream[typing.List["stream_types.NewsletterItem"], typing.List["types.NewsletterItem"]](
+          __result__,
+          lambda x: typing.cast(typing.List["stream_types.NewsletterItem"], x.cast_to(types, types, stream_types, True, __runtime__)),
+          lambda x: typing.cast(typing.List["types.NewsletterItem"], x.cast_to(types, types, stream_types, False, __runtime__)),
+          __ctx__,
+        )
     def ExtractLinks(self, emailHtml: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[typing.List["stream_types.ExtractedLink"], typing.List["types.ExtractedLink"]]:
@@ -275,18 +287,6 @@ class BamlStreamClient:
           __result__,
           lambda x: typing.cast(typing.List["stream_types.ExtractedLink"], x.cast_to(types, types, stream_types, True, __runtime__)),
           lambda x: typing.cast(typing.List["types.ExtractedLink"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
-    def ExtractProducts(self, newsletterText: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[typing.List["stream_types.NewsletterProduct"], typing.List["types.NewsletterProduct"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ExtractProducts", args={
-            "newsletterText": newsletterText,
-        })
-        return baml_py.BamlSyncStream[typing.List["stream_types.NewsletterProduct"], typing.List["types.NewsletterProduct"]](
-          __result__,
-          lambda x: typing.cast(typing.List["stream_types.NewsletterProduct"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.NewsletterProduct"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
@@ -313,11 +313,11 @@ class BamlStreamClient:
           lambda x: typing.cast(typing.List["types.ScoredArticle"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
-    def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
+    def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[typing.List[int], typing.List[int]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="SelectNotableProducts", args={
-            "products": products,
+        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="SelectNotableItems", args={
+            "items": items,
         })
         return baml_py.BamlSyncStream[typing.List[int], typing.List[int]](
           __result__,
@@ -366,18 +366,18 @@ class BamlHttpRequestClient:
             "profiles": profiles,
         }, mode="request")
         return __result__
+    def ExtractItems(self, newsletterText: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractItems", args={
+            "newsletterText": newsletterText,
+        }, mode="request")
+        return __result__
     def ExtractLinks(self, emailHtml: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractLinks", args={
             "emailHtml": emailHtml,
-        }, mode="request")
-        return __result__
-    def ExtractProducts(self, newsletterText: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProducts", args={
-            "newsletterText": newsletterText,
         }, mode="request")
         return __result__
     def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
@@ -394,11 +394,11 @@ class BamlHttpRequestClient:
             "articles": articles,
         }, mode="request")
         return __result__
-    def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
+    def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectNotableProducts", args={
-            "products": products,
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectNotableItems", args={
+            "items": items,
         }, mode="request")
         return __result__
     def SelectProductLink(self, productName: str,productDescription: str,candidates: typing.List["types.SearchCandidate"],
@@ -437,18 +437,18 @@ class BamlHttpStreamRequestClient:
             "profiles": profiles,
         }, mode="stream")
         return __result__
+    def ExtractItems(self, newsletterText: str,
+        baml_options: BamlCallOptions = {},
+    ) -> baml_py.baml_py.HTTPRequest:
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractItems", args={
+            "newsletterText": newsletterText,
+        }, mode="stream")
+        return __result__
     def ExtractLinks(self, emailHtml: str,
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractLinks", args={
             "emailHtml": emailHtml,
-        }, mode="stream")
-        return __result__
-    def ExtractProducts(self, newsletterText: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ExtractProducts", args={
-            "newsletterText": newsletterText,
         }, mode="stream")
         return __result__
     def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
@@ -465,11 +465,11 @@ class BamlHttpStreamRequestClient:
             "articles": articles,
         }, mode="stream")
         return __result__
-    def SelectNotableProducts(self, products: typing.List["types.NewsletterProduct"],
+    def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectNotableProducts", args={
-            "products": products,
+        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectNotableItems", args={
+            "items": items,
         }, mode="stream")
         return __result__
     def SelectProductLink(self, productName: str,productDescription: str,candidates: typing.List["types.SearchCandidate"],

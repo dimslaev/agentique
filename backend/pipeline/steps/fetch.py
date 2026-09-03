@@ -12,8 +12,10 @@ from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
     lab_watch_targets_from_db,
+    newsletter_senders_from_db,
 )
 from pipeline.sources.ainews import fetch_ai_news
+from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.extract_content import fetch_full_content
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
@@ -61,11 +63,16 @@ def build_sources(session: Session) -> list[Source]:
     hard at the source (a keyword gate on HN, the subreddit itself on Reddit)
     and both arrive thin, so they lean on the re-fetch path too.
 
-    The IMAP newsletter channel stays disabled — it has no source module wired
-    up here yet.
+    "Newsletter" is the IMAP channel: unread mail in the "sub" mailbox matched
+    against every active publisher with an ``email`` link (DB-driven via
+    ``newsletter_senders_from_db``). An item is a product named in an issue,
+    resolved to a first-party URL by search rather than by the mail's own
+    tracking links, so it arrives carrying only the issue's blurb and leans on
+    the re-fetch path like the other thin sources.
     """
     feed_sources = feed_sources_from_db(session)
     lab_watch_targets = lab_watch_targets_from_db(session)
+    newsletter_senders = newsletter_senders_from_db(session)
     return [
         Source(
             "Feeds",
@@ -75,6 +82,7 @@ def build_sources(session: Session) -> list[Source]:
         Source("Hacker News", lambda: (fetch_hn(), {})),
         Source("Reddit", lambda: (fetch_reddit(), {})),
         Source("AI News", lambda: (fetch_ai_news(), {})),
+        Source("Newsletter", lambda: (fetch_newsletter(newsletter_senders), {})),
         Source(
             "Lab Watch",
             lambda: (fetch_lab_watch(lab_watch_targets), {}),

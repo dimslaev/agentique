@@ -28,8 +28,8 @@ type_map = {
     "types.ExtractedLink": types.ExtractedLink,
     "stream_types.ExtractedLink": stream_types.ExtractedLink,
 
-    "types.NewsletterProduct": types.NewsletterProduct,
-    "stream_types.NewsletterProduct": stream_types.NewsletterProduct,
+    "types.NewsletterItem": types.NewsletterItem,
+    "stream_types.NewsletterItem": stream_types.NewsletterItem,
 
     "types.ProductLinkChoice": types.ProductLinkChoice,
     "stream_types.ProductLinkChoice": stream_types.ProductLinkChoice,
@@ -56,5 +56,7 @@ type_map = {
     "types.ArticleCategory": types.ArticleCategory,
 
     "types.ArticleKind": types.ArticleKind,
+
+    "types.NewsletterItemKind": types.NewsletterItemKind,
 
 }

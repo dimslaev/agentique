@@ -214,17 +214,32 @@ def test_gate_on_empty_input():
 # funnel's reach, so it is pinned rather than left to review.
 
 
-def _stub_db_sources(monkeypatch, feeds: list[dict], lab_watch: list[tuple[str, str]]):
+def _stub_db_sources(
+    monkeypatch,
+    feeds: list[dict],
+    lab_watch: list[tuple[str, str]],
+    newsletter: list[tuple[str, str]] | None = None,
+):
     monkeypatch.setattr(fetch_step, "feed_sources_from_db", lambda session: feeds)
     monkeypatch.setattr(
         fetch_step, "lab_watch_targets_from_db", lambda session: lab_watch
+    )
+    monkeypatch.setattr(
+        fetch_step, "newsletter_senders_from_db", lambda session: newsletter or []
     )
 
 
 def test_every_channel_is_polled(monkeypatch):
     _stub_db_sources(monkeypatch, [], [])
     labels = [s.label for s in fetch_step.build_sources(session=None)]
-    assert labels == ["Feeds", "Hacker News", "Reddit", "AI News", "Lab Watch"]
+    assert labels == [
+        "Feeds",
+        "Hacker News",
+        "Reddit",
+        "AI News",
+        "Newsletter",
+        "Lab Watch",
+    ]
 
 
 def test_lab_watch_reports_its_targets_as_publishers(monkeypatch):
@@ -248,9 +263,14 @@ def test_feeds_reports_its_publishers(monkeypatch):
 def test_each_source_binds_its_own_db_config(monkeypatch):
     """The fetchers are lambdas closing over lists read once per run — a shared
     or late-bound one would poll the wrong set."""
-    _stub_db_sources(monkeypatch, [], [("Anthropic", "anthropic.com")])
-    monkeypatch.setattr(fetch_step, "fetch_lab_watch", lambda targets: targets)
-    lab_watch = next(
-        s for s in fetch_step.build_sources(session=None) if s.label == "Lab Watch"
+    _stub_db_sources(
+        monkeypatch,
+        [],
+        [("Anthropic", "anthropic.com")],
+        newsletter=[("@tldr.tech", "TLDR")],
     )
-    assert lab_watch.fetcher() == ([("Anthropic", "anthropic.com")], {})
+    monkeypatch.setattr(fetch_step, "fetch_lab_watch", lambda targets: targets)
+    monkeypatch.setattr(fetch_step, "fetch_newsletter", lambda senders: senders)
+    sources = {s.label: s for s in fetch_step.build_sources(session=None)}
+    assert sources["Lab Watch"].fetcher() == ([("Anthropic", "anthropic.com")], {})
+    assert sources["Newsletter"].fetcher() == ([("@tldr.tech", "TLDR")], {})
