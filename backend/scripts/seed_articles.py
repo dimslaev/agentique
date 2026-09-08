@@ -10,9 +10,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.core.config import settings
-from app.core.db import engine
-from app.models import (
+from app.catalog.models import (
     Article,
     ArticleKind,
     ArticleTag,
@@ -22,6 +20,8 @@ from app.models import (
     Tag,
     TrustLevel,
 )
+from app.core.config import settings
+from app.core.db import engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ import random
 
 from sqlmodel import Session
 
-from app.models import (
+from app.catalog.models import (
     Article,
     ArticleKind,
     ArticleTag,

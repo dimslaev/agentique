@@ -15,8 +15,8 @@ from datetime import UTC, datetime, timedelta
 import httpx
 from sqlmodel import Session, col, select
 
-from app.models import PipelineRun
 from app.platform.logging import log
+from pipeline.models import PipelineRun
 
 
 @dataclass(frozen=True)

@@ -17,7 +17,7 @@ from app.api.article_view import (
     liked_article_ids,
 )
 from app.api.deps import CurrentUserOptional, SessionDep
-from app.models import (
+from app.catalog.models import (
     Article,
     ArticleFacets,
     ArticlesPublic,

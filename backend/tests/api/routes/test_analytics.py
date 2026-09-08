@@ -5,8 +5,9 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
+from app.analytics.models import AnalyticsEvent
+from app.audience.models import User
 from app.core.config import settings
-from app.models import AnalyticsEvent, User
 
 
 def _latest_event(db: Session, visitor_id: str) -> AnalyticsEvent | None:

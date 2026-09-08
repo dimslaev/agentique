@@ -14,9 +14,9 @@ from collections import defaultdict
 from sqlalchemy import Subquery, func
 from sqlmodel import Session, col, select
 
-from app.models import (
+from app.audience.models import ArticleLike
+from app.catalog.models import (
     Article,
-    ArticleLike,
     ArticlePublic,
     ArticleTag,
     Publisher,

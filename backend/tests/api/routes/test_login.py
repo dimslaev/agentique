@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
+from app.audience.models import User, UserCreate
 from app.core.config import settings
 from app.core.security import (
     generate_password_reset_token,
@@ -16,7 +17,6 @@ from app.core.security import (
     verify_password,
 )
 from app.crud import create_user
-from app.models import User, UserCreate
 from tests.factories.random_data import random_email, random_lower_string
 from tests.factories.user import user_authentication_headers
 

@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
 
-from app.models import (
+from app.catalog.models import (
     LinkPlatform,
     Publisher,
     PublisherKind,

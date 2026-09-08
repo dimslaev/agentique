@@ -19,8 +19,18 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.models import SQLModel  # noqa
-from app.core.config import settings # noqa
+# Every model module is imported for its side effect: SQLModel.metadata is only
+# complete once each domain's tables have been declared, and autogenerate
+# reads that metadata. A domain added without a line here silently loses its
+# migrations.
+from sqlmodel import SQLModel  # noqa
+
+from app.analytics import models as analytics_models  # noqa
+from app.audience import models as audience_models  # noqa
+from app.catalog import models as catalog_models  # noqa
+from app.core.config import settings  # noqa
+from app.newsletter import models as newsletter_models  # noqa
+from pipeline import models as pipeline_models  # noqa
 
 target_metadata = SQLModel.metadata
 

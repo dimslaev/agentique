@@ -53,7 +53,7 @@ $ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+SQLModel models live with the domain that owns them - `app/catalog/models.py`, `app/audience/models.py`, `app/newsletter/models.py`, `app/analytics/models.py`, and `pipeline/models.py` for the run record. API endpoints are in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
 ## VS Code
 
@@ -85,7 +85,7 @@ When the tests are run, a file `htmlcov/index.html` is generated, you can open i
 
 Make sure you create a "revision" of your models and that you "upgrade" your database with that revision every time you change them. As this is what will update the tables in your database. Otherwise, your application will have errors.
 
-Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+Alembic is already configured to import every model module in `app/alembic/env.py`. A new domain needs a line there, or its tables are invisible to autogenerate.
 
 After changing a model (for example, adding a column), from `./backend/` create a revision:
 
