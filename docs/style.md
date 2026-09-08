@@ -38,6 +38,10 @@ express, enforced by review.
   values (database URL, API keys) live in one settings object
   (`app/platform/settings.py`). Tuning knobs compiled into the code
   (`SCORE_THRESHOLD`, `SNIPPET_CAP`) never move there.
+- **The pipeline is the exception, on purpose.** It reads `os.environ` beside
+  each consumer rather than through that settings object — see ADR 7. The index
+  of what it reads lives in `deploy/README.md`; add a row there when you add a
+  var.
 
 ## Frontend
 

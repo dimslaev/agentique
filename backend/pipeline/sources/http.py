@@ -2,16 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import threading
 
 import httpx
 
-from pipeline.config import residential_proxy_url, tavily_api_key
-
 FETCH_TIMEOUT_SECS = 15.0
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
 TAVILY_SEARCH_CANDIDATES = 5
-RESIDENTIAL_PROXY_URL = residential_proxy_url()
+# A proxy for source fetches that get blocked direct (403/429/paywall).
+# Metered, so callers only reach for it after a direct attempt fails.
+RESIDENTIAL_PROXY_URL = os.environ.get("RESIDENTIAL_PROXY_URL")
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -66,7 +67,7 @@ def tavily_search(
     """Tavily search. ``include_domains`` restricts hits to those hosts (used by
     lab_watch to guarantee first-party results); ``topic="news"`` + ``days`` ask
     for recent items and make ``published_date`` available on each result."""
-    api_key = tavily_api_key()
+    api_key = os.environ["TAVILY_API_KEY"]
     payload: dict = {
         "api_key": api_key,
         "query": query,

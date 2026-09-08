@@ -8,6 +8,7 @@ here must never change whether the pipeline itself succeeded.
 from __future__ import annotations
 
 import html
+import os
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -16,7 +17,29 @@ from sqlmodel import Session, col, select
 
 from app.models import PipelineRun
 from app.platform.logging import log
-from pipeline.config import alert_config
+
+
+@dataclass(frozen=True)
+class AlertConfig:
+    resend_api_key: str | None
+    from_email: str | None
+    to_email: str | None
+    project_name: str
+
+
+def alert_config() -> AlertConfig:
+    """Read lazily, so importing this module needs no alerting environment."""
+    resend_api_key = os.environ.get("RESEND_API_KEY")
+    from_email = os.environ.get("EMAILS_FROM_EMAIL")
+    to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
+    project_name = os.environ.get("PROJECT_NAME") or "Agentique"
+    return AlertConfig(
+        resend_api_key=resend_api_key,
+        from_email=from_email,
+        to_email=to_email,
+        project_name=project_name,
+    )
+
 
 # ─── Tunables ─────────────────────────────────────────────────────────────────
 

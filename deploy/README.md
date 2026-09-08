@@ -113,6 +113,27 @@ is `git revert` + push (which redeploys) — no release directories or symlinks.
   source of truth — back the file up to the password manager. It must set
   `ENVIRONMENT=production` and `POSTGRES_SERVER=localhost`.
 
+### What the pipeline reads from `/opt/agentique/.env`
+
+`pipeline/` reads `os.environ` at the point of use rather than through the
+backend's `Settings` object (see ADR 7), so this is the index — grep the module
+named beside each var for the exact default and why it is what it is.
+
+| Var | Read by | Required? |
+| --- | --- | --- |
+| `POSTGRES_SERVER`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `pipeline/db.py` | server + user required |
+| `IMAP_HOST`, `IMAP_PORT`, `IMAP_USER`, `IMAP_PASSWORD` | `pipeline/sources/email.py` | required for the newsletter source |
+| `TAVILY_API_KEY` | `pipeline/sources/http.py` | required for lab watch / link recovery |
+| `RESIDENTIAL_PROXY_URL` | `pipeline/sources/http.py` | optional, metered fallback |
+| `GITHUB_TOKEN` | `pipeline/sources/github_stars.py` | optional, raises the rate limit |
+| `RESEND_API_KEY`, `EMAILS_FROM_EMAIL`, `PIPELINE_ALERT_EMAIL`, `PROJECT_NAME` | `pipeline/health.py` | needed to receive run alerts |
+| `KEEP_DROP_PREFILTER_THRESHOLD` | `pipeline/keep_drop.py` | optional tuning knob |
+| `HN_MIN_POINTS`, `HN_MIN_COMMENTS`, `HN_GRACE_HOURS` | `pipeline/sources/hn.py` | optional tuning knobs |
+| `GITHUB_MIN_STARS`, `DEDUP_DIST_THRESHOLD` | `pipeline/steps/filter.py` | optional tuning knobs |
+
+The tuning knobs all have working defaults compiled in — set one only to
+override, and prefer changing the default in code so the value is reviewed.
+
 ## Self-hosted runner
 
 A GitHub Actions runner on the VPS with labels `self-hosted` + `production`, installed as a

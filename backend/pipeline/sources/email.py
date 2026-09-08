@@ -14,8 +14,10 @@ depends on the kind:
 
 from __future__ import annotations
 
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from html import unescape
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
@@ -25,12 +27,31 @@ from imap_tools import AND, MailBox
 from app.platform.logging import log, short_error
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
-from pipeline.config import ImapConfig, imap_config
 from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
 from pipeline.types import FetchedArticle
 from pipeline.urls import hostname
 
 IMAP_FOLDER = "sub"
+
+
+@dataclass(frozen=True)
+class ImapConfig:
+    host: str
+    port: int
+    user: str
+    password: str
+
+
+def imap_config() -> ImapConfig:
+    """Read lazily, so importing this module needs no IMAP environment."""
+    host = os.environ.get("IMAP_HOST")
+    user = os.environ.get("IMAP_USER")
+    password = os.environ.get("IMAP_PASSWORD")
+    if not host or not user or not password:
+        raise RuntimeError("Missing IMAP env vars: IMAP_HOST, IMAP_USER, IMAP_PASSWORD")
+    port = int(os.environ.get("IMAP_PORT", "993"))
+    return ImapConfig(host=host, port=port, user=user, password=password)
+
 
 # The product path spends one LLM call per item, and the LLM provider caps
 # concurrent requests well below its per-minute quota: bursts past a handful of
