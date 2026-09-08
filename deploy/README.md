@@ -39,7 +39,7 @@ Install targets:
 - Both roles are passwordless and the postgres image only trusts the local socket, so they cannot log in over the ssh tunnel.
 - `agentique-sql` is root-owned outside `/opt/agentique` deliberately: the runner user can rewrite everything under `/opt/agentique`, so a NOPASSWD rule pointing there would hand it root. Copy the file by hand after changing it.
 
-For interactive poking, the ssh tunnel from [`deployment.md`](../deployment.md#database) is still the better tool.
+For interactive poking, an ssh tunnel is still the better tool: `ssh -L 5432:localhost:5432 <vps>` and point a client at `localhost:5432` — postgres is published on loopback only, so this only works with the ssh key (see CLAUDE.md).
 
 ## One-time setup
 
@@ -95,9 +95,31 @@ echo 'ubuntu ALL=(root) NOPASSWD: /usr/bin/systemctl restart agentique-backend' 
 
 ## Deploy flow (CI)
 
+Push to `master` → `.github/workflows/deploy-production.yml`:
+
 1. Build `frontend/dist` on a GitHub-hosted runner, upload as artifact.
 2. Self-hosted runner: rsync to `/opt/agentique` (excludes `.env`, `.venv`, `frontend/dist`), then rsync the fresh dist.
 3. `uv sync --frozen --package app`, `uv run --env-file ../.env bash scripts/prestart.sh`.
 4. `sudo systemctl restart agentique-backend`.
 
-Pipeline needs no restart — the timer starts a fresh process each run.
+Pipeline needs no restart — the timer starts a fresh process each run. Migrate-then-restart
+means additive migrations only; a few seconds of downtime per deploy is accepted. Rollback
+is `git revert` + push (which redeploys) — no release directories or symlinks.
+
+## Secrets
+
+- GitHub side: `DOMAIN_PRODUCTION` (used for the frontend build URL), in the `production` environment.
+- Box side: `/opt/agentique/.env`, hand-written once, never touched by CI. The VPS is the
+  source of truth — back the file up to the password manager. It must set
+  `ENVIRONMENT=production` and `POSTGRES_SERVER=localhost`.
+
+## Self-hosted runner
+
+A GitHub Actions runner on the VPS with labels `self-hosted` + `production`, installed as a
+service ([official guide](https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/adding-self-hosted-runners)).
+Runs as `ubuntu`. Needs: write access to `/opt/agentique`, uv, and the narrow sudoers rule above.
+
+## URLs
+
+- Frontend: `https://agentique.ch` (`www.` redirects to apex)
+- API: `https://api.agentique.ch` (docs at `/docs`)

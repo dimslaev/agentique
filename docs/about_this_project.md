@@ -113,6 +113,6 @@ above, and a real load/scale test (current data volume is small — this has bee
 architecture spike more than a performance one so far).
 
 If you want the ground-level detail — endpoints, models, exact commands — see
-`backend/README.md`, `frontend/README.md`, and `development.md`. `CHANGES.md` tracks
+`backend/README.md` and `frontend/README.md`. `CHANGES.md` tracks
 every place this fork has diverged from the upstream template, which is the fastest way
 to see what's actually Agentique-specific versus inherited scaffolding.

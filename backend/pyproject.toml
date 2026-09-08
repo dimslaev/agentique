@@ -83,16 +83,13 @@ keep-runtime-typing = true
 "scripts/**" = ["T201"]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "pipeline"]
 dynamic_context = "test_function"
 
 [tool.coverage.report]
 show_missing = true
 sort = "-Cover"
 omit = [
-    "app/api/routes/items.py",
-    "app/api/routes/private.py",
-    "app/api/routes/utils.py",
     "app/seed_articles.py",
     "app/initial_data.py",
 ]

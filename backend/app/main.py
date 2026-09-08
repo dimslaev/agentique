@@ -33,3 +33,8 @@ if settings.all_cors_origins:
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(newsletter.router, prefix="/api")
+
+
+@app.get(f"{settings.API_V1_STR}/utils/health-check/", tags=["utils"])
+async def health_check() -> bool:
+    return True
