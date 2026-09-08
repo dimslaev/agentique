@@ -16,7 +16,7 @@ from sqlmodel import Session, select
 from app.catalog.models import Tag
 from app.platform.db import engine
 
-TAGS_FILE = Path(__file__).resolve().parents[1] / "app" / "data" / "tags.json"
+TAGS_FILE = Path(__file__).resolve().parent / "tags.json"
 
 
 def load_tags() -> list[dict[str, str]]:

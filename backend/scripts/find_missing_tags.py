@@ -11,7 +11,7 @@ Articles whose best tag is far away are the ones the vocabulary can't describe â
 candidates for a missing tag (e.g. text-to-speech, if no such tag exists). We
 group those under-covered articles into clusters and print each cluster with a
 few representative titles and its nearest existing tag, so a human can name the
-gap and add it to `app/data/tags.json`.
+gap and add it to `scripts/tags.json`.
 
 No LLM calls: embeddings are already in the DB, tag vectors are one local encode
 of ~30 tag strings, and clustering is greedy cosine math. Run it against prod by
@@ -264,7 +264,7 @@ def main() -> None:
             print(f"      - {t}")
         print()
     print(
-        "Next: name each real gap and add it to app/data/tags.json, then "
+        "Next: name each real gap and add it to scripts/tags.json, then "
         "re-run `python scripts/seed_tags.py`.\nBackfill tags on affected articles "
         "with the pipeline's categorize_and_tag_articles step."
     )
