@@ -6,7 +6,7 @@
 - `docs/adr/` - decisions made and why, written once, never edited
 - `docs/style.md` - coding conventions a linter can't enforce
 - `docs/product.md` - what agentique is, for anyone picking up work here
-- `plans/` - proposed work in progress, deleted once shipped
+- `.ignored/plans/` - proposed work in progress, deleted once shipped (gitignored)
 
 ## Chat tone 
 
@@ -14,7 +14,7 @@ Respond terse like smart caveman. All technical substance stay. Only fluff die
 ACTIVE EVERY RESPONSE. No revert after many turns. No filler drift. Still active if unsure. Off only: "stop caveman"
 
 ## Docs 
-- When asked for a plan, save it to `plans/<kebab-topic>.md`, without repeating in chat
+- When asked for a plan, save it to `.ignored/plans/<kebab-topic>.md`, without repeating in chat
 - Keep markdown formatting down to minimum. Keep language accessible, concise and human readable. Use bullet points. 
 
 
