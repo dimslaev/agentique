@@ -7,9 +7,9 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
-from app.api.main import api_router
-from app.api.routes import newsletter
-from app.core.config import settings
+from app.newsletter.routes import router as newsletter_router
+from app.platform.settings import settings
+from app.router import api_router
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -36,7 +36,9 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
-app.include_router(newsletter.router, prefix="/api")
+# The newsletter lives outside /api/v1 because the public signup form has
+# posted to /api/newsletter/subscribe since before the API was versioned.
+app.include_router(newsletter_router, prefix="/api")
 
 
 @app.get(f"{settings.API_V1_STR}/utils/health-check/", tags=["utils"])

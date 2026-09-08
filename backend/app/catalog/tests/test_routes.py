@@ -8,24 +8,24 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from pgvector.sqlalchemy import Vector
+from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast
 from sqlmodel import Session, col, select
 
-from app import crud
-from app.api.routes import articles
+from app.audience import service
+from app.audience.tests.factories import authentication_token_from_email
+from app.catalog import semantic_search
 from app.catalog.models import Article
-from app.core.config import settings
-from app.core.security import create_access_token
-from app.main import app
-from tests.factories.article import (
+from app.catalog.tests.factories import (
     create_random_article,
     create_random_publisher,
     create_random_tag,
     tag_article,
 )
-from tests.factories.random_data import random_email
-from tests.factories.user import authentication_token_from_email
+from app.main import app
+from app.platform.security import create_access_token
+from app.platform.settings import settings
+from tests.random_data import random_email
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
 
@@ -38,7 +38,7 @@ def reader_token_headers(client: TestClient, db: Session) -> dict[str, str]:
     """Headers for an ordinary logged-in reader."""
     email = random_email()
     headers = authentication_token_from_email(client=client, email=email, db=db)
-    assert crud.get_user_by_email(session=db, email=email) is not None
+    assert service.get_user_by_email(session=db, email=email) is not None
     return headers
 
 
@@ -93,7 +93,7 @@ def test_read_articles_garbage_token_falls_back_to_anonymous(
 def test_read_articles_valid_token_unknown_user_is_anonymous(
     client: TestClient,
 ) -> None:
-    token = create_access_token(str(uuid.uuid4()), expires_delta=timedelta(minutes=5))
+    token = create_access_token(uuid.uuid4(), expires_delta=timedelta(minutes=5))
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"limit": 5},
@@ -254,7 +254,7 @@ def test_search_is_unbounded_for_anonymous(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
+    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
     now = datetime.now(UTC)
     # identical embedding to the query -> cosine distance 0 -> ranks first
     old = create_random_article(
@@ -301,7 +301,7 @@ def test_search_articles(
     auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
+    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200
@@ -311,7 +311,7 @@ def test_search_articles(
 
     expected_ids = db.exec(
         select(Article.id)
-        .where(Article.embedding.is_not(None))  # type: ignore[union-attr]
+        .where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
         .order_by(
             cast(Article.embedding, Vector(256)).cosine_distance(fake_vec),
             col(Article.id).desc(),
@@ -461,7 +461,7 @@ def test_search_articles_has_like_count_and_liked_by_me(
     auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(articles, "_embed", lambda text: fake_vec)
+    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200

@@ -53,7 +53,7 @@ $ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
-SQLModel models live with the domain that owns them - `app/catalog/models.py`, `app/audience/models.py`, `app/newsletter/models.py`, `app/analytics/models.py`, and `pipeline/models.py` for the run record. API endpoints are in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+SQLModel models live with the domain that owns them - `app/catalog/models.py`, `app/audience/models.py`, `app/newsletter/models.py`, `app/analytics/models.py`, and `pipeline/models.py` for the run record. Each domain folder holds its own `routes.py` and service module, so an endpoint lives next to the data it serves.
 
 ## VS Code
 
@@ -69,7 +69,7 @@ With the db up:
 $ uv run bash scripts/tests-start.sh
 ```
 
-The tests run with Pytest, modify and add tests to `./backend/tests/`.
+The tests run with Pytest. Domain tests live in that domain's `tests/` folder (`app/catalog/tests/`, `app/audience/tests/`, ...); `backend/tests/` keeps what belongs to no single domain - the pipeline, the schema-wide enum guard, the ops scripts. Shared fixtures are in `backend/conftest.py`.
 
 `tests-start.sh` waits for the db, then calls `scripts/test.sh` (pytest + coverage). Extra arguments are forwarded to pytest, e.g. stop on first error:
 

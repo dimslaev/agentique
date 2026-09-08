@@ -10,10 +10,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
 from app.audience.models import ArticleLike
-from app.core.config import settings
-from tests.factories.article import create_random_article
-from tests.factories.random_data import random_email
-from tests.factories.user import authentication_token_from_email, create_random_user
+from app.audience.tests.factories import (
+    authentication_token_from_email,
+    create_random_user,
+)
+from app.catalog.tests.factories import create_random_article
+from app.platform.settings import settings
+from tests.random_data import random_email
 
 
 def test_article_like_duplicate_pk_raises(db: Session) -> None:

@@ -10,7 +10,7 @@ import emails
 import resend
 from jinja2 import Template
 
-from app.core.config import settings
+from app.platform.settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

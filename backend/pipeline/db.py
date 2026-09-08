@@ -16,7 +16,7 @@ _engine: Engine | None = None
 
 
 def postgres_url() -> str:
-    """Read straight from os.environ rather than app.core.config.settings: the
+    """Read straight from os.environ rather than `app.platform.settings`: the
     pipeline stays decoupled from the backend's full Settings object."""
     server = os.environ["POSTGRES_SERVER"]
     port = os.environ.get("POSTGRES_PORT", "5432")
