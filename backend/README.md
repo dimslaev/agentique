@@ -105,4 +105,3 @@ The one transactional email agentique sends is password recovery. Its rendered
 template lives in `./backend/app/platform/email-templates/`, next to
 `app/platform/email.py`, which renders and sends it. The MJML sources the
 upstream template shipped were dropped - edit the HTML directly.
-
