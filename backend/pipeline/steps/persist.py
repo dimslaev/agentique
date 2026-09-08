@@ -8,16 +8,16 @@ from app.catalog.models import Article
 from app.platform.logging import log
 from pipeline.freshness import parse_date
 from pipeline.llm_text import sanitize_llm_text
-from pipeline.types import FetchedArticle
+from pipeline.types import Persisted, Scored
 
 
-def best_per_url(scored: list[FetchedArticle]) -> list[FetchedArticle]:
+def best_per_url(scored: list[Scored]) -> list[Scored]:
     """One article per URL, keeping the highest score. Pure: no I/O.
 
     Two sources can surface the same URL in one run (an HN post and a feed item
     for the same post); the URL is the identity, so the better-scoring one wins.
     """
-    by_url: dict[str, FetchedArticle] = {}
+    by_url: dict[str, Scored] = {}
     for item in scored:
         existing = by_url.get(item["url"])
         if not existing or item["score"] > existing["score"]:
@@ -25,21 +25,19 @@ def best_per_url(scored: list[FetchedArticle]) -> list[FetchedArticle]:
     return list(by_url.values())
 
 
-def insert_articles(
-    session: Session, scored: list[FetchedArticle]
-) -> list[FetchedArticle]:
+def insert_articles(session: Session, scored: list[Scored]) -> list[Persisted]:
     if not scored:
         return []
 
-    inserted: list[FetchedArticle] = []
+    inserted: list[Persisted] = []
     for item in best_per_url(scored):
         title = sanitize_llm_text(item["title"])
-        content = sanitize_llm_text(item.get("content") or "")
+        content = sanitize_llm_text(item["content"])
         article = Article(
             title=title,
             publisher_id=item["publisher_id"],
             url=item["url"],
-            published_at=parse_date(item.get("published_date")),
+            published_at=parse_date(item["published_date"]),
             score=item["score"],
             content=content,
         )

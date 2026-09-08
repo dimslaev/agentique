@@ -22,7 +22,7 @@ from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
 from pipeline.topic_gate import is_on_topic
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate, RawItem
 
 # Below this, content is a teaser/blurb rather than an article, and the
 # categorizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide
@@ -44,7 +44,7 @@ class Source:
     """
 
     label: str
-    fetcher: Callable[[], tuple[list[FetchedArticle], dict[str, str]]]
+    fetcher: Callable[[], tuple[list[RawItem], dict[str, str]]]
     publisher_names: tuple[str, ...] = ()
 
 
@@ -96,7 +96,7 @@ def build_sources(session: Session) -> list[Source]:
     ]
 
 
-def fetch_source(source: Source) -> tuple[list[FetchedArticle], dict[str, str]]:
+def fetch_source(source: Source) -> tuple[list[RawItem], dict[str, str]]:
     articles, errors = source.fetcher()
     if not articles:
         log(f"No articles from {source.label}")
@@ -104,7 +104,7 @@ def fetch_source(source: Source) -> tuple[list[FetchedArticle], dict[str, str]]:
     return _with_content(articles, source.label), errors
 
 
-def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
+def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
     """Fill each item's content at fetch time, then drop the ones still empty.
 
     Feeds already carry ``content:encoded``; thin items (< ``MIN_CONTENT_CHARS``)
@@ -113,7 +113,7 @@ def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArt
     dropped and logged: downstream steps assume full content, so a contentless
     item has nothing to categorize and no point being scored or inserted.
     """
-    thin = [a for a in articles if len(a.get("content") or "") < MIN_CONTENT_CHARS]
+    thin = [a for a in articles if len(a["content"]) < MIN_CONTENT_CHARS]
     if thin:
         content_map = fetch_full_content([a["url"] for a in thin])
         for a in thin:
@@ -121,7 +121,7 @@ def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArt
             if full:
                 a["content"] = full
 
-    kept = [a for a in articles if (a.get("content") or "").strip()]
+    kept = [a for a in articles if a["content"].strip()]
     dropped = len(articles) - len(kept)
     if dropped:
         log(f"  {label}: dropped {dropped} article(s) with no content")
@@ -129,23 +129,35 @@ def _with_content(articles: list[FetchedArticle], label: str) -> list[FetchedArt
 
 
 def resolve_publishers(
-    articles: list[FetchedArticle], resolver: PublisherResolver
-) -> None:
-    """Stamp each fetched item in place with publisher_id, trust and topic_gated.
+    articles: list[RawItem], resolver: PublisherResolver
+) -> list[Candidate]:
+    """Turn fetched items into candidates by resolving each one's publisher.
 
-    All three come from the Publisher row (resolved by source name,
-    auto-quarantined if unknown). Runs right after fetch so trust is available
-    to the scoring/dedup BAML calls and ``topic_gated`` to ``drop_off_topic``.
+    publisher_id, trust and topic_gated all come from the Publisher row
+    (resolved by source name, auto-quarantined if unknown). Runs right after
+    fetch so trust is available to the scoring/dedup BAML calls and
+    ``topic_gated`` to ``drop_off_topic``.
+
+    Returns new dicts rather than stamping the fetched ones in place: it is the
+    only producer of ``Candidate``, which is what lets every step below it read
+    those three keys without a default.
     """
+    candidates: list[Candidate] = []
     for a in articles:
         publisher = resolver.resolve(a["source"])
         assert publisher.id is not None
-        a["publisher_id"] = publisher.id
-        a["trust"] = publisher.trust.value
-        a["topic_gated"] = publisher.topic_gated
+        candidates.append(
+            {
+                **a,
+                "publisher_id": publisher.id,
+                "trust": publisher.trust.value,
+                "topic_gated": publisher.topic_gated,
+            }
+        )
+    return candidates
 
 
-def drop_off_topic(articles: list[FetchedArticle], label: str) -> list[FetchedArticle]:
+def drop_off_topic(articles: list[Candidate], label: str) -> list[Candidate]:
     """Drop off-topic items from publishers marked ``topic_gated``.
 
     Some feeds worth carrying are broad engineering blogs that happen to post
@@ -160,7 +172,7 @@ def drop_off_topic(articles: list[FetchedArticle], label: str) -> list[FetchedAr
     left ungated and pass through untouched; the recall/precision trade-off is
     the same one documented on ``topic_gate.AI_TITLE_KEYWORDS`` itself.
     """
-    kept = [a for a in articles if not a.get("topic_gated") or is_on_topic(a["title"])]
+    kept = [a for a in articles if not a["topic_gated"] or is_on_topic(a["title"])]
     dropped = len(articles) - len(kept)
     if dropped:
         log(f"  {label}: dropped {dropped} off-topic item(s) from gated publishers")

@@ -28,7 +28,7 @@ from app.platform.logging import log, short_error
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
 from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 IMAP_FOLDER = "sub"
@@ -228,7 +228,7 @@ def _unwrap_tracking_url(url: str) -> str | None:
     return inner if hostname(inner) else None
 
 
-def _resolve_article(item: dict) -> FetchedArticle | None:
+def _resolve_article(item: dict) -> RawItem | None:
     """One article -> its real URL, recovered from the newsletter's redirect.
 
     Unwrap first, follow only if that fails: most trackers spell the
@@ -276,7 +276,7 @@ def _resolve_article(item: dict) -> FetchedArticle | None:
     }
 
 
-def _resolve_product(product: dict) -> FetchedArticle | None:
+def _resolve_product(product: dict) -> RawItem | None:
     """One product -> one canonical URL, or None if nothing is a clean first-party source."""
     name = product["name"]
     description = product["description"]
@@ -323,14 +323,14 @@ def _resolve_product(product: dict) -> FetchedArticle | None:
     }
 
 
-def _resolve_one(item: dict) -> FetchedArticle | None:
+def _resolve_one(item: dict) -> RawItem | None:
     """Route an item to the resolution its kind needs."""
     if item["kind"] == NewsletterItemKind.Article:
         return _resolve_article(item)
     return _resolve_product(item)
 
 
-def _resolve_items(raw: list[dict]) -> list[FetchedArticle]:
+def _resolve_items(raw: list[dict]) -> list[RawItem]:
     """Dedupe items by name across all issues in this run, drop the un-notable
     ones, then resolve each survivor to a URL.
 
@@ -374,7 +374,7 @@ def _resolve_items(raw: list[dict]) -> list[FetchedArticle]:
         f"— {len(raw)} raw -> {len(unique)} unique -> {len(items)} notable"
     )
 
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     seen_urls: set[str] = set()
     with ThreadPoolExecutor(max_workers=RESOLVE_CONCURRENCY) as ex:
         futures = [ex.submit(_resolve_one, i) for i in items]
@@ -439,7 +439,7 @@ def _run_imap_fetch(
 
 def fetch_newsletter(
     sources: list[tuple[str, str]], lookback_days: int = LOOKBACK_DAYS
-) -> list[FetchedArticle]:
+) -> list[RawItem]:
     if not sources:
         log("Newsletter: no sources configured, skipping")
         return []

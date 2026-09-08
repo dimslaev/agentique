@@ -13,7 +13,7 @@ from pipeline.first_party import is_first_party
 from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
 from pipeline.topic_gate import is_on_topic
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 
 HN_ITEM = "https://hacker-news.firebaseio.com/v0/item"
 
@@ -138,7 +138,7 @@ def has_traction(item: dict) -> bool:
     return points >= hn_min_points() or comments >= hn_min_comments()
 
 
-def _to_article(item: dict) -> FetchedArticle | None:
+def _to_article(item: dict) -> RawItem | None:
     """One HN item -> a fetched article, or None if it fails a gate.
 
     Gates, cheapest first: it must be a titled story, its title must look
@@ -174,7 +174,7 @@ def _to_article(item: dict) -> FetchedArticle | None:
     }
 
 
-def fetch_hn() -> list[FetchedArticle]:
+def fetch_hn() -> list[RawItem]:
     log("Fetching Hacker News top + new stories...")
 
     # The two lists overlap heavily (a new story that trends is on both), so
@@ -194,7 +194,7 @@ def fetch_hn() -> list[FetchedArticle]:
         results = list(executor.map(_fetch_item, ids))
 
     seen_urls: set[str] = set()
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     on_topic = 0
     for item in results:
         item = item or {}

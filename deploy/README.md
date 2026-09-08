@@ -123,8 +123,8 @@ named beside each var for the exact default and why it is what it is.
 | --- | --- | --- |
 | `POSTGRES_SERVER`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | `pipeline/db.py` | server + user required |
 | `IMAP_HOST`, `IMAP_PORT`, `IMAP_USER`, `IMAP_PASSWORD` | `pipeline/sources/email.py` | required for the newsletter source |
-| `TAVILY_API_KEY` | `pipeline/sources/http.py` | required for lab watch / link recovery |
-| `RESIDENTIAL_PROXY_URL` | `pipeline/sources/http.py` | optional, metered fallback |
+| `TAVILY_API_KEY` | `pipeline/fetching/http.py` | required for lab watch / link recovery |
+| `RESIDENTIAL_PROXY_URL` | `pipeline/fetching/http.py` | optional, metered fallback |
 | `GITHUB_TOKEN` | `pipeline/sources/github_stars.py` | optional, raises the rate limit |
 | `RESEND_API_KEY`, `EMAILS_FROM_EMAIL`, `PIPELINE_ALERT_EMAIL`, `PROJECT_NAME` | `pipeline/health.py` | needed to receive run alerts |
 | `KEEP_DROP_PREFILTER_THRESHOLD` | `pipeline/keep_drop.py` | optional tuning knob |

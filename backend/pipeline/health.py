@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import os
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -17,6 +18,7 @@ from sqlmodel import Session, col, select
 
 from app.platform.logging import log
 from pipeline.models import PipelineRun
+from pipeline.types import Persisted, RawItem
 
 
 @dataclass(frozen=True)
@@ -114,8 +116,8 @@ class RunStats:
     def record_publishers(
         self,
         expected_names: tuple[str, ...],
-        fetched: list[dict],
-        inserted: list[dict],
+        fetched: Sequence[RawItem],
+        inserted: Sequence[Persisted],
         errors: dict[str, str],
     ) -> None:
         """Record per-publisher fetch/insert counts for one source's run.

@@ -23,7 +23,7 @@ from pipeline.github import github_repo_from_url, is_known_owner
 from pipeline.models import ScoredUrl
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate
 
 DNS_CONCURRENCY = 10
 # How far back to look for an article we already carry. Same-story reposts
@@ -58,8 +58,8 @@ def dedup_dist_threshold() -> float:
 
 
 def filter_known_urls(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     if not articles:
         return []
     all_urls = [a["url"] for a in articles]
@@ -104,9 +104,7 @@ def _is_resolvable(url: str) -> bool:
         return True  # Other errors (timeout, etc.) - assume alive
 
 
-def filter_dead_domains(
-    articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+def filter_dead_domains(articles: list[Candidate], label: str) -> list[Candidate]:
     if not articles:
         return articles
 
@@ -125,8 +123,8 @@ def filter_dead_domains(
 
 
 def filter_thin_repos(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     """Drop links to GitHub repos nobody uses.
 
     An aggregator cannot tell a project from an upload: a repo with two stars,
@@ -159,7 +157,7 @@ def filter_thin_repos(
 
     stars = stars_for(list(repo_by_index.values()))
 
-    kept: list[FetchedArticle] = []
+    kept: list[Candidate] = []
     dropped = 0
     for i, a in enumerate(articles):
         repo = repo_by_index.get(i)
@@ -208,8 +206,8 @@ def _nearest_within(
 
 
 def dedup_semantic(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     """Drop articles we already carry, judged by embedding distance alone.
 
     Runs before scoring so a duplicate never costs an LLM call. Compares each
@@ -234,7 +232,7 @@ def dedup_semantic(
     # embeds content capped at SNIPPET_CAP), or an article fails to match its
     # own row in the DB and the comparison is meaningless.
     new_texts = [
-        keep_drop.to_embedding_text(a["title"], (a.get("content") or "")[:SNIPPET_CAP])
+        keep_drop.to_embedding_text(a["title"], a["content"][:SNIPPET_CAP])
         for a in articles
     ]
     new_vecs = np.array(embed_batch(new_texts), dtype=np.float32)
@@ -250,7 +248,7 @@ def dedup_semantic(
 
     against_db = _nearest_within(new_vecs, recent_vecs, threshold)
 
-    unique: list[FetchedArticle] = []
+    unique: list[Candidate] = []
     kept_vecs: list[np.ndarray] = []
     for i, a in enumerate(articles):
         j = against_db.get(i)

@@ -15,7 +15,7 @@ from pipeline import keep_drop
 from pipeline.embedding import get_model
 from pipeline.models import ScoredUrl
 from pipeline.steps import to_baml_input
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate, Scored
 
 # Tied to the rubric in baml_src/score.baml: the median in-scope article sits
 # near 55 there, so this admits roughly the top third. Moving one without the
@@ -26,9 +26,7 @@ SCORE_BATCH = 5
 SCORE_BATCH_PAUSE_MS = 1000
 
 
-def prefilter_keep_drop(
-    session: Session, articles: list[FetchedArticle]
-) -> list[FetchedArticle]:
+def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Candidate]:
     """Drop obvious junk before the LLM scorer.
 
     Runs the tiny distilled classifier on title+snippet. Anything it is very
@@ -40,12 +38,10 @@ def prefilter_keep_drop(
     if not articles or threshold <= 0:
         return articles
 
-    texts = [
-        keep_drop.to_embedding_text(a["title"], a.get("content")) for a in articles
-    ]
+    texts = [keep_drop.to_embedding_text(a["title"], a["content"]) for a in articles]
     vecs = get_model().encode(texts)
 
-    survivors: list[FetchedArticle] = []
+    survivors: list[Candidate] = []
     dropped = 0
     for a, vec in zip(articles, vecs, strict=True):
         if keep_drop.keep_proba(vec) < threshold:
@@ -64,14 +60,14 @@ def prefilter_keep_drop(
 
 
 def apply_scores(
-    articles: list[FetchedArticle], score_by_url: dict[str, int]
-) -> list[FetchedArticle]:
+    articles: list[Candidate], score_by_url: dict[str, int]
+) -> list[Scored]:
     """Attach each article's score and sort best-first. Pure: no I/O.
 
     An article the scorer did not return scores 0 and so falls below the
     threshold — a missing score is treated as a reject, never as a pass.
     """
-    scored: list[FetchedArticle] = []
+    scored: list[Scored] = []
     for a in articles:
         score = score_by_url.get(a["url"], 0)
         # TODO(new-schema): hard-coded per-source score bonus. Once publishers
@@ -85,9 +81,7 @@ def apply_scores(
     return scored
 
 
-def score_articles(
-    session: Session, articles: list[FetchedArticle]
-) -> list[FetchedArticle]:
+def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
     if not articles:
         return []
 
@@ -99,7 +93,7 @@ def score_articles(
     # call failed is left out entirely: apply_scores reads a missing score as 0
     # and the sub-threshold URLs below get written to ScoredUrl, so scoring the
     # batch anyway would turn a provider outage into a permanent drop.
-    judged: list[FetchedArticle] = []
+    judged: list[Candidate] = []
     failed = 0
     last_error: Exception | None = None
     for i in range(0, len(articles), SCORE_BATCH):

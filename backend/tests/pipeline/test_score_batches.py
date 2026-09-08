@@ -13,7 +13,7 @@ import pytest
 
 from pipeline.steps import score as score_step
 from pipeline.steps.score import SCORE_THRESHOLD
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate
 
 
 class _FakeSession:
@@ -36,13 +36,16 @@ class _Scored:
         self.score = score
 
 
-def _article(url: str) -> FetchedArticle:
+def _article(url: str) -> Candidate:
     return {
         "title": "An LLM thing",
         "url": url,
         "content": "body",
         "published_date": None,
         "source": "Hacker News",
+        "publisher_id": 1,
+        "trust": "high",
+        "topic_gated": False,
     }
 
 

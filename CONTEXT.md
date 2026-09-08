@@ -42,10 +42,27 @@ reading, independent of the pipeline's own score: Hacker News points/comments
 past a minimum, or a GitHub repo's star count. The traction gate holds back
 low-traction submissions from the "everyone can post" sources so a repo its
 author uploaded yesterday doesn't rank next to a release half the field
-depends on. A publisher on `FIRST_PARTY_HOSTS` skips the gate — a lab's own
-announcement is real news at zero votes.
+depends on. A first-party URL (`pipeline/first_party.py`) skips the gate — a
+lab's own announcement is real news at zero votes.
 
 **Run** (`PipelineRun`) — one row per nightly pipeline execution: start/end
 time, duration, ok/fail, and per-source and per-publisher funnel counts
 (fetched, filtered, inserted, errored). The record a human or a verifier
 reads to see what last night's run actually did.
+
+**RawItem / Candidate / Scored / Persisted** (`pipeline/types.py`) — the four
+shapes an article takes on its way down the funnel, one per stage:
+
+- **RawItem** — what a source adapter emitted. Title, url, content, date and
+  the source's name; nothing is known about it yet.
+- **Candidate** — a raw item resolved to its Publisher, so it carries
+  `publisher_id`, `trust` and `topic_gated`. Worth spending filter, embedding
+  and LLM budget on.
+- **Scored** — a candidate the LLM rated at or above the threshold. Only the
+  survivors get this far.
+- **Persisted** — a scored article that is now an `Article` row, so it has an
+  `id` and the sanitized title and content actually stored.
+
+Each stage extends the one before, so a step's signature says where in the
+funnel it belongs. Enrichment then narrows a `Persisted` to a
+`ProcessedArticle` — just the fields the embedding text is built from.

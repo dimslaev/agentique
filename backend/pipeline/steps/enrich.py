@@ -26,7 +26,7 @@ from pipeline.llm_text import (
 )
 from pipeline.steps import SNIPPET_CAP, to_baml_input
 from pipeline.tags import Vocabulary, validate_tags, write_article_tags
-from pipeline.types import FetchedArticle, ProcessedArticle
+from pipeline.types import Persisted, ProcessedArticle
 from pipeline.url_kind import kind_from_url
 
 # How much of an article the categorize+tag prompt sees. The opening is what
@@ -69,7 +69,7 @@ def accept_title(raw: str | None, current: str, source: str) -> str | None:
     return sanitized
 
 
-def improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
+def improve_titles(session: Session, inserted: list[Persisted]) -> None:
     if not inserted:
         return
 
@@ -135,7 +135,7 @@ def _to_kind(baml_kind) -> ArticleKind | None:
 
 
 def categorize_and_tag_articles(
-    session: Session, items: list[FetchedArticle], vocab: Vocabulary
+    session: Session, items: list[Persisted], vocab: Vocabulary
 ) -> list[ProcessedArticle]:
     """Assign categories/kind/tags from each article's content.
 
@@ -161,7 +161,7 @@ def categorize_and_tag_articles(
 
     for idx, item in enumerate(items):
         art_id = item["id"]
-        content = item.get("content") or ""
+        content = item["content"]
         if not content.strip():
             log(f"  Drop #{art_id}: no content to categorize")
             continue

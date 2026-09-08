@@ -8,6 +8,8 @@ replace a title — so they are pulled out of the I/O steps and pinned here.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from pipeline.steps import fetch as fetch_step
@@ -162,6 +164,31 @@ def _from_publisher(title: str, topic_gated: bool) -> dict:
     return {"title": title, "url": f"u:{title}", "topic_gated": topic_gated}
 
 
+def _raw(url: str, source: str) -> dict:
+    return {
+        "title": "A title",
+        "url": url,
+        "content": "body",
+        "published_date": None,
+        "source": source,
+    }
+
+
+class _FakePublisher:
+    def __init__(self, topic_gated: bool) -> None:
+        self.id = 1
+        self.trust = SimpleNamespace(value="high")
+        self.topic_gated = topic_gated
+
+
+class _FakeResolver:
+    def __init__(self, topic_gated: bool) -> None:
+        self._publisher = _FakePublisher(topic_gated)
+
+    def resolve(self, source: str) -> _FakePublisher:
+        return self._publisher
+
+
 def test_gated_publisher_drops_an_off_topic_title():
     articles = [_from_publisher(_OFF_TOPIC_TITLE, topic_gated=True)]
     assert drop_off_topic(articles, "Feeds") == []
@@ -192,11 +219,18 @@ def test_gates_only_the_gated_publisher_in_a_mixed_batch():
     assert kept == [gated_ai, ungated_off]
 
 
-def test_missing_flag_is_treated_as_ungated():
-    """A source that never went through resolve_publishers must not have every
-    item silently dropped."""
-    articles = [{"title": _OFF_TOPIC_TITLE, "url": "u1"}]
-    assert drop_off_topic(articles, "Hacker News") == articles
+def test_every_item_carries_the_flag_by_the_time_the_gate_reads_it():
+    """The gate reads ``topic_gated`` with no default, so nothing may reach it
+    without one — an item missing the flag would otherwise be silently dropped
+    (or, now, cost the whole source a KeyError). resolve_publishers is the only
+    producer of a Candidate, so pin that it stamps every item it returns."""
+    resolver = _FakeResolver(topic_gated=True)
+    candidates = fetch_step.resolve_publishers(
+        [_raw("u1", "Feed A"), _raw("u2", "Feed B")], resolver
+    )
+    assert [c["topic_gated"] for c in candidates] == [True, True]
+    assert [c["publisher_id"] for c in candidates] == [1, 1]
+    assert [c["trust"] for c in candidates] == ["high", "high"]
 
 
 def test_does_not_mutate_or_copy_the_articles_it_keeps():
