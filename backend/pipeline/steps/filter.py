@@ -15,6 +15,7 @@ import numpy as np
 from sqlmodel import Session, select
 
 from app.models import Article, Publisher, ScoredUrl
+from app.platform.logging import log
 from pipeline import keep_drop
 from pipeline.config import dedup_dist_threshold, github_min_stars
 from pipeline.embedding import embed_batch
@@ -22,7 +23,6 @@ from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
 
 DNS_CONCURRENCY = 10
 # How far back to look for an article we already carry. Same-story reposts
@@ -63,7 +63,7 @@ def filter_known_urls(
 
 
 def _is_resolvable(url: str) -> bool:
-    # Deliberately not pipeline.utils.hostname: that strips a "www." prefix, and
+    # Deliberately not pipeline.urls.hostname: that strips a "www." prefix, and
     # www.foo.com resolving says nothing about whether foo.com does. Resolve the
     # host exactly as the URL spells it.
     try:

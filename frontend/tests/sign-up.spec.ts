@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 
-import { randomEmail, randomPassword } from "./utils/random"
+import { randomEmail, randomPassword } from "./random"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 

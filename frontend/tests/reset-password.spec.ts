@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test"
-import { findLastEmail } from "./utils/mailcatcher"
-import { randomEmail, randomPassword } from "./utils/random"
-import { logInUser, signUpNewUser } from "./utils/user"
+import { findLastEmail } from "./mailcatcher"
+import { randomEmail, randomPassword } from "./random"
+import { logInUser, signUpNewUser } from "./user"
 
 test.skip(true, "auth unused in Agentique")
 

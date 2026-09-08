@@ -18,14 +18,14 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.main import app
 from app.models import Article
-from tests.utils.article import (
+from tests.factories.article import (
     create_random_article,
     create_random_publisher,
     create_random_tag,
     tag_article,
 )
-from tests.utils.user import authentication_token_from_email
-from tests.utils.utils import random_email
+from tests.factories.random_data import random_email
+from tests.factories.user import authentication_token_from_email
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
 

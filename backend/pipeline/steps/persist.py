@@ -5,9 +5,10 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.models import Article
+from app.platform.logging import log
+from pipeline.freshness import parse_date
 from pipeline.llm_text import sanitize_llm_text
 from pipeline.types import FetchedArticle
-from pipeline.utils import log, parse_date
 
 
 def best_per_url(scored: list[FetchedArticle]) -> list[FetchedArticle]:

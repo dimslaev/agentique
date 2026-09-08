@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-router"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import { handleError } from "@/apiError"
 import { LoginService } from "@/client"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import {
@@ -22,7 +22,6 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
 
 const formSchema = z.object({
   email: z.email(),

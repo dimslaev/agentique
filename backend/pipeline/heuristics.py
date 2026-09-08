@@ -8,7 +8,7 @@ import re
 from urllib.parse import urlparse
 
 from app.models import ArticleKind
-from pipeline.utils import hostname
+from pipeline.urls import hostname
 
 # Tied to the rubric in baml_src/score.baml: the median in-scope article sits
 # near 55 there, so this admits roughly the top third. Moving one without the

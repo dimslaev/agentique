@@ -19,9 +19,9 @@ from __future__ import annotations
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+from app.platform.logging import log
 from pipeline.config import github_token
 from pipeline.sources.http import fetch_with_timeout
-from pipeline.utils import log
 
 GITHUB_API = "https://api.github.com/repos"
 STARS_TIMEOUT_SECS = 10.0

@@ -19,9 +19,10 @@ from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
+from app.platform.logging import log
 from pipeline.sources.http import tavily_search
 from pipeline.types import FetchedArticle
-from pipeline.utils import hostname, log
+from pipeline.urls import hostname
 
 WATCH_DAYS = 2  # nightly cadence + one missed run of slack
 WATCH_CONCURRENCY = 5
@@ -42,23 +43,68 @@ def _host_is_first_party(url: str, domain: str) -> bool:
 # fresh crawl dates, so date + slug checks alone let them through.
 _NON_ARTICLE_SECTIONS = frozenset(
     {
-        "docs", "doc", "api", "api-docs", "reference", "ref", "sdk",
-        "pricing", "playground", "console", "help", "about", "guide",
-        "guides", "models", "ai-models", "tags", "terms", "privacy",
-        "legal", "careers", "contact", "login", "signup", "download",
-        "downloads", "status", "support",
+        "docs",
+        "doc",
+        "api",
+        "api-docs",
+        "reference",
+        "ref",
+        "sdk",
+        "pricing",
+        "playground",
+        "console",
+        "help",
+        "about",
+        "guide",
+        "guides",
+        "models",
+        "ai-models",
+        "tags",
+        "terms",
+        "privacy",
+        "legal",
+        "careers",
+        "contact",
+        "login",
+        "signup",
+        "download",
+        "downloads",
+        "status",
+        "support",
     }
 )
 # Subdomain labels that are never articles (docs.x.ai, media.x.ai, ...). Matched
 # on the leftmost host label, so ``api-docs.deepseek.com`` — where DeepSeek does
 # post releases under /news/ — is intentionally *not* here.
 _NON_ARTICLE_HOSTS = frozenset(
-    {"docs", "api", "developers", "developer", "media", "cdn", "static",
-     "assets", "dashboard", "help", "support", "status"}
+    {
+        "docs",
+        "api",
+        "developers",
+        "developer",
+        "media",
+        "cdn",
+        "static",
+        "assets",
+        "dashboard",
+        "help",
+        "support",
+        "status",
+    }
 )
 _ASSET_EXTENSIONS = (
-    ".pdf", ".xml", ".json", ".zip", ".png", ".jpg", ".jpeg",
-    ".gif", ".svg", ".mp4", ".csv", ".txt",
+    ".pdf",
+    ".xml",
+    ".json",
+    ".zip",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".mp4",
+    ".csv",
+    ".txt",
 )
 
 
@@ -126,7 +172,7 @@ def _watch_one(name: str, domain: str, cutoff: datetime) -> list[FetchedArticle]
                 source=name,
             )
         )
-    log(f'    {name}: {len(articles)} recent first-party hit(s) on {domain}')
+    log(f"    {name}: {len(articles)} recent first-party hit(s) on {domain}")
     return articles
 
 

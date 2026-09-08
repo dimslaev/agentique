@@ -8,7 +8,7 @@ from sqlmodel import Session
 from app import crud
 from app.core.config import settings
 from app.models import User, UserCreate, UserUpdate
-from tests.utils.utils import random_email, random_lower_string
+from tests.factories.random_data import random_email, random_lower_string
 
 
 def user_authentication_headers(
@@ -51,3 +51,15 @@ def authentication_token_from_email(
         user = crud.update_user(session=db, db_user=user, user_in=user_in_update)
 
     return user_authentication_headers(client=client, email=email, password=password)
+
+
+def get_superuser_token_headers(client: TestClient) -> dict[str, str]:
+    login_data = {
+        "username": settings.FIRST_SUPERUSER,
+        "password": settings.FIRST_SUPERUSER_PASSWORD,
+    }
+    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    tokens = r.json()
+    a_token = tokens["access_token"]
+    headers = {"Authorization": f"Bearer {a_token}"}
+    return headers

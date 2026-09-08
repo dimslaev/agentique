@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import { handleError } from "@/apiError"
 import { UsersService, type UserUpdateMe } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,7 +19,6 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
-import { handleError } from "@/utils"
 
 const formSchema = z.object({
   full_name: z.string().max(30).optional(),

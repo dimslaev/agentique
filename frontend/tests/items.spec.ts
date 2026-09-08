@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test"
-import { createUser } from "./utils/privateApi"
+import { createUser } from "./privateApi"
 import {
   randomEmail,
   randomItemDescription,
   randomItemTitle,
   randomPassword,
-} from "./utils/random"
-import { logInUser } from "./utils/user"
+} from "./random"
+import { logInUser } from "./user"
 
 test.skip(true, "auth unused in Agentique")
 

@@ -5,12 +5,14 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
+from app.platform.logging import log
 from pipeline.config import hn_grace_hours, hn_min_comments, hn_min_points
+from pipeline.freshness import is_within_window
 from pipeline.heuristics import AI_TITLE_KEYWORDS, is_first_party
 from pipeline.sources.extract_content import extract_content
 from pipeline.sources.http import fetch_with_timeout
+from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
-from pipeline.utils import clean_title, is_within_window, log
 
 HN_ITEM = "https://hacker-news.firebaseio.com/v0/item"
 

@@ -3,7 +3,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
+import { handleError } from "@/apiError"
 import { NewsletterService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -21,7 +21,6 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { trackEvent } from "@/lib/analytics"
-import { handleError } from "@/utils"
 
 const CATEGORIES = ["all", "models", "dev", "research"] as const
 

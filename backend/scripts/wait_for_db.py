@@ -1,4 +1,8 @@
-"""Blocks the test suite until the test database is reachable."""
+"""Blocks startup until the database is reachable.
+
+Run by both prestart.sh (before the backend boots) and tests-start.sh (before
+pytest) - the wait is the same either way.
+"""
 
 from __future__ import annotations
 
@@ -25,8 +29,8 @@ wait_seconds = 1
 )
 def init(db_engine: Engine) -> None:
     try:
-        # Try to create session to check if DB is awake
         with Session(db_engine) as session:
+            # Try to create session to check if DB is awake
             session.exec(select(1))
     except Exception as e:
         logger.error(e)

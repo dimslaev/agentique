@@ -22,12 +22,13 @@ from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from imap_tools import AND, MailBox
 
+from app.platform.logging import log, short_error
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
 from pipeline.config import ImapConfig, imap_config
 from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
 from pipeline.types import FetchedArticle
-from pipeline.utils import hostname, log, short_error
+from pipeline.urls import hostname
 
 IMAP_FOLDER = "sub"
 

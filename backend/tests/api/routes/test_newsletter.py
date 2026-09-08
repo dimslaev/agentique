@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.models import NewsletterSubscriber
-from tests.utils.utils import random_email
+from tests.factories.random_data import random_email
 
 NEWSLETTER_URL = "/api/newsletter/subscribe"
 

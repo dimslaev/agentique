@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from sqlmodel import Session
 
+from app.platform.logging import log
 from pipeline.heuristics import AI_TITLE_KEYWORDS, MIN_CONTENT_CHARS
 from pipeline.publishers import (
     PublisherResolver,
@@ -22,7 +23,6 @@ from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
 
 
 @dataclass(frozen=True)

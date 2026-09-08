@@ -15,8 +15,8 @@ import httpx
 from sqlmodel import Session, col, select
 
 from app.models import PipelineRun
+from app.platform.logging import log
 from pipeline.config import alert_config
-from pipeline.utils import log
 
 # ─── Tunables ─────────────────────────────────────────────────────────────────
 

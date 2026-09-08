@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Flame } from "lucide-react"
-
+import { handleError } from "@/apiError"
 import {
   type ApiError,
   type ArticlePublic,
@@ -11,7 +11,6 @@ import {
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
-import { handleError } from "@/utils"
 
 function patchArticle(
   data: ArticlesPublic | undefined,
