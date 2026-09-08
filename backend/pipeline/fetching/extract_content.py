@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import trafilatura
 
 from app.platform.logging import log
-from pipeline.sources.http import (
+from pipeline.fetching.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.heuristics import github_repo_from_url
+from pipeline.github import github_repo_from_url
 from pipeline.steps import filter as filter_step
 from pipeline.types import FetchedArticle
 

@@ -23,9 +23,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from app.platform.logging import log
+from pipeline.fetching.extract_content import extract_content
+from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout
 from pipeline.freshness import is_within_window
-from pipeline.sources.extract_content import extract_content
-from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout
 from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
 from pipeline.urls import hostname

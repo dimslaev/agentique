@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from sqlmodel import Session
 
 from app.platform.logging import log
-from pipeline.heuristics import AI_TITLE_KEYWORDS, MIN_CONTENT_CHARS
+from pipeline.fetching.extract_content import fetch_full_content
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
@@ -17,12 +17,17 @@ from pipeline.publishers import (
 )
 from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
-from pipeline.sources.extract_content import fetch_full_content
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
+from pipeline.topic_gate import is_on_topic
 from pipeline.types import FetchedArticle
+
+# Below this, content is a teaser/blurb rather than an article, and the
+# categorizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide
+# whether a fetched item still needs a network re-fetch of its full text.
+MIN_CONTENT_CHARS = 500
 
 
 @dataclass(frozen=True)
@@ -147,19 +152,15 @@ def drop_off_topic(articles: list[FetchedArticle], label: str) -> list[FetchedAr
     about AI a few times a month (Stripe, Figma, Spotify). Without a gate every
     one of their release notes and hiring posts reaches the scorer, and the LLM
     bill scales with the feed, not with the signal. So a gated publisher's items
-    must match ``AI_TITLE_KEYWORDS`` on the title alone.
+    must pass ``topic_gate.is_on_topic`` on the title alone.
 
     Title-only and deliberately early — before dedup's embeddings and before
     ``prefilter_keep_drop`` — so a rejected item costs one regex and nothing
     else. Publishers that are on-topic by definition (an AI lab's own blog) are
     left ungated and pass through untouched; the recall/precision trade-off is
-    the same one documented on ``AI_TITLE_KEYWORDS`` itself.
+    the same one documented on ``topic_gate.AI_TITLE_KEYWORDS`` itself.
     """
-    kept = [
-        a
-        for a in articles
-        if not a.get("topic_gated") or AI_TITLE_KEYWORDS.search(a["title"])
-    ]
+    kept = [a for a in articles if not a.get("topic_gated") or is_on_topic(a["title"])]
     dropped = len(articles) - len(kept)
     if dropped:
         log(f"  {label}: dropped {dropped} off-topic item(s) from gated publishers")

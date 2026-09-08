@@ -27,7 +27,7 @@ from imap_tools import AND, MailBox
 from app.platform.logging import log, short_error
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
-from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
+from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
 from pipeline.types import FetchedArticle
 from pipeline.urls import hostname
 

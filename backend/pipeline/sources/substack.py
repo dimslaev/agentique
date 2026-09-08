@@ -9,13 +9,13 @@ from urllib.parse import urlparse
 import feedparser
 
 from app.platform.logging import log
-from pipeline.freshness import is_within_window
-from pipeline.sources.extract_content import extract_text
-from pipeline.sources.http import (
+from pipeline.fetching.extract_content import extract_text
+from pipeline.fetching.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
 from pipeline.urls import feed_url

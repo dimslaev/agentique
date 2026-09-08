@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.heuristics import SCORE_THRESHOLD
 from pipeline.steps import score as score_step
+from pipeline.steps.score import SCORE_THRESHOLD
 from pipeline.types import FetchedArticle
 
 

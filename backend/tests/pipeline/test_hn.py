@@ -10,9 +10,9 @@ import time
 
 import pytest
 
-from pipeline.heuristics import AI_TITLE_KEYWORDS
 from pipeline.sources import hn
 from pipeline.sources.hn import _to_article, has_traction
+from pipeline.topic_gate import is_on_topic
 
 HOUR = 3600
 
@@ -64,12 +64,12 @@ NON_MATCHES = [
 
 @pytest.mark.parametrize("title", MATCHES)
 def test_matches_ai_titles(title: str) -> None:
-    assert AI_TITLE_KEYWORDS.search(title)
+    assert is_on_topic(title)
 
 
 @pytest.mark.parametrize("title", NON_MATCHES)
 def test_skips_non_ai_titles(title: str) -> None:
-    assert not AI_TITLE_KEYWORDS.search(title)
+    assert not is_on_topic(title)
 
 
 # ─── _to_article ─────────────────────────────────────────────────────────────

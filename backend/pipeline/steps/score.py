@@ -13,11 +13,14 @@ from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline import keep_drop
 from pipeline.embedding import get_model
-from pipeline.heuristics import SCORE_THRESHOLD
 from pipeline.models import ScoredUrl
 from pipeline.steps import to_baml_input
 from pipeline.types import FetchedArticle
 
+# Tied to the rubric in baml_src/score.baml: the median in-scope article sits
+# near 55 there, so this admits roughly the top third. Moving one without the
+# other either empties the feed or fills it with newsletter filler.
+SCORE_THRESHOLD = 65
 SCORE_BATCH = 5
 # Pause between scoring batches to stay under the provider's rate limit.
 SCORE_BATCH_PAUSE_MS = 1000

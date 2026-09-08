@@ -19,7 +19,7 @@ from app.catalog.models import Article, Publisher
 from app.platform.logging import log
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
-from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
+from pipeline.github import github_repo_from_url, is_known_owner
 from pipeline.models import ScoredUrl
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
@@ -38,8 +38,8 @@ def github_min_stars() -> int:
 
     Aimed at the "solo repo with two stars, posted by its author" case, not at
     ranking projects: a real tool that reaches an aggregator is well past this
-    by the time it does. Repos under an owner on ``KNOWN_REPO_OWNERS`` skip the
-    check entirely.
+    by the time it does. Repos under an owner ``github.is_known_owner`` recognises
+    skip the check entirely.
     """
     return int(os.environ.get("GITHUB_MIN_STARS", "50"))
 
@@ -135,7 +135,7 @@ def filter_thin_repos(
     reliably rates it as if the pitch were the product. Stars are the outside
     view, and one API call answers it.
 
-    Only repo URLs cost a lookup. Repos under ``KNOWN_REPO_OWNERS`` skip it —
+    Only repo URLs cost a lookup. Repos under a known owner skip it —
     a PR against llama.cpp is worth reading on its own merits, and it would pass
     anyway. A lookup that fails or is rate-limited returns None and the article
     is kept: the gate never deletes an article because GitHub was unreachable.
@@ -152,7 +152,7 @@ def filter_thin_repos(
     repo_by_index: dict[int, tuple[str, str]] = {}
     for i, a in enumerate(articles):
         repo = github_repo_from_url(a["url"])
-        if repo and repo[0].lower() not in KNOWN_REPO_OWNERS:
+        if repo and not is_known_owner(repo[0]):
             repo_by_index[i] = repo
     if not repo_by_index:
         return articles

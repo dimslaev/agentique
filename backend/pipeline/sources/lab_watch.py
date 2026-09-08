@@ -20,7 +20,7 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 from app.platform.logging import log
-from pipeline.sources.http import tavily_search
+from pipeline.fetching.http import tavily_search
 from pipeline.types import FetchedArticle
 from pipeline.urls import hostname
 
