@@ -181,9 +181,21 @@ def test_read_articles_sort_published_at_desc(auth_client: TestClient) -> None:
     r = auth_client.get(
         f"{ARTICLES_URL}/", params={"sort": "published_at-desc", "limit": 50}
     )
-    data = r.json()["data"]
-    dates = [datetime.fromisoformat(a["published_at"]) for a in data]
-    assert dates == sorted(dates, reverse=True)
+    raw = [a["published_at"] for a in r.json()["data"]]
+
+    # `published_at` is nullable and Postgres sorts NULLs first on DESC, so an
+    # undated article leads the page. Other domains' tests leave undated
+    # articles in the shared database, so this asserts the whole contract —
+    # undated first, then newest-first — rather than assuming every row is
+    # dated, which only held while this file happened to run first.
+    first_dated = next((i for i, p in enumerate(raw) if p is not None), len(raw))
+    dated = [p for p in raw[first_dated:] if p is not None]
+    assert len(dated) == len(raw) - first_dated, (
+        "an undated article sorted after a dated one"
+    )
+
+    parsed = [datetime.fromisoformat(p) for p in dated]
+    assert parsed == sorted(parsed, reverse=True)
 
 
 def test_read_articles_sort_default_is_score_desc(auth_client: TestClient) -> None:
