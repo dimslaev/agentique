@@ -1,3 +1,7 @@
+"""Factory for creating random Article rows in tests."""
+
+from __future__ import annotations
+
 import random
 
 from sqlmodel import Session

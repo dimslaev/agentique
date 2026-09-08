@@ -6,6 +6,8 @@ production included — needs it. Idempotent, keyed on `slug`; tags no longer in
 the file are left alone, because `article_tag` rows may still point at them.
 """
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 

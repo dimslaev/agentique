@@ -1,3 +1,5 @@
+"""Fetches recent posts from the curated list of Substack newsletters."""
+
 from __future__ import annotations
 
 import time

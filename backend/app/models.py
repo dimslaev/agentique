@@ -1,3 +1,7 @@
+"""SQLModel schema for every domain - the source of truth for the database and the API shapes built on it."""
+
+from __future__ import annotations
+
 import re
 import unicodedata
 import uuid

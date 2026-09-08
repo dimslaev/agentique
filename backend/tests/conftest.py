@@ -1,3 +1,7 @@
+"""Shared pytest fixtures: test client, db session, and auth token headers."""
+
+from __future__ import annotations
+
 from collections.abc import Generator
 
 import pytest

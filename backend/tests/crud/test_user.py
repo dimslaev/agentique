@@ -1,3 +1,7 @@
+"""Tests for user CRUD helpers."""
+
+from __future__ import annotations
+
 import pytest
 from fastapi.encoders import jsonable_encoder
 from pwdlib.hashers.bcrypt import BcryptHasher

@@ -17,7 +17,7 @@ bun run dev
 
 Check the file `package.json` to see other available options.
 
-In production the frontend is not a server at all — CI runs `bun run build` and Caddy serves the resulting `dist/` as static files (see [../deployment.md](../deployment.md)).
+In production the frontend is not a server at all — CI runs `bun run build` and Caddy serves the resulting `dist/` as static files (see [../deploy/README.md](../deploy/README.md)).
 
 ## Generate Client
 
@@ -60,7 +60,7 @@ Then, when you run the frontend, it will use that URL as the base URL for the AP
 
 ## End-to-End Testing with Playwright (parked)
 
-The e2e tests in `frontend/tests/` no longer run in CI. They still run locally against the native dev servers: start the db, backend and frontend (see [../development.md](../development.md)), then:
+The e2e tests in `frontend/tests/` no longer run in CI. They still run locally against the native dev servers: start the db (`docker compose up -d`), backend (`cd backend && uv run fastapi dev app/main.py`) and this dev server, then:
 
 ```bash
 bunx playwright test

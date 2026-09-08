@@ -46,6 +46,7 @@ build-backend = "hatchling.build"
 
 [tool.mypy]
 strict = true
+disallow_any_explicit = true
 exclude = ["venv", ".venv", "alembic"]
 
 [tool.ruff]
@@ -64,6 +65,7 @@ select = [
     "UP",  # pyupgrade
     "ARG001", # unused arguments in functions
     "T201",   # print statements are not allowed
+    "D100",   # every module needs a one-sentence docstring
 ]
 ignore = [
     "E501",  # line too long, handled by black
@@ -76,6 +78,11 @@ ignore = [
 # Preserve types, even if a file imports `from __future__ import annotations`.
 keep-runtime-typing = true
 
+[tool.ruff.lint.isort]
+# Every module opens the same way - closes the "27 of 29 pipeline modules
+# have it, 0 of 19 app modules do" gap for good instead of relying on memory.
+required-imports = ["from __future__ import annotations"]
+
 [tool.ruff.lint.per-file-ignores]
 # The pipeline and ops scripts log to stdout via print() so systemd/journald
 # captures it.
@@ -83,16 +90,13 @@ keep-runtime-typing = true
 "scripts/**" = ["T201"]
 
 [tool.coverage.run]
-source = ["app"]
+source = ["app", "pipeline"]
 dynamic_context = "test_function"
 
 [tool.coverage.report]
 show_missing = true
 sort = "-Cover"
 omit = [
-    "app/api/routes/items.py",
-    "app/api/routes/private.py",
-    "app/api/routes/utils.py",
     "app/seed_articles.py",
     "app/initial_data.py",
 ]

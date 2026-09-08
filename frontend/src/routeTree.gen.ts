@@ -20,7 +20,6 @@ import { Route as LayoutProfileRouteImport } from './routes/_layout/profile'
 import { Route as LayoutNewsletterRouteImport } from './routes/_layout/newsletter'
 import { Route as LayoutFeedRouteImport } from './routes/_layout/feed'
 import { Route as LayoutDevelopersRouteImport } from './routes/_layout/developers'
-import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -76,11 +75,6 @@ const LayoutDevelopersRoute = LayoutDevelopersRouteImport.update({
   path: '/developers',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminRoute = LayoutAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => LayoutRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -88,7 +82,6 @@ export interface FileRoutesByFullPath {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/newsletter': typeof LayoutNewsletterRoute
@@ -101,7 +94,6 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/newsletter': typeof LayoutNewsletterRoute
@@ -116,7 +108,6 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/developers': typeof LayoutDevelopersRoute
   '/_layout/feed': typeof LayoutFeedRoute
   '/_layout/newsletter': typeof LayoutNewsletterRoute
@@ -131,7 +122,6 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/developers'
     | '/feed'
     | '/newsletter'
@@ -144,7 +134,6 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/admin'
     | '/developers'
     | '/feed'
     | '/newsletter'
@@ -158,7 +147,6 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/_layout/admin'
     | '/_layout/developers'
     | '/_layout/feed'
     | '/_layout/newsletter'
@@ -254,18 +242,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDevelopersRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/admin': {
-      id: '/_layout/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof LayoutAdminRouteImport
-      parentRoute: typeof LayoutRoute
-    }
   }
 }
 
 interface LayoutRouteChildren {
-  LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDevelopersRoute: typeof LayoutDevelopersRoute
   LayoutFeedRoute: typeof LayoutFeedRoute
   LayoutNewsletterRoute: typeof LayoutNewsletterRoute
@@ -274,7 +254,6 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutAdminRoute: LayoutAdminRoute,
   LayoutDevelopersRoute: LayoutDevelopersRoute,
   LayoutFeedRoute: LayoutFeedRoute,
   LayoutNewsletterRoute: LayoutNewsletterRoute,

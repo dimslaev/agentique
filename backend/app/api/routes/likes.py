@@ -1,4 +1,6 @@
-from typing import Any
+"""Endpoints for a signed-in reader to like and unlike an article."""
+
+from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import func
@@ -14,7 +16,7 @@ router = APIRouter(tags=["likes"])
 @router.put("/articles/{article_id}/like")
 def like_article(
     session: SessionDep, current_user: CurrentUser, article_id: int
-) -> Any:
+) -> dict[str, bool]:
     article = session.get(Article, article_id)
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
@@ -30,7 +32,7 @@ def like_article(
 @router.delete("/articles/{article_id}/like")
 def unlike_article(
     session: SessionDep, current_user: CurrentUser, article_id: int
-) -> Any:
+) -> dict[str, bool]:
     existing = session.get(ArticleLike, (current_user.id, article_id))
     if existing:
         session.delete(existing)
@@ -40,7 +42,9 @@ def unlike_article(
 
 
 @router.get("/me/liked-articles", response_model=ArticlesPublic)
-def read_liked_articles(session: SessionDep, current_user: CurrentUser) -> Any:
+def read_liked_articles(
+    session: SessionDep, current_user: CurrentUser
+) -> ArticlesPublic:
     like_counts_subq = like_counts_subquery()
     like_count_expr = func.coalesce(like_counts_subq.c.like_count, 0)
 

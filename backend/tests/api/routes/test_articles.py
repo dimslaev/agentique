@@ -1,3 +1,7 @@
+"""Tests for article listing, search, and facet endpoints."""
+
+from __future__ import annotations
+
 import uuid
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta

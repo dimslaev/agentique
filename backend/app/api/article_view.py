@@ -6,10 +6,12 @@ assembly. Kept here so `articles.py` and `likes.py` don't import each other's
 privates.
 """
 
-from collections import defaultdict
-from typing import Any
+from __future__ import annotations
 
-from sqlalchemy import func
+import uuid
+from collections import defaultdict
+
+from sqlalchemy import Subquery, func
 from sqlmodel import Session, col, select
 
 from app.models import (
@@ -24,7 +26,7 @@ from app.models import (
 )
 
 
-def like_counts_subquery() -> Any:
+def like_counts_subquery() -> Subquery:
     return (
         select(ArticleLike.article_id, func.count().label("like_count"))
         .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
@@ -32,7 +34,7 @@ def like_counts_subquery() -> Any:
     )
 
 
-def liked_article_ids(session: Session, user_id: Any) -> set[int]:
+def liked_article_ids(session: Session, user_id: uuid.UUID) -> set[int]:
     return set(
         session.exec(
             select(ArticleLike.article_id).where(ArticleLike.user_id == user_id)
@@ -91,11 +93,12 @@ def to_public(
 
 
 def build_rows(
-    session: Session, rows: list[Any], liked_ids: set[int]
+    session: Session, rows: list[tuple[Article, Publisher, int]], liked_ids: set[int]
 ) -> list[ArticlePublic]:
     """`rows` are (Article, Publisher, like_count) tuples."""
     tags = tags_by_article(session, [a.id for a, _, _ in rows if a.id is not None])
-    return [
-        to_public(a, p, like_count, a.id in liked_ids, tags.get(a.id, []))
-        for a, p, like_count in rows
-    ]
+    out = []
+    for a, p, like_count in rows:
+        assert a.id is not None
+        out.append(to_public(a, p, like_count, a.id in liked_ids, tags.get(a.id, [])))
+    return out

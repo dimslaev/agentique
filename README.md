@@ -13,7 +13,7 @@ The stack:
 - pipeline — article pipeline, runs natively via uv (systemd timer, daily 04:00)
 - frontend — React SPA, built to static files and served by Caddy in production
 
-See [development.md](./development.md) for the local loop and [deployment.md](./deployment.md) for the VPS setup.
+See [backend/README.md](./backend/README.md) and [frontend/README.md](./frontend/README.md) for the local loop, and [deploy/README.md](./deploy/README.md) for the VPS setup.
 
 ## Stack
 
@@ -29,8 +29,7 @@ See [development.md](./development.md) for the local loop and [deployment.md](./
 
 - [Backend](./backend/README.md)
 - [Frontend](./frontend/README.md)
-- [Deployment](./deployment.md)
-- [Development](./development.md)
+- [Deployment](./deploy/README.md)
 
 ## Upstream
 

@@ -73,13 +73,6 @@ export type NewsletterSubscribeResponse = {
     ok?: boolean;
 };
 
-export type PrivateUserCreate = {
-    email: string;
-    password: string;
-    full_name: string;
-    is_verified?: boolean;
-};
-
 export type PublisherFacet = {
     slug: string;
     name: string;
@@ -117,14 +110,6 @@ export type UpdatePassword = {
     new_password: string;
 };
 
-export type UserCreate = {
-    email: string;
-    is_active?: boolean;
-    is_superuser?: boolean;
-    full_name?: (string | null);
-    password: string;
-};
-
 export type UserPublic = {
     email: string;
     is_active?: boolean;
@@ -138,19 +123,6 @@ export type UserRegister = {
     email: string;
     password: string;
     full_name?: (string | null);
-};
-
-export type UsersPublic = {
-    data: Array<UserPublic>;
-    count: number;
-};
-
-export type UserUpdate = {
-    email?: (string | null);
-    is_active?: (boolean | null);
-    is_superuser?: (boolean | null);
-    full_name?: (string | null);
-    password?: (string | null);
 };
 
 export type UserUpdateMe = {
@@ -215,19 +187,25 @@ export type ArticlesSearchTagsData = {
 
 export type ArticlesSearchTagsResponse = (Array<TagFacet>);
 
-export type ArticlesArticleStatsResponse = (unknown);
+export type ArticlesArticleStatsResponse = ({
+    [key: string]: (number | string | null);
+});
 
 export type LikesLikeArticleData = {
     articleId: number;
 };
 
-export type LikesLikeArticleResponse = (unknown);
+export type LikesLikeArticleResponse = ({
+    [key: string]: (boolean);
+});
 
 export type LikesUnlikeArticleData = {
     articleId: number;
 };
 
-export type LikesUnlikeArticleResponse = (unknown);
+export type LikesUnlikeArticleResponse = ({
+    [key: string]: (boolean);
+});
 
 export type LikesReadLikedArticlesResponse = (ArticlesPublic);
 
@@ -263,25 +241,6 @@ export type NewsletterSubscribeData = {
 
 export type NewsletterSubscribeResponse2 = (NewsletterSubscribeResponse);
 
-export type PrivateCreateUserData = {
-    requestBody: PrivateUserCreate;
-};
-
-export type PrivateCreateUserResponse = (UserPublic);
-
-export type UsersReadUsersData = {
-    limit?: number;
-    skip?: number;
-};
-
-export type UsersReadUsersResponse = (UsersPublic);
-
-export type UsersCreateUserData = {
-    requestBody: UserCreate;
-};
-
-export type UsersCreateUserResponse = (UserPublic);
-
 export type UsersReadUserMeResponse = (UserPublic);
 
 export type UsersDeleteUserMeResponse = (Message);
@@ -303,30 +262,5 @@ export type UsersRegisterUserData = {
 };
 
 export type UsersRegisterUserResponse = (UserPublic);
-
-export type UsersReadUserByIdData = {
-    userId: string;
-};
-
-export type UsersReadUserByIdResponse = (UserPublic);
-
-export type UsersUpdateUserData = {
-    requestBody: UserUpdate;
-    userId: string;
-};
-
-export type UsersUpdateUserResponse = (UserPublic);
-
-export type UsersDeleteUserData = {
-    userId: string;
-};
-
-export type UsersDeleteUserResponse = (Message);
-
-export type UtilsTestEmailData = {
-    emailTo: string;
-};
-
-export type UtilsTestEmailResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);

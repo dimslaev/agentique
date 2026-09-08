@@ -1,3 +1,7 @@
+"""Seeds the database with sample articles for local development."""
+
+from __future__ import annotations
+
 import logging
 import math
 import random

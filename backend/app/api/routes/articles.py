@@ -1,10 +1,13 @@
+"""Article listing, semantic search, and facet endpoints for the public feed."""
+
+from __future__ import annotations
+
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-from sqlalchemy import cast, func
+from sqlalchemy import ColumnElement, cast, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Session, col, select
 
@@ -65,7 +68,7 @@ def read_articles(
     tag: str | None = None,
     publisher: str | None = None,
     sort: str = Query(default="score-desc"),
-) -> Any:
+) -> ArticlesPublic:
     # Missing `since` means "all time" (no lower bound).
     since_dt: datetime | None = None
     if since is not None:
@@ -74,7 +77,7 @@ def read_articles(
         except ValueError:
             raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
 
-    conditions: list[Any] = []
+    conditions: list[ColumnElement[bool]] = []
     if since_dt is not None:
         conditions.append(col(Article.published_at) >= since_dt)
     if q:
@@ -142,7 +145,7 @@ def search_articles(
     current_user: CurrentUserOptional,
     q: str,
     limit: int = Query(default=20, ge=1, le=50),
-) -> Any:
+) -> ArticlesPublic:
     query_vec = _embed(q)
 
     like_counts_subq = like_counts_subquery()
@@ -204,7 +207,7 @@ def _tag_facets(session: Session, q: str | None, limit: int) -> list[TagFacet]:
 @router.get("/facets", response_model=ArticleFacets)
 def article_facets(
     session: SessionDep, limit: int = Query(default=8, ge=1, le=20)
-) -> Any:
+) -> ArticleFacets:
     return ArticleFacets(
         publishers=_publisher_facets(session, None, limit),
         tags=_tag_facets(session, None, limit),
@@ -216,7 +219,7 @@ def search_publishers(
     session: SessionDep,
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
-) -> Any:
+) -> list[PublisherFacet]:
     return _publisher_facets(session, q, limit)
 
 
@@ -225,12 +228,12 @@ def search_tags(
     session: SessionDep,
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
-) -> Any:
+) -> list[TagFacet]:
     return _tag_facets(session, q, limit)
 
 
 @router.get("/stats")
-def article_stats(session: SessionDep) -> Any:
+def article_stats(session: SessionDep) -> dict[str, int | str | None]:
     total = session.exec(select(func.count()).select_from(Article)).one()
     last = session.exec(
         select(func.max(Article.created_at))  # type: ignore[arg-type]

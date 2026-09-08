@@ -7,13 +7,34 @@
 
 ## Running locally
 
-See [../development.md](../development.md) for the full loop. Short version:
+Needs a root `.env` file (gitignored) with at least: `PROJECT_NAME`, `SECRET_KEY`,
+`FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`, `POSTGRES_SERVER=localhost`,
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`. The backend loads it via
+pydantic-settings (`env_file="../.env"`); the pipeline reads raw `os.environ`,
+hence `uv run --env-file` below. `frontend/.env` is Vite-only (`VITE_API_URL`) and
+kept separate on purpose — pointing Vite at the root `.env` would load secrets
+into the build process.
 
 ```bash
 docker compose up -d           # from the repo root: starts the db
 cd backend
 uv run bash scripts/prestart.sh   # migrations + initial data
 uv run fastapi dev app/main.py
+```
+
+Pipeline (manual run):
+
+```bash
+cd backend && uv run --env-file ../.env python -m pipeline.run
+```
+
+## Pre-commit and linting
+
+We use [prek](https://prek.j178.dev/) (modern pre-commit alternative). Config: `.pre-commit-config.yaml`.
+
+```bash
+uv run prek install -f       # install the git hook, from backend/
+uv run prek run --all-files  # run manually on everything
 ```
 
 ## General Workflow
