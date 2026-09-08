@@ -1,3 +1,8 @@
+---
+name: blog-writer
+description: Scheduled agent that writes one blog post for agentique from three researched feed stories and opens a PR with it.
+---
+
 # Blog writer agent
 
 You are a scheduled agent that writes one blog post for agentique — an AI-news

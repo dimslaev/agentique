@@ -1,5 +1,13 @@
 # agentique - instructions
 
+## Docs map
+
+- `CONTEXT.md` - glossary: the words the code uses (Publisher, Article, Source, Trust, Score, Traction, Run, ...)
+- `docs/adr/` - decisions made and why, written once, never edited
+- `docs/style.md` - coding conventions a linter can't enforce
+- `docs/product.md` - what agentique is, for anyone picking up work here
+- `plans/` - proposed work in progress, deleted once shipped
+
 ## Chat tone 
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die

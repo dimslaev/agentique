@@ -292,10 +292,10 @@ the tag set steers away from it.
 
 ## Follow-ups this work surfaced
 
-- **`.agents/homepage-refresh.md` is now orphaned.** It exists to web-search
-  each lab and open PRs editing `frontend/src/components/Home/sources.ts`,
-  which this change deletes. Retire the agent or repoint it — as written its
-  next run edits a file that no longer exists.
+- ~~`.agents/homepage-refresh.md` is now orphaned.~~ Resolved: deleted during
+  the screaming-architecture refactor (docs step) rather than repointed — the
+  boxes it existed to hand-curate are now API-driven, so the agent has no job
+  left, not just a stale file path.
 - **`/feed` filters need to be URL-addressable** before any box can offer
   "see all".
 - **Backend does not boot on the pinned Python.** `.python-version` is

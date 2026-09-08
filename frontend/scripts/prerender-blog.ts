@@ -6,7 +6,7 @@
  * hashed CSS bundle from dist/assets/ — the same stylesheet the SPA ships.
  * Any contract violation exits non-zero and fails the build; this is the
  * mechanical validation gate for agent-written posts (PR review is the
- * editorial one). The contract lives in .agents/blog-writer.md.
+ * editorial one). The contract lives in .claude/skills/blog-writer/SKILL.md.
  *
  * Run standalone: bun scripts/prerender-blog.ts (needs an existing dist/).
  */
