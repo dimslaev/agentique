@@ -19,11 +19,11 @@ from app.catalog.models import Article, Publisher
 from app.platform.logging import log
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
-from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
+from pipeline.github import github_repo_from_url, is_known_owner
 from pipeline.models import ScoredUrl
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate
 
 DNS_CONCURRENCY = 10
 # How far back to look for an article we already carry. Same-story reposts
@@ -38,8 +38,8 @@ def github_min_stars() -> int:
 
     Aimed at the "solo repo with two stars, posted by its author" case, not at
     ranking projects: a real tool that reaches an aggregator is well past this
-    by the time it does. Repos under an owner on ``KNOWN_REPO_OWNERS`` skip the
-    check entirely.
+    by the time it does. Repos under an owner ``github.is_known_owner`` recognises
+    skip the check entirely.
     """
     return int(os.environ.get("GITHUB_MIN_STARS", "50"))
 
@@ -58,8 +58,8 @@ def dedup_dist_threshold() -> float:
 
 
 def filter_known_urls(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     if not articles:
         return []
     all_urls = [a["url"] for a in articles]
@@ -104,9 +104,7 @@ def _is_resolvable(url: str) -> bool:
         return True  # Other errors (timeout, etc.) - assume alive
 
 
-def filter_dead_domains(
-    articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+def filter_dead_domains(articles: list[Candidate], label: str) -> list[Candidate]:
     if not articles:
         return articles
 
@@ -125,8 +123,8 @@ def filter_dead_domains(
 
 
 def filter_thin_repos(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     """Drop links to GitHub repos nobody uses.
 
     An aggregator cannot tell a project from an upload: a repo with two stars,
@@ -135,7 +133,7 @@ def filter_thin_repos(
     reliably rates it as if the pitch were the product. Stars are the outside
     view, and one API call answers it.
 
-    Only repo URLs cost a lookup. Repos under ``KNOWN_REPO_OWNERS`` skip it —
+    Only repo URLs cost a lookup. Repos under a known owner skip it —
     a PR against llama.cpp is worth reading on its own merits, and it would pass
     anyway. A lookup that fails or is rate-limited returns None and the article
     is kept: the gate never deletes an article because GitHub was unreachable.
@@ -152,14 +150,14 @@ def filter_thin_repos(
     repo_by_index: dict[int, tuple[str, str]] = {}
     for i, a in enumerate(articles):
         repo = github_repo_from_url(a["url"])
-        if repo and repo[0].lower() not in KNOWN_REPO_OWNERS:
+        if repo and not is_known_owner(repo[0]):
             repo_by_index[i] = repo
     if not repo_by_index:
         return articles
 
     stars = stars_for(list(repo_by_index.values()))
 
-    kept: list[FetchedArticle] = []
+    kept: list[Candidate] = []
     dropped = 0
     for i, a in enumerate(articles):
         repo = repo_by_index.get(i)
@@ -208,8 +206,8 @@ def _nearest_within(
 
 
 def dedup_semantic(
-    session: Session, articles: list[FetchedArticle], label: str
-) -> list[FetchedArticle]:
+    session: Session, articles: list[Candidate], label: str
+) -> list[Candidate]:
     """Drop articles we already carry, judged by embedding distance alone.
 
     Runs before scoring so a duplicate never costs an LLM call. Compares each
@@ -234,7 +232,7 @@ def dedup_semantic(
     # embeds content capped at SNIPPET_CAP), or an article fails to match its
     # own row in the DB and the comparison is meaningless.
     new_texts = [
-        keep_drop.to_embedding_text(a["title"], (a.get("content") or "")[:SNIPPET_CAP])
+        keep_drop.to_embedding_text(a["title"], a["content"][:SNIPPET_CAP])
         for a in articles
     ]
     new_vecs = np.array(embed_batch(new_texts), dtype=np.float32)
@@ -250,7 +248,7 @@ def dedup_semantic(
 
     against_db = _nearest_within(new_vecs, recent_vecs, threshold)
 
-    unique: list[FetchedArticle] = []
+    unique: list[Candidate] = []
     kept_vecs: list[np.ndarray] = []
     for i, a in enumerate(articles):
         j = against_db.get(i)

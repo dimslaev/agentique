@@ -4,17 +4,27 @@ from __future__ import annotations
 
 import re
 from html import unescape
+from typing import TypedDict
 
 from app.platform.logging import log
+from pipeline.fetching.http import fetch_with_timeout
 from pipeline.freshness import is_within_window
-from pipeline.sources.http import fetch_with_timeout
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 FEED_URL = "https://news.smol.ai/rss.xml"
 MAX_CONTENT_LENGTH = 1400
 MIN_REDDIT_BODY_LENGTH = 120
 MIN_TWITTER_TITLE_LENGTH = 10
+
+
+class _Story(TypedDict):
+    """One story pulled out of an issue, before the issue's own publication date
+    and the channel name are attached to it."""
+
+    title: str
+    url: str
+    content: str
 
 
 # --- minimal RSS parsing (no feedparser dep for this source) ---
@@ -137,7 +147,7 @@ def _pick_primary(links: list[dict]) -> dict:
 # --- Twitter Recap ---
 
 
-def _extract_twitter_recap(html: str) -> dict | None:
+def _extract_twitter_recap(html: str) -> _Story | None:
     region = _slice_section(
         html, re.compile(r"<h1[^>]*>\s*AI Twitter Recap\s*</h1>", re.IGNORECASE)
     )
@@ -167,7 +177,17 @@ REDDIT_ANCHOR_RX = re.compile(
 )
 
 
-def _extract_reddit_recap(html: str) -> list[dict]:
+class _Anchor(TypedDict):
+    """One reddit permalink in the recap, plus where it sat in the HTML — the
+    offsets are how the story's body is sliced out from between two anchors."""
+
+    url: str
+    title: str
+    start: int
+    end: int
+
+
+def _extract_reddit_recap(html: str) -> list[_Story]:
     region = _slice_section(
         html, re.compile(r"<h1[^>]*>\s*AI Reddit Recap\s*</h1>", re.IGNORECASE)
     )
@@ -175,16 +195,16 @@ def _extract_reddit_recap(html: str) -> list[dict]:
         return []
 
     anchors = [
-        {
-            "url": m.group(1),
-            "title": _strip_tags(m.group(2)),
-            "start": m.start(),
-            "end": m.end(),
-        }
+        _Anchor(
+            url=m.group(1),
+            title=_strip_tags(m.group(2)),
+            start=m.start(),
+            end=m.end(),
+        )
         for m in REDDIT_ANCHOR_RX.finditer(region)
     ]
 
-    stories = []
+    stories: list[_Story] = []
     for i, anchor in enumerate(anchors):
         next_start = anchors[i + 1]["start"] if i + 1 < len(anchors) else len(region)
         after = region[anchor["end"] :]
@@ -199,11 +219,11 @@ def _extract_reddit_recap(html: str) -> list[dict]:
             continue
         primary = _pick_primary(_collect_links(body))
         stories.append(
-            {
-                "title": anchor["title"] or "(untitled)",
-                "url": primary["url"] or anchor["url"],
-                "content": content[:MAX_CONTENT_LENGTH],
-            }
+            _Story(
+                title=anchor["title"] or "(untitled)",
+                url=primary["url"] or anchor["url"],
+                content=content[:MAX_CONTENT_LENGTH],
+            )
         )
     return stories
 
@@ -211,7 +231,18 @@ def _extract_reddit_recap(html: str) -> list[dict]:
 # --- fetch ---
 
 
-def fetch_ai_news() -> list[FetchedArticle]:
+def _to_raw_item(story: _Story, published_date: str) -> RawItem:
+    """Attach the issue's date and the channel name to one extracted story."""
+    return RawItem(
+        title=story["title"],
+        url=story["url"],
+        content=story["content"],
+        published_date=published_date,
+        source="AI News",
+    )
+
+
+def fetch_ai_news() -> list[RawItem]:
     log("Fetching AI News feed...")
     try:
         resp = fetch_with_timeout(FEED_URL)
@@ -225,29 +256,17 @@ def fetch_ai_news() -> list[FetchedArticle]:
     items = [it for it in _parse_feed(xml) if is_within_window(it["pub_date"])]
     log(f"  AI News: {len(items)} issues within window")
 
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     for item in items:
         if re.match(r"^not much happened", item["title"], re.IGNORECASE):
             continue
         twitter = _extract_twitter_recap(item["content_html"])
         if twitter:
-            articles.append(
-                {
-                    **twitter,
-                    "published_date": item["pub_date"],
-                    "source": "AI News",
-                }
-            )
+            articles.append(_to_raw_item(twitter, item["pub_date"]))
         for reddit in _extract_reddit_recap(item["content_html"]):
-            articles.append(
-                {
-                    **reddit,
-                    "published_date": item["pub_date"],
-                    "source": "AI News",
-                }
-            )
+            articles.append(_to_raw_item(reddit, item["pub_date"]))
 
-    by_url: dict[str, FetchedArticle] = {}
+    by_url: dict[str, RawItem] = {}
     for a in articles:
         if a["url"] not in by_url:
             by_url[a["url"]] = a

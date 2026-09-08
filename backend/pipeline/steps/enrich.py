@@ -17,11 +17,7 @@ from baml_client.sync_client import b
 from baml_client.types import TagOption
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
-from pipeline.heuristics import (
-    PROMPT_CONTENT_CAP,
-    github_repo_from_content,
-    kind_from_url,
-)
+from pipeline.github import github_repo_from_content
 from pipeline.llm_text import (
     enum_value,
     is_valid_title,
@@ -30,7 +26,13 @@ from pipeline.llm_text import (
 )
 from pipeline.steps import SNIPPET_CAP, to_baml_input
 from pipeline.tags import Vocabulary, validate_tags, write_article_tags
-from pipeline.types import FetchedArticle, ProcessedArticle
+from pipeline.types import Persisted, ProcessedArticle
+from pipeline.url_kind import kind_from_url
+
+# How much of an article the categorize+tag prompt sees. The opening is what
+# says what a piece is about; past this the prompt costs more and decides the
+# same.
+PROMPT_CONTENT_CAP = 1500
 
 # Batch size for the title call. Kept small on purpose: a long list invites the
 # model to blend one article's details into another's output, and a failed call
@@ -67,7 +69,7 @@ def accept_title(raw: str | None, current: str, source: str) -> str | None:
     return sanitized
 
 
-def improve_titles(session: Session, inserted: list[FetchedArticle]) -> None:
+def improve_titles(session: Session, inserted: list[Persisted]) -> None:
     if not inserted:
         return
 
@@ -133,7 +135,7 @@ def _to_kind(baml_kind) -> ArticleKind | None:
 
 
 def categorize_and_tag_articles(
-    session: Session, items: list[FetchedArticle], vocab: Vocabulary
+    session: Session, items: list[Persisted], vocab: Vocabulary
 ) -> list[ProcessedArticle]:
     """Assign categories/kind/tags from each article's content.
 
@@ -159,7 +161,7 @@ def categorize_and_tag_articles(
 
     for idx, item in enumerate(items):
         art_id = item["id"]
-        content = item.get("content") or ""
+        content = item["content"]
         if not content.strip():
             log(f"  Drop #{art_id}: no content to categorize")
             continue

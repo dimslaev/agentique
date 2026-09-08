@@ -23,11 +23,11 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from app.platform.logging import log
+from pipeline.fetching.extract_content import extract_content
+from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout
 from pipeline.freshness import is_within_window
-from pipeline.sources.extract_content import extract_content
-from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout
 from pipeline.titles import clean_title
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 SUBREDDITS = ("LocalLLaMA", "MachineLearning")
@@ -55,7 +55,7 @@ _MEDIA_HOSTS = frozenset(
 )
 
 
-def _to_article(post: dict) -> FetchedArticle | None:
+def _to_article(post: dict) -> RawItem | None:
     """One listing entry's ``data`` object -> a fetched article, or None.
 
     Gates, cheapest first: it must be a live, non-stickied, SFW post over
@@ -98,7 +98,7 @@ def _to_article(post: dict) -> FetchedArticle | None:
     }
 
 
-def _fetch_subreddit(sub: str) -> list[FetchedArticle]:
+def _fetch_subreddit(sub: str) -> list[RawItem]:
     url = LISTING_URL.format(sub=sub, limit=LISTING_LIMIT)
     try:
         resp = fetch_with_timeout(url, headers=BROWSER_HEADERS)
@@ -113,7 +113,7 @@ def _fetch_subreddit(sub: str) -> list[FetchedArticle]:
     return articles
 
 
-def fetch_reddit() -> list[FetchedArticle]:
+def fetch_reddit() -> list[RawItem]:
     log(f"Fetching Reddit ({', '.join('r/' + s for s in SUBREDDITS)})...")
 
     with ThreadPoolExecutor(max_workers=len(SUBREDDITS)) as executor:
@@ -122,7 +122,7 @@ def fetch_reddit() -> list[FetchedArticle]:
     # The two subreddits cross-post the same release often enough to matter, and
     # a URL seen twice would be two scoring calls for one story.
     seen: set[str] = set()
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     for a in (a for batch in results for a in batch):
         if a["url"] in seen:
             continue

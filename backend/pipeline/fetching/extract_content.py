@@ -8,12 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import trafilatura
 
 from app.platform.logging import log
-from pipeline.sources.http import (
+from pipeline.fetching.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
@@ -142,9 +142,9 @@ def _fetch_texts(
     return texts
 
 
-def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
+def extract_content(articles: list[RawItem]) -> list[RawItem]:
     """Fill in missing content snippets for a list of article dicts."""
-    needs = [a for a in articles if not a.get("content")]
+    needs = [a for a in articles if not a["content"]]
     if not needs:
         return articles
 
@@ -154,9 +154,9 @@ def extract_content(articles: list[FetchedArticle]) -> list[FetchedArticle]:
     snippet_map = _fetch_texts(unique_urls, max_length=SNIPPET_MAX_LENGTH)
     log(f"  Extracted {len(snippet_map)}/{len(unique_urls)} snippets")
 
-    result: list[FetchedArticle] = []
+    result: list[RawItem] = []
     for a in articles:
-        if not a.get("content") and a["url"] in snippet_map:
+        if not a["content"] and a["url"] in snippet_map:
             result.append({**a, "content": snippet_map[a["url"]]})
         else:
             result.append(a)

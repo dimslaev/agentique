@@ -20,8 +20,8 @@ from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
 from app.platform.logging import log
-from pipeline.sources.http import tavily_search
-from pipeline.types import FetchedArticle
+from pipeline.fetching.http import tavily_search
+from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 WATCH_DAYS = 2  # nightly cadence + one missed run of slack
@@ -141,7 +141,7 @@ def _is_recent(published_date: str | None, cutoff: datetime) -> bool:
     return dt >= cutoff
 
 
-def _watch_one(name: str, domain: str, cutoff: datetime) -> list[FetchedArticle]:
+def _watch_one(name: str, domain: str, cutoff: datetime) -> list[RawItem]:
     query = f"{name} latest announcements, model releases, and research"
     try:
         results = tavily_search(
@@ -155,7 +155,7 @@ def _watch_one(name: str, domain: str, cutoff: datetime) -> list[FetchedArticle]
         log(f'    Lab watch search failed for "{name}": {e}')
         return []
 
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     for r in results:
         if not _host_is_first_party(r["url"], domain):
             continue
@@ -164,7 +164,7 @@ def _watch_one(name: str, domain: str, cutoff: datetime) -> list[FetchedArticle]
         if not _is_recent(r.get("published_date"), cutoff):
             continue
         articles.append(
-            FetchedArticle(
+            RawItem(
                 title=r["title"],
                 url=r["url"],
                 content=r["description"],
@@ -176,7 +176,7 @@ def _watch_one(name: str, domain: str, cutoff: datetime) -> list[FetchedArticle]
     return articles
 
 
-def fetch_lab_watch(targets: list[tuple[str, str]]) -> list[FetchedArticle]:
+def fetch_lab_watch(targets: list[tuple[str, str]]) -> list[RawItem]:
     """Poll each (publisher_name, first-party-domain) target concurrently.
 
     ``source`` on each article is the publisher name so downstream publisher
@@ -188,7 +188,7 @@ def fetch_lab_watch(targets: list[tuple[str, str]]) -> list[FetchedArticle]:
 
     log(f"Lab watch: searching {len(targets)} lab domain(s) over last {WATCH_DAYS}d")
     cutoff = datetime.now(UTC) - timedelta(days=WATCH_DAYS)
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     with ThreadPoolExecutor(max_workers=WATCH_CONCURRENCY) as ex:
         futures = [
             ex.submit(_watch_one, name, domain, cutoff) for name, domain in targets

@@ -7,12 +7,13 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from app.platform.logging import log
+from pipeline.fetching.extract_content import extract_content
+from pipeline.fetching.http import fetch_with_timeout
+from pipeline.first_party import is_first_party
 from pipeline.freshness import is_within_window
-from pipeline.heuristics import AI_TITLE_KEYWORDS, is_first_party
-from pipeline.sources.extract_content import extract_content
-from pipeline.sources.http import fetch_with_timeout
 from pipeline.titles import clean_title
-from pipeline.types import FetchedArticle
+from pipeline.topic_gate import is_on_topic
+from pipeline.types import RawItem
 
 HN_ITEM = "https://hacker-news.firebaseio.com/v0/item"
 
@@ -44,7 +45,7 @@ def hn_grace_hours() -> float:
     return float(os.environ.get("HN_GRACE_HOURS", "6"))
 
 
-# Two firehoses, both title-gated by AI_TITLE_KEYWORDS before any item is
+# Two firehoses, both title-gated by topic_gate.is_on_topic before any item is
 # fetched in full. "top" is the front page — high signal, but an AI post only
 # reaches it if it already trended. "new" is every submission in publication
 # order, which is where a lab's own release lands minutes after it goes up and
@@ -88,7 +89,7 @@ def _passes_topic_and_window(item: dict) -> bool:
     reports the traction gate against."""
     if not item or item.get("type") != "story" or not item.get("title"):
         return False
-    if not AI_TITLE_KEYWORDS.search(item["title"]):
+    if not is_on_topic(item["title"]):
         return False
     posted = item.get("time")
     pub_date = datetime.fromtimestamp(posted, tz=UTC).isoformat() if posted else None
@@ -137,7 +138,7 @@ def has_traction(item: dict) -> bool:
     return points >= hn_min_points() or comments >= hn_min_comments()
 
 
-def _to_article(item: dict) -> FetchedArticle | None:
+def _to_article(item: dict) -> RawItem | None:
     """One HN item -> a fetched article, or None if it fails a gate.
 
     Gates, cheapest first: it must be a titled story, its title must look
@@ -147,7 +148,7 @@ def _to_article(item: dict) -> FetchedArticle | None:
     """
     if not item or item.get("type") != "story" or not item.get("title"):
         return None
-    if not AI_TITLE_KEYWORDS.search(item["title"]):
+    if not is_on_topic(item["title"]):
         return None
     pub_date = (
         datetime.fromtimestamp(item["time"], tz=UTC).isoformat()
@@ -173,7 +174,7 @@ def _to_article(item: dict) -> FetchedArticle | None:
     }
 
 
-def fetch_hn() -> list[FetchedArticle]:
+def fetch_hn() -> list[RawItem]:
     log("Fetching Hacker News top + new stories...")
 
     # The two lists overlap heavily (a new story that trends is on both), so
@@ -193,7 +194,7 @@ def fetch_hn() -> list[FetchedArticle]:
         results = list(executor.map(_fetch_item, ids))
 
     seen_urls: set[str] = set()
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     on_topic = 0
     for item in results:
         item = item or {}

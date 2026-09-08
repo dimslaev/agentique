@@ -9,15 +9,15 @@ from urllib.parse import urlparse
 import feedparser
 
 from app.platform.logging import log
-from pipeline.freshness import is_within_window
-from pipeline.sources.extract_content import extract_text
-from pipeline.sources.http import (
+from pipeline.fetching.extract_content import extract_text
+from pipeline.fetching.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
-from pipeline.types import FetchedArticle
+from pipeline.types import RawItem
 from pipeline.urls import feed_url
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
@@ -87,7 +87,7 @@ def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     raise RuntimeError("Exhausted retries")
 
 
-def _fetch_source(source: dict) -> tuple[list[FetchedArticle], str | None]:
+def _fetch_source(source: dict) -> tuple[list[RawItem], str | None]:
     name = source["name"]
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
@@ -118,7 +118,7 @@ def _fetch_source(source: dict) -> tuple[list[FetchedArticle], str | None]:
         return [], f"{type(e).__name__}: {e}"
 
 
-def fetch_feeds(sources: list[dict]) -> tuple[list[FetchedArticle], dict[str, str]]:
+def fetch_feeds(sources: list[dict]) -> tuple[list[RawItem], dict[str, str]]:
     """Fetch a list of RSS/substack feeds in parallel.
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it
@@ -137,7 +137,7 @@ def fetch_feeds(sources: list[dict]) -> tuple[list[FetchedArticle], dict[str, st
 
     _log_proxy_status_once()
 
-    articles: list[FetchedArticle] = []
+    articles: list[RawItem] = []
     errors: dict[str, str] = {}
     with ThreadPoolExecutor(max_workers=10) as executor:
         futures = {executor.submit(_fetch_source, src): src for src in sources}

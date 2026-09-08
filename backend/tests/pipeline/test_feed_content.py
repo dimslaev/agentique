@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.heuristics import MIN_CONTENT_CHARS
 from pipeline.sources.substack import _entry_content
 from pipeline.steps import fetch as fetch_step
+from pipeline.steps.fetch import MIN_CONTENT_CHARS
 from pipeline.urls import feed_url
 
 # Varied prose on purpose: trafilatura deduplicates repeated segments, so a

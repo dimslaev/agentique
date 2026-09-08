@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.heuristics import github_repo_from_url
+from pipeline.github import github_repo_from_url
 from pipeline.steps import filter as filter_step
-from pipeline.types import FetchedArticle
+from pipeline.types import Candidate
 
 
 class _FakeSession:
@@ -29,13 +29,16 @@ class _FakeSession:
         self.commits += 1
 
 
-def _article(url: str) -> FetchedArticle:
+def _article(url: str) -> Candidate:
     return {
         "title": "An LLM thing",
         "url": url,
         "content": "",
         "published_date": None,
         "source": "Hacker News",
+        "publisher_id": 1,
+        "trust": "high",
+        "topic_gated": False,
     }
 
 

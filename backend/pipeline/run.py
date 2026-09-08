@@ -36,7 +36,7 @@ from pipeline.steps.filter import (
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
 from pipeline.tags import load_vocabulary
-from pipeline.types import FetchedArticle
+from pipeline.types import Persisted, RawItem
 
 
 def run_pipeline(stats: RunStats) -> None:
@@ -52,9 +52,9 @@ def run_pipeline(stats: RunStats) -> None:
 
             # Held outside the try so the publisher stats below survive a
             # failure in any step after the fetch.
-            fetched: list[FetchedArticle] = []
+            fetched: list[RawItem] = []
             fetch_errors: dict[str, str] = {}
-            inserted: list[FetchedArticle] = []
+            inserted: list[Persisted] = []
             fetched_ok = False
 
             try:
@@ -62,12 +62,12 @@ def run_pipeline(stats: RunStats) -> None:
                 fetched_ok = True
                 s.fetched = len(fetched)
 
-                resolve_publishers(fetched, resolver)
+                candidates = resolve_publishers(fetched, resolver)
 
                 # First gate, and the cheapest: a title regex on the broad
                 # publishers. Ahead of every DB, DNS, embedding and LLM cost
                 # below, so an off-topic post from a gated feed costs nothing.
-                on_topic = drop_off_topic(fetched, source.label)
+                on_topic = drop_off_topic(candidates, source.label)
                 s.filtered_off_topic = s.fetched - len(on_topic)
 
                 fresh = filter_known_urls(session, on_topic, source.label)
@@ -85,14 +85,14 @@ def run_pipeline(stats: RunStats) -> None:
                 # Pre-filter obvious junk before the scoring LLM call: cuts what
                 # the scorer has to see, and junk gets recorded in ScoredUrl
                 # instead of silently dropped.
-                candidates = prefilter_keep_drop(session, real)
-                prefiltered = len(real) - len(candidates)
+                worth_scoring = prefilter_keep_drop(session, real)
+                prefiltered = len(real) - len(worth_scoring)
 
                 # Before scoring: a story we already carry must never cost an
                 # LLM call. Runs after the pre-filter so junk-that-is-a-dup is
                 # recorded in ScoredUrl rather than silently dropped here.
-                unique = dedup_semantic(session, candidates, source.label)
-                s.deduped = len(candidates) - len(unique)
+                unique = dedup_semantic(session, worth_scoring, source.label)
+                s.deduped = len(worth_scoring) - len(unique)
 
                 scored = score_articles(session, unique)
                 # below_threshold = pre-filter drops + LLM sub-threshold
