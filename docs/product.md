@@ -95,11 +95,6 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
 - **Deploy**: a single VPS — the db in Docker, backend and pipeline as systemd
   services, the frontend as static files behind Caddy.
 
-The whole thing is a fork of a well-known open-source FastAPI starter template, so a lot
-of the plumbing (auth scaffolding, migrations, project layout, CI) is inherited rather
-than built from scratch — Agentique-specific logic lives in a small number of clearly
-separate files rather than scattered through upstream code, which keeps it easy to pull
-in upstream improvements later.
 
 ## Where things stand / what's next
 
@@ -113,6 +108,4 @@ above, and a real load/scale test (current data volume is small — this has bee
 architecture spike more than a performance one so far).
 
 If you want the ground-level detail — endpoints, models, exact commands — see
-`backend/README.md` and `frontend/README.md`. `CHANGES.md` tracks
-every place this fork has diverged from the upstream template, which is the fastest way
-to see what's actually Agentique-specific versus inherited scaffolding.
+`backend/README.md` and `frontend/README.md`.

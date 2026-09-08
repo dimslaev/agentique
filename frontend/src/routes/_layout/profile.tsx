@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_layout/profile")({
   head: () => ({
     meta: [
       {
-        title: "Profile - FastAPI Template",
+        title: "Profile - agentique",
       },
     ],
   }),

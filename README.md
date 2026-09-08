@@ -30,7 +30,3 @@ See [backend/README.md](./backend/README.md) and [frontend/README.md](./frontend
 - [Backend](./backend/README.md)
 - [Frontend](./frontend/README.md)
 - [Deployment](./deploy/README.md)
-
-## Upstream
-
-Started as a fork of [fastapi/full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template). The fork is cut — upstream is no longer merged. [CHANGES.md](./CHANGES.md) is frozen as the historical record of divergences.

@@ -6,7 +6,7 @@ Accepted.
 
 ## Context
 
-The upstream template's Compose stack ran everything in containers:
+The earlier Compose stack ran everything in containers:
 backend, frontend, a mail-catcher, a reverse proxy, and the database.
 Running a single VPS with that much container overhead, for a project at
 agentique's current scale, added operational weight (image builds, network

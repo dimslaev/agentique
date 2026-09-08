@@ -1,5 +1,5 @@
 {
-  "name": "fastapi-full-stack-template",
+  "name": "agentique",
   "private": true,
   "workspaces": [
     "frontend"

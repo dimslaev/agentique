@@ -6,10 +6,10 @@ Accepted.
 
 ## Context
 
-`backend/app/` read as "FastAPI template with a pipeline bolted on": `api/`,
-`core/`, `models.py`, `crud.py` are framework layers, not domains. Nobody
-could answer "where does X live" without already knowing the framework's
-own folder conventions rather than agentique's.
+`backend/app/` read as a generic web scaffold with a pipeline bolted on:
+`api/`, `core/`, `models.py`, `crud.py` are framework layers, not domains.
+Nobody could answer "where does X live" without already knowing the
+framework's own folder conventions rather than agentique's.
 
 ## Decision
 
