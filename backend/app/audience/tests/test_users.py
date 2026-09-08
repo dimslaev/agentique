@@ -5,11 +5,11 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app import crud
+from app.audience import service
 from app.audience.models import User, UserCreate
-from app.core.config import settings
-from app.core.security import verify_password
-from tests.factories.random_data import random_email, random_lower_string
+from app.platform.security import verify_password
+from app.platform.settings import settings
+from tests.random_data import random_email, random_lower_string
 
 
 def test_get_users_superuser_me(
@@ -121,7 +121,7 @@ def test_update_user_me_email_exists(
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = service.create_user(session=db, user_create=user_in)
 
     data = {"email": user.email}
     r = client.patch(
@@ -195,7 +195,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     username = random_email()
     password = random_lower_string()
     user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = service.create_user(session=db, user_create=user_in)
     user_id = user.id
 
     login_data = {
@@ -218,7 +218,7 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
     assert result is None
 
     user_query = select(User).where(User.id == user_id)
-    user_db = db.execute(user_query).first()
+    user_db = db.exec(user_query).first()
     assert user_db is None
 
 

@@ -15,7 +15,7 @@ from app.catalog.models import (
     Tag,
     slugify,
 )
-from tests.factories.random_data import random_lower_string
+from tests.random_data import random_lower_string
 
 
 def create_random_publisher(db: Session, **overrides: object) -> Publisher:
@@ -26,7 +26,7 @@ def create_random_publisher(db: Session, **overrides: object) -> Publisher:
         "kind": PublisherKind.community,
     }
     defaults.update(overrides)
-    publisher = Publisher(**defaults)  # type: ignore[arg-type]
+    publisher = Publisher(**defaults)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     db.add(publisher)
     db.commit()
     db.refresh(publisher)
@@ -41,7 +41,7 @@ def create_random_tag(db: Session, **overrides: object) -> Tag:
         "description": random_lower_string(),
     }
     defaults.update(overrides)
-    tag = Tag(**defaults)  # type: ignore[arg-type]
+    tag = Tag(**defaults)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     db.add(tag)
     db.commit()
     db.refresh(tag)
@@ -63,7 +63,7 @@ def create_random_article(db: Session, **overrides: object) -> Article:
         "content": random_lower_string(),
     }
     defaults.update(overrides)
-    article = Article(**defaults)  # type: ignore[arg-type]
+    article = Article(**defaults)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     db.add(article)
     db.commit()
     db.refresh(article)

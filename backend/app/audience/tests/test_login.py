@@ -10,15 +10,15 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
 from app.audience.models import User, UserCreate
-from app.core.config import settings
-from app.core.security import (
+from app.audience.service import create_user
+from app.audience.tests.factories import user_authentication_headers
+from app.platform.security import (
     generate_password_reset_token,
     get_password_hash,
     verify_password,
 )
-from app.crud import create_user
-from tests.factories.random_data import random_email, random_lower_string
-from tests.factories.user import user_authentication_headers
+from app.platform.settings import settings
+from tests.random_data import random_email, random_lower_string
 
 
 def test_get_access_token(client: TestClient) -> None:
@@ -58,10 +58,10 @@ def test_recovery_password(
     client: TestClient, normal_user_token_headers: dict[str, str], monkeypatch
 ) -> None:
     monkeypatch.setattr(
-        "app.core.config.settings.RESEND_API_KEY", "test-key", raising=False
+        "app.platform.settings.settings.RESEND_API_KEY", "test-key", raising=False
     )
     monkeypatch.setattr(
-        "app.core.config.settings.EMAILS_FROM_EMAIL", "admin@example.com"
+        "app.platform.settings.settings.EMAILS_FROM_EMAIL", "admin@example.com"
     )
     calls = []
     monkeypatch.setattr(resend.Emails, "send", lambda payload: calls.append(payload))
@@ -83,10 +83,10 @@ def test_recovery_password_smtp_fallback(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
     with (
-        patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
-        patch("app.core.config.settings.EMAILS_FROM_EMAIL", "admin@example.com"),
-        patch("app.core.config.settings.RESEND_API_KEY", None),
+        patch("app.platform.settings.settings.SMTP_HOST", "smtp.example.com"),
+        patch("app.platform.settings.settings.SMTP_USER", "admin@example.com"),
+        patch("app.platform.settings.settings.EMAILS_FROM_EMAIL", "admin@example.com"),
+        patch("app.platform.settings.settings.RESEND_API_KEY", None),
     ):
         email = "test@example.com"
         r = client.post(

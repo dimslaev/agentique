@@ -20,8 +20,8 @@ from app.catalog.models import (
     Tag,
     TrustLevel,
 )
-from app.core.config import settings
-from app.core.db import engine
+from app.platform.db import engine
+from app.platform.settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

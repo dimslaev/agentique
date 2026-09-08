@@ -92,8 +92,16 @@ required-imports = ["from __future__ import annotations"]
 "pipeline/**" = ["T201"]
 "scripts/**" = ["T201"]
 
+[tool.pytest.ini_options]
+# Domain tests live inside the domain (ADR 4); `tests/` keeps what belongs to
+# no single domain - the pipeline, the schema-wide enum guard, ops scripts.
+testpaths = ["app", "pipeline", "tests"]
+
 [tool.coverage.run]
 source = ["app", "pipeline"]
+# Colocated tests are inside `source`; measuring the tests themselves would
+# only inflate the number.
+omit = ["*/tests/*"]
 dynamic_context = "test_function"
 
 [tool.coverage.report]
