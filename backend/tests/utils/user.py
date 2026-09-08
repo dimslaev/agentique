@@ -1,3 +1,7 @@
+"""Factory for creating random User rows in tests."""
+
+from __future__ import annotations
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 

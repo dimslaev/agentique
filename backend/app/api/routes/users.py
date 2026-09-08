@@ -1,4 +1,6 @@
-from typing import Any
+"""Signup and self-service account endpoints for the current user."""
+
+from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
@@ -11,6 +13,7 @@ from app.core.security import get_password_hash, verify_password
 from app.models import (
     Message,
     UpdatePassword,
+    User,
     UserCreate,
     UserPublic,
     UserRegister,
@@ -23,7 +26,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.patch("/me", response_model=UserPublic)
 def update_user_me(
     *, session: SessionDep, user_in: UserUpdateMe, current_user: CurrentUser
-) -> Any:
+) -> User:
     """
     Update own user.
     """
@@ -45,7 +48,7 @@ def update_user_me(
 @router.patch("/me/password", response_model=Message)
 def update_password_me(
     *, session: SessionDep, body: UpdatePassword, current_user: CurrentUser
-) -> Any:
+) -> Message:
     """
     Update own password.
     """
@@ -64,7 +67,7 @@ def update_password_me(
 
 
 @router.get("/me", response_model=UserPublic)
-def read_user_me(current_user: CurrentUser) -> Any:
+def read_user_me(current_user: CurrentUser) -> User:
     """
     Get current user.
     """
@@ -72,7 +75,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
 
 
 @router.delete("/me", response_model=Message)
-def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
+def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     """
     Delete own user.
     """
@@ -86,7 +89,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
 
 
 @router.post("/signup", response_model=UserPublic)
-def register_user(session: SessionDep, user_in: UserRegister) -> Any:
+def register_user(session: SessionDep, user_in: UserRegister) -> User:
     """
     Create new user without the need to be logged in.
     """

@@ -1,3 +1,7 @@
+"""FastAPI application entry point: wires routers, CORS, and the health check."""
+
+from __future__ import annotations
+
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.routing import APIRoute

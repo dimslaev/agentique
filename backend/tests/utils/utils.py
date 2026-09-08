@@ -1,3 +1,7 @@
+"""Random string/email generators shared across tests."""
+
+from __future__ import annotations
+
 import random
 import string
 

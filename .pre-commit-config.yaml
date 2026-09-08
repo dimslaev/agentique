@@ -78,6 +78,12 @@ repos:
         files: ^release-notes\.md$
         pass_filenames: false
 
+      - id: no-grab-bag-modules
+        name: no utils/helpers/common/shared/misc modules
+        entry: bash scripts/check-banned-module-names.sh
+        language: system
+        pass_filenames: false
+
       - id: zizmor
         name: zizmor
         language: python

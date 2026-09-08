@@ -1,3 +1,5 @@
+"""Hacker News source: polls the newstories/newest feed and applies the traction gate."""
+
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor

@@ -1,3 +1,7 @@
+"""Database engine and first-superuser bootstrap."""
+
+from __future__ import annotations
+
 from sqlmodel import Session, create_engine, select
 
 from app import crud

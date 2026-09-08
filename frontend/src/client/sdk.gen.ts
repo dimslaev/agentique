@@ -171,7 +171,7 @@ export class LikesService {
      * Like Article
      * @param data The data for the request.
      * @param data.articleId
-     * @returns unknown Successful Response
+     * @returns boolean Successful Response
      * @throws ApiError
      */
     public static likeArticle(data: LikesLikeArticleData): CancelablePromise<LikesLikeArticleResponse> {
@@ -191,7 +191,7 @@ export class LikesService {
      * Unlike Article
      * @param data The data for the request.
      * @param data.articleId
-     * @returns unknown Successful Response
+     * @returns boolean Successful Response
      * @throws ApiError
      */
     public static unlikeArticle(data: LikesUnlikeArticleData): CancelablePromise<LikesUnlikeArticleResponse> {

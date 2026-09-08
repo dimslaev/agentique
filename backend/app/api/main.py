@@ -1,3 +1,7 @@
+"""Aggregates every domain router into the versioned API router mounted by app.main."""
+
+from __future__ import annotations
+
 from fastapi import APIRouter
 
 from app.api.routes import (

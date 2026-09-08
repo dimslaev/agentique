@@ -1,3 +1,7 @@
+"""Tests for login, password recovery, and password reset."""
+
+from __future__ import annotations
+
 from unittest.mock import patch
 
 import resend

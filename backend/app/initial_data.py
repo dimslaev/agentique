@@ -1,3 +1,7 @@
+"""Creates the first superuser on a fresh database."""
+
+from __future__ import annotations
+
 import logging
 
 from sqlmodel import Session

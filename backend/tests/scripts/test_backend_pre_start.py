@@ -1,3 +1,7 @@
+"""Tests for the backend startup DB-readiness check."""
+
+from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
 
 from sqlmodel import select

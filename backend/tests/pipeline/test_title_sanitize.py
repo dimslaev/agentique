@@ -3,6 +3,7 @@
 Fixtures marked "prod" are real corrupted values pulled from the production
 `article` table — the failure modes the pipeline actually produces.
 """
+from __future__ import annotations
 
 import pytest
 

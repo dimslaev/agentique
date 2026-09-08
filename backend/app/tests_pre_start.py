@@ -1,3 +1,7 @@
+"""Blocks the test suite until the test database is reachable."""
+
+from __future__ import annotations
+
 import logging
 
 from sqlalchemy import Engine

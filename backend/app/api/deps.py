@@ -1,3 +1,7 @@
+"""FastAPI dependency wiring: DB session, current-user, and auth guards shared by every route module."""
+
+from __future__ import annotations
+
 from collections.abc import Generator
 from typing import Annotated
 

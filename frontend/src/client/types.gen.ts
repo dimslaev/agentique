@@ -187,19 +187,25 @@ export type ArticlesSearchTagsData = {
 
 export type ArticlesSearchTagsResponse = (Array<TagFacet>);
 
-export type ArticlesArticleStatsResponse = (unknown);
+export type ArticlesArticleStatsResponse = ({
+    [key: string]: (number | string | null);
+});
 
 export type LikesLikeArticleData = {
     articleId: number;
 };
 
-export type LikesLikeArticleResponse = (unknown);
+export type LikesLikeArticleResponse = ({
+    [key: string]: (boolean);
+});
 
 export type LikesUnlikeArticleData = {
     articleId: number;
 };
 
-export type LikesUnlikeArticleResponse = (unknown);
+export type LikesUnlikeArticleResponse = ({
+    [key: string]: (boolean);
+});
 
 export type LikesReadLikedArticlesResponse = (ArticlesPublic);
 

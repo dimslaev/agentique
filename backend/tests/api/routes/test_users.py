@@ -1,3 +1,7 @@
+"""Tests for signup and self-service account endpoints."""
+
+from __future__ import annotations
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 

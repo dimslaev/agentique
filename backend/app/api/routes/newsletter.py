@@ -1,6 +1,9 @@
+"""Newsletter signup endpoint: captures an email and syncs it to Resend."""
+
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any
 
 import resend
 from fastapi import APIRouter, HTTPException
@@ -19,7 +22,9 @@ router = APIRouter(prefix="/newsletter", tags=["newsletter"])
 
 
 @router.post("/subscribe", response_model=NewsletterSubscribeResponse)
-def subscribe(session: SessionDep, body: NewsletterSubscribeRequest) -> Any:
+def subscribe(
+    session: SessionDep, body: NewsletterSubscribeRequest
+) -> NewsletterSubscribeResponse:
     if "@" not in body.email:
         raise HTTPException(status_code=400, detail="Valid email is required")
 

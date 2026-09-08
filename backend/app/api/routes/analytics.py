@@ -1,3 +1,7 @@
+"""First-party analytics ingest endpoint: records a pageview or custom event."""
+
+from __future__ import annotations
+
 from fastapi import APIRouter, Request
 
 from app.api.deps import CurrentUserOptional, SessionDep

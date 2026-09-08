@@ -1,3 +1,7 @@
+"""Blocks backend startup until the database is reachable."""
+
+from __future__ import annotations
+
 import logging
 
 from sqlalchemy import Engine
