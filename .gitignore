@@ -8,3 +8,4 @@ node_modules/
 .ignored/
 .DS_Store
 .env
+dumps/*.sql.gz

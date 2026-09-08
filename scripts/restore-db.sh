@@ -18,7 +18,7 @@ set +a
 
 dump=$(ls -1 dumps/agentique-db-*.sql.gz 2>/dev/null | sort | tail -1)
 if [ -z "$dump" ]; then
-  echo "no dump in dumps/ — run scripts/dump-prod-db.sh first" >&2
+  echo "no dump in dumps/ — drop a dump in dumps/ or run backend/scripts/seed_articles.py" >&2
   exit 1
 fi
 
