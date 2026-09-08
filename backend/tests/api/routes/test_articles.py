@@ -14,10 +14,10 @@ from sqlmodel import Session, col, select
 
 from app import crud
 from app.api.routes import articles
+from app.catalog.models import Article
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.main import app
-from app.models import Article
 from tests.factories.article import (
     create_random_article,
     create_random_publisher,

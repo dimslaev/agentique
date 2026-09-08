@@ -8,7 +8,8 @@ from sqlmodel import col, select
 
 from app.api.article_view import build_rows, like_counts_subquery
 from app.api.deps import CurrentUser, SessionDep
-from app.models import Article, ArticleLike, ArticlesPublic, Publisher
+from app.audience.models import ArticleLike
+from app.catalog.models import Article, ArticlesPublic, Publisher
 
 router = APIRouter(tags=["likes"])
 

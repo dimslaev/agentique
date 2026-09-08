@@ -8,10 +8,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, delete
 
+from app.analytics.models import AnalyticsEvent
+from app.audience.models import ArticleLike, User
 from app.core.config import settings
 from app.core.db import engine, init_db
 from app.main import app
-from app.models import AnalyticsEvent, ArticleLike, User
 from tests.factories.user import (
     authentication_token_from_email,
     get_superuser_token_headers,

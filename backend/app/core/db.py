@@ -5,14 +5,10 @@ from __future__ import annotations
 from sqlmodel import Session, create_engine, select
 
 from app import crud
+from app.audience.models import User, UserCreate
 from app.core.config import settings
-from app.models import User, UserCreate
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
-
-
-# app.models must be imported before this runs, so SQLModel has every
-# relationship registered before init_db touches the engine.
 
 
 def init_db(session: Session) -> None:

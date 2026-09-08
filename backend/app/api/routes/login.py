@@ -12,9 +12,16 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.audience.models import (
+    Message,
+    NewPassword,
+    Token,
+    User,
+    UserPublic,
+    UserUpdate,
+)
 from app.core import security
 from app.core.config import settings
-from app.models import Message, NewPassword, Token, User, UserPublic, UserUpdate
 from app.platform.email import generate_reset_password_email, send_email
 
 logger = logging.getLogger(__name__)

@@ -6,7 +6,7 @@ import resend
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.models import NewsletterSubscriber
+from app.newsletter.models import NewsletterSubscriber
 from tests.factories.random_data import random_email
 
 NEWSLETTER_URL = "/api/newsletter/subscribe"

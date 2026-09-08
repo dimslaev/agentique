@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from app.analytics.models import AnalyticsEvent, AnalyticsEventCreate
 from app.api.deps import CurrentUserOptional, SessionDep
-from app.models import AnalyticsEvent, AnalyticsEventCreate
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 

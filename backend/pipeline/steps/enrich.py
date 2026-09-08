@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models import Article, ArticleKind, Category
+from app.catalog.models import Article, ArticleKind, Category
 from app.platform.logging import log, wait_ms
 from baml_client.sync_client import b
 from baml_client.types import TagOption

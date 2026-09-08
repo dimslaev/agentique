@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.models import ScoredUrl
 from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline import keep_drop
 from pipeline.embedding import get_model
 from pipeline.heuristics import SCORE_THRESHOLD
+from pipeline.models import ScoredUrl
 from pipeline.steps import to_baml_input
 from pipeline.types import FetchedArticle
 

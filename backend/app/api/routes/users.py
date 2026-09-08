@@ -9,8 +9,7 @@ from app.api.deps import (
     CurrentUser,
     SessionDep,
 )
-from app.core.security import get_password_hash, verify_password
-from app.models import (
+from app.audience.models import (
     Message,
     UpdatePassword,
     User,
@@ -19,6 +18,7 @@ from app.models import (
     UserRegister,
     UserUpdateMe,
 )
+from app.core.security import get_password_hash, verify_password
 
 router = APIRouter(prefix="/users", tags=["users"])
 

@@ -36,7 +36,7 @@ from typing import TypedDict
 import numpy as np
 from sqlmodel import Session, select
 
-from app.models import Article, ArticleTag, Tag
+from app.catalog.models import Article, ArticleTag, Tag
 from pipeline.db import get_engine
 from pipeline.embedding import embed_batch
 

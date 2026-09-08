@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.models import ArticleTag, Tag
+from app.catalog.models import ArticleTag, Tag
 from app.platform.logging import log
 from pipeline.llm_text import enum_value
 

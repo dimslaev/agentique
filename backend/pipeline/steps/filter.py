@@ -15,11 +15,12 @@ import dns.resolver
 import numpy as np
 from sqlmodel import Session, select
 
-from app.models import Article, Publisher, ScoredUrl
+from app.catalog.models import Article, Publisher
 from app.platform.logging import log
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
 from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
+from pipeline.models import ScoredUrl
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
 from pipeline.types import FetchedArticle

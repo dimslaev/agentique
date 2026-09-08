@@ -9,12 +9,12 @@ import resend
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import SessionDep
-from app.models import (
+from app.newsletter.models import (
     NewsletterSubscriber,
     NewsletterSubscribeRequest,
     NewsletterSubscribeResponse,
-    get_datetime_utc,
 )
+from app.platform.dates import get_datetime_utc
 
 logger = logging.getLogger(__name__)
 

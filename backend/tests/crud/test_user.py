@@ -8,8 +8,8 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
 from app import crud
+from app.audience.models import User, UserCreate, UserUpdate
 from app.core.security import verify_password
-from app.models import User, UserCreate, UserUpdate
 from tests.factories.random_data import random_email, random_lower_string
 
 pytestmark = pytest.mark.skip(reason="auth unused in Agentique")

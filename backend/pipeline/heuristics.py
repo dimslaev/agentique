@@ -7,7 +7,7 @@ from __future__ import annotations
 import re
 from urllib.parse import urlparse
 
-from app.models import ArticleKind
+from app.catalog.models import ArticleKind
 from pipeline.urls import hostname
 
 # Tied to the rubric in baml_src/score.baml: the median in-scope article sits
