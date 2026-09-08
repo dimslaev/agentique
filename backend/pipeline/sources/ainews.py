@@ -5,9 +5,11 @@ from __future__ import annotations
 import re
 from html import unescape
 
+from app.platform.logging import log
+from pipeline.freshness import is_within_window
 from pipeline.sources.http import fetch_with_timeout
 from pipeline.types import FetchedArticle
-from pipeline.utils import hostname, is_within_window, log
+from pipeline.urls import hostname
 
 FEED_URL = "https://news.smol.ai/rss.xml"
 MAX_CONTENT_LENGTH = 1400

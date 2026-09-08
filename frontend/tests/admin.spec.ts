@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
-import { createUser } from "./utils/privateApi"
-import { randomEmail, randomPassword } from "./utils/random"
-import { logInUser } from "./utils/user"
+import { createUser } from "./privateApi"
+import { randomEmail, randomPassword } from "./random"
+import { logInUser } from "./user"
 
 test.skip(true, "auth unused in Agentique")
 

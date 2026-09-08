@@ -8,14 +8,17 @@ from urllib.parse import urlparse
 
 import feedparser
 
+from app.platform.logging import log
+from pipeline.freshness import is_within_window
 from pipeline.sources.extract_content import extract_text
 from pipeline.sources.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
-from pipeline.utils import clean_title, feed_url, is_within_window, log
+from pipeline.urls import feed_url
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
 _proxy_status_logged = False

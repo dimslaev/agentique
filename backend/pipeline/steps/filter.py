@@ -6,6 +6,7 @@ so the expensive check only ever sees what the cheap ones could not rule out.
 
 from __future__ import annotations
 
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
@@ -15,20 +16,44 @@ import numpy as np
 from sqlmodel import Session, select
 
 from app.models import Article, Publisher, ScoredUrl
+from app.platform.logging import log
 from pipeline import keep_drop
-from pipeline.config import dedup_dist_threshold, github_min_stars
 from pipeline.embedding import embed_batch
 from pipeline.heuristics import KNOWN_REPO_OWNERS, github_repo_from_url
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
 from pipeline.types import FetchedArticle
-from pipeline.utils import log
 
 DNS_CONCURRENCY = 10
 # How far back to look for an article we already carry. Same-story reposts
 # cluster within days of each other; beyond this a genuine new article about an
 # old topic is not a duplicate, and the comparison set stops growing forever.
 DEDUP_WINDOW_DAYS = 14
+
+
+def github_min_stars() -> int:
+    """Stars a GitHub repo needs before we treat it as something builders use.
+    0 disables the repo gate.
+
+    Aimed at the "solo repo with two stars, posted by its author" case, not at
+    ranking projects: a real tool that reaches an aggregator is well past this
+    by the time it does. Repos under an owner on ``KNOWN_REPO_OWNERS`` skip the
+    check entirely.
+    """
+    return int(os.environ.get("GITHUB_MIN_STARS", "50"))
+
+
+def dedup_dist_threshold() -> float:
+    """Cosine-distance cutoff below which two articles are the same story;
+    0 disables dedup entirely.
+
+    Same-story pairs empirically sit at 0.29-0.35. The old shortlist used 0.45
+    to favour recall because an LLM still made the final call - that call is
+    gone, so this now drops on its own and sits at the bottom of the band
+    instead. Erring tight costs a duplicate slipping through; erring loose
+    silently deletes a real article, which is the worse failure.
+    """
+    return float(os.environ.get("DEDUP_DIST_THRESHOLD", "0.30"))
 
 
 def filter_known_urls(
@@ -63,7 +88,7 @@ def filter_known_urls(
 
 
 def _is_resolvable(url: str) -> bool:
-    # Deliberately not pipeline.utils.hostname: that strips a "www." prefix, and
+    # Deliberately not pipeline.urls.hostname: that strips a "www." prefix, and
     # www.foo.com resolving says nothing about whether foo.com does. Resolve the
     # host exactly as the URL spells it.
     try:

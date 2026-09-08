@@ -7,13 +7,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import trafilatura
 
+from app.platform.logging import log
 from pipeline.sources.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
 from pipeline.types import FetchedArticle
-from pipeline.utils import hostname, log
+from pipeline.urls import hostname
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
 SNIPPET_MAX_LENGTH = 500

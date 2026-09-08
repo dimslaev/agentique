@@ -16,12 +16,12 @@ article.
 
 from __future__ import annotations
 
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-from pipeline.config import github_token
+from app.platform.logging import log
 from pipeline.sources.http import fetch_with_timeout
-from pipeline.utils import log
 
 GITHUB_API = "https://api.github.com/repos"
 STARS_TIMEOUT_SECS = 10.0
@@ -37,7 +37,7 @@ _cache_lock = threading.Lock()
 
 def _headers() -> dict[str, str]:
     headers = {"Accept": "application/vnd.github+json"}
-    token = github_token()
+    token = os.environ.get("GITHUB_TOKEN") or None
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers

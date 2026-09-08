@@ -27,7 +27,9 @@ from app.models import (
     TrustLevel,
     slugify,
 )
-from pipeline.utils import enum_value, feed_url, log
+from app.platform.logging import log
+from pipeline.llm_text import enum_value
+from pipeline.urls import feed_url
 
 # ─── per-run publisher resolution ───────────────────────────────────────────
 

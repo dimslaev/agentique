@@ -18,11 +18,10 @@ potion-base-8M model, then call `keep_proba(vec)`.
 from __future__ import annotations
 
 import math
+import os
 from pathlib import Path
 
 import numpy as np
-
-from pipeline.config import keep_drop_threshold
 
 _MODEL_PATH = Path(__file__).parent / "keep_drop_model.npz"
 
@@ -36,7 +35,7 @@ def drop_below() -> float:
     Read fresh each call (not cached at import) so the env var can disable the
     pre-filter without a process restart.
     """
-    return keep_drop_threshold()
+    return float(os.environ.get("KEEP_DROP_PREFILTER_THRESHOLD", "0.15"))
 
 
 _coef: np.ndarray | None = None

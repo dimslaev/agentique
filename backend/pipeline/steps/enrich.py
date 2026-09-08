@@ -12,6 +12,7 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.models import Article, ArticleKind, Category
+from app.platform.logging import log, wait_ms
 from baml_client.sync_client import b
 from baml_client.types import TagOption
 from pipeline import keep_drop
@@ -22,6 +23,7 @@ from pipeline.heuristics import (
     kind_from_url,
 )
 from pipeline.llm_text import (
+    enum_value,
     is_valid_title,
     sanitize_llm_text,
     strip_title_wrappers,
@@ -29,7 +31,6 @@ from pipeline.llm_text import (
 from pipeline.steps import SNIPPET_CAP, to_baml_input
 from pipeline.tags import Vocabulary, validate_tags, write_article_tags
 from pipeline.types import FetchedArticle, ProcessedArticle
-from pipeline.utils import enum_value, log, wait_ms
 
 # Batch size for the title call. Kept small on purpose: a long list invites the
 # model to blend one article's details into another's output, and a failed call
@@ -146,7 +147,9 @@ def categorize_and_tag_articles(
     if not items:
         return []
 
-    log(f"  Categorizing and tagging {len(items)} articles ({len(vocab.slugs)} tags)...")
+    log(
+        f"  Categorizing and tagging {len(items)} articles ({len(vocab.slugs)} tags)..."
+    )
     processed: list[ProcessedArticle] = []
 
     options = [

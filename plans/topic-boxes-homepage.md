@@ -212,7 +212,7 @@ Only once v1 says which boxes people actually use.
 ## Separate session: tag vocabulary gaps
 
 **Hand this to an agent with VPS/prod access — it is not part of the box
-work.** The vocabulary lives in the `tag` table (`backend/app/seed_tags.py`,
+work.** The vocabulary lives in the `tag` table (`backend/scripts/seed_tags.py`,
 loaded by `backend/pipeline/tags.py`, fed to `AssignTags` in
 `baml_src/tags.baml`). Adding a tag means seeding prod **and backfilling**
 by re-running tagging over ~1,100 existing articles.

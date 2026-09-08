@@ -16,7 +16,7 @@ import pytest
 from pipeline.heuristics import MIN_CONTENT_CHARS
 from pipeline.sources.substack import _entry_content
 from pipeline.steps import fetch as fetch_step
-from pipeline.utils import feed_url
+from pipeline.urls import feed_url
 
 # Varied prose on purpose: trafilatura deduplicates repeated segments, so a
 # fixture built from one repeated sentence extracts to nothing.

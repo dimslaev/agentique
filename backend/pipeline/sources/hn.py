@@ -2,17 +2,47 @@
 
 from __future__ import annotations
 
+import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
-from pipeline.config import hn_grace_hours, hn_min_comments, hn_min_points
+from app.platform.logging import log
+from pipeline.freshness import is_within_window
 from pipeline.heuristics import AI_TITLE_KEYWORDS, is_first_party
 from pipeline.sources.extract_content import extract_content
 from pipeline.sources.http import fetch_with_timeout
+from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
-from pipeline.utils import clean_title, is_within_window, log
 
 HN_ITEM = "https://hacker-news.firebaseio.com/v0/item"
+
+
+def hn_min_points() -> int:
+    """Upvotes an aged-out story needs before it is worth an extraction and a
+    scoring call. 0 disables the traction gate.
+
+    A Show HN for a two-star repo finishes its life at 1-4 points; anything the
+    community actually read clears 10 comfortably.
+    """
+    return int(os.environ.get("HN_MIN_POINTS", "10"))
+
+
+def hn_min_comments() -> int:
+    """Alternative to ``hn_min_points``: a story that got discussed is real even
+    when the votes stayed flat. Either bar clears the gate."""
+    return int(os.environ.get("HN_MIN_COMMENTS", "5"))
+
+
+def hn_grace_hours() -> float:
+    """How long a story is exempt from having any traction yet.
+
+    Under this age a vote count says nothing - every story starts at 1 point.
+    Rather than admit them blind (which is what filled the feed with noise) the
+    source holds them back; the next run re-reads them with real numbers, still
+    inside the 48h window.
+    """
+    return float(os.environ.get("HN_GRACE_HOURS", "6"))
+
 
 # Two firehoses, both title-gated by AI_TITLE_KEYWORDS before any item is
 # fetched in full. "top" is the front page — high signal, but an AI post only

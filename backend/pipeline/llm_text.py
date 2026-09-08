@@ -1,4 +1,4 @@
-"""Cleanup and validation for every LLM-authored field (titles).
+"""Cleanup and validation for every LLM-authored value.
 
 Two steps, applied to every LLM-authored field:
 
@@ -8,11 +8,26 @@ Two steps, applied to every LLM-authored field:
 Callers reject on is_corrupted() rather than trying to clean it: a model that
 emits Chinese mid-sentence or leaks its output envelope has produced garbage,
 not lightly-dirty text.
+
+enum_value() covers the same ground for a field BAML types as an enum rather
+than as free text.
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 import regex
+
+
+def enum_value(raw: Any) -> str:
+    """The ``.value`` of an enum-ish object, else the object itself, as a str.
+
+    BAML returns plain strings for some fields and enum members for others, and
+    which one it is has changed across regenerations - callers tolerate both
+    rather than depend on it.
+    """
+    return str(getattr(raw, "value", raw))
 
 
 def sanitize_llm_text(text: str) -> str:

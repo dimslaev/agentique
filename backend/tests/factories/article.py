@@ -15,7 +15,7 @@ from app.models import (
     Tag,
     slugify,
 )
-from tests.utils.utils import random_lower_string
+from tests.factories.random_data import random_lower_string
 
 
 def create_random_publisher(db: Session, **overrides: object) -> Publisher:

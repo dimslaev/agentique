@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { randomEmail } from "./utils/random"
+import { randomEmail } from "./random"
 
 test("Newsletter signup succeeds with a valid email", async ({ page }) => {
   await page.goto("/newsletter")

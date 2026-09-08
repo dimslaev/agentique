@@ -17,7 +17,14 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import useAuth from "@/hooks/useAuth"
-import { getInitials } from "@/utils"
+
+const getInitials = (name: string): string =>
+  name
+    .split(" ")
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase()
 
 interface UserInfoProps {
   fullName?: string

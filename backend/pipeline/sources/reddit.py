@@ -22,10 +22,13 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
+from app.platform.logging import log
+from pipeline.freshness import is_within_window
 from pipeline.sources.extract_content import extract_content
 from pipeline.sources.http import BROWSER_HEADERS, fetch_with_timeout
+from pipeline.titles import clean_title
 from pipeline.types import FetchedArticle
-from pipeline.utils import clean_title, hostname, is_within_window, log
+from pipeline.urls import hostname
 
 SUBREDDITS = ("LocalLLaMA", "MachineLearning")
 LISTING_URL = "https://www.reddit.com/r/{sub}/top.json?t=day&limit={limit}"

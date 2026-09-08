@@ -6,6 +6,7 @@ loads fine into the DB and then blows up on read: SQLAlchemy raises
 carrying it — and ``_active_publisher_links`` selects *all* active publishers,
 so one such row takes the whole pipeline run down.
 """
+
 from __future__ import annotations
 
 import inspect

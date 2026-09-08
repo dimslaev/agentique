@@ -12,6 +12,7 @@ import sys
 
 from sqlmodel import Session
 
+from app.platform.logging import log, short_error
 from pipeline.db import get_engine
 from pipeline.health import RunStats, check_liveness, record_run, verify_run
 from pipeline.publishers import PublisherResolver
@@ -36,7 +37,6 @@ from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
 from pipeline.tags import load_vocabulary
 from pipeline.types import FetchedArticle
-from pipeline.utils import log, short_error
 
 
 def run_pipeline(stats: RunStats) -> None:

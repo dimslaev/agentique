@@ -11,9 +11,9 @@ from sqlmodel import Session, select
 
 from app.core.config import settings
 from app.models import ArticleLike
-from tests.utils.article import create_random_article
-from tests.utils.user import authentication_token_from_email, create_random_user
-from tests.utils.utils import random_email
+from tests.factories.article import create_random_article
+from tests.factories.random_data import random_email
+from tests.factories.user import authentication_token_from_email, create_random_user
 
 
 def test_article_like_duplicate_pk_raises(db: Session) -> None:

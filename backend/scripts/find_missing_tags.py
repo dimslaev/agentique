@@ -31,6 +31,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import TypedDict
 
 import numpy as np
 from sqlmodel import Session, select
@@ -46,6 +47,15 @@ class ArticleVec:
     title: str
     vec: np.ndarray  # L2-normalized
     tags: list[str] = field(default_factory=list)
+
+
+class GapCluster(TypedDict):
+    """One reported theme the tag vocabulary has no word for."""
+
+    size: int
+    nearest_existing_tag: str
+    nearest_tag_similarity: float
+    sample_titles: list[str]
 
 
 def normalize(m: np.ndarray) -> np.ndarray:
@@ -75,10 +85,10 @@ def load_articles(
     session: Session, since: datetime | None, limit: int
 ) -> list[ArticleVec]:
     """Articles that have an embedding, with their assigned tag slugs attached."""
-    stmt = select(Article).where(Article.embedding.is_not(None))  # type: ignore[union-attr]
+    stmt = select(Article).where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
     if since is not None:
-        stmt = stmt.where(Article.published_at >= since)  # type: ignore[arg-type]
-    stmt = stmt.order_by(Article.id)  # type: ignore[arg-type]
+        stmt = stmt.where(Article.published_at >= since)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
+    stmt = stmt.order_by(Article.id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
     if limit > 0:
         stmt = stmt.limit(limit)
     rows = session.exec(stmt).all()
@@ -88,8 +98,8 @@ def load_articles(
     if ids:
         pairs = session.exec(
             select(ArticleTag.article_id, Tag.slug)
-            .join(Tag, Tag.id == ArticleTag.tag_id)  # type: ignore[arg-type]
-            .where(ArticleTag.article_id.in_(ids))  # type: ignore[union-attr]
+            .join(Tag, Tag.id == ArticleTag.tag_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            .where(ArticleTag.article_id.in_(ids))  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         ).all()
         for aid, slug in pairs:
             tags_by_article.setdefault(aid, []).append(slug)
@@ -177,7 +187,6 @@ def main() -> None:
     A = normalize(np.stack([a.vec for a in articles]))
     sims = A @ tag_vecs.T  # (n_articles, n_tags)
     best_sim = sims.max(axis=1)
-    best_tag = sims.argmax(axis=1)
 
     under_idx = np.where(best_sim < args.threshold)[0]
     under_vecs = A[under_idx]
@@ -202,7 +211,7 @@ def main() -> None:
         },
     }
 
-    report_clusters = []
+    report_clusters: list[GapCluster] = []
     for c in clusters:
         member_articles = [articles[under_idx[m]] for m in c.members]
         member_local = np.stack([under_vecs[m] for m in c.members])
@@ -256,7 +265,7 @@ def main() -> None:
         print()
     print(
         "Next: name each real gap and add it to app/data/tags.json, then "
-        "re-run `python -m app.seed_tags`.\nBackfill tags on affected articles "
+        "re-run `python scripts/seed_tags.py`.\nBackfill tags on affected articles "
         "with the pipeline's categorize_and_tag_articles step."
     )
 

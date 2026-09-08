@@ -1,4 +1,4 @@
-"""Tests for the backend startup DB-readiness check."""
+"""Tests for the DB-readiness wait that gates startup and the test suite."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from sqlmodel import select
 
-from app.backend_pre_start import init, logger
+from scripts.wait_for_db import init, logger
 
 
 def test_init_successful_connection() -> None:
@@ -18,8 +18,8 @@ def test_init_successful_connection() -> None:
     select1 = select(1)
 
     with (
-        patch("app.backend_pre_start.Session", return_value=session_mock),
-        patch("app.backend_pre_start.select", return_value=select1),
+        patch("scripts.wait_for_db.Session", return_value=session_mock),
+        patch("scripts.wait_for_db.select", return_value=select1),
         patch.object(logger, "info"),
         patch.object(logger, "error"),
         patch.object(logger, "warn"),

@@ -28,10 +28,20 @@ express, enforced by review.
   `pipeline/steps/filter.py` / `pipeline/steps/enrich.py` for the two-reader
   case). See the constants-vs-config discussion in the refactor plan for
   the reasoning.
+- **`app/` holds the running service; `backend/scripts/` holds ops
+  entrypoints.** A module that exists to be run by hand or by `prestart.sh` —
+  waiting for the DB, creating the superuser, seeding — is an entrypoint, not
+  part of the service, and lives in `backend/scripts/`. They are still
+  type-checked (mypy and ty run over `backend/scripts` too); they are
+  deliberately outside coverage's `source`, because pytest never runs them.
 - **Config is different from constants.** Deployment-varying, env-provided
   values (database URL, API keys) live in one settings object
   (`app/platform/settings.py`). Tuning knobs compiled into the code
   (`SCORE_THRESHOLD`, `SNIPPET_CAP`) never move there.
+- **The pipeline is the exception, on purpose.** It reads `os.environ` beside
+  each consumer rather than through that settings object — see ADR 7. The index
+  of what it reads lives in `deploy/README.md`; add a row there when you add a
+  var.
 
 ## Frontend
 

@@ -14,7 +14,8 @@ from typing import Any
 from sqlmodel import Session, select
 
 from app.models import ArticleTag, Tag
-from pipeline.utils import enum_value, log
+from app.platform.logging import log
+from pipeline.llm_text import enum_value
 
 MAX_TAGS_PER_ARTICLE = 3
 
