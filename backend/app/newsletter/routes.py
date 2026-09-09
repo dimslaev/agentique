@@ -1,0 +1,55 @@
+"""Newsletter signup endpoint: captures an email and syncs it to Resend."""
+
+from __future__ import annotations
+
+import logging
+import os
+
+import resend
+from fastapi import APIRouter, HTTPException
+
+from app.deps import SessionDep
+from app.newsletter.models import (
+    NewsletterSubscriber,
+    NewsletterSubscribeRequest,
+    NewsletterSubscribeResponse,
+)
+from app.platform.dates import get_datetime_utc
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/newsletter", tags=["newsletter"])
+
+
+@router.post("/subscribe", response_model=NewsletterSubscribeResponse)
+def subscribe(
+    session: SessionDep, body: NewsletterSubscribeRequest
+) -> NewsletterSubscribeResponse:
+    if "@" not in body.email:
+        raise HTTPException(status_code=400, detail="Valid email is required")
+
+    categories = body.categories if body.categories else ["all"]
+
+    existing = session.get(NewsletterSubscriber, body.email)
+    subscriber = NewsletterSubscriber(
+        email=body.email,
+        categories=categories,
+        custom_category=body.customCategory,
+        utm_source=body.utm_source,
+        created_at=existing.created_at if existing else get_datetime_utc(),
+        updated_at=get_datetime_utc(),
+    )
+    session.merge(subscriber)
+    session.commit()
+
+    api_key = os.getenv("RESEND_API_KEY")
+    audience_id = os.getenv("RESEND_AUDIENCE_ID")
+    if api_key and audience_id:
+        resend.api_key = api_key
+        try:
+            resend.Contacts.create({"email": body.email, "audience_id": audience_id})
+        except Exception as e:
+            if "already exists" not in str(e):
+                logger.error(f"Resend contact create failed for {body.email}: {e}")
+
+    return NewsletterSubscribeResponse(ok=True)

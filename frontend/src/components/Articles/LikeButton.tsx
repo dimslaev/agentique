@@ -1,0 +1,116 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
+import { Flame } from "lucide-react"
+import { handleError } from "@/apiError"
+import {
+  type ApiError,
+  type ArticlePublic,
+  type ArticlesPublic,
+  LikesService,
+} from "@/client"
+import { isLoggedIn } from "@/hooks/useAuth"
+import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
+
+function patchArticle(
+  data: ArticlesPublic | undefined,
+  articleId: number,
+  liked: boolean,
+  delta: number,
+): ArticlesPublic | undefined {
+  if (!data) return data
+  return {
+    ...data,
+    data: data.data.map((a) =>
+      a.id === articleId
+        ? {
+            ...a,
+            liked_by_me: liked,
+            like_count: Math.max(0, (a.like_count ?? 0) + delta),
+          }
+        : a,
+    ),
+  }
+}
+
+export function LikeButton({ article }: { article: ArticlePublic }) {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { showErrorToast } = useCustomToast()
+
+  const liked = article.liked_by_me ?? false
+  const count = article.like_count ?? 0
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      liked
+        ? LikesService.unlikeArticle({ articleId: article.id })
+        : LikesService.likeArticle({ articleId: article.id }),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["articles"] })
+      await queryClient.cancelQueries({ queryKey: ["liked-articles"] })
+      const previous = [
+        ...queryClient.getQueriesData<ArticlesPublic>({
+          queryKey: ["articles"],
+        }),
+        ...queryClient.getQueriesData<ArticlesPublic>({
+          queryKey: ["liked-articles"],
+        }),
+      ]
+      queryClient.setQueriesData<ArticlesPublic>(
+        { queryKey: ["articles"] },
+        (old) => patchArticle(old, article.id, !liked, liked ? -1 : 1),
+      )
+      if (liked) {
+        queryClient.setQueriesData<ArticlesPublic>(
+          { queryKey: ["liked-articles"] },
+          (old) =>
+            old
+              ? {
+                  ...old,
+                  data: old.data.filter((a) => a.id !== article.id),
+                  count: Math.max(0, old.count - 1),
+                }
+              : old,
+        )
+      }
+      return { previous }
+    },
+    onError: (err, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data)
+      })
+      handleError.call(showErrorToast, err as ApiError)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["articles"] })
+      queryClient.invalidateQueries({ queryKey: ["liked-articles"] })
+    },
+  })
+
+  return (
+    <button
+      type="button"
+      data-testid="like-button"
+      data-liked={liked}
+      onClick={() => {
+        // liking is the one thing on the feed that needs an account
+        if (!isLoggedIn()) {
+          navigate({
+            to: "/login",
+            search: { redirect: window.location.pathname },
+          })
+          return
+        }
+        mutation.mutate()
+      }}
+      className={cn(
+        "flex items-center gap-1 text-xs transition-colors",
+        liked ? "text-primary" : "text-muted-foreground hover:text-primary",
+      )}
+    >
+      <Flame className={cn("h-3.5 w-3.5", liked && "fill-primary")} />
+      <span data-testid="like-count">{count}</span>
+    </button>
+  )
+}

@@ -1,0 +1,321 @@
+"""Pipeline health: capture per-run stats and email a report of every run —
+what was inserted, and where each run's funnel lost the rest.
+
+Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
+here must never change whether the pipeline itself succeeded.
+
+Deliberately not here: statistical anomaly detection (yield drops, dead feeds
+measured against a 30-run average). It fired on every daily report and told a
+reader nothing they acted on; the numbers it reasoned over are still recorded
+in `pipeline_run`, for an agent to look over on its own schedule.
+"""
+
+from __future__ import annotations
+
+import html
+import os
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
+
+from sqlmodel import Session, col, select
+
+from app.platform.logging import log
+from pipeline.models import PipelineRun
+from pipeline.types import Persisted, RawItem
+
+
+@dataclass(frozen=True)
+class AlertConfig:
+    resend_api_key: str | None
+    from_email: str | None
+    to_email: str | None
+    project_name: str
+
+
+def alert_config() -> AlertConfig:
+    """Read lazily, so importing this module needs no alerting environment."""
+    resend_api_key = os.environ.get("RESEND_API_KEY")
+    from_email = os.environ.get("EMAILS_FROM_EMAIL")
+    to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
+    project_name = os.environ.get("PROJECT_NAME") or "Agentique"
+    return AlertConfig(
+        resend_api_key=resend_api_key,
+        from_email=from_email,
+        to_email=to_email,
+        project_name=project_name,
+    )
+
+
+# ─── Tunables ─────────────────────────────────────────────────────────────────
+
+STALE_RUN_HOURS = 26  # older than this with no success → "pipeline may be down"
+
+
+# ─── In-memory stats (populated during the run) ───────────────────────────────
+
+
+@dataclass
+class InsertedArticle:
+    """One article this run put in the catalog — the report's headline content.
+
+    ``publisher`` is the per-item source label (a feed name under "Feeds", the
+    aggregator's own name elsewhere), so a row says which feed a story came
+    from without joining anything.
+    """
+
+    id: int
+    title: str
+    url: str
+    score: int
+    publisher: str
+
+
+@dataclass
+class SourceStats:
+    """Funnel counts for one source in one run. Every drop is accounted for:
+    fetched → off-topic → known → dead → dup → below-threshold → inserted."""
+
+    # `source` here is the run-level fetcher label (Hacker News / AI News /
+    # Feeds), not a publisher — see `PublisherStats` below for per-publisher
+    # granularity within "Feeds".
+    source: str
+    fetched: int = 0
+    filtered_off_topic: int = 0
+    filtered_known: int = 0
+    filtered_dead: int = 0
+    filtered_thin_repo: int = 0
+    deduped: int = 0
+    below_threshold: int = 0
+    inserted: int = 0
+    articles: list[InsertedArticle] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+
+    def record_articles(self, inserted: Sequence[Persisted]) -> None:
+        """Record what landed. Called after enrichment, so the titles are the
+        rewritten ones a reader will actually see in the app."""
+        self.articles = [
+            InsertedArticle(
+                id=a["id"],
+                title=a["title"],
+                url=a["url"],
+                score=a["score"],
+                publisher=a["source"],
+            )
+            for a in inserted
+        ]
+
+
+@dataclass
+class PublisherStats:
+    """Fetch/insert counts for one publisher within the "Feeds" source in one
+    run — the granularity ``SourceStats`` can't give, since "Feeds" aggregates
+    every RSS/substack publisher under one label."""
+
+    name: str
+    fetched: int = 0
+    inserted: int = 0
+    error: str | None = None
+
+
+@dataclass
+class RunStats:
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    finished_at: datetime | None = None
+    duration_ms: int | None = None
+    ok: bool = False
+    sources: list[SourceStats] = field(default_factory=list)
+    publishers: list[PublisherStats] = field(default_factory=list)
+
+    def source(self, label: str) -> SourceStats:
+        s = SourceStats(source=label)
+        self.sources.append(s)
+        return s
+
+    def record_publishers(
+        self,
+        expected_names: tuple[str, ...],
+        fetched: Sequence[RawItem],
+        inserted: Sequence[Persisted],
+        errors: dict[str, str],
+    ) -> None:
+        """Record per-publisher fetch/insert counts for one source's run.
+
+        ``expected_names`` is every publisher this source was supposed to
+        poll, so a publisher that fetched nothing still gets a row (fetched=0)
+        instead of silently disappearing from the stats.
+        """
+        fetched_counts: dict[str, int] = {}
+        for a in fetched:
+            fetched_counts[a["source"]] = fetched_counts.get(a["source"], 0) + 1
+        inserted_counts: dict[str, int] = {}
+        for a in inserted:
+            inserted_counts[a["source"]] = inserted_counts.get(a["source"], 0) + 1
+
+        for name in expected_names:
+            self.publishers.append(
+                PublisherStats(
+                    name=name,
+                    fetched=fetched_counts.get(name, 0),
+                    inserted=inserted_counts.get(name, 0),
+                    error=errors.get(name),
+                )
+            )
+
+    def finish(self, ok: bool) -> None:
+        self.finished_at = datetime.now(UTC)
+        self.duration_ms = int(
+            (self.finished_at - self.started_at).total_seconds() * 1000
+        )
+        self.ok = ok
+
+
+# ─── Persistence ──────────────────────────────────────────────────────────────
+
+
+def record_run(session: Session, stats: RunStats) -> PipelineRun:
+    """Append this run to the pipeline_run table."""
+    row = PipelineRun(
+        started_at=stats.started_at,
+        finished_at=stats.finished_at,
+        duration_ms=stats.duration_ms,
+        ok=stats.ok,
+        sources=[asdict(s) for s in stats.sources],
+        publishers=[asdict(p) for p in stats.publishers],
+    )
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    log(f"  Recorded pipeline_run #{row.id} (ok={stats.ok})")
+    return row
+
+
+# ─── Dead-man's-switch (runs at the START of each run) ─────────────────────────
+
+
+def check_liveness(session: Session) -> None:
+    """Alert if there hasn't been a successful run in STALE_RUN_HOURS.
+
+    Catches the case where a previous night's run died so hard it recorded
+    nothing. Runs at the start of the next scheduled invocation.
+    """
+    last = session.exec(
+        select(PipelineRun)
+        .where(col(PipelineRun.ok).is_(True))
+        .order_by(col(PipelineRun.finished_at).desc())
+    ).first()
+    if last is None or last.finished_at is None:
+        return  # first ever successful run — nothing to compare against
+    age = datetime.now(UTC) - last.finished_at
+    if age > timedelta(hours=STALE_RUN_HOURS):
+        hours = age.total_seconds() / 3600
+        _send_alert(
+            subject="Pipeline may be down",
+            body=(
+                f"No successful pipeline run in {hours:.0f}h "
+                f"(last success: {last.finished_at:%Y-%m-%d %H:%M UTC}).\n"
+                "Tonight's run is starting now. If this keeps arriving, the "
+                "pipeline container or its schedule is broken."
+            ),
+        )
+
+
+# ─── Report (runs at the END of each run) ────────────────────────────────────
+
+
+def report_run(stats: RunStats) -> None:
+    """Email what this run inserted, plus the funnel behind it."""
+    subject = "Pipeline run report" if stats.ok else "Pipeline run CRASHED"
+    _send_alert(subject=subject, body=_format_report(stats))
+    log(f"  Reported {_total_inserted(stats)} inserted article(s)")
+
+
+def _total_inserted(stats: RunStats) -> int:
+    return sum(len(s.articles) for s in stats.sources)
+
+
+def _format_report(stats: RunStats) -> str:
+    lines = _inserted_section(stats) + _funnel_section(stats)
+
+    errors = _errors(stats)
+    if errors:
+        lines += ["", "ERRORS", "======"]
+        lines += [f"  - {e}" for e in errors]
+
+    dur = f"{stats.duration_ms / 1000:.0f}s" if stats.duration_ms else "?"
+    lines += ["", f"Run {'OK' if stats.ok else 'CRASHED'} in {dur}."]
+    return "\n".join(lines)
+
+
+def _inserted_section(stats: RunStats) -> list[str]:
+    total = _total_inserted(stats)
+    heading = f"INSERTED ({total})"
+    lines = [heading, "=" * len(heading)]
+    if not total:
+        return lines + ["  Nothing inserted this run.", ""]
+
+    for s in stats.sources:
+        if not s.articles:
+            continue
+        lines.append(f"  {s.source}")
+        for a in s.articles:
+            # The publisher is only worth a line of its own under an aggregate
+            # source; for Hacker News and friends it just repeats the label.
+            byline = f" — {a.publisher}" if a.publisher != s.source else ""
+            lines.append(f"    [{a.score}/100] {a.title}{byline}")
+            lines.append(f"      {a.url}")
+    lines.append("")
+    return lines
+
+
+def _funnel_section(stats: RunStats) -> list[str]:
+    lines = ["THIS RUN", "========"]
+    for s in stats.sources:
+        row = (
+            f"  {s.source}: fetched {s.fetched} "
+            f"→ off-topic -{s.filtered_off_topic} "
+            f"→ known -{s.filtered_known} "
+            f"→ dead -{s.filtered_dead} "
+            f"→ thin-repo -{s.filtered_thin_repo} "
+            f"→ dup -{s.deduped} "
+            f"→ below-threshold -{s.below_threshold} "
+            f"→ inserted {s.inserted}"
+        )
+        if s.errors:
+            row += f"   [errors: {len(s.errors)}]"
+        lines.append(row)
+    return lines
+
+
+def _errors(stats: RunStats) -> list[str]:
+    """Errors are facts about this run, not a judgement about it — a failed
+    source or a feed that 403s belongs in the daily report either way."""
+    out = [f"{s.source}: {e}" for s in stats.sources for e in s.errors]
+    out += [f"{p.name}: fetch failed — {p.error}" for p in stats.publishers if p.error]
+    return out
+
+
+# ─── Email (Resend) ─────────────────────────────────────────────────────────
+
+
+def _send_alert(subject: str, body: str) -> None:
+    cfg = alert_config()
+    if not (cfg.resend_api_key and cfg.from_email and cfg.to_email):
+        log(f"  [alert suppressed — email env not set] {subject}\n{body}")
+        return
+
+    try:
+        import resend
+
+        resend.api_key = cfg.resend_api_key
+        resend.Emails.send(
+            {
+                "from": f"{cfg.project_name} pipeline <{cfg.from_email}>",
+                "to": cfg.to_email,
+                "subject": f"[{cfg.project_name}] {subject}",
+                "html": f"<pre>{html.escape(body)}</pre>",
+            }
+        )
+        log(f"  Alert emailed to {cfg.to_email}: {subject}")
+    except Exception as e:
+        log(f"  Alert send failed: {e}")

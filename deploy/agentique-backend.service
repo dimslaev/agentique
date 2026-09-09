@@ -1,0 +1,29 @@
+# Install target: /etc/systemd/system/agentique-backend.service
+[Unit]
+Description=agentique backend (FastAPI)
+# The db runs in Docker; start after the daemon so restarts on boot find it.
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+User=agentique
+Group=agentique
+WorkingDirectory=/opt/agentique/backend
+# pydantic-settings also reads ../.env, but EnvironmentFile puts ENVIRONMENT
+# etc. in the process env so shell-level guards (prestart.sh) see them too.
+EnvironmentFile=/opt/agentique/.env
+# agentique is a system user (adduser --system) with home=/nonexistent. The
+# search endpoint lazy-loads a model2vec model via huggingface_hub, which
+# expands ~ for its cache dir and fails with EACCES against /nonexistent.
+# /var/lib/agentique is real and writable (created by vps-setup.sh) — outside
+# /opt/agentique so the deploy rsync's --delete never touches it.
+Environment=HOME=/var/lib/agentique
+# 2 workers, not 4: the box has 1.9G and no swap, and each worker sits at
+# ~140M resident. Four held ~560M against a 436M-peak pipeline running
+# alongside a live API. At observed load (0.13, workers idle) two is ample.
+ExecStart=/opt/agentique/.venv/bin/fastapi run --workers 2 --host 127.0.0.1 --port 8000 app/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

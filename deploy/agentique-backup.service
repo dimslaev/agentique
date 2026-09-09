@@ -1,0 +1,21 @@
+# Install target: /etc/systemd/system/agentique-backup.service
+# Runs once per activation (see agentique-backup.timer for the schedule).
+# Manual run: sudo systemctl start agentique-backup
+[Unit]
+Description=agentique nightly db backup to kDrive (one run)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# No User=agentique here: the dump runs `docker compose exec`, which needs the
+# docker socket, and docker-group membership is root-equivalent anyway — so
+# just run the unit as root.
+WorkingDirectory=/opt/agentique/backend
+# Needs POSTGRES_USER/POSTGRES_DB and KDRIVE_API_TOKEN/KDRIVE_DRIVE_ID
+# (optional: KDRIVE_BACKUP_DIR, KDRIVE_BACKUP_KEEP).
+EnvironmentFile=/opt/agentique/.env
+# Root running python against the shared venv would otherwise leave root-owned
+# __pycache__ files behind, breaking `uv sync` on the next deploy.
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/agentique/.venv/bin/python scripts/backup_db.py

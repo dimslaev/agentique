@@ -1,0 +1,12 @@
+# Install target: /etc/systemd/system/agentique-backup.timer
+[Unit]
+Description=Daily agentique db backup to kDrive
+
+[Timer]
+# 03:30 — before the 04:00 pipeline run, so the dump captures a quiet db.
+OnCalendar=*-*-* 03:30:00
+# Run on boot if the 03:30 slot was missed (box was down).
+Persistent=true
+
+[Install]
+WantedBy=timers.target

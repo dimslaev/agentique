@@ -1,0 +1,25 @@
+services:
+
+  db:
+    image: ghcr.io/dimslaev/pgvector:pg17
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    # Bind to loopback only — natively-run backend/pipeline reach the db on
+    # localhost:5432, and Postgres must never listen on a public interface.
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - app-db-data:/var/lib/postgresql/data/pgdata
+    environment:
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
+      - POSTGRES_USER=${POSTGRES_USER?Variable not set}
+      - POSTGRES_DB=${POSTGRES_DB?Variable not set}
+
+volumes:
+  app-db-data:
