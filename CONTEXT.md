@@ -46,8 +46,9 @@ depends on. A first-party URL (`pipeline/first_party.py`) skips the gate — a
 lab's own announcement is real news at zero votes.
 
 **Run** (`PipelineRun`) — one row per nightly pipeline execution: start/end
-time, duration, ok/fail, and per-source and per-publisher funnel counts
-(fetched, filtered, inserted, errored). The record a human or a verifier
+time, duration, ok/fail, per-source and per-publisher funnel counts
+(fetched, filtered, inserted, errored), and the articles each source
+inserted (id, title, url, score, publisher). The record a human or an agent
 reads to see what last night's run actually did.
 
 **RawItem / Candidate / Scored / Persisted** (`pipeline/types.py`) — the four

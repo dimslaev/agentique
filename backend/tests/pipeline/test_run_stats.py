@@ -1,4 +1,5 @@
-"""What the run records when a source fails partway through.
+"""What the run records: the articles it inserted, and what survives a source
+that fails partway through.
 
 On 2026-09-03 the Feeds source died at the scoring step and took the
 record_publishers call with it: the run stored 19 publishers instead of 118,
@@ -10,7 +11,7 @@ fetch, and that the stored error stays a readable length.
 from __future__ import annotations
 
 from pipeline import run as run_module
-from pipeline.health import RunStats
+from pipeline.health import RunStats, _format_report
 from pipeline.steps.fetch import Source
 
 
@@ -32,8 +33,15 @@ class _FakeResolver:
         pass
 
 
-def _article(url: str, source: str) -> dict:
-    return {"title": "t", "url": url, "content": "body", "source": source}
+def _article(url: str, source: str, title: str = "t", score: int = 80) -> dict:
+    return {
+        "id": abs(hash(url)) % 10_000,
+        "title": title,
+        "url": url,
+        "content": "body",
+        "source": source,
+        "score": score,
+    }
 
 
 def _stub_run(monkeypatch, sources, **overrides):
@@ -136,3 +144,93 @@ def test_the_stored_error_is_truncated(monkeypatch):
     error = stats.sources[0].errors[0]
     assert len(error) < 1_000
     assert error.endswith("chars]")
+
+
+def test_the_run_records_the_articles_it_inserted(monkeypatch):
+    """The report's whole point: which stories landed, not just how many."""
+    source = Source(
+        "Feeds",
+        lambda: [_article("https://a.example/x", "Feed A", title="A title", score=91)],
+        publisher_names=("Feed A",),
+    )
+
+    stats = _stub_run(monkeypatch, [source])
+
+    (article,) = stats.sources[0].articles
+    assert (article.title, article.url, article.score, article.publisher) == (
+        "A title",
+        "https://a.example/x",
+        91,
+        "Feed A",
+    )
+
+
+def test_recorded_titles_are_the_rewritten_ones(monkeypatch):
+    """improve_titles edits each item in place after the insert, so recording
+    has to happen downstream of it or the email shows the raw feed title."""
+
+    def rewrite(_session, inserted):
+        for item in inserted:
+            item["title"] = "Rewritten"
+
+    stats = _stub_run(monkeypatch, [_feeds_source()], improve_titles=rewrite)
+
+    assert [a.title for a in stats.sources[0].articles] == ["Rewritten"]
+
+
+def test_a_source_that_failed_still_reports_what_it_inserted(monkeypatch):
+    """The failure is in enrichment, after the rows are committed — the report
+    must still name them."""
+
+    def boom(_session, _inserted, _vocab):
+        raise RuntimeError("tagger down")
+
+    stats = _stub_run(monkeypatch, [_feeds_source()], categorize_and_tag_articles=boom)
+
+    assert [a.url for a in stats.sources[0].articles] == ["u1"]
+    assert len(stats.sources[0].errors) == 1
+
+
+def test_the_report_lists_the_inserted_articles(monkeypatch):
+    stats = _stub_run(
+        monkeypatch,
+        [
+            Source(
+                "Feeds",
+                lambda: [_article("https://a.example/x", "Feed A", title="A title")],
+                publisher_names=("Feed A",),
+            )
+        ],
+    )
+    stats.finish(ok=True)
+
+    report = _format_report(stats)
+
+    assert "INSERTED (1)" in report
+    assert "[80/100] A title — Feed A" in report
+    assert "https://a.example/x" in report
+    # Anomaly detection is gone: no run-over-run judgement in the daily report.
+    assert "ANOMAL" not in report.upper()
+
+
+def test_the_report_says_so_when_nothing_landed(monkeypatch):
+    stats = _stub_run(monkeypatch, [Source("Hacker News", lambda: [])])
+    stats.finish(ok=True)
+
+    report = _format_report(stats)
+
+    assert "INSERTED (0)" in report
+    assert "Nothing inserted this run." in report
+
+
+def test_the_report_lists_errors(monkeypatch):
+    def boom(_session, _articles):
+        raise RuntimeError("scorer down")
+
+    stats = _stub_run(monkeypatch, [_feeds_source()], score_articles=boom)
+    stats.finish(ok=True)
+
+    report = _format_report(stats)
+
+    assert "ERRORS" in report
+    assert "Feeds: RuntimeError: scorer down" in report

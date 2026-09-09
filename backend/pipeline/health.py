@@ -1,8 +1,13 @@
-"""Pipeline health: capture per-run stats, detect anomalies, email a report
-every run (anomaly alert or clean daily summary).
+"""Pipeline health: capture per-run stats and email a report of every run —
+what was inserted, and where each run's funnel lost the rest.
 
 Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
 here must never change whether the pipeline itself succeeded.
+
+Deliberately not here: statistical anomaly detection (yield drops, dead feeds
+measured against a 30-run average). It fired on every daily report and told a
+reader nothing they acted on; the numbers it reasoned over are still recorded
+in `pipeline_run`, for an agent to look over on its own schedule.
 """
 
 from __future__ import annotations
@@ -13,7 +18,6 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
 
-import httpx
 from sqlmodel import Session, col, select
 
 from app.platform.logging import log
@@ -45,26 +49,26 @@ def alert_config() -> AlertConfig:
 
 # ─── Tunables ─────────────────────────────────────────────────────────────────
 
-HISTORY_WINDOW = 30  # runs of history the averages are computed over
 STALE_RUN_HOURS = 26  # older than this with no success → "pipeline may be down"
-YIELD_DROP_RATIO = 0.3  # inserted < 30% of average → yield-drop flag
-MIN_AVG_FETCH_FOR_DOWN = 3.0  # only call "source down" if it normally fetches > this
-MIN_AVG_INSERT_FOR_YIELD = 2.0  # ignore yield drops on sources that barely insert
-
-# A single feed publisher fetches far less than the aggregate "Feeds" source,
-# so it gets its own (much lower) bar for "this normally produces something".
-MIN_AVG_FETCH_FOR_PUBLISHER_DOWN = 0.3
-
-# Representative URL to probe when a source suddenly fetches nothing. Aggregate
-# sources (Substack = many feeds) have no single URL, so they're omitted and the
-# report just says so.
-PROBE_URL_BY_SOURCE = {
-    "Hacker News": "https://hacker-news.firebaseio.com/v0/topstories.json",
-    "AI News": "https://news.smol.ai/rss.xml",
-}
 
 
 # ─── In-memory stats (populated during the run) ───────────────────────────────
+
+
+@dataclass
+class InsertedArticle:
+    """One article this run put in the catalog — the report's headline content.
+
+    ``publisher`` is the per-item source label (a feed name under "Feeds", the
+    aggregator's own name elsewhere), so a row says which feed a story came
+    from without joining anything.
+    """
+
+    id: int
+    title: str
+    url: str
+    score: int
+    publisher: str
 
 
 @dataclass
@@ -84,7 +88,22 @@ class SourceStats:
     deduped: int = 0
     below_threshold: int = 0
     inserted: int = 0
+    articles: list[InsertedArticle] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+
+    def record_articles(self, inserted: Sequence[Persisted]) -> None:
+        """Record what landed. Called after enrichment, so the titles are the
+        rewritten ones a reader will actually see in the app."""
+        self.articles = [
+            InsertedArticle(
+                id=a["id"],
+                title=a["title"],
+                url=a["url"],
+                score=a["score"],
+                publisher=a["source"],
+            )
+            for a in inserted
+        ]
 
 
 @dataclass
@@ -171,19 +190,6 @@ def record_run(session: Session, stats: RunStats) -> PipelineRun:
     return row
 
 
-def _load_history(session: Session, exclude_started_at: datetime) -> list[dict]:
-    """Last HISTORY_WINDOW runs (excluding the current one), newest first."""
-    runs = session.exec(
-        select(PipelineRun)
-        .where(PipelineRun.started_at != exclude_started_at)
-        .order_by(col(PipelineRun.started_at).desc())
-        .limit(HISTORY_WINDOW)
-    ).all()
-    return [
-        {"sources": r.sources, "publishers": r.publishers, "ok": r.ok} for r in runs
-    ]
-
-
 # ─── Dead-man's-switch (runs at the START of each run) ─────────────────────────
 
 
@@ -214,128 +220,56 @@ def check_liveness(session: Session) -> None:
         )
 
 
-# ─── Anomaly detection (runs at the END of each run) ──────────────────────────
+# ─── Report (runs at the END of each run) ────────────────────────────────────
 
 
-def verify_run(session: Session, stats: RunStats) -> None:
-    """Compare this run to recent history; email a report every run (not just
-    when something looks wrong) so a daily digest lands regardless."""
-    history = _load_history(session, exclude_started_at=stats.started_at)
+def report_run(stats: RunStats) -> None:
+    """Email what this run inserted, plus the funnel behind it."""
+    subject = "Pipeline run report" if stats.ok else "Pipeline run CRASHED"
+    _send_alert(subject=subject, body=_format_report(stats))
+    log(f"  Reported {_total_inserted(stats)} inserted article(s)")
 
-    anomalies: list[str] = []
-    if not stats.ok:
-        anomalies.append("Pipeline run did NOT complete (crashed mid-run).")
+
+def _total_inserted(stats: RunStats) -> int:
+    return sum(len(s.articles) for s in stats.sources)
+
+
+def _format_report(stats: RunStats) -> str:
+    lines = _inserted_section(stats) + _funnel_section(stats)
+
+    errors = _errors(stats)
+    if errors:
+        lines += ["", "ERRORS", "======"]
+        lines += [f"  - {e}" for e in errors]
+
+    dur = f"{stats.duration_ms / 1000:.0f}s" if stats.duration_ms else "?"
+    lines += ["", f"Run {'OK' if stats.ok else 'CRASHED'} in {dur}."]
+    return "\n".join(lines)
+
+
+def _inserted_section(stats: RunStats) -> list[str]:
+    total = _total_inserted(stats)
+    heading = f"INSERTED ({total})"
+    lines = [heading, "=" * len(heading)]
+    if not total:
+        return lines + ["  Nothing inserted this run.", ""]
+
     for s in stats.sources:
-        anomalies.extend(_check_source(s, history))
-    for p in stats.publishers:
-        anomalies.extend(_check_publisher(p, history))
-
-    subject = (
-        "Pipeline health: anomalies detected" if anomalies else "Pipeline run report"
-    )
-    _send_alert(subject=subject, body=_format_report(stats, anomalies, len(history)))
-    log(f"  Verifier: {'anomalies detected' if anomalies else 'no anomalies'}")
-
-
-def _check_source(s: SourceStats, history: list[dict]) -> list[str]:
-    flags: list[str] = []
-
-    if s.errors:
-        shown = "; ".join(s.errors[:3])
-        flags.append(f"{s.source}: {len(s.errors)} error(s) — {shown}")
-
-    prev = _source_rows(history, s.source)
-    avg_fetch = _avg(prev, "fetched")
-    avg_insert = _avg(prev, "inserted")
-
-    if avg_fetch is not None and avg_fetch > MIN_AVG_FETCH_FOR_DOWN and s.fetched == 0:
-        flags.append(
-            f"{s.source}: fetched 0 (30-run avg {avg_fetch:.1f}). "
-            f"Probe: {_probe(s.source)}"
-        )
-    elif (
-        avg_insert is not None
-        and avg_insert >= MIN_AVG_INSERT_FOR_YIELD
-        and s.inserted < YIELD_DROP_RATIO * avg_insert
-    ):
-        flags.append(
-            f"{s.source}: inserted {s.inserted} (30-run avg {avg_insert:.1f}) "
-            "— yield down >70%"
-        )
-
-    return flags
+        if not s.articles:
+            continue
+        lines.append(f"  {s.source}")
+        for a in s.articles:
+            # The publisher is only worth a line of its own under an aggregate
+            # source; for Hacker News and friends it just repeats the label.
+            byline = f" — {a.publisher}" if a.publisher != s.source else ""
+            lines.append(f"    [{a.score}/100] {a.title}{byline}")
+            lines.append(f"      {a.url}")
+    lines.append("")
+    return lines
 
 
-def _check_publisher(p: PublisherStats, history: list[dict]) -> list[str]:
-    """Same idea as ``_check_source`` but one feed publisher at a time — this
-    is what catches a single dead feed (e.g. a 403) that the aggregate
-    "Feeds" numbers hide because every other feed is still healthy."""
-    if p.error:
-        return [f"{p.name}: fetch failed — {p.error}"]
-
-    prev = _publisher_rows(history, p.name)
-    avg_fetch = _avg(prev, "fetched")
-    if (
-        avg_fetch is not None
-        and avg_fetch > MIN_AVG_FETCH_FOR_PUBLISHER_DOWN
-        and p.fetched == 0
-    ):
-        return [
-            f"{p.name}: fetched 0 (30-run avg {avg_fetch:.1f}) — no error, "
-            "feed returned nothing this run"
-        ]
-    return []
-
-
-def _source_rows(history: list[dict], label: str) -> list[dict]:
-    rows: list[dict] = []
-    for run in history:
-        for src in run.get("sources", []):
-            if src.get("source") == label:
-                rows.append(src)
-    return rows
-
-
-def _publisher_rows(history: list[dict], name: str) -> list[dict]:
-    rows: list[dict] = []
-    for run in history:
-        for pub in run.get("publishers", []):
-            if pub.get("name") == name:
-                rows.append(pub)
-    return rows
-
-
-def _avg(rows: list[dict], key: str) -> float | None:
-    if not rows:
-        return None
-    return sum(r.get(key, 0) for r in rows) / len(rows)
-
-
-def _probe(label: str) -> str:
-    """HTTP GET the source URL to tell 'source is down' from 'our parser broke'."""
-    url = PROBE_URL_BY_SOURCE.get(label)
-    if not url:
-        return "no probe URL (aggregate source)"
-    try:
-        r = httpx.get(url, timeout=10.0, follow_redirects=False)
-        if r.is_redirect:
-            return f"redirecting ({r.status_code} → {r.headers.get('location', '?')})"
-        if r.status_code == 200:
-            return "URL alive (200) — likely our parser, not the source"
-        return f"HTTP {r.status_code}"
-    except Exception as e:
-        return f"unreachable ({type(e).__name__})"
-
-
-def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> str:
-    lines: list[str] = []
-    if anomalies:
-        lines += ["ANOMALIES", "========="]
-        lines += [f"  - {a}" for a in anomalies]
-        lines.append("")
-    else:
-        lines += ["No anomalies detected.", ""]
-    lines += ["THIS RUN", "========"]
+def _funnel_section(stats: RunStats) -> list[str]:
+    lines = ["THIS RUN", "========"]
     for s in stats.sources:
         row = (
             f"  {s.source}: fetched {s.fetched} "
@@ -350,13 +284,15 @@ def _format_report(stats: RunStats, anomalies: list[str], history_len: int) -> s
         if s.errors:
             row += f"   [errors: {len(s.errors)}]"
         lines.append(row)
-    dur = f"{stats.duration_ms / 1000:.0f}s" if stats.duration_ms else "?"
-    lines += [
-        "",
-        f"Run {'OK' if stats.ok else 'CRASHED'} in {dur}. "
-        f"{history_len} prior runs in history.",
-    ]
-    return "\n".join(lines)
+    return lines
+
+
+def _errors(stats: RunStats) -> list[str]:
+    """Errors are facts about this run, not a judgement about it — a failed
+    source or a feed that 403s belongs in the daily report either way."""
+    out = [f"{s.source}: {e}" for s in stats.sources for e in s.errors]
+    out += [f"{p.name}: fetch failed — {p.error}" for p in stats.publishers if p.error]
+    return out
 
 
 # ─── Email (Resend) ─────────────────────────────────────────────────────────

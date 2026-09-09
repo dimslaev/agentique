@@ -14,7 +14,7 @@ from sqlmodel import Session
 
 from app.platform.logging import log, short_error
 from pipeline.db import get_engine
-from pipeline.health import RunStats, check_liveness, record_run, verify_run
+from pipeline.health import RunStats, check_liveness, record_run, report_run
 from pipeline.publishers import PublisherResolver
 from pipeline.steps.enrich import (
     categorize_and_tag_articles,
@@ -108,12 +108,18 @@ def run_pipeline(stats: RunStats) -> None:
                 # One source failing must not sink the others — record and move
                 # on. The message is truncated: a BAML failure carries every
                 # attempt's prompt and the upstream's HTML, and this string is
-                # stored in pipeline_run and emailed by the verifier.
+                # stored in pipeline_run and emailed with the run report.
                 message = short_error(e)
                 s.errors.append(message)
                 log(f"  !! {source.label} failed: {message}")
                 session.rollback()
             finally:
+                # Recorded here, not beside the insert, so the titles are the
+                # rewritten ones: improve_titles edits each item in place, and
+                # a failure in enrichment must still leave the run reporting
+                # what it inserted.
+                s.record_articles(inserted)
+
                 # Per-publisher health is recorded whatever happened after the
                 # fetch. It used to sit mid-try, so the 2026-09-03 scoring
                 # failure took it with it and 99 feeds dropped out of the run's
@@ -153,12 +159,12 @@ if __name__ == "__main__":
 
     stats.finish(ok=crashed is None)
 
-    # Record stats + run the verifier. Best-effort: never flips the exit code.
+    # Record stats + email the report. Best-effort: never flips the exit code.
     try:
         with Session(get_engine()) as session:
             record_run(session, stats)
-            verify_run(session, stats)
+        report_run(stats)
     except Exception as e:
-        print(f"Health recording/verify failed: {e}", file=sys.stderr)
+        print(f"Health recording/report failed: {e}", file=sys.stderr)
 
     sys.exit(1 if crashed else 0)

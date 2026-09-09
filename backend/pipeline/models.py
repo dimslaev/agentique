@@ -17,7 +17,7 @@ class ScoredUrl(SQLModel, table=True):
 
 
 class PipelineRun(SQLModel, table=True):
-    """One row per nightly pipeline run — the numeric record the verifier reasons over."""
+    """One row per nightly pipeline run — what it inserted, and the counts behind it."""
 
     __tablename__ = "pipeline_run"
     id: int | None = Field(default=None, primary_key=True)
@@ -31,7 +31,8 @@ class PipelineRun(SQLModel, table=True):
     )
     duration_ms: int | None = None
     ok: bool = Field(default=False)
-    # per-source funnel counts: [{source, fetched, filtered_known, ..., inserted, errors}]
+    # per-source funnel counts plus what landed:
+    # [{source, fetched, filtered_known, ..., inserted, articles, errors}]
     sources: list[dict] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
