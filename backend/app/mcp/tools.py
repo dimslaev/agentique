@@ -97,10 +97,14 @@ def sql_query(sql: str) -> str:
             # planned here. A prepared statement takes exactly one command, so
             # the server rejects the smuggled second before anything executes.
             with driver.cursor() as cursor:
-                # Encoded, because psycopg types a `str` query as LiteralString
-                # to catch exactly the interpolation this tool does on purpose;
-                # `bytes` is the driver's own escape hatch for a dynamic query.
-                cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}".encode(), prepare=True)
+                # psycopg types a `str` query as LiteralString -- a string
+                # written in the source, not built at runtime -- to stop anyone
+                # interpolating input into SQL. Building SQL at runtime is this
+                # tool's whole job, so the objection is noted and overruled;
+                # what keeps it safe is the role, the check below and `prepare`.
+                cursor.execute(  # ty: ignore[no-matching-overload]
+                    f"EXPLAIN (FORMAT JSON) {sql}", prepare=True
+                )
                 plan = cursor.fetchone()
                 blocked = BLOCKED_TABLES.intersection(
                     _plan_tables(plan[0] if plan else None)
@@ -110,7 +114,7 @@ def sql_query(sql: str) -> str:
                         f"Not readable through this tool: {', '.join(sorted(blocked))}"
                     )
 
-                cursor.execute(sql.encode(), prepare=True)
+                cursor.execute(sql, prepare=True)  # ty: ignore[no-matching-overload]
                 if cursor.description is None:
                     return json.dumps({"columns": [], "rows": [], "truncated": False})
                 columns = [column.name for column in cursor.description]
