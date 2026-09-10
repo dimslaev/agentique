@@ -85,11 +85,12 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     def MCP_DATABASE_URI(self) -> str:
         """Read-only DSN for the MCP `sql_query` tool.
 
-        Two independent guards, because the tool runs whatever SQL an agent
-        writes: the role holds SELECT grants only, and every transaction on
-        this connection opens read-only, so a write still fails if the grants
-        are ever widened. The statement timeout is tighter than the role's own
-        (30s) so a runaway query cannot hold a backend worker for long.
+        The role's SELECT-only grants are the boundary. The read-only flag
+        set here is a seatbelt, not a lock: `default_transaction_read_only` is
+        USERSET, so the session can turn it back off -- it catches a mistaken
+        write at the first statement, it does not contain a determined one.
+        The statement timeout is tighter than the role's own (30s) so a
+        runaway query cannot hold a backend worker for long.
         """
         dsn = PostgresDsn.build(
             scheme="postgresql+psycopg",
