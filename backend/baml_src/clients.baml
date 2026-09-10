@@ -21,7 +21,7 @@ retry_policy Burst {
 //
 // Still NVIDIA NIM, deliberately: a fallback on Ministral's own provider would
 // share its rate limiter, and the failure this slot exists to absorb is
-// Infomaniak refusing a burst. A second provider is the whole point.
+// Mistral refusing a burst. A second provider is the whole point.
 //
 // Measured 2026-09-03 on a SelectProductLink-shaped prompt: 1.5-6.8s across
 // sequential calls, all answering with clean JSON and the right pick — no sign
@@ -30,7 +30,7 @@ retry_policy Burst {
 // start crawling. Past 8 parallel calls NIM starts returning 503; the retry
 // policy covers those.
 //
-// Infomaniak's Qwen3.5-397B was the other candidate and judged just as well,
+// Qwen3.5-397B was the other candidate and judged just as well,
 // but it is a reasoning model: it spends its budget in a `reasoning` field and
 // emits an EMPTY content string if it runs out before it stops thinking (427
 // completion tokens for a two-element array). That needs a large explicit
@@ -39,7 +39,7 @@ client<llm> Nemotron {
   provider openai-generic
   retry_policy Burst
   options {
-    base_url "https://integrate.api.nvidia.com/v1"
+    base_url env.NVIDIA_NIM_BASE_URL
     api_key env.NVIDIA_NIM_API_KEY
     model "nvidia/nemotron-3-super-120b-a12b"
     timeout 120
@@ -53,8 +53,8 @@ client<llm> Ministral {
   provider openai-generic
   retry_policy Burst
   options {
-    base_url "https://api.infomaniak.com/2/ai/7/openai/v1"
-    api_key env.IK_AI_KEY
+    base_url env.MISTRAL_AI_BASE_URL
+    api_key env.MISTRAL_AI_KEY
     model "mistralai/Ministral-3-14B-Instruct-2512"
     timeout 120
   }
