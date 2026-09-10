@@ -3,39 +3,31 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Generator
 
 import pytest
 from fastmcp.exceptions import ToolError
-from sqlalchemy import Engine
-from sqlmodel import create_engine
 
 from app.mcp import tools
 from app.platform.settings import settings
 
 
-@pytest.fixture(scope="module")
-def ro_engine() -> Generator[Engine]:
-    """`tools.engine` built on the test credentials instead of `agentique_ro`.
-
-    The role does not exist outside the production box, but the DSN it is
-    reached through is the same one settings build, read-only options and all,
-    so the guard under test is the real one.
-    """
-    dsn = settings.model_copy(
-        update={
-            "MCP_DB_USER": settings.POSTGRES_USER,
-            "MCP_DB_PASSWORD": settings.POSTGRES_PASSWORD,
-        }
-    ).MCP_DATABASE_URI
-    engine = create_engine(dsn)
-    yield engine
-    engine.dispose()
-
-
 @pytest.fixture(autouse=True)
-def _use_ro_engine(ro_engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(tools, "engine", ro_engine)
+def _test_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the tool at the test credentials instead of `agentique_ro`.
+
+    The role does not exist outside the production box, but the DSN is the one
+    settings build, read-only options and all, so the guard under test is real.
+    """
+    monkeypatch.setattr(
+        tools,
+        "DSN",
+        settings.model_copy(
+            update={
+                "MCP_DB_USER": settings.POSTGRES_USER,
+                "MCP_DB_PASSWORD": settings.POSTGRES_PASSWORD,
+            }
+        ).MCP_DATABASE_URI,
+    )
 
 
 def test_select_returns_columns_and_rows():
@@ -112,25 +104,18 @@ def test_a_statement_crafted_to_close_the_explain_prefix_is_still_one_statement(
         )
 
 
-def test_web_fetch_returns_extracted_text(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(
-        tools, "fetch_and_extract", lambda url, max_length: f"text of {url}"
-    )
-    assert (
-        tools.web_fetch("https://example.com/post")
-        == "text of https://example.com/post"
-    )
-
-
-def test_web_fetch_passes_the_length_cap_through(monkeypatch: pytest.MonkeyPatch):
+def test_web_fetch_returns_extracted_text_and_forwards_the_cap(
+    monkeypatch: pytest.MonkeyPatch,
+):
     seen: list[tuple[str, int]] = []
 
     def fake(url: str, max_length: int) -> str:
         seen.append((url, max_length))
-        return "text"
+        return f"text of {url}"
 
     monkeypatch.setattr(tools, "fetch_and_extract", fake)
-    tools.web_fetch("https://example.com/post", max_length=50)
+    text = tools.web_fetch("https://example.com/post", max_length=50)
+    assert text == "text of https://example.com/post"
     assert seen == [("https://example.com/post", 50)]
 
 

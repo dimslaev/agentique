@@ -5,7 +5,7 @@ from __future__ import annotations
 import secrets
 import warnings
 from typing import Annotated, Literal, Self
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from pydantic import (
     AnyUrl,
@@ -93,15 +93,18 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
         runaway query cannot hold a backend worker for long.
         """
         dsn = PostgresDsn.build(
-            scheme="postgresql+psycopg",
+            scheme="postgresql",
             username=self.MCP_DB_USER,
             password=self.MCP_DB_PASSWORD or None,
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+        # quote, not the default quote_plus: libpq percent-decodes a URI query
+        # and leaves `+` as a literal plus, so spaces have to be %20.
         options = urlencode(
-            {"options": "-c default_transaction_read_only=on -c statement_timeout=10s"}
+            {"options": "-c default_transaction_read_only=on -c statement_timeout=10s"},
+            quote_via=quote,
         )
         return f"{dsn}?{options}"
 

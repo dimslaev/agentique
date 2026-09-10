@@ -5,12 +5,9 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator
 from datetime import date, datetime
-from typing import cast
 
 import psycopg
 from fastmcp.exceptions import ToolError
-from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import create_engine
 
 from app.platform.settings import settings
 from pipeline.fetching.extract_content import fetch_and_extract
@@ -22,14 +19,14 @@ MAX_ROWS = 1000
 
 # `user` holds emails and password hashes, and no question worth asking this
 # tool needs either. The role's grants are the real boundary (see
-# deploy/sql-roles.sql); the plan check below catches it one step earlier and
-# still holds when the tool runs as a role that does have the grant, which is
-# every local database.
+# deploy/sql-roles.sql); the plan check below holds even where the tool runs as
+# a role that has the grant anyway, which is every local database.
 BLOCKED_TABLES = frozenset({"user"})
 
-# Its own engine, on the read-only DSN — the request-scoped `app.platform.db`
-# engine logs in as POSTGRES_USER and would happily run a DELETE.
-engine = create_engine(settings.MCP_DATABASE_URI, pool_pre_ping=True)
+# Its own connection, not `app.platform.db` — that one logs in as POSTGRES_USER
+# and would happily run a DELETE. One per call rather than a pool: the cost is
+# nothing at this call rate, and no session state survives a query.
+DSN = settings.MCP_DATABASE_URI
 
 
 def _json_safe(value: object) -> str:
@@ -62,6 +59,32 @@ def _plan_tables(node: object) -> Iterator[str]:
             yield from _plan_tables(item)
 
 
+def _reject_blocked_tables(
+    cursor: psycopg.Cursor[tuple[object, ...]], sql: str
+) -> None:
+    """Plan the statement, and refuse it if the plan reads a blocked table.
+
+    EXPLAIN reports the tables actually read -- views expanded, joins, CTEs and
+    subplans included -- and refusing to plan is what keeps this a query tool,
+    since COPY, SET and DO never get that far.
+
+    `prepare` is what makes the check honest. Given no parameters psycopg falls
+    back to the simple query protocol, which runs every command in the string,
+    so `SELECT 1; SELECT * FROM "user"` would be two commands and only the
+    first would be the one planned here. A prepared statement takes exactly
+    one, so the server rejects the second before anything executes.
+
+    psycopg types a `str` query as LiteralString to stop callers interpolating
+    input into SQL. Doing precisely that is this tool's job, hence the
+    suppression; what keeps it safe is the role, this check, and `prepare`.
+    """
+    cursor.execute(f"EXPLAIN (FORMAT JSON) {sql}", prepare=True)  # ty: ignore[no-matching-overload]
+    plan = cursor.fetchone()
+    blocked = BLOCKED_TABLES.intersection(_plan_tables(plan[0] if plan else None))
+    if blocked:
+        raise ToolError(f"Not readable through this tool: {', '.join(sorted(blocked))}")
+
+
 def sql_query(sql: str) -> str:
     """Run a read-only SQL query against the agentique Postgres database.
 
@@ -78,60 +101,26 @@ def sql_query(sql: str) -> str:
     vectors are stringified.
     """
     try:
-        # The driver cursor rather than the SQLAlchemy one, for `prepare`
-        # below. Pooling and the read-only DSN still come from the engine.
-        with engine.connect() as conn:
-            driver = cast(
-                "psycopg.Connection[tuple[object, ...]]",
-                conn.connection.driver_connection,
-            )
-            # Plan before running, for two things at once. EXPLAIN names the
-            # tables the statement really reads -- views expanded, joins and
-            # subplans included -- and refusing to plan is what keeps this a
-            # query tool, since COPY, SET and DO never get that far.
-            #
-            # `prepare` is what makes the check honest. Without parameters
-            # psycopg sends a statement over the simple query protocol, which
-            # runs every command in the string, so `SELECT 1; SELECT * FROM
-            # "user"` would be two commands and only the first would be the one
-            # planned here. A prepared statement takes exactly one command, so
-            # the server rejects the smuggled second before anything executes.
-            with driver.cursor() as cursor:
-                # psycopg types a `str` query as LiteralString -- a string
-                # written in the source, not built at runtime -- to stop anyone
-                # interpolating input into SQL. Building SQL at runtime is this
-                # tool's whole job, so the objection is noted and overruled;
-                # what keeps it safe is the role, the check below and `prepare`.
-                cursor.execute(  # ty: ignore[no-matching-overload]
-                    f"EXPLAIN (FORMAT JSON) {sql}", prepare=True
-                )
-                plan = cursor.fetchone()
-                blocked = BLOCKED_TABLES.intersection(
-                    _plan_tables(plan[0] if plan else None)
-                )
-                if blocked:
-                    raise ToolError(
-                        f"Not readable through this tool: {', '.join(sorted(blocked))}"
-                    )
+        with psycopg.connect(DSN) as conn, conn.cursor() as cursor:
+            _reject_blocked_tables(cursor, sql)
 
-                cursor.execute(sql, prepare=True)  # ty: ignore[no-matching-overload]
-                if cursor.description is None:
-                    return json.dumps({"columns": [], "rows": [], "truncated": False})
-                columns = [column.name for column in cursor.description]
-                # One past the cap, so a full page can be told from an exact fit.
-                rows = cursor.fetchmany(MAX_ROWS + 1)
-                return json.dumps(
-                    {
-                        "columns": columns,
-                        "rows": [
-                            dict(zip(columns, row, strict=True))
-                            for row in rows[:MAX_ROWS]
-                        ],
-                        "truncated": len(rows) > MAX_ROWS,
-                    },
-                    default=_json_safe,
-                )
-    except (SQLAlchemyError, psycopg.Error) as exc:
+            cursor.execute(sql, prepare=True)  # ty: ignore[no-matching-overload]
+            if cursor.description is None:
+                return json.dumps({"columns": [], "rows": [], "truncated": False})
+            columns = [column.name for column in cursor.description]
+            # One past the cap, so a full page can be told from an exact fit.
+            rows = cursor.fetchmany(MAX_ROWS + 1)
+            return json.dumps(
+                {
+                    "columns": columns,
+                    "rows": [
+                        dict(zip(columns, row, strict=True)) for row in rows[:MAX_ROWS]
+                    ],
+                    "truncated": len(rows) > MAX_ROWS,
+                },
+                default=_json_safe,
+            )
+    except psycopg.Error as exc:
         # The agent wrote this SQL and can fix it, but only if it sees what
         # Postgres actually said; anything but a ToolError reaches the client
         # as a bare "internal error".
