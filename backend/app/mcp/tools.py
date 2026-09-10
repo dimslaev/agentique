@@ -106,7 +106,10 @@ def sql_query(sql: str) -> str:
 
             cursor.execute(sql, prepare=True)  # ty: ignore[no-matching-overload]
             if cursor.description is None:
-                return json.dumps({"columns": [], "rows": [], "truncated": False})
+                # Unreachable while the plan check stands -- nothing that gets
+                # past it returns without a result set. Kept as an error rather
+                # than an empty result, which would read as "no rows found".
+                raise ToolError("Statement returned no result set")
             columns = [column.name for column in cursor.description]
             # One past the cap, so a full page can be told from an exact fit.
             rows = cursor.fetchmany(MAX_ROWS + 1)

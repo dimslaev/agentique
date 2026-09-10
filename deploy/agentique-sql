@@ -7,14 +7,14 @@
 # free root shell. Root owns this copy; update it by hand when this file
 # changes (same deal as the unit files and the Caddyfile).
 #
-# Called by .github/workflows/prod-sql.yml as:
+# Run by hand on the box, over ssh:
 #   printf '%s' "$SQL" | sudo /usr/local/bin/agentique-sql write
 #
 # The mode picks the login role, and the role carries its own guardrails
 # (read-only flag, statement/lock timeouts) — see deploy/sql-roles.sql. Local
 # socket connections are `trust` in the postgres image, which is why no
-# password is needed here. Reads normally go through the MCP `sql_query` tool
-# now; `read` stays for use by hand on the box.
+# password is needed here. This is the whole write path now: prefer a
+# migration, and reach for `write` only when nothing else will fix prod.
 set -euo pipefail
 
 env_file=/opt/agentique/.env
