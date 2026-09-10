@@ -76,15 +76,40 @@ def test_a_write_is_rejected_by_the_read_only_transaction():
     # Not a syntax check on the way in: Postgres refuses it, so anything the
     # tool failed to anticipate is refused too.
     with pytest.raises(ToolError, match="read-only transaction"):
-        tools.sql_query("CREATE TABLE mcp_should_not_exist (id int)")
+        tools.sql_query("UPDATE article SET title = title WHERE false")
 
 
-def test_a_statement_with_no_result_set_returns_no_rows():
-    assert json.loads(tools.sql_query("SET application_name = 'mcp'")) == {
-        "columns": [],
-        "rows": [],
-        "truncated": False,
-    }
+def test_anything_postgres_cannot_plan_as_a_query_is_refused():
+    # Planning is the filter: COPY, SET, DO and a second statement after a
+    # semicolon never reach execution.
+    with pytest.raises(ToolError):
+        tools.sql_query("SET application_name = 'mcp'")
+
+
+def test_the_user_table_is_not_readable():
+    with pytest.raises(ToolError, match="Not readable through this tool: user"):
+        tools.sql_query('SELECT email FROM "user"')
+
+
+def test_the_user_table_is_not_readable_through_a_subquery():
+    # The check walks the whole plan, so hiding it below the top node does not
+    # help -- nor would a join, a CTE or a view.
+    with pytest.raises(ToolError, match="Not readable through this tool: user"):
+        tools.sql_query('SELECT 1 WHERE EXISTS (SELECT 1 FROM "user")')
+
+
+def test_a_second_statement_after_a_semicolon_cannot_smuggle_a_read():
+    with pytest.raises(ToolError):
+        tools.sql_query('SELECT 1; SELECT email FROM "user"')
+
+
+def test_a_statement_crafted_to_close_the_explain_prefix_is_still_one_statement():
+    # The prefix is text, so this would be three valid statements if anything
+    # but a prepared statement ran it -- and the middle one is the read.
+    with pytest.raises(ToolError):
+        tools.sql_query(
+            'SELECT 1) AS x; SELECT email FROM "user"; SELECT * FROM (SELECT 1'
+        )
 
 
 def test_web_fetch_returns_extracted_text(monkeypatch: pytest.MonkeyPatch):

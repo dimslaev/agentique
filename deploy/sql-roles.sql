@@ -16,6 +16,11 @@
 CREATE ROLE agentique_ro LOGIN;
 GRANT USAGE ON SCHEMA public TO agentique_ro;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO agentique_ro;
+-- ...except `user`: emails and password hashes, which nothing reading through
+-- this role has a reason to see. Re-run this file after any restore that
+-- recreates the table -- the default privileges at the bottom grant SELECT on
+-- every new table, this one included.
+REVOKE SELECT ON TABLE "user" FROM agentique_ro;
 ALTER ROLE agentique_ro SET default_transaction_read_only = on;
 ALTER ROLE agentique_ro SET statement_timeout = '30s';
 -- Set out of band, not here, so no password lands in git. Same value as
