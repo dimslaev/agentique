@@ -25,6 +25,12 @@ export default defineConfig({
         target: "http://localhost:8000",
         changeOrigin: true,
       },
+      // Not a frontend route — proxied so an MCP client points at the same
+      // path in dev (localhost:5173/mcp) as in prod (agentique.ch/mcp).
+      "/mcp": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
     },
   },
 })

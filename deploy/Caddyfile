@@ -13,6 +13,14 @@ agentique.ch {
 		file_server
 	}
 
+	# The MCP endpoint is the backend, not the SPA. Served from the site host
+	# rather than api. so an agent is configured with one origin, the same
+	# path the Vite proxy serves in dev. Auth is the bearer token the app
+	# checks — Caddy just forwards.
+	handle /mcp* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
 	# SPA fallback for everything else.
 	handle {
 		try_files {path} /index.html

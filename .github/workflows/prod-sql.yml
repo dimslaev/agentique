@@ -1,9 +1,12 @@
 name: Prod SQL
 
-# Manual SQL against the prod db, run by the self-hosted runner on the box.
-# Postgres stays on loopback — this is the remote-access path that does not
-# open a port. Every run is an Actions entry with the statement, the output and
-# who dispatched it.
+# Break-glass writes against the prod db, run by the self-hosted runner on the
+# box. Postgres stays on loopback — this is the remote-access path that does
+# not open a port. Every run is an Actions entry with the statement, the output
+# and who dispatched it.
+#
+# Writes only. Reads moved to the MCP `sql_query` tool (backend/app/mcp/), which
+# is the same agentique_ro role without a workflow_dispatch round trip.
 #
 # Needs on the box: /usr/local/bin/agentique-sql, the two roles from
 # deploy/sql-roles.sql, and the sudoers rule — see deploy/README.md.
@@ -15,21 +18,13 @@ on:
         description: "SQL to run (newlines allowed via the API; all statements run in one transaction)"
         required: true
         type: string
-      mode:
-        description: "read = agentique_ro (SELECT only), write = agentique_rw (DML)"
-        required: true
-        type: choice
-        default: read
-        options:
-          - read
-          - write
       confirm:
-        description: "Type WRITE to confirm a write run. Ignored in read mode."
-        required: false
+        description: "Type WRITE to confirm."
+        required: true
         type: string
         default: ""
 
-run-name: "prod-sql (${{ inputs.mode }}) by @${{ github.actor }}"
+run-name: "prod-sql (write) by @${{ github.actor }}"
 
 permissions: {}
 
@@ -51,27 +46,25 @@ jobs:
       - name: Run SQL
         env:
           SQL: ${{ inputs.sql }}
-          MODE: ${{ inputs.mode }}
           CONFIRM: ${{ inputs.confirm }}
         run: |
           set -euo pipefail
-          if [ "$MODE" = write ] && [ "$CONFIRM" != WRITE ]; then
-            echo "write mode needs confirm=WRITE" >&2
+          if [ "$CONFIRM" != WRITE ]; then
+            echo "needs confirm=WRITE" >&2
             exit 1
           fi
           printf '%s\n' "$SQL" \
-            | sudo /usr/local/bin/agentique-sql "$MODE" \
+            | sudo /usr/local/bin/agentique-sql write \
             | tee "$RUNNER_TEMP/sql-output.txt"
 
       - name: Summary
         if: always()
         env:
           SQL: ${{ inputs.sql }}
-          MODE: ${{ inputs.mode }}
         run: |
           set -euo pipefail
           {
-            printf '### prod-sql (%s)\n\n```sql\n%s\n```\n\n' "$MODE" "$SQL"
+            printf '### prod-sql (write)\n\n```sql\n%s\n```\n\n' "$SQL"
             printf '```\n'
             head -c 60000 "$RUNNER_TEMP/sql-output.txt" 2>/dev/null || true
             printf '\n```\n'

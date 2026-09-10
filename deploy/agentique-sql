@@ -8,13 +8,13 @@
 # changes (same deal as the unit files and the Caddyfile).
 #
 # Called by .github/workflows/prod-sql.yml as:
-#   printf '%s' "$SQL" | sudo /usr/local/bin/agentique-sql read|write
+#   printf '%s' "$SQL" | sudo /usr/local/bin/agentique-sql write
 #
 # The mode picks the login role, and the role carries its own guardrails
 # (read-only flag, statement/lock timeouts) — see deploy/sql-roles.sql. Local
 # socket connections are `trust` in the postgres image, which is why no
-# password is needed here and why both roles are passwordless: without a
-# password they cannot log in over TCP, so the ssh tunnel path is unaffected.
+# password is needed here. Reads normally go through the MCP `sql_query` tool
+# now; `read` stays for use by hand on the box.
 set -euo pipefail
 
 env_file=/opt/agentique/.env

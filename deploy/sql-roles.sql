@@ -1,11 +1,14 @@
--- Login roles for /usr/local/bin/agentique-sql (deploy/agentique-sql).
+-- Login roles for /usr/local/bin/agentique-sql (deploy/agentique-sql) and for
+-- the MCP `sql_query` tool (backend/app/mcp/tools.py).
 -- One-time, on the box:
 --   docker exec -i agentique-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 --     -v ON_ERROR_STOP=1 < /opt/agentique/deploy/sql-roles.sql
 --
--- Both roles are passwordless. pg_hba in the postgres image trusts local
--- socket connections (what `docker exec psql` uses) and requires a password
--- over TCP, so a passwordless role cannot log in through the ssh tunnel.
+-- pg_hba in the postgres image trusts local socket connections (what
+-- `docker exec psql` uses) and requires a password over TCP. agentique_rw
+-- stays passwordless so it can only ever be reached through the socket;
+-- agentique_ro needs a password because the backend reaches it over TCP on
+-- loopback for the MCP tool -- see the ALTER ROLE below.
 -- Neither role owns anything and neither can CREATE in `public` (PG15+ dropped
 -- that default grant), so DDL stays with alembic.
 
@@ -15,6 +18,11 @@ GRANT USAGE ON SCHEMA public TO agentique_ro;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO agentique_ro;
 ALTER ROLE agentique_ro SET default_transaction_read_only = on;
 ALTER ROLE agentique_ro SET statement_timeout = '30s';
+-- Set out of band, not here, so no password lands in git. Same value as
+-- MCP_DB_PASSWORD in /opt/agentique/.env:
+--   ALTER ROLE agentique_ro PASSWORD '<generated>';
+-- SELECT-only and read-only by default, so the worst a leak buys is a copy of
+-- data the site already publishes.
 
 -- Read/write DML.
 CREATE ROLE agentique_rw LOGIN;

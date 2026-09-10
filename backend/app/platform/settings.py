@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 import warnings
 from typing import Annotated, Literal, Self
+from urllib.parse import urlencode
 
 from pydantic import (
     AnyUrl,
@@ -70,6 +71,38 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+
+    # The MCP server (app/mcp/) is gated by this one shared bearer token. Unset
+    # means every request is rejected, so a deploy that forgets it is closed,
+    # not open.
+    MCP_TOKEN: str | None = None
+    # The MCP `sql_query` tool logs in as its own role, not as POSTGRES_USER.
+    MCP_DB_USER: str = "agentique_ro"
+    MCP_DB_PASSWORD: str = ""
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MCP_DATABASE_URI(self) -> str:
+        """Read-only DSN for the MCP `sql_query` tool.
+
+        Two independent guards, because the tool runs whatever SQL an agent
+        writes: the role holds SELECT grants only, and every transaction on
+        this connection opens read-only, so a write still fails if the grants
+        are ever widened. The statement timeout is tighter than the role's own
+        (30s) so a runaway query cannot hold a backend worker for long.
+        """
+        dsn = PostgresDsn.build(
+            scheme="postgresql+psycopg",
+            username=self.MCP_DB_USER,
+            password=self.MCP_DB_PASSWORD or None,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        )
+        options = urlencode(
+            {"options": "-c default_transaction_read_only=on -c statement_timeout=10s"}
+        )
+        return f"{dsn}?{options}"
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
