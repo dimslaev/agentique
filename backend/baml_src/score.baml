@@ -32,17 +32,21 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
       85  "TurboPrefill: 2.7x faster than llama.cpp Pipeline Parallel on Llama-3-70B" [HN, 240 points] — upstream PR, stated hardware, measured speedup.
       85  "Optimizing Claude 3 Code's System Prompt for Efficiency and Output Quality" [AI Hero] — third party, but the method is concrete and a reader can apply it.
       82  "Qwen3.6-27B KV Cache Quantization in vLLM: Accuracy, Memory, and Speed" [Kaitchup] — measured comparison a reader can rerun.
+      80  "Ollama ships native support for a major open model family" [HN] — a runtime a huge share of builders already run, and the capability lands for all of them at once; adoption, not new research, so bottom of the band.
 
     70-79 — Useful but narrow, or well-made with modest novelty. Community writeups, series posts, and think pieces that leave a builder with something belong here.
+      75  "My self-sovereign local LLM setup, April 2026" [personal blog] — no scripts, but named tooling and measured tok/sec across real hardware; a reader can rebuild from it.
       74  "Running Gemma 4 26B at 5 tokens/sec on a 13-year-old Xeon with no GPU" [HN] — reproducible with exact flags, but narrow.
-      72  "We measured agent token cost across 40 repos before picking a context strategy" [Eng blog] — written for founders and leads, not the coder, but real data with a stated method and a decision it drove, selling nothing.
+      72  "We measured agent token cost across 40 repos before picking a context strategy" [Eng blog] — written for founders and leads, not the coder, but real data with a stated method and a decision it drove.
+      70  "What 18 agent-built PRs cost us in context tokens" [Vendor blog] — measured from their own sessions with the method stated and it names a real cost line item; it also pitches their product, which neither adds nor subtracts.
       70  "Set Up a $0 Cloud VM to Run Your Hermes Agent (Part 1)" [AI Weekender] — serial newsletter post, but the steps work.
       70  "Why Human Language is the New Code (and How to Write It)" [Substack] — think piece, worth a builder's time.
       70  "Orchestrating agents just got 10x easier, check out Temporal" [x.com] — social post, but a real tool behind it.
 
     55-69 — Minor tools, incremental product news, competent commentary, demos.
-      65  "Ollama announces support for open models" [HN] — real but small announcement, little to act on.
-      62  "What 18 agent-built PRs cost us in context tokens" [Vendor blog] — measured from their own sessions with the method stated, and it names a real line item, but it is a pitch for their product: the numbers carry it this far, the pitch holds it here.
+      65  "A month of local-LLM releases, rounded up" [Substack] — competent digest, saves some tab-hopping, but no analysis of its own.
+      62  "llama.cpp adds a --cache-reuse flag for partial prompt matches" [HN] — real and merged upstream, but a single knob most builders never touch.
+      55  "I built a TUI for chatting with Ollama" [HN] — it works, but it is small and a dozen others do the same thing.
 
     35-54 — Unverified solo projects, marketing and landing pages, big numbers with no method.
       45  "LLMrPro: free LLM balancer combines local machines with cloud fallback" [HN, 4 points, 0 comments] — unknown solo repo in a crowded category, and nobody read it.
@@ -54,7 +58,9 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
 
     RULES
     - A first-party release post on a major lab's own domain (openai.com, anthropic.com, deepmind.google, mistral.ai, kimi.com, ai.meta.com, qwen.ai, huggingface.co/blog, an official model card) never scores below 70. Aggregators retitle these into something that reads like a rewrite — judge the release, not the headline someone put on it.
-    - A piece written for founders or tech leads — someone deciding what their team builds with, not writing the code — is in scope, judged on the same EVIDENCE bar as everything else: data with a stated method, a named decision it informs, or steps someone can follow. One that clears it lands 55-72. A polished piece with only an argument behind it still caps at 40, as do pure careers, business strategy, funding, and hiring. A vendor piece that is really a pitch for the author's own product is discounted hard even when it carries numbers. "The model is the brain, everything else is the desk" is a metaphor, not evidence.
+    - A piece written for founders or tech leads — someone deciding what their team builds with, not writing the code — is in scope, judged on the same EVIDENCE bar as everything else: data with a stated method, a named decision it informs, or steps someone can follow. One that clears it lands 55-79. A polished piece with only an argument behind it still caps at 40, as do pure careers, business strategy, funding, and hiring. "The model is the brain, everything else is the desk" is a metaphor, not evidence.
+    - A vendor's own blog post is scored on its evidence like anything else. Real numbers with a stated method count even when the post also pitches the vendor's product; a product pitch with no method behind it does not (see the 35-54 band).
+    - An independent or personal developer blog is scored on the same EVIDENCE and REACH as anything else — no penalty for having no institution behind it, no bonus for the author's name. A setup writeup, a debugging story, or a benchmark on the author's own hardware lands where its detail puts it: concrete and reproducible reaches 70-79, a spelled-out reusable technique 80-89, thin or purely reflective posts below.
     - A proposed spec, standard, or protocol with no users beyond its author caps at 70, even with a reference implementation. Anyone can publish a spec; adoption is what makes one matter.
     - Empty snippet means you are judging a title alone → cap 70.
     - Score against the whole field, not against the others in this batch. A weak batch produces low scores; that is the correct outcome.
@@ -131,8 +137,8 @@ test score_practitioner_vs_advocacy {
 
 // Founder-audience is in scope. The piece with measured data and a decision
 // behind it clears the threshold; the polished argument with nothing to act on
-// stays at or under 40; a vendor post that is really a product pitch lands in
-// the 55-69 band on the strength of its numbers but no higher.
+// stays at or under 40; a vendor post with real numbers and a stated method
+// clears it too, its product pitch notwithstanding.
 test score_founder_audience {
   functions [ScoreArticles]
   args {
