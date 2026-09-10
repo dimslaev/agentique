@@ -19,7 +19,7 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
     THEN — HOW MUCH DOES IT GIVE A BUILDER?
     Two things decide the number:
       EVIDENCE — what is actually shown? Runnable code, downloadable weights, a measured result with its method stated, or concrete steps a reader can copy. A number in a headline with no method behind it is a claim, not evidence — discount it hard, and the bigger the claim the harder.
-      REACH — how many builders does it change something for? A frontier release or a runtime everyone uses is high. A weekend project, demo, or niche integration is low.
+      REACH — how many people building with AI does it change something for? A frontier release or a runtime everyone uses is high. A weekend project, demo, or niche integration is low.
 
     BANDS
     Absolute, not relative to this batch. Every example below is a real item, correctly scored.
@@ -35,12 +35,14 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
 
     70-79 — Useful but narrow, or well-made with modest novelty. Community writeups, series posts, and think pieces that leave a builder with something belong here.
       74  "Running Gemma 4 26B at 5 tokens/sec on a 13-year-old Xeon with no GPU" [HN] — reproducible with exact flags, but narrow.
+      72  "We measured agent token cost across 40 repos before picking a context strategy" [Eng blog] — written for founders and leads, not the coder, but real data with a stated method and a decision it drove, selling nothing.
       70  "Set Up a $0 Cloud VM to Run Your Hermes Agent (Part 1)" [AI Weekender] — serial newsletter post, but the steps work.
       70  "Why Human Language is the New Code (and How to Write It)" [Substack] — think piece, worth a builder's time.
       70  "Orchestrating agents just got 10x easier, check out Temporal" [x.com] — social post, but a real tool behind it.
 
     55-69 — Minor tools, incremental product news, competent commentary, demos.
       65  "Ollama announces support for open models" [HN] — real but small announcement, little to act on.
+      62  "What 18 agent-built PRs cost us in context tokens" [Vendor blog] — measured from their own sessions with the method stated, and it names a real line item, but it is a pitch for their product: the numbers carry it this far, the pitch holds it here.
 
     35-54 — Unverified solo projects, marketing and landing pages, big numbers with no method.
       45  "LLMrPro: free LLM balancer combines local machines with cloud fallback" [HN, 4 points, 0 comments] — unknown solo repo in a crowded category, and nobody read it.
@@ -52,7 +54,7 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
 
     RULES
     - A first-party release post on a major lab's own domain (openai.com, anthropic.com, deepmind.google, mistral.ai, kimi.com, ai.meta.com, qwen.ai, huggingface.co/blog, an official model card) never scores below 70. Aggregators retitle these into something that reads like a rewrite — judge the release, not the headline someone put on it.
-    - An explainer written for product managers, founders-as-audience, careers, or business strategy caps at 40, however polished. "The model is the brain, everything else is the desk" is a metaphor, not a technique.
+    - A piece written for founders or tech leads — someone deciding what their team builds with, not writing the code — is in scope, judged on the same EVIDENCE bar as everything else: data with a stated method, a named decision it informs, or steps someone can follow. One that clears it lands 55-72. A polished piece with only an argument behind it still caps at 40, as do pure careers, business strategy, funding, and hiring. A vendor piece that is really a pitch for the author's own product is discounted hard even when it carries numbers. "The model is the brain, everything else is the desk" is a metaphor, not evidence.
     - A proposed spec, standard, or protocol with no users beyond its author caps at 70, even with a reference implementation. Anyone can publish a spec; adoption is what makes one matter.
     - Empty snippet means you are judging a title alone → cap 70.
     - Score against the whole field, not against the others in this batch. A weak batch produces low scores; that is the correct outcome.
@@ -122,6 +124,39 @@ test score_practitioner_vs_advocacy {
         snippet "A campaign page advocating the right to run local AI. It calls for protecting the ability to run models on your own hardware."
         trust "medium"
         traction "18 points, 6 comments on Hacker News"
+      }
+    ]
+  }
+}
+
+// Founder-audience is in scope. The piece with measured data and a decision
+// behind it clears the threshold; the polished argument with nothing to act on
+// stays at or under 40; a vendor post that is really a product pitch lands in
+// the 55-69 band on the strength of its numbers but no higher.
+test score_founder_audience {
+  functions [ScoreArticles]
+  args {
+    articles [
+      {
+        url "https://example.com/blog/agent-token-cost-study"
+        title "We measured agent token cost across 40 repos before picking a context strategy"
+        source "Engineering blog"
+        snippet "Over six weeks we logged context-token usage for coding agents across 40 internal repos, with the measurement method and per-repo numbers. Here is how it shaped the retrieval approach we chose."
+        trust "medium"
+      }
+      {
+        url "https://example.com/blog/why-agents-change-the-org"
+        title "Why AI agents change how you should structure your engineering org"
+        source "Substack"
+        snippet "A case that agents shift the unit of work from the team to the individual, and what that means for how founders should plan headcount."
+        trust "medium"
+      }
+      {
+        url "https://vendor.example.com/blog/stop-the-context-tax"
+        title "What 18 agent-built PRs cost us in context tokens"
+        source "Vendor blog"
+        snippet "Each agent-built PR in our codebase averaged $65 in context-token overhead, peaking near 975k tokens. Our semantic navigation layer cuts that."
+        trust "medium"
       }
     ]
   }
