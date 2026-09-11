@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 import warnings
 from typing import Annotated, Literal, Self
+from urllib.parse import quote, urlencode
 
 from pydantic import (
     AnyUrl,
@@ -70,6 +71,42 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+
+    # The MCP server (app/mcp/) is gated by this one shared bearer token. Unset
+    # means every request is rejected, so a deploy that forgets it is closed,
+    # not open.
+    MCP_TOKEN: str | None = None
+    # The MCP `sql_query` tool logs in as its own role, not as POSTGRES_USER.
+    MCP_DB_USER: str = "agentique_ro"
+    MCP_DB_PASSWORD: str = ""
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MCP_DATABASE_URI(self) -> str:
+        """Read-only DSN for the MCP `sql_query` tool.
+
+        The role's SELECT-only grants are the boundary. The read-only flag
+        set here is a seatbelt, not a lock: `default_transaction_read_only` is
+        USERSET, so the session can turn it back off -- it catches a mistaken
+        write at the first statement, it does not contain a determined one.
+        The statement timeout is tighter than the role's own (30s) so a
+        runaway query cannot hold a backend worker for long.
+        """
+        dsn = PostgresDsn.build(
+            scheme="postgresql",
+            username=self.MCP_DB_USER,
+            password=self.MCP_DB_PASSWORD or None,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        )
+        # quote, not the default quote_plus: libpq percent-decodes a URI query
+        # and leaves `+` as a literal plus, so spaces have to be %20.
+        options = urlencode(
+            {"options": "-c default_transaction_read_only=on -c statement_timeout=10s"},
+            quote_via=quote,
+        )
+        return f"{dsn}?{options}"
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

@@ -21,14 +21,15 @@ How agentique runs in production. Docker runs only the database
   rsyncs the source, syncs the venv, runs migrations + prestart, and restarts
   the backend. Additive migrations only; rollback is `git revert` + push.
 - The pipeline needs no restart — the timer starts a fresh process each run.
-- `.github/workflows/prod-sql.yml` (`workflow_dispatch`) runs read/write SQL on
-  the box without opening a port: the self-hosted runner pipes the statement
-  into `agentique-sql`, which uses a role-scoped `psql` (read-only vs. DML, each
-  with its own timeouts). Every run is an Actions entry with the statement,
-  output, and who dispatched it.
-- Postgres is published on loopback only and the SQL roles are passwordless, so
-  they can only be reached through the local socket (`docker exec`), never over
-  the network.
+- Break-glass writes are `agentique-sql` over ssh, run by hand: it pipes the
+  statement into `psql` as `agentique_rw`, with that role's statement, lock and
+  idle timeouts. There is no CI path for it — prefer a migration, and reach for
+  this only when nothing else will fix prod.
+- Postgres is published on loopback only. `agentique_rw` is passwordless, so it
+  can only ever be reached through the local socket (`docker exec`), never over
+  the network. `agentique_ro` has a password so it can also be used over
+  loopback TCP; it is SELECT-only, read-only by default, and cannot see the
+  `user` table at all.
 
 ## Config
 

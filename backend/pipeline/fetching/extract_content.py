@@ -87,7 +87,7 @@ def extract_text(html: str, max_length: int | None = None) -> str:
     return text[:max_length] if max_length else text
 
 
-def _fetch_and_extract(url: str, max_length: int | None = None) -> str:
+def fetch_and_extract(url: str, max_length: int | None = None) -> str:
     """Fetch a URL directly, falling back to the residential proxy.
 
     An empty result from the direct attempt covers every failure mode we care
@@ -123,7 +123,7 @@ def _fetch_texts(
         idx, url = idx_url
         if verbose:
             log(f"    [{idx + 1}/{total}] Fetching: {url}")
-        text = _fetch_and_extract(url, max_length)
+        text = fetch_and_extract(url, max_length)
         if verbose:
             size = f"OK ({len(text)} chars)" if text else "no content"
             log(f"    [{idx + 1}/{total}] {size}: {url}")

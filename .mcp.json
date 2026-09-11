@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "agentique": {
+      "type": "http",
+      "url": "https://agentique.ch/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${AGENTIQUE_MCP_TOKEN}"
+      }
+    }
+  }
+}

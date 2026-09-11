@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
+from app.mcp.server import mcp_app
 from app.newsletter.routes import router as newsletter_router
 from app.platform.settings import settings
 from app.router import api_router
@@ -23,6 +24,9 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
+    # The MCP app's session manager starts here: a mounted ASGI app never runs
+    # its own lifespan.
+    lifespan=mcp_app.lifespan,
 )
 
 # Set all CORS enabled origins
@@ -39,6 +43,9 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 # The newsletter lives outside /api/v1 because the public signup form has
 # posted to /api/newsletter/subscribe since before the API was versioned.
 app.include_router(newsletter_router, prefix="/api")
+# Outside the versioned API on purpose: it is an MCP endpoint, not a REST
+# resource, and it carries its own bearer-token auth rather than a user JWT.
+app.mount("/mcp", mcp_app)
 
 
 @app.get(f"{settings.API_V1_STR}/utils/health-check/", tags=["utils"])
