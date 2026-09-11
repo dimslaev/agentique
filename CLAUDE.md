@@ -29,3 +29,7 @@
 - `scripts/restore-db.sh` starts the `db` container and restores the newest dump in `.ignored/dumps/`. Always use the latest dump, never an older one.
 - Credentials are in committed `.env.dev` (local throwaway only), copied to `.env` when missing. `POSTGRES_USER` must stay `postgres`.
 - Read and mutate freely. It's a local copy, not prod.
+
+## MCP tools
+- `.mcp.json` connects to the `agentique` MCP server (`backend/app/mcp/`), exposing `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
+- Don't use these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
