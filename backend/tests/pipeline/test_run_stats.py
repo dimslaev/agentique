@@ -59,6 +59,7 @@ def _stub_run(monkeypatch, sources, **overrides):
     monkeypatch.setattr(run_module, "prefilter_keep_drop", lambda s, a: a)
     monkeypatch.setattr(run_module, "dedup_semantic", lambda s, a, label: a)
     monkeypatch.setattr(run_module, "score_articles", lambda s, a: a)
+    monkeypatch.setattr(run_module, "summarize_articles", lambda s, a: a)
     monkeypatch.setattr(run_module, "insert_articles", lambda s, a: a)
     monkeypatch.setattr(run_module, "improve_titles", lambda s, a: None)
     monkeypatch.setattr(run_module, "categorize_and_tag_articles", lambda s, a, v: [])

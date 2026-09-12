@@ -15,7 +15,7 @@ import pytest
 
 from pipeline.sources.substack import _entry_content
 from pipeline.steps import fetch as fetch_step
-from pipeline.steps.fetch import MIN_CONTENT_CHARS
+from pipeline.steps.fetch import MIN_CONTENT_CHARS, MIN_SUMMARIZABLE_CHARS
 from pipeline.urls import feed_url
 
 # Varied prose on purpose: trafilatura deduplicates repeated segments, so a
@@ -153,7 +153,16 @@ def test_a_snippet_that_stays_thin_is_dropped_even_though_it_is_non_empty(monkey
     """A failed re-fetch leaves the original snippet in place; length, not
     presence, is what decides."""
     _stub_refetch(monkeypatch, {})
-    assert fetch_step._with_content([_fetched("u1", "  ")], "Lab Watch") == []
+    assert fetch_step._with_content([_fetched("u1", "a snippet")], "Lab Watch") == []
+
+
+def test_content_just_long_enough_to_summarize_is_kept(monkeypatch):
+    _stub_refetch(monkeypatch, {})
+    text = "x" * MIN_SUMMARIZABLE_CHARS
+    assert (
+        fetch_step._with_content([_fetched("u1", text)], "Lab Watch")[0]["content"]
+        == text
+    )
 
 
 def test_an_item_that_already_has_full_content_is_not_refetched(monkeypatch):

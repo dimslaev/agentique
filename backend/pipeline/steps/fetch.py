@@ -29,6 +29,12 @@ from pipeline.types import Candidate, RawItem
 # whether a fetched item still needs a network re-fetch of its full text.
 MIN_CONTENT_CHARS = 500
 
+# Below this, even after the re-fetch, what is left is a teaser (a launch
+# tweet, a one-line search snippet): too little to summarize without
+# inventing, and an article is never inserted without a summary. Dropped here
+# so it does not cost a scoring call first.
+MIN_SUMMARIZABLE_CHARS = 300
+
 
 @dataclass(frozen=True)
 class Source:
@@ -105,13 +111,13 @@ def fetch_source(source: Source) -> tuple[list[RawItem], dict[str, str]]:
 
 
 def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
-    """Fill each item's content at fetch time, then drop the ones still empty.
+    """Fill each item's content at fetch time, then drop the ones still thin.
 
     Feeds already carry ``content:encoded``; thin items (< ``MIN_CONTENT_CHARS``)
     get a network re-fetch — direct, then residential proxy — via
-    ``fetch_full_content``. An article with no usable content after that is
-    dropped and logged: downstream steps assume full content, so a contentless
-    item has nothing to categorize and no point being scored or inserted.
+    ``fetch_full_content``. An article still under ``MIN_SUMMARIZABLE_CHARS``
+    after that is dropped and logged: it has nothing to summarize, so it has no
+    point being scored or inserted.
     """
     thin = [a for a in articles if len(a["content"]) < MIN_CONTENT_CHARS]
     if thin:
@@ -121,10 +127,10 @@ def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
             if full:
                 a["content"] = full
 
-    kept = [a for a in articles if a["content"].strip()]
+    kept = [a for a in articles if len(a["content"].strip()) >= MIN_SUMMARIZABLE_CHARS]
     dropped = len(articles) - len(kept)
     if dropped:
-        log(f"  {label}: dropped {dropped} article(s) with no content")
+        log(f"  {label}: dropped {dropped} article(s) with too little content")
     return kept
 
 

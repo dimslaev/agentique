@@ -1,17 +1,18 @@
 """The pipeline's steps, in the order run.py applies them.
 
-    fetch    - poll each source, fill content, stamp publisher/trust per item
-    filter   - drop known URLs, dead domains, semantic duplicates
-    score    - cheap keep/drop pre-filter, then the LLM scorer
-    persist  - insert what passed
-    enrich   - titles, categories/kind/tags, embedding
+    fetch     - poll each source, fill content, stamp publisher/trust per item
+    filter    - drop known URLs, dead domains, semantic duplicates
+    score     - cheap keep/drop pre-filter, then the LLM scorer
+    summarize - summary per article; one that cannot be summarized stops here
+    persist   - insert what passed
+    enrich    - titles, categories/kind/tags, embedding
 
 Every step takes the session and a list of articles and returns the survivors,
 so run.py reads as the funnel it is. Steps own their own logging and commits.
 
 The article changes type as it goes -- RawItem -> Candidate -> Scored ->
-Persisted, see pipeline.types -- so a step's signature says where in the funnel
-it belongs.
+Summarized -> Persisted, see pipeline.types -- so a step's signature says where
+in the funnel it belongs.
 """
 
 from __future__ import annotations

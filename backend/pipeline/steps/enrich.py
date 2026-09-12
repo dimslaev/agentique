@@ -1,4 +1,4 @@
-"""Step 5: everything we do to an article after it is in the DB.
+"""Step 6: everything we do to an article after it is in the DB.
 
 Titles, categories + kind + tags, embedding. Content is already full by now
 (the fetch step fills it and drops anything it cannot), so categorize works
