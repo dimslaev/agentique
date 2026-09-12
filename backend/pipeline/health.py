@@ -74,7 +74,8 @@ class InsertedArticle:
 @dataclass
 class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
-    fetched → off-topic → known → dead → dup → below-threshold → inserted."""
+    fetched → off-topic → known → dead → dup → below-threshold → unsummarized
+    → inserted."""
 
     # `source` here is the run-level fetcher label (Hacker News / AI News /
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
@@ -87,6 +88,7 @@ class SourceStats:
     filtered_thin_repo: int = 0
     deduped: int = 0
     below_threshold: int = 0
+    unsummarized: int = 0
     inserted: int = 0
     articles: list[InsertedArticle] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
@@ -279,6 +281,7 @@ def _funnel_section(stats: RunStats) -> list[str]:
             f"→ thin-repo -{s.filtered_thin_repo} "
             f"→ dup -{s.deduped} "
             f"→ below-threshold -{s.below_threshold} "
+            f"→ unsummarized -{s.unsummarized} "
             f"→ inserted {s.inserted}"
         )
         if s.errors:

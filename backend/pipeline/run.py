@@ -35,6 +35,7 @@ from pipeline.steps.filter import (
 )
 from pipeline.steps.persist import insert_articles
 from pipeline.steps.score import prefilter_keep_drop, score_articles
+from pipeline.steps.summarize import summarize_articles
 from pipeline.tags import load_vocabulary
 from pipeline.types import Persisted, RawItem
 
@@ -98,7 +99,12 @@ def run_pipeline(stats: RunStats) -> None:
                 # below_threshold = pre-filter drops + LLM sub-threshold
                 s.below_threshold = prefiltered + (len(unique) - len(scored))
 
-                inserted = insert_articles(session, scored)
+                # Before the insert, not in enrichment: an article the model
+                # cannot summarize is never inserted without a summary.
+                summarized = summarize_articles(session, scored)
+                s.unsummarized = len(scored) - len(summarized)
+
+                inserted = insert_articles(session, summarized)
                 s.inserted = len(inserted)
 
                 improve_titles(session, inserted)

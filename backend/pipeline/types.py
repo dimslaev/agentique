@@ -5,6 +5,7 @@ One type per stage, each fully populated by the step that produces it:
     RawItem    what a source emits -- title, url, content, date, source
     Candidate  + the publisher it belongs to   (fetch.resolve_publishers)
     Scored     + the score the LLM gave it     (score.score_articles)
+    Summarized + the summary a reader sees      (summarize.summarize_articles)
     Persisted  + the id of the row it landed in (persist.insert_articles)
 
 Each stage subclasses the one before, so a step that only needs a ``Candidate``
@@ -67,7 +68,15 @@ class Scored(Candidate):
     score: int
 
 
-class Persisted(Scored):
+class Summarized(Scored):
+    """A scored article with its summary. Only the ones the model could
+    summarize get this far -- ``summarize_articles`` drops the rest, so nothing
+    is inserted without one."""
+
+    summary: str
+
+
+class Persisted(Summarized):
     """A scored article that is now a row: ``id`` is the Article's primary key.
 
     ``title`` and ``content`` are the sanitized values actually stored, not the
