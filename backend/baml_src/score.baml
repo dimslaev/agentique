@@ -35,12 +35,15 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
       88  "vLLM integrates Hugging Face Transformers for production-grade inference" [HF Blog] — official integration, removes porting work for every model author.
       85  "TurboPrefill: 2.7x faster than llama.cpp Pipeline Parallel on Llama-3-70B" [HN, 240 points] — upstream PR, stated hardware, measured speedup.
       85  "Optimizing Claude 3 Code's System Prompt for Efficiency and Output Quality" [AI Hero] — third party, but the method is concrete and a reader can apply it.
+      85  "Qwen3.6-35B-A3B" [AI News] huggingface.co/Qwen/Qwen3.6-35B-A3B — found through an aggregator, but the URL is Qwen's own model card: a first-party open-weight release, not a rewrite.
       82  "Qwen3.6-27B KV Cache Quantization in vLLM: Accuracy, Memory, and Speed" [Kaitchup] — measured comparison a reader can rerun.
       80  "Ollama ships native support for a major open model family" [HN] — a runtime a huge share of builders already run, and the capability lands for all of them at once; adoption, not new research, so bottom of the band.
 
     70-79 — Useful but narrow, or well-made with modest novelty. Community writeups, series posts, and think pieces that leave a builder with something belong here.
       75  "My self-sovereign local LLM setup, April 2026" [personal blog] — no scripts, but named tooling and measured tok/sec across real hardware; a reader can rebuild from it.
       74  "Running Gemma 4 26B at 5 tokens/sec on a 13-year-old Xeon with no GPU" [HN] — reproducible with exact flags, but narrow.
+      74  "Orchestrating AI code review at scale" [Hacker News] blog.cloudflare.com — seven review agents per merge request, architecture and trade-offs spelled out; no A/B numbers, but a team can copy the design.
+      72  "Running a one-trillion-parameter LLM locally on an AMD Ryzen AI Max+ cluster" [Hacker News] amd.com — exact hardware and llama.cpp RPC steps; reproducible without a benchmark table.
       72  "We measured agent token cost across 40 repos before picking a context strategy" [Eng blog] — written for founders and leads, not the coder, but real data with a stated method and a decision it drove.
       70  "What 18 agent-built PRs cost us in context tokens" [Vendor blog] — measured from their own sessions with the method stated and it names a real cost line item; it also pitches their product, which neither adds nor subtracts.
       70  "Set Up a $0 Cloud VM to Run Your Hermes Agent (Part 1)" [AI Weekender] — serial newsletter post, but the steps work.
@@ -66,14 +69,17 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
 
     RULES
     - A first-party release post on a major lab's own domain (openai.com, anthropic.com, deepmind.google, mistral.ai, kimi.com, ai.meta.com, qwen.ai, huggingface.co/blog, an official model card) never scores below 70. Aggregators retitle these into something that reads like a rewrite — judge the release, not the headline someone put on it. The floor is for releases — a model, API, tool or capability shipping — not for everything on the domain: a customer story, case study, event recap or marketing page on a lab's site is judged like any vendor post.
+    - The [source] tag says where we found the link — often an aggregator, a newsletter or Hacker News — not who wrote it. Decide first-party versus rewrite from the URL: the maker's own site, blog, docs, x.com account, huggingface.co/<maker> or github.com/<maker> is first-party, whatever the tag says. A company's own release of its own model or developer tool there is a release and is judged as one — never as a notice or a rewrite.
+    - A new model that builders can download or call today, released by an established maker — a known lab, a major tech company, or the company behind a tool a large share of builders already use (Cursor, Black Forest Labs, Xiaomi, Microsoft, NVIDIA, DeepSeek) — is a release even when the maker is not on the list above. It lands 70 or above, with REACH deciding how far; its self-reported benchmarks neither add nor subtract. An unknown company announcing a model on a landing page with big claims and no weights, API docs or model card is still a landing page (35-54).
     - A piece written for founders or tech leads — someone deciding what their team builds with, not writing the code — is in scope, judged on the same EVIDENCE bar as everything else: data with a stated method, a named decision it informs, or steps someone can follow. One that clears it lands 55-79. A polished piece with only an argument behind it still caps at 40, as do pure careers, business strategy, funding, and hiring. "The model is the brain, everything else is the desk" is a metaphor, not evidence.
     - A vendor's own blog post is scored on its evidence like anything else. Real numbers with a stated method count even when the post also pitches the vendor's product; a product pitch with no method behind it does not (see the 35-54 band).
     - A customer case study on a cloud or platform vendor's blog ("How X built Y with Bedrock / AgentCore / Vertex / Azure") is marketing for the platform: it caps at 60 unless it reports a measured result with its method stated.
-    - An availability or pricing notice — "model X is now available on platform Y", a price cut, a discount, a new region or quota — caps at 55. The release it points at is the news; this is a changelog line.
+    - An availability or pricing notice — an existing model or tool now available on another platform, a price cut, a discount, a new region or quota — caps at 55. The release it points at is the news; this is a changelog line. A new model or product launching is a release, not a notice, however short the post that announces it.
     - A third-party rewrite of someone else's release or paper (news aggregators, SEO explainers, reseller and wrapper sites) caps at 80: the evidence lives in the primary source, not the retelling. One that only restates the announcement, adding nothing, caps at 60.
-    - A page that is not an article — a documentation index, a product or landing page, a model catalog, a pricing page, a vendor's own "X vs Y" comparison — belongs in 35-54, however strong the product behind it.
+    - A page that is not an article — a documentation index, a product or landing page, a model catalog, a pricing page, a vendor's own "X vs Y" comparison — belongs in 35-54, however strong the product behind it. So does a standing page for something that already exists — a product homepage, a model or tool page with no launch news on it — even on a lab's own domain: the release floor is for launches.
     - Old work resurfacing is not news. If the URL or the text dates the piece more than six months before the seen date (a /2021/ path, a 2024 arXiv id, "published March 2025"), it caps at 60, however good it is.
     - An independent or personal developer blog is scored on the same EVIDENCE and REACH as anything else — no penalty for having no institution behind it, no bonus for the author's name. A setup writeup, a debugging story, or a benchmark on the author's own hardware lands where its detail puts it: concrete and reproducible reaches 70-79, a spelled-out reusable technique 80-89, thin or purely reflective posts below.
+    - Missing numbers are not missing evidence. Exact setup steps, or a system design spelled out in enough detail for a team to copy it, are evidence on their own: such a piece lands 70-79 even with no benchmark table. "No measured results" only drags down a piece with nothing else behind it — a claim, a pitch, a landing page. Working code alone does not lift a small tool: a weekend repo that runs is still a minor tool (55-69).
     - A proposed spec, standard, or protocol with no users beyond its author caps at 70, even with a reference implementation. Anyone can publish a spec; adoption is what makes one matter.
     - Empty snippet means you are judging a title alone → cap 70.
     - Score against the whole field, not against the others in this batch. A weak batch produces low scores; that is the correct outcome.
@@ -246,6 +252,69 @@ test score_notices_case_studies_and_old_work {
         trust "medium"
         traction "132 points, 21 comments on Hacker News"
         seen_on "2026-09-13"
+      }
+    ]
+  }
+}
+
+// From the 2026-09-13 rescore, where Nemotron read the aggregator in [source]
+// as the author and called first-party releases rewrites or notices, and
+// dropped a copyable engineering write-up for having no benchmark table.
+// Expect all three at 70 or above.
+test score_source_tag_is_not_the_author {
+  functions [ScoreArticles]
+  args {
+    articles [
+      {
+        url "https://huggingface.co/Qwen/Qwen3.6-35B-A3B"
+        title "Qwen3.6-35B-A3B sparse MoE model beats Qwen3.5-27B and Gemma4-31B"
+        source "AI News"
+        snippet "A new sparse Mixture-of-Experts LLM with 35B total parameters that runs with only 3B active delivers better coding and vision performance than larger dense models."
+        trust "medium"
+        seen_on "2026-04-17"
+      }
+      {
+        url "https://x.com/MicrosoftAI/status/2061887500541366489"
+        title "Microsoft AI unveils seven new MAI models across reasoning, code, image, speech"
+        source "AI News"
+        snippet "Microsoft AI releases seven new models, including a data-lineage-first reasoning model. The MAI models cover reasoning, code, image, text-to-speech and transcription."
+        trust "medium"
+        seen_on "2026-06-03"
+      }
+      {
+        url "https://blog.cloudflare.com/ai-code-review/"
+        title "Orchestrating AI code review at scale"
+        source "Hacker News"
+        snippet "Cloudflare built a CI system that runs up to seven AI code-review agents per merge request and posts a single structured comment, with the architecture and trade-offs laid out."
+        trust "medium"
+        seen_on "2026-05-30"
+      }
+    ]
+  }
+}
+
+// A usable model from an established maker is a release even off the lab list;
+// an unknown company's model landing page with extraordinary claims is not.
+// Expect Cursor's Composer at 70 or above and SubQ in 35-54.
+test score_established_release_vs_unknown_landing_page {
+  functions [ScoreArticles]
+  args {
+    articles [
+      {
+        url "https://cursor.com/blog/2-0"
+        title "Cursor 2.0 adds Composer model with 4x faster coding"
+        source "Ben's Bites"
+        snippet "Cursor 2.0 releases Composer, a new coding model that runs four times faster, available in the editor today."
+        trust "medium"
+        seen_on "2026-03-15"
+      }
+      {
+        url "https://subq.ai/"
+        title "SubQ: Sub-quadratic LLM for 12-million-token reasoning"
+        source "Hacker News"
+        snippet "SubQ lets you reason over 12 million tokens in one prompt, at one-fifth the cost of other LLMs. 150 tokens/s, cuts attention compute ~1,000x."
+        trust "medium"
+        seen_on "2026-05-07"
       }
     ]
   }
