@@ -4,8 +4,11 @@ class ScoredArticle {
   reason string @description("One short sentence naming what decided the score: out of scope, the evidence shown or missing, the reach, or the rule that capped it.")
 }
 
+// Nemotron directly, no Nvidia fallback: falling back to another model would
+// mix two judges' scales in one feed (see the Nvidia wrapper in clients.baml). A NIM
+// outage holds the batch for the next run, as summaries already do.
 function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
-  client Nvidia
+  client Nemotron
   prompt #"
     {{ _.role("system") }}
     You are a senior editorial analyst at a developer news platform. You rate articles on how much they help someone building with AI. You are precise and consistent, and when something is thin you say so with a low number.
@@ -47,10 +50,14 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
     55-69 — Minor tools, incremental product news, competent commentary, demos.
       65  "A month of local-LLM releases, rounded up" [Substack] — competent digest, saves some tab-hopping, but no analysis of its own.
       62  "llama.cpp adds a --cache-reuse flag for partial prompt matches" [HN] — real and merged upstream, but a single knob most builders never touch.
+      60  "How Heurist Finance built an AI-native investment workbench on Amazon Bedrock AgentCore" [AWS Machine Learning] — a customer story selling the platform; architecture boxes, no measured result.
+      60  "A Mathematical Framework for Transformer Circuits" [HN, transformer-circuits.pub/2021/...] — foundational, but a 2021 paper resurfacing years later is not news.
       55  "I built a TUI for chatting with Ollama" [HN] — it works, but it is small and a dozen others do the same thing.
+      55  "GLM-5.3 is 50% off through DigitalOcean on AI Gateway" [Vercel] — a price notice; the model release it points at was the news.
 
     35-54 — Unverified solo projects, marketing and landing pages, big numbers with no method.
       45  "LLMrPro: free LLM balancer combines local machines with cloud fallback" [HN, 4 points, 0 comments] — unknown solo repo in a crowded category, and nobody read it.
+      45  "Pinecone vs Amazon S3 Vectors" [Pinecone] — the vendor's own comparison page: a sales page, not an article.
       35  "SigMap cuts prompt count by 49% across 90 coding tasks" [HN, 3 points, 1 comment] — landing page, extraordinary numbers, no method or repo.
 
     15-34 — Slop, SEO bait, advocacy and campaign pages, manifestos, content-free.
@@ -58,9 +65,14 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
     1-14 — Out of scope only. An in-scope article never goes below 15: this band means "wrong subject", not "bad".
 
     RULES
-    - A first-party release post on a major lab's own domain (openai.com, anthropic.com, deepmind.google, mistral.ai, kimi.com, ai.meta.com, qwen.ai, huggingface.co/blog, an official model card) never scores below 70. Aggregators retitle these into something that reads like a rewrite — judge the release, not the headline someone put on it.
+    - A first-party release post on a major lab's own domain (openai.com, anthropic.com, deepmind.google, mistral.ai, kimi.com, ai.meta.com, qwen.ai, huggingface.co/blog, an official model card) never scores below 70. Aggregators retitle these into something that reads like a rewrite — judge the release, not the headline someone put on it. The floor is for releases — a model, API, tool or capability shipping — not for everything on the domain: a customer story, case study, event recap or marketing page on a lab's site is judged like any vendor post.
     - A piece written for founders or tech leads — someone deciding what their team builds with, not writing the code — is in scope, judged on the same EVIDENCE bar as everything else: data with a stated method, a named decision it informs, or steps someone can follow. One that clears it lands 55-79. A polished piece with only an argument behind it still caps at 40, as do pure careers, business strategy, funding, and hiring. "The model is the brain, everything else is the desk" is a metaphor, not evidence.
     - A vendor's own blog post is scored on its evidence like anything else. Real numbers with a stated method count even when the post also pitches the vendor's product; a product pitch with no method behind it does not (see the 35-54 band).
+    - A customer case study on a cloud or platform vendor's blog ("How X built Y with Bedrock / AgentCore / Vertex / Azure") is marketing for the platform: it caps at 60 unless it reports a measured result with its method stated.
+    - An availability or pricing notice — "model X is now available on platform Y", a price cut, a discount, a new region or quota — caps at 55. The release it points at is the news; this is a changelog line.
+    - A third-party rewrite of someone else's release or paper (news aggregators, SEO explainers, reseller and wrapper sites) caps at 80: the evidence lives in the primary source, not the retelling. One that only restates the announcement, adding nothing, caps at 60.
+    - A page that is not an article — a documentation index, a product or landing page, a model catalog, a pricing page, a vendor's own "X vs Y" comparison — belongs in 35-54, however strong the product behind it.
+    - Old work resurfacing is not news. If the URL or the text dates the piece more than six months before the seen date (a /2021/ path, a 2024 arXiv id, "published March 2025"), it caps at 60, however good it is.
     - An independent or personal developer blog is scored on the same EVIDENCE and REACH as anything else — no penalty for having no institution behind it, no bonus for the author's name. A setup writeup, a debugging story, or a benchmark on the author's own hardware lands where its detail puts it: concrete and reproducible reaches 70-79, a spelled-out reusable technique 80-89, thin or purely reflective posts below.
     - A proposed spec, standard, or protocol with no users beyond its author caps at 70, even with a reference implementation. Anyone can publish a spec; adoption is what makes one matter.
     - Empty snippet means you are judging a title alone → cap 70.
@@ -72,7 +84,7 @@ function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {
 
     Articles:
     {% for a in articles %}
-    {{ loop.index }}. [{{ a.source }}] "{{ a.title }}" - {{ a.url }}{% if a.trust %} [trust: {{ a.trust }}]{% endif %}{% if a.traction %} [traction: {{ a.traction }}]{% endif %}
+    {{ loop.index }}. [{{ a.source }}] "{{ a.title }}" - {{ a.url }}{% if a.trust %} [trust: {{ a.trust }}]{% endif %}{% if a.traction %} [traction: {{ a.traction }}]{% endif %}{% if a.seen_on %} [seen: {{ a.seen_on }}]{% endif %}
     {% if a.snippet %}   {{ a.snippet }}{% else %}   (no content available){% endif %}
     {% endfor %}
 
@@ -190,6 +202,50 @@ test score_unverified_claim_vs_measured {
         snippet "TurboPrefill implements intra-prompt pipeline scheduling for multi-GPU prefill. On Llama-3-70B it runs 2.7x faster than llama.cpp pipeline parallel."
         trust "medium"
         traction "240 points, 96 comments on Hacker News"
+      }
+    ]
+  }
+}
+
+// The 2026-09-13 caps, all from a review of the ten runs before it. Expect the
+// discount notice at or under 55, the AWS customer story at or under 60, the
+// comparison page in 35-54, and the resurfaced 2021 paper at or under 60.
+test score_notices_case_studies_and_old_work {
+  functions [ScoreArticles]
+  args {
+    articles [
+      {
+        url "https://vercel.com/changelog/glm-5-3-is-50-off-through-digitalocean-on-ai-gateway"
+        title "GLM-5.3 is 50% off through DigitalOcean on AI Gateway"
+        source "Vercel"
+        snippet "GLM-5.3 is now 50% off when routed through DigitalOcean on AI Gateway, through the end of the month."
+        trust "medium"
+        seen_on "2026-09-03"
+      }
+      {
+        url "https://aws.amazon.com/blogs/machine-learning/how-heurist-finance-built-an-ai-native-investment-workbench-on-amazon-bedrock-agentcore/"
+        title "How Heurist Finance built an AI-native investment workbench on Amazon Bedrock AgentCore"
+        source "AWS Machine Learning"
+        snippet "Heurist Finance uses Amazon Bedrock AgentCore to turn a chat into full-stack financial research. AgentCore payments buy the premium data each query needs."
+        trust "medium"
+        seen_on "2026-09-10"
+      }
+      {
+        url "https://www.pinecone.io/compare/elasticsearch"
+        title "Pinecone vs Elasticsearch"
+        source "Pinecone"
+        snippet "Pinecone separates storage and compute, so there is no cluster to manage. Elasticsearch stores vectors in the same shards as text."
+        trust "medium"
+        seen_on "2026-09-05"
+      }
+      {
+        url "https://transformer-circuits.pub/2021/framework/index.html"
+        title "A Mathematical Framework for Transformer Circuits"
+        source "Hacker News"
+        snippet "We propose a way to reverse engineer transformer computations, mapping layers to readable steps."
+        trust "medium"
+        traction "132 points, 21 comments on Hacker News"
+        seen_on "2026-09-13"
       }
     ]
   }

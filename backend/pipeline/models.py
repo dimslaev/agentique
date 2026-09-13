@@ -49,8 +49,10 @@ class Reject(SQLModel, table=True):
     reason: str | None = None
     # Stage-specific evidence: {"stars": 12}, {"keep_proba": 0.08},
     # {"dup_of": "<url>"}.
+    # none_as_null: without it an absent detail is stored as JSON 'null', which
+    # `detail IS NULL` does not match.
     detail: dict[str, object] | None = Field(
-        default=None, sa_column=Column(JSON, nullable=True)
+        default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )
 
 

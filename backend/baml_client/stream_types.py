@@ -33,6 +33,7 @@ class ArticleInput(BaseModel):
     snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
     trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
     traction: typing.Optional[str] = Field(default=None, description='How the item was received where it was posted, e.g. "7 points, 1 comments on Hacker News". Absent for sources with no public reception signal.')
+    seen_on: typing.Optional[str] = Field(default=None, description='Date the pipeline picked the item up, YYYY-MM-DD. What \'old\' is measured against: a feed or HN date is when it was posted there, not when the work was published.')
 
 class CategorizeAndTagResult(BaseModel):
     categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')

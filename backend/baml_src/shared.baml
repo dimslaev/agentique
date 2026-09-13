@@ -24,4 +24,5 @@ class ArticleInput {
   snippet string? @description("First ~200 chars of the article content, if any")
   trust string? @description("\"high\" | \"medium\" | \"low\" - source trust tag")
   traction string? @description("How the item was received where it was posted, e.g. \"7 points, 1 comments on Hacker News\". Absent for sources with no public reception signal.")
+  seen_on string? @description("Date the pipeline picked the item up, YYYY-MM-DD. What 'old' is measured against: a feed or HN date is when it was posted there, not when the work was published.")
 }

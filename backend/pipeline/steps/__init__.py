@@ -17,6 +17,8 @@ in the funnel it belongs.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from baml_client.types import ArticleInput
 from pipeline.types import Candidate
 
@@ -41,4 +43,5 @@ def to_baml_input(a: Candidate) -> ArticleInput:
         snippet=content[:SNIPPET_CAP] if content else None,
         trust=a["trust"],
         traction=a.get("traction"),
+        seen_on=datetime.now(UTC).date().isoformat(),
     )

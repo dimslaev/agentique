@@ -148,6 +148,17 @@ class Article(ArticleBase, table=True):
     # The scorer's one-sentence account of `score`. Internal, not on the public
     # API; null for articles scored before the scorer gave one.
     score_reason: str | None = None
+    # Set by scripts/rescore_articles.py: when this row was last rescored, and
+    # whether that rescore put it under the pipeline's threshold. Marking only;
+    # nothing deletes a marked row automatically.
+    rescored_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    marked_for_deletion_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore

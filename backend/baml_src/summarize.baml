@@ -6,10 +6,10 @@
 // Ministral would be written in a different voice. A NIM outage holds the
 // run's articles for the next run instead.
 //
-// Its own client, not the shared `Nemotron` in clients.baml: that one carries
+// Its own client, not the shared `Nemotron` in clients.baml: that one carried
 // `timeout 120` in options, which integrate.api.nvidia.com rejects as an
-// unsupported body param (400). Infomaniak ignores it, so `Ministral` and the
-// `Nvidia` fallback never tripped over it.
+// unsupported body param (400). It sets its timeout in an `http` block now,
+// so the two could be merged.
 client<llm> NemotronSummary {
   provider openai-generic
   retry_policy Burst

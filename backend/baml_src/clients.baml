@@ -14,14 +14,11 @@ retry_policy Burst {
   }
 }
 
-// Second in line as of 2026-09-03, replacing NVIDIA's gpt-oss-120b, which
-// reached end of life that morning and answered every call with 410 Gone. The
-// slot had been dead weight for hours before anyone noticed, because a fallback
-// only speaks up when the primary fails.
-//
-// Still NVIDIA NIM, deliberately: a fallback on Ministral's own provider would
-// share its rate limiter, and the failure this slot exists to absorb is
-// Mistral refusing a burst. A second provider is the whole point.
+// First choice since 2026-09-13: ScoreArticles calls it directly and the Nvidia
+// wrapper below tries it first. Second in line from 2026-09-03, replacing
+// NVIDIA's gpt-oss-120b, which reached end of life that morning and answered
+// every call with 410 Gone - dead weight for hours before anyone noticed,
+// because a fallback only speaks up when the primary fails.
 //
 // Measured 2026-09-03 on a SelectProductLink-shaped prompt: 1.5-6.8s across
 // sequential calls, all answering with clean JSON and the right pick — no sign
@@ -34,7 +31,7 @@ retry_policy Burst {
 // but it is a reasoning model: it spends its budget in a `reasoning` field and
 // emits an EMPTY content string if it runs out before it stops thinking (427
 // completion tokens for a two-element array). That needs a large explicit
-// max_tokens to be safe, on top of sharing Ministral's limiter.
+// max_tokens to be safe.
 client<llm> Nemotron {
   provider openai-generic
   retry_policy Burst
@@ -42,13 +39,39 @@ client<llm> Nemotron {
     base_url env.NVIDIA_NIM_BASE_URL
     api_key env.NVIDIA_NIM_API_KEY
     model "nvidia/nemotron-3-super-120b-a12b"
-    timeout 120
+    // The timeout lives in `http`, which BAML applies itself. A bare `timeout`
+    // option is sent as a body param, and NIM answers that with 400
+    // "Unsupported parameter(s)": every call here failed that way from
+    // 2026-09-04 until this block replaced it.
+    http {
+      request_timeout_ms 120000
+    }
   }
 }
 
-// Primary as of 2026-08-06: fast and reliable, lower quality. Chosen for
-// throughput — it answers in 2-3s where gpt-oss was taking minutes. See the
-// variance warning on the Nvidia wrapper below before moving it back.
+// Second in the Nvidia fallback, and --model gpt-oss-20b in the rescore scripts
+// (scripts/rescoring.py). The smaller sibling of the gpt-oss-120b that led
+// scoring until its endpoint reached end of life. Only measured on
+// ScoreArticles so far (2026-09-13): clean JSON, but it read the rubric's
+// 70 floor for lab releases as a cap.
+client<llm> GptOss20b {
+  provider openai-generic
+  retry_policy Burst
+  options {
+    base_url env.NVIDIA_NIM_BASE_URL
+    api_key env.NVIDIA_NIM_API_KEY
+    model "openai/gpt-oss-20b"
+    http {
+      request_timeout_ms 120000
+    }
+  }
+}
+
+// Last in the Nvidia fallback since 2026-09-13; primary from 2026-08-06 until
+// then. Fast (2-3s) and reliable, but a lower-quality judge - see the variance
+// warning on the Nvidia wrapper below before moving it back up. It stays as
+// the last resort because it is the only client not on NIM: when NIM refuses a
+// burst, the two clients above it fail together.
 client<llm> Ministral {
   provider openai-generic
   retry_policy Burst
@@ -56,14 +79,18 @@ client<llm> Ministral {
     base_url env.MISTRAL_AI_BASE_URL
     api_key env.MISTRAL_AI_KEY
     model "mistralai/Ministral-3-14B-Instruct-2512"
-    timeout 120
+    // A real client-side timeout. The old `timeout 120` went out as a body
+    // param, which this endpoint silently ignored: it never timed anything out.
+    http {
+      request_timeout_ms 120000
+    }
   }
 }
 
-// The name every function already references. A fallback wrapper: try Ministral
-// first, drop to Nemotron if it fails. Renaming would mean editing all 12
-// `client Nvidia` sites for no gain, so the name stays — and with Nemotron in
-// the second slot it is at least half true again.
+// The name every function already references. A fallback wrapper: Nemotron
+// first, then gpt-oss-20b, then Ministral. Renaming would mean editing all 12
+// `client Nvidia` sites for no gain, so the name stays - and with two NIM
+// models in front it is mostly true again.
 //
 // A Gemini Flash client sat third here until 2026-09-03, when the run that
 // needed it got 400 FAILED_PRECONDITION "User location is not supported for
@@ -72,17 +99,16 @@ client<llm> Ministral {
 // place: a client that always fails is not a fallback, it just hides how thin
 // the chain really is. A replacement has to be reachable from the box.
 //
-// KNOWN COST OF THIS ORDER, for ScoreArticles specifically: Ministral-3-14B
-// judged with ±15 run-to-run variance on identical input and intermittently
-// returned fewer results than it was given, which apply_scores reads as
-// score 0 — i.e. a silent reject. gpt-oss-120b led for that reason until its
-// provider latency made full runs impossible. Traded accuracy for a run that
-// finishes. Nemotron looks like the better judge and is worth trying in front
-// for scoring, but that swap needs a full score_articles pass measured end to
-// end before it lands. See plans/scoring-recalibration.md.
+// ScoreArticles no longer runs through this wrapper (2026-09-13): it calls
+// Nemotron directly. Ministral-3-14B judged with ±15 run-to-run variance on
+// identical input, intermittently returned fewer results than it was given
+// (apply_scores reads a missing score as 0, a silent reject), and over the ten
+// runs before the switch put 15 articles at 90+ and passed items the rubric
+// rules out. A fallback to it would mix two judges' scales in one feed, so
+// scoring has none.
 client<llm> Nvidia {
   provider fallback
   options {
-    strategy [Ministral, Nemotron]
+    strategy [Nemotron, GptOss20b, Ministral]
   }
 }

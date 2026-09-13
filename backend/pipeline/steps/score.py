@@ -13,6 +13,7 @@ from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline import keep_drop
 from pipeline.embedding import get_model
+from pipeline.llm_text import sanitize_llm_text
 from pipeline.models import RejectStage
 from pipeline.rejects import record_reject
 from pipeline.steps import to_baml_input
@@ -117,7 +118,7 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
         else:
             judged.extend(batch)
             score_by_url.update({r.url: r.score for r in result})
-            reason_by_url.update({r.url: r.reason for r in result})
+            reason_by_url.update({r.url: sanitize_llm_text(r.reason) for r in result})
             log(f"    batch {i // SCORE_BATCH + 1}/{batches} done")
         if i + SCORE_BATCH < len(articles):
             wait_ms(SCORE_BATCH_PAUSE_MS)
