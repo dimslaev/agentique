@@ -84,14 +84,14 @@ def run_pipeline(stats: RunStats) -> None:
                 s.filtered_thin_repo = len(alive) - len(real)
 
                 # Pre-filter obvious junk before the scoring LLM call: cuts what
-                # the scorer has to see, and junk gets recorded in ScoredUrl
+                # the scorer has to see, and junk gets recorded as a reject
                 # instead of silently dropped.
                 worth_scoring = prefilter_keep_drop(session, real)
                 prefiltered = len(real) - len(worth_scoring)
 
                 # Before scoring: a story we already carry must never cost an
-                # LLM call. Runs after the pre-filter so junk-that-is-a-dup is
-                # recorded in ScoredUrl rather than silently dropped here.
+                # LLM call. Runs after the pre-filter so junk that is also a
+                # dup is recorded as junk, the verdict that says more.
                 unique = dedup_semantic(session, worth_scoring, source.label)
                 s.deduped = len(worth_scoring) - len(unique)
 

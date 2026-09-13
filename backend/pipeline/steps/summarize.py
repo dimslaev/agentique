@@ -5,7 +5,7 @@ cannot summarize is dropped here rather than inserted bare. Content is already
 at least ``fetch.MIN_SUMMARIZABLE_CHARS`` by now, so a drop means the call
 failed or the answer was garbage.
 
-An unusable summary is recorded in ScoredUrl, like a sub-threshold score, so
+An unusable summary is recorded as a reject, like a sub-threshold score, so
 the article is not fetched, scored and summarized again every run. A failed
 call is not: a provider outage must not become a permanent reject, so the next
 run fetches and scores those again.
@@ -18,7 +18,8 @@ from sqlmodel import Session
 from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline.llm_text import is_corrupted, sanitize_llm_text
-from pipeline.models import ScoredUrl
+from pipeline.models import RejectStage
+from pipeline.rejects import record_reject
 from pipeline.types import Scored, Summarized
 
 # The article text sent to the model. Long enough to summarize a full post
@@ -79,7 +80,9 @@ def summarize_articles(session: Session, articles: list[Scored]) -> list[Summari
             if summary:
                 summarized.append({**a, "summary": summary})
             else:
-                session.merge(ScoredUrl(url=a["url"]))
+                record_reject(
+                    session, a, RejectStage.unusable_summary, score=a["score"]
+                )
                 unusable += 1
                 log(f"    Unusable summary, not inserting {a['url']}")
         if i + 1 < len(articles):

@@ -635,7 +635,7 @@ class ScoredArticleAst:
     def __init__(self, tb: type_builder.TypeBuilder):
         _tb = tb._tb # type: ignore (we know how to use this private attribute)
         self._bldr = _tb.class_("ScoredArticle")
-        self._properties: typing.Set[str] = set([  "url",  "score",  ])
+        self._properties: typing.Set[str] = set([  "url",  "score",  "reason",  ])
         self._props = ScoredArticleProperties(self._bldr, self._properties)
 
     def type(self) -> baml_py.FieldType:
@@ -670,6 +670,10 @@ class ScoredArticleProperties:
     @property
     def score(self) -> type_builder.ClassPropertyViewer:
         return type_builder.ClassPropertyViewer(self.__bldr.property("score"))
+    
+    @property
+    def reason(self) -> type_builder.ClassPropertyViewer:
+        return type_builder.ClassPropertyViewer(self.__bldr.property("reason"))
     
     
 

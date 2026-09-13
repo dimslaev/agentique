@@ -13,7 +13,8 @@ from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline import keep_drop
 from pipeline.embedding import get_model
-from pipeline.models import ScoredUrl
+from pipeline.models import RejectStage
+from pipeline.rejects import record_reject
 from pipeline.steps import to_baml_input
 from pipeline.types import Candidate, Scored
 
@@ -31,7 +32,7 @@ def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Can
 
     Runs the tiny distilled classifier on title+snippet. Anything it is very
     confident is a drop (P(keep) < threshold) is discarded without an LLM call
-    and recorded in ScoredUrl so it is not re-fetched. Everything else passes
+    and recorded as a reject so it is not re-fetched. Everything else passes
     through for real scoring.
     """
     threshold = keep_drop.drop_below()
@@ -44,8 +45,14 @@ def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Can
     survivors: list[Candidate] = []
     dropped = 0
     for a, vec in zip(articles, vecs, strict=True):
-        if keep_drop.keep_proba(vec) < threshold:
-            session.merge(ScoredUrl(url=a["url"]))
+        p_keep = keep_drop.keep_proba(vec)
+        if p_keep < threshold:
+            record_reject(
+                session,
+                a,
+                RejectStage.prefilter,
+                detail={"keep_proba": round(p_keep, 3)},
+            )
             dropped += 1
         else:
             survivors.append(a)
@@ -84,9 +91,10 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
     log(f"  Scoring {len(articles)} articles in batches of {SCORE_BATCH}...")
 
     score_by_url: dict[str, int] = {}
+    reason_by_url: dict[str, str] = {}
     # Only the articles a scoring call actually came back for. A batch whose
     # call failed is left out entirely: apply_scores reads a missing score as 0
-    # and the sub-threshold URLs below get written to ScoredUrl, so scoring the
+    # and the sub-threshold URLs below get recorded as rejects, so scoring the
     # batch anyway would turn a provider outage into a permanent drop.
     judged: list[Candidate] = []
     failed = 0
@@ -106,6 +114,7 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
         else:
             judged.extend(batch)
             score_by_url.update({r.url: r.score for r in result})
+            reason_by_url.update({r.url: r.reason for r in result})
             log(f"    batch {i // SCORE_BATCH + 1}/{batches} done")
         if i + SCORE_BATCH < len(articles):
             wait_ms(SCORE_BATCH_PAUSE_MS)
@@ -129,9 +138,16 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
     # are deliberately NOT recorded here: a crash between this commit and the
     # insert would otherwise mark them "scored" and drop them forever. Once
     # inserted, the Article row itself makes them known (see filter_known_urls).
+    # A score of 0 with no reason is an article the scorer did not return.
     below = [s for s in scored if s["score"] < SCORE_THRESHOLD]
     for s in below:
-        session.merge(ScoredUrl(url=s["url"]))
+        record_reject(
+            session,
+            s,
+            RejectStage.below_threshold,
+            score=s["score"],
+            reason=reason_by_url.get(s["url"]),
+        )
     if below:
         session.commit()
 

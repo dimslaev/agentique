@@ -1,6 +1,7 @@
 class ScoredArticle {
   url string
   score int @description("1-100 developer-actionability rating")
+  reason string @description("One short sentence naming what decided the score: out of scope, the evidence shown or missing, the reach, or the rule that capped it.")
 }
 
 function ScoreArticles(articles: ArticleInput[]) -> ScoredArticle[] {

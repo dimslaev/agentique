@@ -105,6 +105,7 @@ class ProfileVerdict(BaseModel):
 class ScoredArticle(BaseModel):
     url: str
     score: int = Field(description='1-100 developer-actionability rating')
+    reason: str = Field(description='One short sentence naming what decided the score: out of scope, the evidence shown or missing, the reach, or the rule that capped it.')
 
 class SearchCandidate(BaseModel):
     title: str

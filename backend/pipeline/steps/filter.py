@@ -20,7 +20,8 @@ from app.platform.logging import log
 from pipeline import keep_drop
 from pipeline.embedding import embed_batch
 from pipeline.github import github_repo_from_url, is_known_owner
-from pipeline.models import ScoredUrl
+from pipeline.models import Reject, RejectStage
+from pipeline.rejects import record_reject
 from pipeline.sources.github_stars import stars_for
 from pipeline.steps import SNIPPET_CAP
 from pipeline.types import Candidate
@@ -68,7 +69,7 @@ def filter_known_urls(
         session.exec(select(Article.url).where(Article.url.in_(all_urls))).all()
     )
     scored_urls = set(
-        session.exec(select(ScoredUrl.url).where(ScoredUrl.url.in_(all_urls))).all()
+        session.exec(select(Reject.url).where(Reject.url.in_(all_urls))).all()
     )
 
     fresh = [
@@ -138,7 +139,7 @@ def filter_thin_repos(
     anyway. A lookup that fails or is rate-limited returns None and the article
     is kept: the gate never deletes an article because GitHub was unreachable.
 
-    Drops are recorded in ``ScoredUrl``. Unlike the recency-based holds in the
+    Drops are recorded as rejects. Unlike the recency-based holds in the
     Hacker News source, this verdict does not change inside a 48h window, so
     re-fetching and re-checking the same repo tomorrow would just spend the
     request budget again.
@@ -164,7 +165,7 @@ def filter_thin_repos(
         count = stars.get(repo) if repo else None
         if repo and count is not None and count < min_stars:
             log(f"  Dropped thin repo: {a['url']} ({count} stars < {min_stars})")
-            session.merge(ScoredUrl(url=a["url"]))
+            record_reject(session, a, RejectStage.thin_repo, detail={"stars": count})
             dropped += 1
             continue
         kept.append(a)
@@ -214,6 +215,9 @@ def dedup_semantic(
     candidate against every article ingested in the last DEDUP_WINDOW_DAYS, and
     against the ones already kept from this same batch — two feeds carrying one
     story in a single run would otherwise both survive.
+
+    Duplicates are recorded as rejects with the URL they duplicate: that stops
+    re-embedding them every run, and counts how many outlets carried a story.
     """
     threshold = dedup_dist_threshold()
     if not articles or threshold <= 0:
@@ -253,7 +257,9 @@ def dedup_semantic(
     for i, a in enumerate(articles):
         j = against_db.get(i)
         if j is not None:
-            log(f"  Dropped duplicate: {a['url']} (already carry: {embedded[j][0]})")
+            dup_of = embedded[j][0]
+            log(f"  Dropped duplicate: {a['url']} (already carry: {dup_of})")
+            record_reject(session, a, RejectStage.duplicate, detail={"dup_of": dup_of})
             continue
 
         if kept_vecs:
@@ -261,9 +267,10 @@ def dedup_semantic(
                 new_vecs[i : i + 1], np.array(kept_vecs, dtype=np.float32), threshold
             )
             if 0 in intra:
-                log(
-                    f"  Dropped duplicate: {a['url']} "
-                    f"(same batch: {unique[intra[0]]['url']})"
+                dup_of = unique[intra[0]]["url"]
+                log(f"  Dropped duplicate: {a['url']} (same batch: {dup_of})")
+                record_reject(
+                    session, a, RejectStage.duplicate, detail={"dup_of": dup_of}
                 )
                 continue
 
@@ -272,6 +279,7 @@ def dedup_semantic(
 
     dropped = len(articles) - len(unique)
     if dropped:
+        session.commit()
         log(
             f"  Deduped {dropped}/{len(articles)} against "
             f"{len(embedded)} articles from the last {DEDUP_WINDOW_DAYS} days"

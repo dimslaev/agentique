@@ -113,7 +113,7 @@ def has_traction(item: dict) -> bool:
     * **Still young** (under ``hn_grace_hours``) — no verdict yet. Every story
       starts at 1 point, so a vote count here means nothing either way, and this
       returns False to *hold the story back rather than reject it*: nothing
-      dropped in a source is written to ``ScoredUrl``, so the next run re-reads
+      dropped in a source is recorded as a reject, so the next run re-reads
       the same id with settled numbers, still inside the 48h recency window.
       The cost is up to a day of latency on a non-lab story; the alternative is
       admitting the entire firehose blind, which is what filled the feed with

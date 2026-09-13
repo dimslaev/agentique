@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 
+from pipeline.models import RejectStage
 from pipeline.steps import score as score_step
 from pipeline.steps.score import SCORE_THRESHOLD
 from pipeline.types import Candidate
@@ -21,19 +22,22 @@ class _FakeSession:
 
     def __init__(self) -> None:
         self.merged: list[str] = []
+        self.rejects: list = []
         self.commits = 0
 
     def merge(self, obj) -> None:
         self.merged.append(obj.url)
+        self.rejects.append(obj)
 
     def commit(self) -> None:
         self.commits += 1
 
 
 class _Scored:
-    def __init__(self, url: str, score: int) -> None:
+    def __init__(self, url: str, score: int, reason: str = "") -> None:
         self.url = url
         self.score = score
+        self.reason = reason
 
 
 def _article(url: str) -> Candidate:
@@ -116,6 +120,33 @@ def test_a_sub_threshold_article_is_still_recorded(monkeypatch):
 
     assert [k["url"] for k in kept] == ["keep"]
     assert session.merged == ["drop"]
+
+
+def test_a_reject_keeps_the_scorers_score_and_reason(monkeypatch):
+    articles = [_article("drop")]
+
+    _, session = _run(
+        monkeypatch,
+        articles,
+        lambda urls: [_Scored(u, 40, "Landing page, no method.") for u in urls],
+    )
+
+    [reject] = session.rejects
+    assert reject.stage == RejectStage.below_threshold
+    assert reject.score == 40
+    assert reject.reason == "Landing page, no method."
+    assert reject.title == "An LLM thing"
+
+
+def test_an_article_the_scorer_skipped_is_recorded_without_a_reason(monkeypatch):
+    articles = [_article("answered"), _article("skipped")]
+
+    _, session = _run(
+        monkeypatch, articles, lambda urls: [_Scored("answered", 90, "Release.")]
+    )
+
+    [reject] = session.rejects
+    assert (reject.url, reject.score, reject.reason) == ("skipped", 0, None)
 
 
 def test_every_batch_failing_raises_so_the_source_records_the_error(monkeypatch):
