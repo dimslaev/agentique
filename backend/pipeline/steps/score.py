@@ -67,17 +67,20 @@ def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Can
 
 
 def apply_scores(
-    articles: list[Candidate], score_by_url: dict[str, int]
+    articles: list[Candidate],
+    score_by_url: dict[str, int],
+    reason_by_url: dict[str, str] | None = None,
 ) -> list[Scored]:
-    """Attach each article's score and sort best-first. Pure: no I/O.
+    """Attach each article's score and reason, and sort best-first. Pure: no I/O.
 
     An article the scorer did not return scores 0 and so falls below the
     threshold — a missing score is treated as a reject, never as a pass.
     """
+    reasons = reason_by_url or {}
     scored: list[Scored] = []
     for a in articles:
         score = score_by_url.get(a["url"], 0)
-        scored.append({**a, "score": score})
+        scored.append({**a, "score": score, "score_reason": reasons.get(a["url"])})
 
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored
@@ -130,7 +133,7 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
     if last_error is not None and not judged:
         raise last_error
 
-    scored = apply_scores(judged, score_by_url)
+    scored = apply_scores(judged, score_by_url, reason_by_url)
     kept = [s for s in scored if s["score"] >= SCORE_THRESHOLD]
     log(f"  {len(kept)} articles pass scoring (threshold: {SCORE_THRESHOLD})")
 
@@ -146,7 +149,7 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
             s,
             RejectStage.below_threshold,
             score=s["score"],
-            reason=reason_by_url.get(s["url"]),
+            reason=s["score_reason"],
         )
     if below:
         session.commit()

@@ -39,6 +39,7 @@ def insert_articles(session: Session, summarized: list[Summarized]) -> list[Pers
             url=item["url"],
             published_at=parse_date(item["published_date"]),
             score=item["score"],
+            score_reason=item["score_reason"],
             summary=item["summary"],
             content=content,
         )

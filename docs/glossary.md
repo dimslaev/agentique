@@ -14,7 +14,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). When set, the fetch step drops anything whose title misses the AI keyword list before spending an embedding or LLM call on it. Ingestion policy, not part of the public read API.
 
-- **Score** (`Article.score`) - an LLM's 1-100 rating of how actionable the article is for a developer building with AI right now. Main noise filter: only articles at or above the configured threshold get inserted.
+- **Score** (`Article.score`) - an LLM's 1-100 rating of how actionable the article is for a developer building with AI right now. Main noise filter: only articles at or above the configured threshold get inserted. The scorer's one-sentence reason is kept in `Article.score_reason` (internal, not on the public API) and, for rejects, in `Reject.reason`.
 
 - **Traction** - outside signal that people found a story worth reading, independent of the pipeline's own score: Hacker News points/comments past a minimum, or a GitHub repo's star count. Holds back low-traction submissions from the "everyone can post" sources. A first-party URL (`pipeline/first_party.py`) skips the gate - a lab's own announcement counts as news at zero votes.
 

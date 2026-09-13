@@ -32,6 +32,15 @@ def test_attaches_each_articles_score_by_url():
     assert {s["url"]: s["score"] for s in scored} == {"u1": 80, "u2": 40}
 
 
+def test_attaches_the_scorers_reason_or_none():
+    articles = [_article("u1"), _article("u2")]
+    scored = apply_scores(articles, {"u1": 80, "u2": 40}, {"u1": "Open weights."})
+    assert {s["url"]: s["score_reason"] for s in scored} == {
+        "u1": "Open weights.",
+        "u2": None,
+    }
+
+
 def test_article_the_scorer_omitted_scores_zero():
     """A missing score must read as a reject, never as a pass — the scorer
     dropping an item from its response should not let it through unrated."""

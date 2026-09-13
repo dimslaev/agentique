@@ -145,6 +145,9 @@ class Article(ArticleBase, table=True):
     embedding: list[float] | None = Field(
         default=None, sa_column=Column(Vector(256), nullable=True)
     )
+    # The scorer's one-sentence account of `score`. Internal, not on the public
+    # API; null for articles scored before the scorer gave one.
+    score_reason: str | None = None
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore

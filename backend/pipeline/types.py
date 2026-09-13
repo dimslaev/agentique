@@ -66,6 +66,8 @@ class Scored(Candidate):
     this far -- ``score_articles`` drops the rest."""
 
     score: int
+    # The scorer's one-sentence account of the score; None if it gave none.
+    score_reason: str | None
 
 
 class Summarized(Scored):
