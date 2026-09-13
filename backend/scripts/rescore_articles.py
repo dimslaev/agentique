@@ -124,6 +124,7 @@ def main() -> int:
             f"{pending} articles to rescore with {model} ({mode}); "
             f"{no_summary} skipped for having no summary"
         )
+        total = pending if limit is None else min(pending, limit)
         try:
             while limit is None or taken < limit:
                 size = SCORE_BATCH if limit is None else min(SCORE_BATCH, limit - taken)
@@ -168,6 +169,13 @@ def main() -> int:
                         session.add(article)
                 if write:
                     session.commit()
+                # One line per batch, flushed: piped through tee, stdout is
+                # block-buffered and the line would otherwise show up late.
+                print(
+                    f"[{taken}/{total}] rescored {rescored}, marked {marked}, "
+                    f"not answered {unanswered}",
+                    flush=True,
+                )
                 wait_ms(SCORE_BATCH_PAUSE_MS)
         except KeyboardInterrupt:
             session.rollback()
