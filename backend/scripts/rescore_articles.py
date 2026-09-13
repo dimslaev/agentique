@@ -6,7 +6,8 @@ same ScoreArticles prompt on title + summary instead, and writes the new score,
 the scorer's reason and ``rescored_at``. An article that now scores under the
 pipeline's threshold also gets ``marked_for_deletion_at``; nothing is deleted.
 
-Prints only by default; --write persists. With --write it resumes: it picks
+A dry run by default: it scores and prints only the totals, writing nothing;
+each verdict is in BAML's own log. --write persists, and resumes: it picks
 articles where ``rescored_at`` is null and commits after every batch, so a
 Ctrl-C, a crash or a provider outage costs at most the batch in flight. Run it
 again and it carries on.
@@ -102,7 +103,9 @@ def main() -> int:
         f"{DRY_RUN_LIMIT} without)",
     )
     parser.add_argument(
-        "--write", action="store_true", help="persist scores and marks (default: print)"
+        "--write",
+        action="store_true",
+        help="persist scores and marks (default: dry run)",
     )
     args = parser.parse_args()
     write: bool = args.write
@@ -151,13 +154,10 @@ def main() -> int:
                         unanswered += 1
                         print(f"  #{article.id} not answered, left for the next run")
                         continue
+                    # No per-article line: BAML's own log already shows every
+                    # verdict, and two copies of each buried the progress.
                     low = verdict.score < SCORE_THRESHOLD
                     reason = sanitize_llm_text(verdict.reason)
-                    flag = "  MARK" if low else ""
-                    print(
-                        f"  #{article.id} {article.score} -> {verdict.score}{flag}  "
-                        f"{article.title}\n      {reason}"
-                    )
                     rescored += 1
                     marked += int(low)
                     if write:
