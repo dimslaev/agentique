@@ -37,7 +37,7 @@ from sqlalchemy import literal, tuple_
 from sqlmodel import Session, col, func, select
 from trafilatura import extract_metadata
 
-from app.catalog.models import LinkPlatform, Publisher
+from app.catalog.models import Publisher
 from app.platform.dates import get_datetime_utc
 from app.platform.db import engine
 from app.platform.logging import short_error, wait_ms
@@ -51,9 +51,15 @@ from pipeline.fetching.http import (
 from pipeline.freshness import parse_date
 from pipeline.llm_text import sanitize_llm_text
 from pipeline.models import Reject
+from pipeline.publishers import hosts_to_publishers, match_publisher
 from pipeline.rejects import CONTENT_CAP
 from pipeline.steps import SNIPPET_CAP
-from pipeline.steps.score import SCORE_BATCH, SCORE_BATCH_PAUSE_MS, SCORE_THRESHOLD
+from pipeline.steps.score import (
+    SCORE_BATCH,
+    SCORE_BATCH_PAUSE_MS,
+    SCORE_THRESHOLD,
+    threshold_for,
+)
 from pipeline.urls import hostname
 from scripts.rescoring import (
     DEFAULT_MODEL,
@@ -66,19 +72,6 @@ DRY_RUN_LIMIT = 10
 FETCH_TIMEOUT_SECS = 10.0
 PROXY_TIMEOUT_SECS = 20.0
 FETCH_CONCURRENCY = 5
-
-# Hosts many unrelated authors publish under: a URL on one says nothing about
-# which publisher it came from, so none is matched there.
-SHARED_HOSTS = {
-    "github.com",
-    "linkedin.com",
-    "medium.com",
-    "reddit.com",
-    "substack.com",
-    "twitter.com",
-    "x.com",
-    "youtube.com",
-}
 
 
 class Page(NamedTuple):
@@ -116,42 +109,6 @@ def fetch_page(url: str, use_proxy: bool) -> Page | None:
     if not title and not text:
         return None
     return Page(title=title or url, text=text, published=meta.date)
-
-
-def publishers_by_host(session: Session) -> dict[str, Publisher]:
-    """Host -> the one publisher whose links name it. A host two publishers
-    share is left out: it cannot say which of them a URL belongs to."""
-    candidates: dict[str, dict[int, Publisher]] = {}
-    for p in session.exec(select(Publisher)).all():
-        for platform, link in p.links.items():
-            if platform == LinkPlatform.search:
-                host = link.lower().removeprefix("www.")
-            elif platform in (
-                LinkPlatform.website,
-                LinkPlatform.rss,
-                LinkPlatform.substack,
-            ):
-                host = hostname(link)
-            else:
-                continue
-            if host and host not in SHARED_HOSTS and p.id is not None:
-                candidates.setdefault(host, {})[p.id] = p
-    return {
-        host: next(iter(pubs.values()))
-        for host, pubs in candidates.items()
-        if len(pubs) == 1
-    }
-
-
-def match_publisher(url: str, by_host: dict[str, Publisher]) -> Publisher | None:
-    """The publisher for a URL's host, climbing to parent domains
-    (blog.example.com -> example.com) until one matches."""
-    host = hostname(url)
-    while "." in host:
-        if host in by_host:
-            return by_host[host]
-        host = host.partition(".")[2]
-    return None
 
 
 def count_pending(session: Session) -> int:
@@ -225,7 +182,7 @@ def main() -> int:
     failed_in_a_row = 0
     now_passing: list[tuple[int, str, str]] = []
     with Session(engine) as session:
-        by_host = publishers_by_host(session)
+        by_host = hosts_to_publishers(session.exec(select(Publisher)).all())
         mode = "writing" if write else "dry run, nothing is written"
         print(f"{count_pending(session)} rejects to backfill with {model} ({mode})")
         try:
@@ -290,7 +247,12 @@ def main() -> int:
                         f"       {reason}"
                     )
                     scored += 1
-                    if verdict.score >= SCORE_THRESHOLD:
+                    bar = (
+                        threshold_for(str(publisher.trust), str(publisher.kind))
+                        if publisher
+                        else SCORE_THRESHOLD
+                    )
+                    if verdict.score >= bar:
                         now_passing.append((verdict.score, page.title, reject.url))
                     if write:
                         reject.title = page.title
@@ -317,7 +279,7 @@ def main() -> int:
             )
             if now_passing:
                 print(
-                    f"\n{len(now_passing)} would now pass (score >= {SCORE_THRESHOLD}):"
+                    f"\n{len(now_passing)} would now pass their publisher's threshold:"
                 )
                 for score, title, url in sorted(now_passing, reverse=True):
                     print(f"  {score:>3}  {title}\n       {url}")

@@ -40,8 +40,8 @@ class _Scored:
         self.reason = reason
 
 
-def _article(url: str) -> Candidate:
-    return {
+def _article(url: str, **overrides: str) -> Candidate:
+    a: Candidate = {
         "title": "An LLM thing",
         "url": url,
         "content": "body",
@@ -49,8 +49,10 @@ def _article(url: str) -> Candidate:
         "source": "Hacker News",
         "publisher_id": 1,
         "trust": "high",
+        "publisher_kind": "company",
         "topic_gated": False,
     }
+    return {**a, **overrides}  # type: ignore[typeddict-item]
 
 
 def _run(monkeypatch, articles, scorer):
@@ -147,6 +149,22 @@ def test_an_article_the_scorer_skipped_is_recorded_without_a_reason(monkeypatch)
 
     [reject] = session.rejects
     assert (reject.url, reject.score, reject.reason) == ("skipped", 0, None)
+
+
+def test_a_curated_individual_clears_a_lower_bar(monkeypatch):
+    """58 keeps a high-trust individual's post and drops everyone else's."""
+    articles = [
+        _article("simon", publisher_kind="individual"),
+        _article("vendor"),
+        _article("solo", trust="medium", publisher_kind="individual"),
+    ]
+
+    kept, session = _run(
+        monkeypatch, articles, lambda urls: [_Scored(u, 58) for u in urls]
+    )
+
+    assert [k["url"] for k in kept] == ["simon"]
+    assert sorted(session.merged) == ["solo", "vendor"]
 
 
 def test_every_batch_failing_raises_so_the_source_records_the_error(monkeypatch):

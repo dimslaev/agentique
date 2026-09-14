@@ -2,7 +2,7 @@
 
 Glossary for words the code uses. If a term below and the code disagree, the code wins - file a fix.
 
-- **Publisher** - the outlet an article came from (a blog, a lab's news page, a subreddit). Different from a *source* (below): one publisher can be reached through more than one source. `Publisher.type` records the source actually used.
+- **Publisher** - the outlet an article came from (a blog, a lab's news page, a subreddit). Different from a *source* (below): one publisher can be reached through more than one source. `Publisher.type` records the source actually used. An article is credited to the publisher whose site its URL is on when one is known, even when an aggregator found it; the item's `source` still names the aggregator.
 
 - **Publisher kind vs type** - two enums on the same model, easy to confuse.
   - `kind` (`PublisherKind`) - what the publisher is: `individual`, `company`, `community`, `media`. Shown to readers.
@@ -10,7 +10,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, an AI-news aggregator, a curated Substack list, GitHub stars, Reddit, a lab-watch crawler, email ingestion. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
 
-- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Weights or gates pipeline decisions. Not on the public API.
+- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Weights or gates pipeline decisions. A high-trust `individual` publisher's articles pass at 55 instead of 65 (`threshold_for` in `pipeline/steps/score.py`). Not on the public API.
 
 - **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). When set, the fetch step drops anything whose title misses the AI keyword list before spending an embedding or LLM call on it. Ingestion policy, not part of the public read API.
 

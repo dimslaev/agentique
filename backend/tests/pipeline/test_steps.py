@@ -16,7 +16,12 @@ from pipeline.steps import fetch as fetch_step
 from pipeline.steps.enrich import accept_title
 from pipeline.steps.fetch import drop_off_topic
 from pipeline.steps.persist import best_per_url
-from pipeline.steps.score import apply_scores
+from pipeline.steps.score import (
+    CURATED_INDIVIDUAL_THRESHOLD,
+    SCORE_THRESHOLD,
+    apply_scores,
+    threshold_for,
+)
 
 
 def _article(url: str, source: str = "Hacker News", **extra) -> dict:
@@ -39,6 +44,12 @@ def test_attaches_the_scorers_reason_or_none():
         "u1": "Open weights.",
         "u2": None,
     }
+
+
+def test_only_a_high_trust_individual_gets_the_lower_bar():
+    assert threshold_for("high", "individual") == CURATED_INDIVIDUAL_THRESHOLD
+    assert threshold_for("medium", "individual") == SCORE_THRESHOLD
+    assert threshold_for("high", "company") == SCORE_THRESHOLD
 
 
 def test_article_the_scorer_omitted_scores_zero():
@@ -169,15 +180,20 @@ def _raw(url: str, source: str) -> dict:
 
 
 class _FakePublisher:
-    def __init__(self, topic_gated: bool) -> None:
-        self.id = 1
+    def __init__(self, topic_gated: bool, id_: int = 1) -> None:
+        self.id = id_
         self.trust = SimpleNamespace(value="high")
+        self.kind = SimpleNamespace(value="individual")
         self.topic_gated = topic_gated
 
 
 class _FakeResolver:
-    def __init__(self, topic_gated: bool) -> None:
+    def __init__(self, topic_gated: bool, credited: dict | None = None) -> None:
         self._publisher = _FakePublisher(topic_gated)
+        self._credited = credited or {}
+
+    def credit(self, url: str) -> _FakePublisher | None:
+        return self._credited.get(url)
 
     def resolve(self, source: str) -> _FakePublisher:
         return self._publisher
@@ -225,6 +241,21 @@ def test_every_item_carries_the_flag_by_the_time_the_gate_reads_it():
     assert [c["topic_gated"] for c in candidates] == [True, True]
     assert [c["publisher_id"] for c in candidates] == [1, 1]
     assert [c["trust"] for c in candidates] == ["high", "high"]
+    assert [c["publisher_kind"] for c in candidates] == ["individual", "individual"]
+
+
+def test_credits_the_author_over_the_aggregator_that_found_it():
+    """A post found through Hacker News is the author's when we know their
+    site; the source stays Hacker News, which is where we found it."""
+    author = _FakePublisher(topic_gated=False, id_=7)
+    url = "https://simonwillison.net/2026/Aug/8/auto-mode/"
+    resolver = _FakeResolver(topic_gated=True, credited={url: author})
+
+    [c] = fetch_step.resolve_publishers([_raw(url, "Hacker News")], resolver)
+
+    assert c["publisher_id"] == 7
+    assert c["topic_gated"] is False
+    assert c["source"] == "Hacker News"
 
 
 def test_does_not_mutate_or_copy_the_articles_it_keeps():

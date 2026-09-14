@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from app.catalog.models import PublisherKind, TrustLevel
 from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
 from pipeline import keep_drop
@@ -23,9 +24,22 @@ from pipeline.types import Candidate, Scored
 # near 55 there, so this admits roughly the top third. Moving one without the
 # other either empties the feed or fills it with newsletter filler.
 SCORE_THRESHOLD = 65
+# Hand-picked individual writers (a high-trust publisher of kind individual)
+# clear a lower bar. The feed is meant to carry them over one more vendor
+# post, and asking the scorer to favour them does not work: its +3 trust
+# nudge drowns in its own run-to-run noise, and a prompt that favours
+# individuals lifts every solo landing page with them.
+CURATED_INDIVIDUAL_THRESHOLD = 55
 SCORE_BATCH = 5
 # Pause between scoring batches to stay under the provider's rate limit.
 SCORE_BATCH_PAUSE_MS = 1000
+
+
+def threshold_for(trust: str, kind: str) -> int:
+    """The score an article needs to be kept, given its publisher. Pure."""
+    if trust == TrustLevel.high and kind == PublisherKind.individual:
+        return CURATED_INDIVIDUAL_THRESHOLD
+    return SCORE_THRESHOLD
 
 
 def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Candidate]:
@@ -135,15 +149,24 @@ def score_articles(session: Session, articles: list[Candidate]) -> list[Scored]:
         raise last_error
 
     scored = apply_scores(judged, score_by_url, reason_by_url)
-    kept = [s for s in scored if s["score"] >= SCORE_THRESHOLD]
-    log(f"  {len(kept)} articles pass scoring (threshold: {SCORE_THRESHOLD})")
+    kept = [
+        s
+        for s in scored
+        if s["score"] >= threshold_for(s["trust"], s["publisher_kind"])
+    ]
+    log(
+        f"  {len(kept)} articles pass scoring (threshold: {SCORE_THRESHOLD}, "
+        f"{CURATED_INDIVIDUAL_THRESHOLD} for curated individuals)"
+    )
 
     # Record only sub-threshold URLs so they are not re-fetched next run. Keepers
     # are deliberately NOT recorded here: a crash between this commit and the
     # insert would otherwise mark them "scored" and drop them forever. Once
     # inserted, the Article row itself makes them known (see filter_known_urls).
     # A score of 0 with no reason is an article the scorer did not return.
-    below = [s for s in scored if s["score"] < SCORE_THRESHOLD]
+    below = [
+        s for s in scored if s["score"] < threshold_for(s["trust"], s["publisher_kind"])
+    ]
     for s in below:
         record_reject(
             session,

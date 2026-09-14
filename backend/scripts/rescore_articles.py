@@ -34,7 +34,13 @@ from app.platform.db import engine
 from app.platform.logging import short_error, wait_ms
 from baml_client.types import ArticleInput
 from pipeline.llm_text import sanitize_llm_text
-from pipeline.steps.score import SCORE_BATCH, SCORE_BATCH_PAUSE_MS, SCORE_THRESHOLD
+from pipeline.steps.score import (
+    CURATED_INDIVIDUAL_THRESHOLD,
+    SCORE_BATCH,
+    SCORE_BATCH_PAUSE_MS,
+    SCORE_THRESHOLD,
+    threshold_for,
+)
 from scripts.rescoring import (
     DEFAULT_MODEL,
     MAX_FAILED_BATCHES_IN_A_ROW,
@@ -149,7 +155,7 @@ def main() -> int:
                 failed_in_a_row = 0
 
                 now = get_datetime_utc()
-                for article, _ in rows:
+                for article, publisher in rows:
                     verdict = verdicts.get(article.url)
                     if verdict is None:
                         unanswered += 1
@@ -157,7 +163,9 @@ def main() -> int:
                         continue
                     # No per-article line: BAML's own log already shows every
                     # verdict, and two copies of each buried the progress.
-                    low = verdict.score < SCORE_THRESHOLD
+                    low = verdict.score < threshold_for(
+                        str(publisher.trust), str(publisher.kind)
+                    )
                     reason = sanitize_llm_text(verdict.reason)
                     rescored += 1
                     marked += int(low)
@@ -186,7 +194,8 @@ def main() -> int:
         finally:
             print(
                 f"\nRescored {rescored}, marked {marked} for deletion "
-                f"(score < {SCORE_THRESHOLD}), {unanswered} not answered."
+                f"(score < {SCORE_THRESHOLD}, < {CURATED_INDIVIDUAL_THRESHOLD} for "
+                f"curated individuals), {unanswered} not answered."
             )
     return 0
 

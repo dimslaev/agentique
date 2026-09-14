@@ -58,6 +58,8 @@ class Candidate(RawItem):
 
     publisher_id: int
     trust: str
+    # PublisherKind value; with trust it decides the scoring threshold.
+    publisher_kind: str
     topic_gated: bool
 
 

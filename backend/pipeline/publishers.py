@@ -10,12 +10,15 @@ checked-in list.
 Key jobs:
 - map a fetched item's ``source`` name -> a Publisher.id (via ``slugify``),
   auto-creating a *quarantined* publisher for unknown sources.
+- credit an item to the publisher whose site its URL is on, when one is known,
+  so a post found through an aggregator counts as its author's.
 - expose the active feed publishers (rss/substack links) the pipeline should poll.
 - expose the active newsletter senders (email links) the IMAP source matches.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from sqlmodel import Session, select
@@ -29,7 +32,7 @@ from app.catalog.models import (
 )
 from app.platform.logging import log
 from pipeline.llm_text import enum_value
-from pipeline.urls import feed_url
+from pipeline.urls import feed_url, hostname
 
 # ─── per-run publisher resolution ───────────────────────────────────────────
 
@@ -44,7 +47,18 @@ class PublisherResolver:
 
     session: Session
     _cache: dict[str, Publisher] = field(default_factory=dict)
+    _by_host: dict[str, Publisher] | None = None
     quarantined: list[str] = field(default_factory=list)
+
+    def credit(self, url: str) -> Publisher | None:
+        """The publisher whose site ``url`` is on, if we know one. Hacker News
+        and the newsletters link to other people's posts; this is what lets
+        such a post count as its author's rather than the aggregator's."""
+        if self._by_host is None:
+            self._by_host = hosts_to_publishers(
+                self.session.exec(select(Publisher)).all()
+            )
+        return match_publisher(url, self._by_host)
 
     def resolve(self, name: str) -> Publisher:
         """Return the Publisher for ``name``, auto-creating a quarantined
@@ -80,6 +94,71 @@ class PublisherResolver:
         self.quarantined.append(slug)
         log(f"  Quarantined new publisher: {name!r} (slug={slug}, id={publisher.id})")
         return publisher
+
+
+# ─── crediting by URL ────────────────────────────────────────────────────────
+
+# Hosts many unrelated authors publish under: a URL on one says nothing about
+# who wrote it, so no publisher is credited from it. huggingface.co is here
+# because "Hugging Face Blog" would otherwise claim every model card.
+SHARED_HOSTS = frozenset(
+    {
+        "arxiv.org",
+        "github.com",
+        "huggingface.co",
+        "linkedin.com",
+        "medium.com",
+        "reddit.com",
+        "substack.com",
+        "twitter.com",
+        "x.com",
+        "youtube.com",
+    }
+)
+
+_HOST_PLATFORMS = (
+    LinkPlatform.website.value,
+    LinkPlatform.rss.value,
+    LinkPlatform.substack.value,
+)
+
+
+def hosts_to_publishers(publishers: Iterable[Publisher]) -> dict[str, Publisher]:
+    """Host -> the one publisher whose links name it. Pure.
+
+    A host two publishers both claim is left out: it cannot say which of them
+    wrote a given URL.
+    """
+    claims: dict[str, dict[int, Publisher]] = {}
+    for p in publishers:
+        if p.id is None:
+            continue
+        for platform, link in (p.links or {}).items():
+            key = enum_value(platform)
+            if key == LinkPlatform.search.value:
+                host = link.lower().removeprefix("www.")
+            elif key in _HOST_PLATFORMS:
+                host = hostname(link)
+            else:
+                continue
+            if host and host not in SHARED_HOSTS:
+                claims.setdefault(host, {})[p.id] = p
+    return {
+        host: next(iter(pubs.values()))
+        for host, pubs in claims.items()
+        if len(pubs) == 1
+    }
+
+
+def match_publisher(url: str, by_host: dict[str, Publisher]) -> Publisher | None:
+    """The publisher for a URL's host, climbing to parent domains
+    (blog.example.com -> example.com) until one matches. Pure."""
+    host = hostname(url)
+    while "." in host:
+        if host in by_host:
+            return by_host[host]
+        host = host.partition(".")[2]
+    return None
 
 
 # ─── DB-driven feed discovery ────────────────────────────────────────────────

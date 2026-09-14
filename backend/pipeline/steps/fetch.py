@@ -139,10 +139,15 @@ def resolve_publishers(
 ) -> list[Candidate]:
     """Turn fetched items into candidates by resolving each one's publisher.
 
-    publisher_id, trust and topic_gated all come from the Publisher row
-    (resolved by source name, auto-quarantined if unknown). Runs right after
+    publisher_id, trust, publisher_kind and topic_gated all come from the
+    Publisher row: the one whose site the URL is on when we know it, else the
+    one named by the source (auto-quarantined if unknown). Runs right after
     fetch so trust is available to the scoring/dedup BAML calls and
     ``topic_gated`` to ``drop_off_topic``.
+
+    Crediting by URL first is what lets an individual's post found through
+    Hacker News or a newsletter count as theirs. ``source`` is left alone: it
+    is still where we found the item, which traction and the run stats read.
 
     Returns new dicts rather than stamping the fetched ones in place: it is the
     only producer of ``Candidate``, which is what lets every step below it read
@@ -150,13 +155,14 @@ def resolve_publishers(
     """
     candidates: list[Candidate] = []
     for a in articles:
-        publisher = resolver.resolve(a["source"])
+        publisher = resolver.credit(a["url"]) or resolver.resolve(a["source"])
         assert publisher.id is not None
         candidates.append(
             {
                 **a,
                 "publisher_id": publisher.id,
                 "trust": publisher.trust.value,
+                "publisher_kind": publisher.kind.value,
                 "topic_gated": publisher.topic_gated,
             }
         )
