@@ -31,7 +31,8 @@ def read_articles(
     publisher: str | None = None,
     sort: str = Query(default="score-desc"),
 ) -> ArticlesPublic:
-    # Missing `since` means "all time" (no lower bound).
+    # Missing `since` means "all time" (no lower bound). So does any `since`
+    # sent alongside `q` — see `_filters`, a search is never date-bounded.
     since_dt: datetime | None = None
     if since is not None:
         try:

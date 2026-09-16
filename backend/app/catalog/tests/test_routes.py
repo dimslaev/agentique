@@ -242,6 +242,37 @@ def test_read_articles_missing_since_returns_all_time(client: TestClient) -> Non
     assert r.json()["count"] > 0
 
 
+def test_read_articles_q_ignores_since(auth_client: TestClient, db: Session) -> None:
+    """A keyword search is all-time, however narrow the caller's window."""
+    needle = f"zqx{uuid.uuid4().hex[:10]}"
+    old = create_random_article(
+        db,
+        title=f"a story about {needle}",
+        published_at=datetime.now(UTC) - timedelta(days=400),
+    )
+
+    r = auth_client.get(
+        f"{ARTICLES_URL}/", params={"q": needle, "since": RECENT_SINCE, "limit": 50}
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["count"] == 1
+    assert [a["id"] for a in body["data"]] == [old.id]
+
+
+def test_read_articles_since_still_applies_without_q(
+    auth_client: TestClient, db: Session
+) -> None:
+    """Dropping `since` is scoped to search — plain browsing keeps its window."""
+    create_random_article(db, published_at=datetime.now(UTC) - timedelta(days=400))
+
+    windowed = auth_client.get(
+        f"{ARTICLES_URL}/", params={"since": RECENT_SINCE, "limit": 50}
+    ).json()
+    all_time = auth_client.get(f"{ARTICLES_URL}/", params={"limit": 50}).json()
+    assert windowed["count"] < all_time["count"]
+
+
 def test_read_articles_old_since_ok_anonymous(client: TestClient) -> None:
     old_since = (datetime.now(UTC) - timedelta(days=30)).isoformat()
     r = client.get(f"{ARTICLES_URL}/", params={"since": old_since})

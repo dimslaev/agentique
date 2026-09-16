@@ -117,7 +117,11 @@ def _filters(
     publisher: str | None,
 ) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
-    if since is not None:
+    # A text search is all-time. `since` is a browsing window the reader left
+    # on from scrolling the feed, not a constraint they chose for this search,
+    # and silently hiding the one article they typed the words of is worse than
+    # ignoring it.
+    if since is not None and not q:
         conditions.append(col(Article.published_at) >= since)
     if q:
         conditions.append(
