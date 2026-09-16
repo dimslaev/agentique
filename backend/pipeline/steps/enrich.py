@@ -15,8 +15,7 @@ from app.catalog.models import Article, ArticleKind, Category
 from app.platform.logging import log, wait_ms
 from baml_client.sync_client import b
 from baml_client.types import TagOption
-from pipeline import keep_drop
-from pipeline.embedding import embed_batch
+from pipeline.embedding import embed_batch, to_embedding_text
 from pipeline.github import github_repo_from_content
 from pipeline.llm_text import (
     enum_value,
@@ -220,12 +219,7 @@ def embed_articles(session: Session, items: list[ProcessedArticle]) -> None:
 
     log(f"  Embedding {len(items)} articles...")
 
-    # Built by keep_drop so the string is identical to the one its weights were
-    # distilled against — the pre-filter and this step must embed the same text.
-    texts = [
-        keep_drop.to_embedding_text(item["title"], item.get("snippet"))
-        for item in items
-    ]
+    texts = [to_embedding_text(item["title"], item.get("snippet")) for item in items]
     try:
         vecs = embed_batch(texts)
     except Exception as e:

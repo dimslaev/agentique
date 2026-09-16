@@ -34,7 +34,7 @@ from pipeline.steps.filter import (
     filter_thin_repos,
 )
 from pipeline.steps.persist import insert_articles
-from pipeline.steps.score import prefilter_keep_drop, score_articles
+from pipeline.steps.score import score_articles
 from pipeline.steps.summarize import summarize_articles
 from pipeline.tags import load_vocabulary
 from pipeline.types import Persisted, RawItem
@@ -83,21 +83,13 @@ def run_pipeline(stats: RunStats) -> None:
                 real = filter_thin_repos(session, alive, source.label)
                 s.filtered_thin_repo = len(alive) - len(real)
 
-                # Pre-filter obvious junk before the scoring LLM call: cuts what
-                # the scorer has to see, and junk gets recorded as a reject
-                # instead of silently dropped.
-                worth_scoring = prefilter_keep_drop(session, real)
-                prefiltered = len(real) - len(worth_scoring)
-
                 # Before scoring: a story we already carry must never cost an
-                # LLM call. Runs after the pre-filter so junk that is also a
-                # dup is recorded as junk, the verdict that says more.
-                unique = dedup_semantic(session, worth_scoring, source.label)
-                s.deduped = len(worth_scoring) - len(unique)
+                # LLM call.
+                unique = dedup_semantic(session, real, source.label)
+                s.deduped = len(real) - len(unique)
 
                 scored = score_articles(session, unique)
-                # below_threshold = pre-filter drops + LLM sub-threshold
-                s.below_threshold = prefiltered + (len(unique) - len(scored))
+                s.below_threshold = len(unique) - len(scored)
 
                 # Before the insert, not in enrichment: an article the model
                 # cannot summarize is never inserted without a summary.

@@ -65,7 +65,6 @@ def _run(monkeypatch, articles, scorer):
 
     monkeypatch.setattr(score_step, "b", _FakeBaml)
     monkeypatch.setattr(score_step, "wait_ms", lambda ms: None)
-    monkeypatch.setattr(score_step, "prefilter_keep_drop", lambda s, a: a)
     session = _FakeSession()
     return score_step.score_articles(session, articles), session
 

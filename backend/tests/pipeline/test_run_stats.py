@@ -56,7 +56,6 @@ def _stub_run(monkeypatch, sources, **overrides):
     monkeypatch.setattr(run_module, "filter_known_urls", lambda s, a, label: a)
     monkeypatch.setattr(run_module, "filter_dead_domains", lambda a, label: a)
     monkeypatch.setattr(run_module, "filter_thin_repos", lambda s, a, label: a)
-    monkeypatch.setattr(run_module, "prefilter_keep_drop", lambda s, a: a)
     monkeypatch.setattr(run_module, "dedup_semantic", lambda s, a, label: a)
     monkeypatch.setattr(run_module, "score_articles", lambda s, a: a)
     monkeypatch.setattr(run_module, "summarize_articles", lambda s, a: a)

@@ -179,8 +179,7 @@ def drop_off_topic(articles: list[Candidate], label: str) -> list[Candidate]:
     must pass ``topic_gate.is_on_topic`` on the title alone.
 
     Title-only and deliberately early — before dedup's embeddings and before
-    ``prefilter_keep_drop`` — so a rejected item costs one regex and nothing
-    else. Publishers that are on-topic by definition (an AI lab's own blog) are
+    the scorer — so a rejected item costs one regex and nothing else. Publishers that are on-topic by definition (an AI lab's own blog) are
     left ungated and pass through untouched; the recall/precision trade-off is
     the same one documented on ``topic_gate.AI_TITLE_KEYWORDS`` itself.
     """

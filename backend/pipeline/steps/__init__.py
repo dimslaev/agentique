@@ -2,7 +2,7 @@
 
     fetch     - poll each source, fill content, stamp publisher/trust per item
     filter    - drop known URLs, dead domains, semantic duplicates
-    score     - cheap keep/drop pre-filter, then the LLM scorer
+    score     - the LLM scorer against the rubric in baml_src/score.baml
     summarize - summary per article; one that cannot be summarized stops here
     persist   - insert what passed
     enrich    - titles, categories/kind/tags, embedding

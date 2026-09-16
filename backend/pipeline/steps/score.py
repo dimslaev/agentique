@@ -1,8 +1,8 @@
 """Step 3: rate what survived filtering, keep what clears the bar.
 
-A cascade: the tiny distilled keep/drop classifier throws out obvious junk for
-free, then the LLM scores the rest 1-100. The LLM stays the scoring authority —
-the classifier only trims noise so we make fewer, cheaper LLM calls.
+The LLM rates 1-100 on evidence and reach against the rubric in
+baml_src/score.baml, and anything at or above its publisher's threshold is
+kept. Everything below is recorded as a reject with the scorer's reason.
 """
 
 from __future__ import annotations
@@ -12,8 +12,6 @@ from sqlmodel import Session
 from app.catalog.models import PublisherKind, TrustLevel
 from app.platform.logging import log, short_error, wait_ms
 from baml_client.sync_client import b
-from pipeline import keep_drop
-from pipeline.embedding import get_model
 from pipeline.llm_text import sanitize_llm_text
 from pipeline.models import RejectStage
 from pipeline.rejects import record_reject
@@ -40,45 +38,6 @@ def threshold_for(trust: str, kind: str) -> int:
     if trust == TrustLevel.high and kind == PublisherKind.individual:
         return CURATED_INDIVIDUAL_THRESHOLD
     return SCORE_THRESHOLD
-
-
-def prefilter_keep_drop(session: Session, articles: list[Candidate]) -> list[Candidate]:
-    """Drop obvious junk before the LLM scorer.
-
-    Runs the tiny distilled classifier on title+snippet. Anything it is very
-    confident is a drop (P(keep) < threshold) is discarded without an LLM call
-    and recorded as a reject so it is not re-fetched. Everything else passes
-    through for real scoring.
-    """
-    threshold = keep_drop.drop_below()
-    if not articles or threshold <= 0:
-        return articles
-
-    texts = [keep_drop.to_embedding_text(a["title"], a["content"]) for a in articles]
-    vecs = get_model().encode(texts)
-
-    survivors: list[Candidate] = []
-    dropped = 0
-    for a, vec in zip(articles, vecs, strict=True):
-        p_keep = keep_drop.keep_proba(vec)
-        if p_keep < threshold:
-            record_reject(
-                session,
-                a,
-                RejectStage.prefilter,
-                detail={"keep_proba": round(p_keep, 3)},
-            )
-            dropped += 1
-        else:
-            survivors.append(a)
-    if dropped:
-        session.commit()
-
-    log(
-        f"  Pre-filter dropped {dropped}/{len(articles)} as obvious junk "
-        f"(P(keep) < {threshold}); {len(survivors)} to scorer"
-    )
-    return survivors
 
 
 def apply_scores(

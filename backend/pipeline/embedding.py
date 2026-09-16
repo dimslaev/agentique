@@ -1,8 +1,9 @@
-"""The shared potion-base-8M embedding model.
+"""The shared potion-base-8M embedding model, and the text every caller embeds.
 
-One process-wide instance, loaded lazily on first use: the keep/drop pre-filter
-and the article embed step both encode with it, and it must be the same model in
-both places — keep_drop's weights were distilled against these vectors.
+One process-wide instance, loaded lazily on first use. The embed step and the
+semantic dedup must encode the same string for the same article, or an article
+fails to match its own stored row, so the text is built here rather than at
+each call site.
 """
 
 from __future__ import annotations
@@ -26,3 +27,10 @@ def embed_batch(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
     return [v.tolist() for v in get_model().encode(texts)]
+
+
+def to_embedding_text(title: str, text: str | None) -> str:
+    """One string per article: title, blank line, then the snippet if there is one."""
+    title = (title or "").strip()
+    text = (text or "").strip()
+    return f"{title}\n\n{text}" if text else title

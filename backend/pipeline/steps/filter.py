@@ -17,8 +17,7 @@ from sqlmodel import Session, select
 
 from app.catalog.models import Article, Publisher
 from app.platform.logging import log
-from pipeline import keep_drop
-from pipeline.embedding import embed_batch
+from pipeline.embedding import embed_batch, to_embedding_text
 from pipeline.github import github_repo_from_url, is_known_owner
 from pipeline.models import Reject, RejectStage
 from pipeline.rejects import record_reject
@@ -236,8 +235,7 @@ def dedup_semantic(
     # embeds content capped at SNIPPET_CAP), or an article fails to match its
     # own row in the DB and the comparison is meaningless.
     new_texts = [
-        keep_drop.to_embedding_text(a["title"], a["content"][:SNIPPET_CAP])
-        for a in articles
+        to_embedding_text(a["title"], a["content"][:SNIPPET_CAP]) for a in articles
     ]
     new_vecs = np.array(embed_batch(new_texts), dtype=np.float32)
 
