@@ -17,6 +17,7 @@
 - Stays active even if unsure.
 
 ## Git
+- Commit straight to master. Don't create a branch or open a PR unless asked or you're running in cloud.
 - Commit message: subject line only, no body/description.
 - Conventional commit type, no scope: `feat: auth something`, not `feat(auth): something`.
 - PR/MR title: exactly the same format as the commit subject.
