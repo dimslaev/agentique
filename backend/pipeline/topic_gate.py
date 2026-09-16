@@ -77,7 +77,19 @@ AI_TITLE_KEYWORDS = re.compile(
     r"text.?to.?image|text.?to.?video|text.?to.?speech|speech.?to.?text|"
     r"tts|asr|voice.?clon|"
     # data
-    r"synthetic.?data|common.?crawl|fineweb"
+    r"synthetic.?data|common.?crawl|fineweb|"
+    # generic terms the list above misses: broad enough to let a post through
+    # on its own words rather than on naming a vendor.
+    r"gpu|inference|evals?|evaluation|benchmark|harness|subagent|skills?|"
+    r"vibe.?cod|context.?engineering|on.?device|local.?(?:llm|model)|prompt|"
+    # model and product names in the feed but not named above. Everyday English
+    # words (opus, sonnet, haiku, nova, muse, needle) are here on purpose: this
+    # gate is tuned for recall, and a false positive only costs the next filter
+    # a look. The list churns monthly -- review it against the titles the gate
+    # misses whenever the feed feels thin:
+    #   SELECT title FROM article ORDER BY created_at DESC LIMIT 500;
+    # then re-run is_on_topic over them and read what fails.
+    r"fable|astra|opus|sonnet|haiku|nova|muse|hermes|needle|holotron|lfm"
     # Trailing [\d.]* absorbs version suffixes so "Qwen3", "GPT5" and "Llama4"
     # match the bare term. It can match empty, so the closing \b still keeps
     # "ai" from firing on "aircraft".

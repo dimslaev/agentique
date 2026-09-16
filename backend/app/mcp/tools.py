@@ -1,4 +1,9 @@
-"""The three things an agent can do against agentique: query the db, fetch a page, search the web."""
+"""What an agent can do against agentique: read the db and the web, and curate.
+
+Two groups, two tokens. `sql_query`, `web_fetch` and `web_search` read and are
+reachable with `MCP_TOKEN`. The curation tools at the bottom publish and reject
+articles, and need `MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
+"""
 
 from __future__ import annotations
 
@@ -8,10 +13,19 @@ from datetime import date, datetime
 
 import psycopg
 from fastmcp.exceptions import ToolError
+from fastmcp.server.dependencies import get_access_token
+from sqlmodel import Session
 
+from app.platform.db import engine
 from app.platform.settings import settings
+from pipeline import curation
 from pipeline.fetching.extract_content import fetch_and_extract
 from pipeline.fetching.http import tavily_search
+
+# The scope `MCP_WRITE_TOKEN` carries and the read token does not. Named for
+# what it lets a caller do, not for the token that carries it: `server.py` mints
+# it, the curation tools below demand it.
+WRITE_SCOPE = "curate"
 
 # A cap, not a page size: an agent that wants more should narrow the query or
 # add its own LIMIT. Anything larger is context an agent cannot read anyway.
@@ -155,3 +169,87 @@ def web_search(
     return tavily_search(
         query, max_results=max_results, include_domains=include_domains
     )
+
+
+# ─── Curation ────────────────────────────────────────────────────────────────
+# The four verbs the curation agent drives the pipeline's tail with. Unlike the
+# three above they write, so each one checks for the write scope first: the
+# read token reaches `sql_query`, `web_fetch` and `web_search` and nothing else.
+
+
+def _require_write() -> None:
+    """Refuse a write to a caller holding only the read token."""
+    token = get_access_token()
+    if token is None or WRITE_SCOPE not in token.scopes:
+        raise ToolError(
+            "This tool needs the curation token — the read token cannot write."
+        )
+
+
+def _curation_session() -> Session:
+    """A read/write session, not the read-only DSN `sql_query` uses."""
+    return Session(engine)
+
+
+def list_candidates() -> list[dict[str, str]]:
+    """List the articles waiting on a curation verdict, freshest first.
+
+    One row per candidate: `url`, `title`, `source` (where the link was found),
+    `publisher`, `trust`, `traction`, `published_at`, `queued_at`, and a
+    200-character `snippet`. Deliberately not the full text — call
+    `get_content` for a candidate worth a closer look, or fetch the page.
+
+    A candidate stays listed until `approve` or `reject` is called on it, so a
+    session that stops halfway leaves the rest for the next one.
+    """
+    _require_write()
+    with _curation_session() as session:
+        return curation.list_candidates(session)
+
+
+def get_content(url: str) -> str:
+    """Return the article text the pipeline stored for one candidate.
+
+    The fallback for pages that cannot be fetched: a newsletter item has no web
+    page of its own, so this is the only copy of what it said. Capped at the
+    first 2000 characters, which is what the pipeline keeps.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            return curation.get_content(session, url)
+        except curation.CandidateError as exc:
+            raise ToolError(str(exc))
+
+
+def approve(url: str, score: int, reason: str, summary: str) -> str:
+    """Publish a candidate: insert the article, then tag, categorize and embed it.
+
+    `score` is 1-100 on the same scale the rubric describes, `reason` one short
+    sentence naming what decided it, and `summary` the text a reader sees under
+    the title. The candidate stops being pending in the same transaction that
+    inserts the article, so nothing is ever published twice.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            article_id = curation.approve(session, url, score, reason, summary)
+        except curation.CandidateError as exc:
+            raise ToolError(str(exc))
+    return f"Published article #{article_id}: {url}"
+
+
+def reject(url: str, score: int, reason: str) -> str:
+    """Turn a candidate down, keeping the score and the reason for it.
+
+    The row stays in the ledger so the URL is never judged twice, and so the
+    verdicts can be read back as labels. Write `reason` for a human reading a
+    hundred of them later, not for a log line.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            curation.reject(session, url, score, reason)
+        except curation.CandidateError as exc:
+            raise ToolError(str(exc))
+    return f"Rejected [{score}/100] {url}"

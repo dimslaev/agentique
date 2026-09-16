@@ -1,0 +1,13 @@
+# Install target: /etc/systemd/system/agentique-report.timer
+# After the curation session, so the report has verdicts to report. It runs on
+# its own timer rather than after the agent's unit on purpose: a night the agent
+# never ran still produces a report, and that report says nothing landed.
+[Unit]
+Description=Daily agentique report email
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

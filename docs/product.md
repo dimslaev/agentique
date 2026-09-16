@@ -15,7 +15,8 @@ static marketing page, not backed by the live article API; a separate agent keep
 source data current.
 
 **A filtered, ranked article feed (`/feed`, public — no account needed).** Lists recent
-articles sorted by an LLM-assigned "developer-actionability" score (or by recency).
+articles sorted by a "developer-actionability" score the curation agent assigns (or
+by recency).
 Each entry shows a category (Models / Dev / Research) and a "kind" (repo, paper, model,
 blog, product, announcement). You can filter by category, kind, score, and time window
 (last 3 days / week / month).
@@ -55,21 +56,29 @@ newsletters), and runs each fresh batch through a chain of small, focused steps:
    day once the votes have settled); for anything linking to a GitHub repo, the
    repo's star count. A lab publishing on its own domain skips both — that is
    news at zero votes.
-4. **Score for relevance** — an LLM rates each surviving article 1–100 on how
-   actionable it is for a developer building with AI right now. Only the top scorers
-   (currently ≥76) make it into the database at all — this is the main noise filter.
-5. **Insert & clean up the title** — the article is saved, then a second LLM pass
-   tightens up clickbait-y or vague titles into something plain and informative.
-6. **Pull the full article text** — for sources that only gave us a link, the pipeline
-   fetches and extracts the actual article body (skipping paywalled junk, ads, nav).
-7. **Categorize & tag** — another LLM pass assigns category + kind and 1-3 tags from a
-   controlled vocabulary, shown in the feed.
-8. **Embed** — a small, fast local embedding model turns the title + a content snippet
-   into a vector, which is what powers semantic search.
+4. **Queue what survives** — everything left becomes a *candidate*: stored, but
+   not published and not visible to anyone. The nightly run makes no judgement
+   about quality at all, and stops here.
+5. **An agent reads them** — an hour later, a Claude Code session picks up the
+   candidates, fetches each page, and approves or rejects it with a score, a
+   one-sentence reason, and the summary a reader will see. Approving is the only
+   thing that creates an article. This used to be an LLM call inside the pipeline
+   scoring from a title and a 200-character snippet; it could not separate the
+   articles the reader loved from the ones they called noise, because at 200
+   characters a write-up with real measurements and a landing page quoting the
+   same numbers look identical (docs/adr/0009).
+6. **Categorize & tag** — on approval, an LLM pass assigns category + kind and 1-3
+   tags from a controlled vocabulary, shown in the feed.
+7. **Embed** — a small, fast local embedding model turns the title + a content
+   snippet into a vector, which is what powers semantic search.
+8. **Report** — one email a night, after the verdicts: what landed, named one by
+   one, and what did not as a count and the publishers it came from.
 
-All the LLM steps are defined declaratively as prompt functions (via BAML) rather than
-hand-rolled prompt strings scattered through the code, so tweaking a prompt or swapping
-a model is a config change, not a refactor.
+The remaining LLM steps are defined declaratively as prompt functions (via BAML)
+rather than hand-rolled prompt strings scattered through the code, so tweaking a
+prompt or swapping a model is a config change, not a refactor. The agent's own
+rubric is prose, in `.claude/skills/curate/SKILL.md`, next to the 70 hand-labelled
+articles it is measured against.
 
 There are a few more pipeline building blocks already defined (a Substack discovery
 crawler that finds new AI-focused publications to follow, and newsletter-email
@@ -82,8 +91,9 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
   built from.
 - **Database**: Postgres with the pgvector extension — one table holds articles plus
   their embedding vectors, so relevance search is just a SQL query.
-- **Pipeline**: a separate scheduled Python process (cron-style, once a day) that does
-  the fetch → filter → score → categorize → embed work described above.
+- **Pipeline**: a separate scheduled Python process (once a day, 04:00) that fetches
+  and filters, plus a Claude Code session an hour later that judges what it queued and
+  a report email an hour after that.
 - **Embeddings**: model2vec — a tiny, fast, CPU-only static embedding model, no GPU or
   external API call needed for search.
 - **Frontend**: React + Vite + Tailwind, talking to the backend through a generated

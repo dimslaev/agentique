@@ -14,17 +14,23 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). When set, the fetch step drops anything whose title misses the AI keyword list before spending an embedding or LLM call on it. Ingestion policy, not part of the public read API.
 
-- **Score** (`Article.score`) - an LLM's 1-100 rating of how actionable the article is for a developer building with AI right now. Main noise filter: only articles at or above the configured threshold get inserted. The scorer's one-sentence reason is kept in `Article.score_reason` (internal, not on the public API) and, for rejects, in `Reject.reason`.
+- **Score** (`Article.score`) - a 1-100 rating of how actionable the article is for a developer building with AI right now. Written by the curation agent, which reads the page before it decides (see **Candidate** below and ADR 9); an LLM in the pipeline used to write it from a title and a 200-char snippet. The one-sentence reason is kept in `Article.score_reason` (internal, not on the public API) and, for rejects, in `Reject.reason`.
+
+- **Candidate** - overloaded, and the two senses are one step apart.
+  - The *type* `Candidate` (`pipeline/types.py`) - a raw item resolved to its Publisher, mid-funnel.
+  - A *candidate* in the feed's sense - an article the nightly run has queued and the curation agent has not judged yet: a `Reject` row at stage `pending`. It becomes an `Article` on approval and a `below_threshold` reject otherwise. Until then it is not visible anywhere a reader can see.
+
+- **Curation agent** - the Claude Code session that runs at 05:00, an hour after the pipeline, reads the pending candidates through the MCP tools (`list_candidates`, `get_content`, `approve`, `reject`) and decides each one. Its rubric is `.claude/skills/curate/SKILL.md`. It is the only judge the feed has and the only thing that writes an `Article`.
 
 - **Traction** - outside signal that people found a story worth reading, independent of the pipeline's own score: Hacker News points/comments past a minimum, or a GitHub repo's star count. Holds back low-traction submissions from the "everyone can post" sources. A first-party URL (`pipeline/first_party.py`) skips the gate - a lab's own announcement counts as news at zero votes.
 
-- **Reject** (`Reject`, table `scored_url`) - a URL the funnel turned down, one row per URL. `stage` says which step dropped it (`thin_repo`, `prefilter`, `duplicate`, `below_threshold`, `unusable_summary`). It keeps what that step saw: title, source, publisher, the first 2000 chars of content, traction, score, and the scorer's `reason`. `filter_known_urls` reads it so a reject is never judged twice. Holds in a source (HN traction, recency) and a failed LLM call are deliberately not rejects: those come back next run. Rows from before 2026-09-13 carry only the URL.
+- **Reject** (`Reject`, table `scored_url`) - a URL the funnel turned down, one row per URL. `stage` says which step dropped it (`thin_repo`, `prefilter`, `duplicate`, `below_threshold`, `unusable_summary`) - or `pending`, the one stage that is not a rejection at all: a candidate still waiting on the agent. It keeps what that step saw: title, source, publisher, the first 2000 chars of content, traction, score, and the scorer's `reason`. `filter_known_urls` reads it so a reject is never judged twice. Holds in a source (HN traction, recency) and a failed LLM call are deliberately not rejects: those come back next run. Rows from before 2026-09-13 carry only the URL.
 
 - **Run** (`PipelineRun`) - one row per nightly pipeline execution: start/end time, duration, ok/fail, per-source and per-publisher funnel counts (fetched, filtered, inserted, errored). What a human or a verifier reads to see what last night's run did.
 
 - **RawItem / Candidate / Scored / Persisted** (`pipeline/types.py`) - the four shapes an article takes going down the funnel, one per stage.
   - **RawItem** - what a source adapter emitted. Title, url, content, date, source name. Nothing else known yet.
   - **Candidate** - a raw item resolved to its Publisher: carries `publisher_id`, `trust`, `topic_gated`. Worth spending filter, embedding, LLM budget on.
-  - **Scored** - a candidate the LLM rated at or above the threshold. Only survivors reach this stage.
+  - **Scored** - a candidate rated at or above the threshold. Only survivors reach this stage. The nightly run no longer produces one: it ends at a pending candidate, and the shape is built again by `curation.approve` from the row the agent judged.
   - **Persisted** - a scored article now stored as an `Article` row: has an `id`, sanitized title and content.
   - Each stage extends the one before, so a step's signature says where in the funnel it belongs. Enrichment narrows a `Persisted` to a `ProcessedArticle`: just the fields the embedding text is built from.

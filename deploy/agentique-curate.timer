@@ -1,0 +1,13 @@
+# Install target: /etc/systemd/system/agentique-curate.timer
+# An hour after the pipeline, so the night's candidates are all queued.
+[Unit]
+Description=Daily agentique curation session
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+# Deliberately NOT Persistent=true. A missed session is not work to catch up on
+# at boot: the candidates are still pending and tomorrow's session reads them
+# alongside the new ones.
+
+[Install]
+WantedBy=timers.target

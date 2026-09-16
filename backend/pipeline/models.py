@@ -12,8 +12,17 @@ from app.platform.dates import get_datetime_utc
 
 
 class RejectStage(StrEnum):
-    """The step that turned a URL down."""
+    """The step that turned a URL down, or ``pending`` for one still waiting.
 
+    ``pending`` is the one stage that is not a rejection. The nightly run ends
+    by writing it, and the curation agent turns it into an Article or into
+    ``below_threshold``. It lives in this table because the row already holds
+    everything a judge needs -- title, source, publisher, content, traction --
+    and because ``filter_known_urls`` reads the table, so a candidate waiting
+    for the agent is not fetched again the next night.
+    """
+
+    pending = "pending"
     thin_repo = "thin_repo"
     prefilter = "prefilter"
     duplicate = "duplicate"
@@ -22,7 +31,10 @@ class RejectStage(StrEnum):
 
 
 class Reject(SQLModel, table=True):
-    """A URL the funnel turned down: what it saw, and why it said no.
+    """A URL the funnel turned down, or one waiting on the curation agent.
+
+    The name is the common case. A ``pending`` row is the exception: the same
+    columns, holding a candidate the agent has not read yet.
 
     Every column but ``url`` and ``created_at`` is nullable: rows written before
     the ledger kept evidence carry only the URL.

@@ -1,11 +1,18 @@
-"""Step 3: rate what survived filtering, keep what clears the bar.
+"""Step 3, superseded: rate what survived filtering, keep what clears the bar.
 
 The LLM rates 1-100 on evidence and reach against the rubric in
 baml_src/score.baml, and anything at or above its publisher's threshold is
 kept. Everything below is recorded as a reject with the scorer's reason.
+
+The curation agent replaced this — see docs/adr/0009-agent-curation.md for the
+measurements that settled it. The module stays reachable behind
+``llm_scoring_enabled`` until the agent has run clean for a week, then it goes,
+and `score.baml` and `SCORE_THRESHOLD` go with it.
 """
 
 from __future__ import annotations
+
+import os
 
 from sqlmodel import Session
 
@@ -31,6 +38,16 @@ CURATED_INDIVIDUAL_THRESHOLD = 55
 SCORE_BATCH = 5
 # Pause between scoring batches to stay under the provider's rate limit.
 SCORE_BATCH_PAUSE_MS = 1000
+
+
+def llm_scoring_enabled() -> bool:
+    """True while the pipeline scores with the LLM instead of queueing
+    candidates for the agent. Off by default: the agent is the judge now.
+
+    Lives here, not in run.py, so deleting this module deletes the flag with
+    it and leaves no dead branch behind.
+    """
+    return os.environ.get("LLM_SCORING", "0") == "1"
 
 
 def threshold_for(trust: str, kind: str) -> int:

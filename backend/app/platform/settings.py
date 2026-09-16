@@ -76,6 +76,11 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     # means every request is rejected, so a deploy that forgets it is closed,
     # not open.
     MCP_TOKEN: str | None = None
+    # A second token, for the curation agent only: it carries the write scope
+    # that the `approve` and `reject` tools demand and `MCP_TOKEN` does not.
+    # Unset means no caller can write, so a deploy that forgets it curates
+    # nothing rather than letting the read token publish.
+    MCP_WRITE_TOKEN: str | None = None
     # The MCP `sql_query` tool logs in as its own role, not as POSTGRES_USER.
     MCP_DB_USER: str = "agentique_ro"
     MCP_DB_PASSWORD: str = ""
@@ -145,6 +150,22 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
                 warnings.warn(message, stacklevel=1)
             else:
                 raise ValueError(message)
+
+    @model_validator(mode="after")
+    def _keep_the_two_mcp_tokens_apart(self) -> Self:
+        """Refuse a config where the read token is also the write token.
+
+        The verifier checks the write token first, so a copy-paste that sets
+        both to the same value silently hands publishing rights to everything
+        holding what the operator believes is a read-only credential. Nothing
+        downstream would notice.
+        """
+        if self.MCP_TOKEN and self.MCP_TOKEN == self.MCP_WRITE_TOKEN:
+            raise ValueError(
+                "MCP_TOKEN and MCP_WRITE_TOKEN are the same value, which makes "
+                "the read token a write token. Use two different secrets."
+            )
+        return self
 
     @model_validator(mode="after")
     def _enforce_non_default_secrets(self) -> Self:

@@ -4,6 +4,12 @@ Orchestration only — each step lives in pipeline.steps.* and owns its own
 logging and commits. This file's job is the funnel: for every source, run the
 steps in order, record the counts, and make sure one bad source cannot take the
 others down with it.
+
+The funnel ends at `queue_candidates`: every survivor is written as a pending
+candidate and nothing is scored, summarized or inserted. The curation agent
+reads those candidates an hour later and decides what becomes an Article — see
+docs/adr/0009-agent-curation.md. `LLM_SCORING=1` restores the old scoring tail
+(score → summarize → insert → enrich) while the agent is being trusted.
 """
 
 from __future__ import annotations
@@ -34,7 +40,8 @@ from pipeline.steps.filter import (
     filter_thin_repos,
 )
 from pipeline.steps.persist import insert_articles
-from pipeline.steps.score import score_articles
+from pipeline.steps.queue import queue_candidates
+from pipeline.steps.score import llm_scoring_enabled, score_articles
 from pipeline.steps.summarize import summarize_articles
 from pipeline.tags import load_vocabulary
 from pipeline.types import Persisted, RawItem
@@ -88,20 +95,27 @@ def run_pipeline(stats: RunStats) -> None:
                 unique = dedup_semantic(session, real, source.label)
                 s.deduped = len(real) - len(unique)
 
-                scored = score_articles(session, unique)
-                s.below_threshold = len(unique) - len(scored)
+                if not llm_scoring_enabled():
+                    # The end of the funnel: the agent is the judge, so the run
+                    # stops at a pending row. Titles, categories, tags and the
+                    # embedding are enrichment of an Article, and there is no
+                    # Article until the agent approves one.
+                    s.queued = len(queue_candidates(session, unique))
+                else:
+                    scored = score_articles(session, unique)
+                    s.below_threshold = len(unique) - len(scored)
 
-                # Before the insert, not in enrichment: an article the model
-                # cannot summarize is never inserted without a summary.
-                summarized = summarize_articles(session, scored)
-                s.unsummarized = len(scored) - len(summarized)
+                    # Before the insert, not in enrichment: an article the model
+                    # cannot summarize is never inserted without a summary.
+                    summarized = summarize_articles(session, scored)
+                    s.unsummarized = len(scored) - len(summarized)
 
-                inserted = insert_articles(session, summarized)
-                s.inserted = len(inserted)
+                    inserted = insert_articles(session, summarized)
+                    s.inserted = len(inserted)
 
-                improve_titles(session, inserted)
-                processed = categorize_and_tag_articles(session, inserted, vocab)
-                embed_articles(session, processed)
+                    improve_titles(session, inserted)
+                    processed = categorize_and_tag_articles(session, inserted, vocab)
+                    embed_articles(session, processed)
             except Exception as e:
                 # One source failing must not sink the others — record and move
                 # on. The message is truncated: a BAML failure carries every
@@ -157,11 +171,17 @@ if __name__ == "__main__":
 
     stats.finish(ok=crashed is None)
 
-    # Record stats + email the report. Best-effort: never flips the exit code.
+    # Record stats, and email only what cannot wait. Best-effort: never flips
+    # the exit code.
     try:
         with Session(get_engine()) as session:
             record_run(session, stats)
-        report_run(stats)
+        # Under agent curation this run has landed nothing yet, so its report
+        # would be a page of counts an hour before the articles exist. The
+        # night's one email goes out after the agent has read the candidates
+        # (`python -m pipeline.report`). A crash does not wait for that.
+        if llm_scoring_enabled() or not stats.ok:
+            report_run(stats)
     except Exception as e:
         print(f"Health recording/report failed: {e}", file=sys.stderr)
 

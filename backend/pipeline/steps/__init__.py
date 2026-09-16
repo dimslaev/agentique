@@ -2,6 +2,13 @@
 
     fetch     - poll each source, fill content, stamp publisher/trust per item
     filter    - drop known URLs, dead domains, semantic duplicates
+    queue     - park each survivor as a pending candidate. The last step.
+
+The curation agent takes it from there (pipeline/curation.py): approving a
+candidate runs persist and enrich on that one article. The steps below
+are the superseded scoring tail, reachable behind LLM_SCORING=1 -- see
+docs/adr/0009-agent-curation.md:
+
     score     - the LLM scorer against the rubric in baml_src/score.baml
     summarize - summary per article; one that cannot be summarized stops here
     persist   - insert what passed

@@ -1,5 +1,10 @@
-"""Pipeline health: capture per-run stats and email a report of every run —
-what was inserted, and where each run's funnel lost the rest.
+"""Pipeline health: capture per-run stats and email the night's report —
+what landed, a short account of what did not, and the funnel behind both.
+
+The fetch and the verdict are an hour apart now (the run queues candidates at
+04:00, the curation agent reads them at 05:00), so the report is sent by
+`pipeline.report` after the agent, not by the run itself. `report_run` stays
+for the crash email and for `LLM_SCORING=1`.
 
 Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
 here must never change whether the pipeline itself succeeded.
@@ -15,13 +20,14 @@ from __future__ import annotations
 import html
 import os
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime, timedelta
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
+from app.catalog.models import Article, Publisher
 from app.platform.logging import log
-from pipeline.models import PipelineRun
+from pipeline.models import PipelineRun, Reject, RejectStage
 from pipeline.types import Persisted, RawItem
 
 
@@ -50,6 +56,12 @@ def alert_config() -> AlertConfig:
 # ─── Tunables ─────────────────────────────────────────────────────────────────
 
 STALE_RUN_HOURS = 26  # older than this with no success → "pipeline may be down"
+# How far back the nightly report looks. One window covers the 04:00 run and the
+# 05:00 curation session together, which is the night a reader is asking about.
+REPORT_WINDOW_HOURS = 24
+# Publishers named in the "did not land" line. Enough to show which outlet is
+# filling the queue with noise, few enough to stay one sentence.
+LOUDEST_PUBLISHERS = 3
 
 
 # ─── In-memory stats (populated during the run) ───────────────────────────────
@@ -57,11 +69,12 @@ STALE_RUN_HOURS = 26  # older than this with no success → "pipeline may be dow
 
 @dataclass
 class InsertedArticle:
-    """One article this run put in the catalog — the report's headline content.
+    """One article that landed in the catalog — the report's headline content.
 
     ``publisher`` is the per-item source label (a feed name under "Feeds", the
     aggregator's own name elsewhere), so a row says which feed a story came
-    from without joining anything.
+    from without joining anything. The nightly report fills it from the
+    publisher row instead, which is the same name by a different route.
     """
 
     id: int
@@ -74,8 +87,12 @@ class InsertedArticle:
 @dataclass
 class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
-    fetched → off-topic → known → dead → dup → below-threshold → unsummarized
-    → inserted."""
+    fetched → off-topic → known → dead → dup → queued.
+
+    ``below_threshold``, ``unsummarized`` and ``inserted`` are the tail of the
+    superseded scoring path and stay 0 unless ``LLM_SCORING`` is on; ``queued``
+    is what the run now ends with — candidates written for the curation agent,
+    which inserts them itself once it has read them."""
 
     # `source` here is the run-level fetcher label (Hacker News / AI News /
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
@@ -87,6 +104,7 @@ class SourceStats:
     filtered_dead: int = 0
     filtered_thin_repo: int = 0
     deduped: int = 0
+    queued: int = 0
     below_threshold: int = 0
     unsummarized: int = 0
     inserted: int = 0
@@ -237,7 +255,7 @@ def _total_inserted(stats: RunStats) -> int:
 
 
 def _format_report(stats: RunStats) -> str:
-    lines = _inserted_section(stats) + _funnel_section(stats)
+    lines = _inserted_section(stats) + _funnel_section(stats.sources)
 
     errors = _errors(stats)
     if errors:
@@ -254,7 +272,16 @@ def _inserted_section(stats: RunStats) -> list[str]:
     heading = f"INSERTED ({total})"
     lines = [heading, "=" * len(heading)]
     if not total:
-        return lines + ["  Nothing inserted this run.", ""]
+        queued = sum(s.queued for s in stats.sources)
+        # The run inserts nothing of its own under agent curation: it hands the
+        # agent candidates and the agent inserts what it approves. Saying so
+        # keeps an empty INSERTED block from reading as a dead pipeline.
+        waiting = (
+            f"  Nothing inserted this run; {queued} candidate(s) queued for review."
+            if queued
+            else "  Nothing inserted this run."
+        )
+        return lines + [waiting, ""]
 
     for s in stats.sources:
         if not s.articles:
@@ -270,9 +297,9 @@ def _inserted_section(stats: RunStats) -> list[str]:
     return lines
 
 
-def _funnel_section(stats: RunStats) -> list[str]:
+def _funnel_section(sources: Sequence[SourceStats]) -> list[str]:
     lines = ["THIS RUN", "========"]
-    for s in stats.sources:
+    for s in sources:
         row = (
             f"  {s.source}: fetched {s.fetched} "
             f"→ off-topic -{s.filtered_off_topic} "
@@ -280,6 +307,7 @@ def _funnel_section(stats: RunStats) -> list[str]:
             f"→ dead -{s.filtered_dead} "
             f"→ thin-repo -{s.filtered_thin_repo} "
             f"→ dup -{s.deduped} "
+            f"→ queued {s.queued} "
             f"→ below-threshold -{s.below_threshold} "
             f"→ unsummarized -{s.unsummarized} "
             f"→ inserted {s.inserted}"
@@ -296,6 +324,145 @@ def _errors(stats: RunStats) -> list[str]:
     out = [f"{s.source}: {e}" for s in stats.sources for e in s.errors]
     out += [f"{p.name}: fetch failed — {p.error}" for p in stats.publishers if p.error]
     return out
+
+
+# ─── Nightly report (runs after the curation agent) ──────────────────────────
+
+
+@dataclass(frozen=True)
+class CurationDay:
+    """One night, end to end: what the agent published, and what it did not.
+
+    The rejects are counts and names on purpose. Twenty turned-down articles
+    listed one per line is the part of the old report nobody read; what a reader
+    acts on is which outlet is filling the queue and whether the pile is
+    growing. The verdicts themselves are in the ledger for whoever wants them.
+    """
+
+    approved: list[InsertedArticle]
+    rejected: int
+    loudest: list[tuple[str, int]]
+    still_pending: int
+    sources: list[SourceStats]
+    errors: list[str]
+
+
+def _source_stats(run: PipelineRun | None) -> list[SourceStats]:
+    """Rebuild a recorded run's per-source counts from its stored JSON.
+
+    Keys the dataclass does not have are dropped and missing ones keep their
+    default, so a run recorded before a counter existed still reports.
+    """
+    if run is None:
+        return []
+    known = {f.name for f in fields(SourceStats)} - {"articles"}
+    return [
+        SourceStats(**{k: v for k, v in source.items() if k in known})
+        for source in run.sources
+    ]
+
+
+def curation_summary(session: Session) -> CurationDay:
+    """Read the night out of the database: articles in, candidates turned down."""
+    cutoff = datetime.now(UTC) - timedelta(hours=REPORT_WINDOW_HOURS)
+
+    approved = session.exec(
+        select(Article, Publisher)
+        .join(Publisher, col(Publisher.id) == col(Article.publisher_id), isouter=True)
+        .where(col(Article.created_at) >= cutoff)
+        .order_by(col(Article.score).desc())
+    ).all()
+
+    # Counted over what this window queued, not over what the agent touched:
+    # a reject keeps the `created_at` of the night its candidate was written,
+    # so this is "of last night's candidates, how many were turned down".
+    rejected_rows = session.exec(
+        select(func.count(), Publisher.name)  # ty: ignore[missing-argument]
+        .select_from(Reject)
+        .join(Publisher, col(Publisher.id) == col(Reject.publisher_id), isouter=True)
+        .where(
+            col(Reject.stage) == RejectStage.below_threshold,
+            col(Reject.created_at) >= cutoff,
+        )
+        .group_by(col(Publisher.name))
+        .order_by(func.count().desc())
+    ).all()
+
+    still_pending = session.exec(
+        select(func.count())
+        .select_from(Reject)
+        .where(  # ty: ignore[missing-argument]
+            col(Reject.stage) == RejectStage.pending
+        )
+    ).one()
+
+    last_run = session.exec(
+        select(PipelineRun).order_by(col(PipelineRun.started_at).desc())
+    ).first()
+    sources = _source_stats(last_run)
+
+    return CurationDay(
+        approved=[
+            InsertedArticle(
+                id=a.id or 0,
+                title=a.title,
+                url=a.url,
+                score=a.score,
+                publisher=p.name if p else "",
+            )
+            for a, p in approved
+        ],
+        rejected=sum(count for count, _ in rejected_rows),
+        loudest=[
+            (name or "unknown", count)
+            for count, name in rejected_rows[:LOUDEST_PUBLISHERS]
+        ],
+        still_pending=still_pending,
+        sources=sources,
+        errors=[f"{s.source}: {e}" for s in sources for e in s.errors],
+    )
+
+
+def report_curation(session: Session) -> None:
+    """Email the night's one report. Best-effort, like every other alert."""
+    day = curation_summary(session)
+    subject = (
+        f"{len(day.approved)} article(s) landed" if day.approved else "Nothing landed"
+    )
+    _send_alert(subject=subject, body=_format_curation(day))
+    log(f"  Reported {len(day.approved)} landed, {day.rejected} turned down")
+
+
+def _format_curation(day: CurationDay) -> str:
+    heading = f"LANDED ({len(day.approved)})"
+    lines = [heading, "=" * len(heading)]
+    if day.approved:
+        for a in day.approved:
+            byline = f" — {a.publisher}" if a.publisher else ""
+            lines.append(f"  [{a.score}/100] {a.title}{byline}")
+            lines.append(f"    {a.url}")
+    else:
+        lines.append("  Nothing was published. If that is not what you expected,")
+        lines.append("  the curation session is the first thing to check.")
+
+    lines += ["", "DID NOT LAND", "============"]
+    if day.rejected:
+        loudest = ", ".join(f"{name} {count}" for name, count in day.loudest)
+        lines.append(f"  {day.rejected} turned down. Loudest: {loudest}.")
+    else:
+        lines.append("  Nothing turned down.")
+    lines.append(
+        f"  {day.still_pending} candidate(s) still waiting on a verdict."
+        if day.still_pending
+        else "  Queue empty — every candidate got a verdict."
+    )
+
+    lines += [""] + _funnel_section(day.sources)
+
+    if day.errors:
+        lines += ["", "ERRORS", "======"] + [f"  - {e}" for e in day.errors]
+
+    return "\n".join(lines)
 
 
 # ─── Email (Resend) ─────────────────────────────────────────────────────────

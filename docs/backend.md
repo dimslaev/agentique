@@ -25,6 +25,18 @@ Pipeline, manual run:
 cd backend && uv run --env-file ../.env python -m pipeline.run
 ```
 
+The run ends at pending candidates and publishes nothing — the curation agent
+does that (ADR 9). Judge them, then send the night's report:
+
+```bash
+claude "/curate"                                        # from the repo root
+cd backend && uv run --env-file ../.env python -m pipeline.report
+```
+
+`AGENTIQUE_MCP_TOKEN` must be the write token for `/curate` to publish anything;
+with the read token the session can list candidates and settle none. Set
+`LLM_SCORING=1` to run the superseded in-pipeline scorer instead.
+
 ## Pre-commit and linting
 
 Uses [prek](https://prek.j178.dev/). Config: `.pre-commit-config.yaml`.

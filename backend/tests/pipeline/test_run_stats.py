@@ -57,6 +57,10 @@ def _stub_run(monkeypatch, sources, **overrides):
     monkeypatch.setattr(run_module, "filter_dead_domains", lambda a, label: a)
     monkeypatch.setattr(run_module, "filter_thin_repos", lambda s, a, label: a)
     monkeypatch.setattr(run_module, "dedup_semantic", lambda s, a, label: a)
+    # These pin the scoring tail, so they run it: `LLM_SCORING=1`'s branch. The
+    # queueing branch the pipeline takes by default is pinned at the bottom.
+    monkeypatch.setattr(run_module, "llm_scoring_enabled", lambda: True)
+    monkeypatch.setattr(run_module, "queue_candidates", lambda s, a: a)
     monkeypatch.setattr(run_module, "score_articles", lambda s, a: a)
     monkeypatch.setattr(run_module, "summarize_articles", lambda s, a: a)
     monkeypatch.setattr(run_module, "insert_articles", lambda s, a: a)
@@ -234,3 +238,26 @@ def test_the_report_lists_errors(monkeypatch):
 
     assert "ERRORS" in report
     assert "Feeds: RuntimeError: scorer down" in report
+
+
+# ─── The default funnel: queue candidates, insert nothing ────────────────────
+
+
+def test_the_run_queues_its_survivors_and_inserts_nothing(monkeypatch):
+    """The agent is the judge, so the night's run ends at a pending row. An
+    `inserted` count here would mean something published without being read."""
+    stats = _stub_run(monkeypatch, [_feeds_source()], llm_scoring_enabled=lambda: False)
+
+    [source] = stats.sources
+    assert (source.queued, source.inserted) == (1, 0)
+    assert source.articles == []
+
+
+def test_the_report_says_what_is_waiting_when_nothing_landed(monkeypatch):
+    """An empty INSERTED block on its own reads as a dead pipeline; the queue
+    count is what says the run worked and the verdict has not happened yet."""
+    stats = _stub_run(monkeypatch, [_feeds_source()], llm_scoring_enabled=lambda: False)
+
+    report = _format_report(stats)
+    assert "1 candidate(s) queued for review" in report
+    assert "→ queued 1" in report

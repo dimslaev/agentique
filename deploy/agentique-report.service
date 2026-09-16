@@ -1,0 +1,18 @@
+# Install target: /etc/systemd/system/agentique-report.service
+# The night's one email (see agentique-report.timer for the schedule).
+# Manual run: sudo systemctl start agentique-report
+[Unit]
+Description=agentique nightly report (one send)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agentique
+Group=agentique
+WorkingDirectory=/opt/agentique/backend
+# pipeline/report.py reads raw os.environ and loads no dotenv, same as
+# pipeline/run.py -- EnvironmentFile is what feeds it.
+EnvironmentFile=/opt/agentique/.env
+Environment=HOME=/var/lib/agentique
+ExecStart=/opt/agentique/.venv/bin/python -m pipeline.report

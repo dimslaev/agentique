@@ -1,0 +1,33 @@
+# Install target: /etc/systemd/system/agentique-curate.service
+# One curation session (see agentique-curate.timer for the schedule).
+# Manual run: sudo systemctl start agentique-curate
+[Unit]
+Description=agentique curation agent (one session)
+After=network-online.target agentique-backend.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agentique
+Group=agentique
+# The repo root, not backend/: this is where .mcp.json and .claude/skills/ live.
+WorkingDirectory=/opt/agentique
+# Needs ANTHROPIC_API_KEY, and AGENTIQUE_MCP_TOKEN set to MCP_WRITE_TOKEN --
+# the same server serves both tokens and the one in the header is what decides
+# whether this session can publish. A read token here means a session that can
+# read every candidate and approve none.
+EnvironmentFile=/opt/agentique/.env
+Environment=HOME=/var/lib/agentique
+# Reading a few dozen pages and writing a summary for each takes longer than the
+# default. A session that overruns is killed and its candidates stay pending, so
+# tomorrow's session picks them up -- nothing is lost, the feed is just a day
+# late.
+TimeoutStartSec=3600
+# --strict-mcp-config: only the servers in this file, and no trust prompt for
+# them. The tool list is the whole surface the session gets; anything not named
+# here it cannot call.
+ExecStart=/usr/local/bin/claude --print "/curate" \
+  --mcp-config /opt/agentique/.mcp.json \
+  --strict-mcp-config \
+  --permission-mode acceptEdits \
+  --allowed-tools "mcp__agentique__list_candidates,mcp__agentique__get_content,mcp__agentique__approve,mcp__agentique__reject,mcp__agentique__sql_query,mcp__agentique__web_fetch,mcp__agentique__web_search"
