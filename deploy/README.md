@@ -10,7 +10,6 @@ How agentique runs in production. Docker runs only the database
 | `Caddyfile` | TLS + static frontend + reverse proxy to the API (`/etc/caddy/Caddyfile`) |
 | `agentique-backend.service` | FastAPI under systemd, 2 workers, bound to `127.0.0.1:8000` |
 | `agentique-pipeline.service` + `.timer` | the article pipeline, one run daily at 04:00 |
-| `agentique-curate.service` + `.timer` | the curation agent, one session daily at 05:00 |
 | `agentique-report.service` + `.timer` | the night's one report email at 06:00 |
 | `agentique-backup.service` + `.timer` | nightly DB dump to off-box storage at 03:30 |
 | `agentique-sql` | run SQL against the prod DB from stdin, inside the `db` container |
@@ -24,9 +23,10 @@ How agentique runs in production. Docker runs only the database
   the backend. Additive migrations only; rollback is `git revert` + push.
 - The pipeline needs no restart — the timer starts a fresh process each run.
 - The night runs in three steps an hour apart: 04:00 the pipeline queues
-  candidates, 05:00 the agent judges them, 06:00 the report goes out. Each is a
-  separate timer, so a failure in one does not silence the others — a night the
-  agent never ran still gets a report, and that report says nothing landed.
+  candidates, 05:00 the agent judges them, 06:00 the report goes out. The box
+  owns the first and the last as separate timers; the agent runs off-box (see
+  Curation). A failure in one does not silence the others — a night the agent
+  never ran still gets a report, and that report says nothing landed.
 - Nothing is lost when the agent does not run: candidates stay pending and the
   next session reads them alongside the new ones.
 - Break-glass writes are `agentique-sql` over ssh, run by hand: it pipes the
@@ -52,14 +52,15 @@ subset a given deployment actually needs.
 The judge is a Claude Code session, not an LLM call inside the pipeline (ADR 9).
 It reads pending candidates through the MCP server this same box serves.
 
-- `agentique-curate.service` runs `claude --print "/curate"` from
-  `/opt/agentique`, where `.mcp.json` and `.claude/skills/curate/` live. It needs
-  `ANTHROPIC_API_KEY` in `/opt/agentique/.env` and the `claude` CLI on the box.
-- **`AGENTIQUE_MCP_TOKEN` in that env must be the write token.** The MCP server
-  serves both tokens at the same URL and the one in the header is what decides
-  what the session can do: `MCP_TOKEN` reaches `sql_query`, `web_fetch` and
-  `web_search`, `MCP_WRITE_TOKEN` also reaches `approve` and `reject`. A read
-  token here gives you a session that reads every candidate and publishes none.
+- The session runs off-box, as a scheduled task on claude.ai/code against this
+  repo, invoking `/curate`. Nothing about it is installed here: the box serves
+  the MCP endpoint and holds the tokens it verifies, nothing more.
+- **`AGENTIQUE_MCP_TOKEN` in that session must be the write token.** The MCP
+  server serves both tokens at the same URL and the one in the header is what
+  decides what the session can do: `MCP_TOKEN` reaches `sql_query`, `web_fetch`
+  and `web_search`, `MCP_WRITE_TOKEN` also reaches `approve` and `reject`. A
+  read token there gives you a session that reads every candidate and publishes
+  none.
 - `MCP_WRITE_TOKEN` unset means nothing can be published at all — the same
   closed-by-default posture as `MCP_TOKEN`.
 
