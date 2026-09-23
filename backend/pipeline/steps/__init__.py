@@ -5,7 +5,8 @@
     queue     - park each survivor as a pending candidate. The last step.
 
 The curation agent takes it from there (pipeline/curation.py): approving a
-candidate runs persist and enrich on that one article. The steps below
+candidate runs persist and the embedding on that one article, with the
+summary, categories, kind and tags the agent wrote. The steps below
 are the superseded scoring tail, reachable behind LLM_SCORING=1 -- see
 docs/adr/0009-agent-curation.md:
 

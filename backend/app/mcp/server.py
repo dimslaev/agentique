@@ -14,6 +14,7 @@ from app.mcp.tools import (
     list_candidates,
     reject,
     sql_query,
+    vocabulary,
     web_fetch,
     web_search,
 )
@@ -61,8 +62,8 @@ mcp: FastMCP = FastMCP(
         "the Postgres database (publishers, articles, scores, pipeline runs), "
         "`web_fetch` reads one page, `web_search` finds pages. Curation, with "
         "the write token only: `list_candidates` lists what is waiting on a "
-        "verdict, `get_content` returns the stored text for one of them, and "
-        "`approve` and `reject` settle it."
+        "verdict, `get_content` returns the stored text for one of them, "
+        "`vocabulary` lists the labels, and `approve` and `reject` settle it."
     ),
     auth=SharedSecret(),
     tools=[
@@ -71,6 +72,7 @@ mcp: FastMCP = FastMCP(
         web_search,
         list_candidates,
         get_content,
+        vocabulary,
         approve,
         reject,
     ],

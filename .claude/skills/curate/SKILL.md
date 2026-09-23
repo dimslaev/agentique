@@ -1,6 +1,6 @@
 ---
 name: curate
-description: Read the night's article candidates and approve or reject each one with a score, a reason and a summary. Use when running the nightly agentique curation session, or when asked to curate, review candidates, or work the pending queue.
+description: Read the night's article candidates and approve or reject each one with a score, a reason, a summary and labels. Use when running the nightly agentique curation session, or when asked to curate, review candidates, or work the pending queue.
 ---
 
 # Curate the night's candidates
@@ -11,8 +11,8 @@ candidate. What you approve is what readers see; what you reject is gone.
 
 The scorer you replaced kept 11 of 21 noise articles and dropped 13 of 27 the
 reader loved, on the same rubric you are about to read. The rubric was not the
-problem — it could not read the page. You can. Use that: **fetch the page before
-approving anything.**
+problem — it could not read the article. You can. Use that: **read the article
+before approving anything.**
 
 ## Tools
 
@@ -20,26 +20,33 @@ From the `agentique` MCP server, with the curation token:
 
 - `list_candidates()` — everything waiting on a verdict. URL, title, source,
   publisher, trust, traction, dates, and a 200-character snippet.
-- `get_content(url)` — the text the pipeline stored, for a page you cannot
-  fetch. Newsletter items have no web page of their own; this is all there is.
-- `approve(url, score, reason, summary)` — publishes it, then tags and embeds.
+- `get_content(url)` — the article text the pipeline extracted, up to 12000
+  characters: the same text `web_fetch` would return, cut at that length. Read
+  here first.
+- `vocabulary()` — the categories, kinds and tags `approve` accepts. Call it
+  once, before the first approve.
+- `approve(url, score, reason, summary, categories, kind, tags)` — publishes
+  it with your labels, then embeds it.
 - `reject(url, score, reason)` — turns it down, keeping both for the record.
 - `sql_query(sql)` — read-only. Use it to check what the feed already carries.
-- `web_fetch(url)`, `web_search(query)`.
+- `web_fetch(url)`, `web_search(query)` — for what the stored text cannot tell
+  you. See **Looking further** for when.
 
 Every candidate must end in exactly one `approve` or `reject`. A candidate you
 skip stays pending and comes back tomorrow, which is a slow way of never
-deciding. If you genuinely cannot tell — the page is down and the stored text is
-empty — reject it and say so in the reason.
+deciding. If you genuinely cannot tell — the stored text is empty and the page
+is down — reject it and say so in the reason.
 
 ## Rounds
 
 1. **Triage on title and snippet.** Most candidates are settled here: an
    availability notice, a funding round, a vendor's console walkthrough. Reject
    them and move on.
-2. **Fetch the page for everything else** — anything borderline, and everything
-   you are considering approving. Do not approve an article you have not read.
-   Use `get_content` when the fetch fails or the item has no page.
+2. **Read `get_content` for everything else** — anything borderline, and
+   everything you are considering approving. Do not approve an article you have
+   not read. Call `web_fetch` on the candidate's own URL only when the stored
+   text is empty, a teaser or cookie wall, or ends at 12000 characters before
+   the part that decides it.
 3. **Check what the feed already carries** before approving. A rewrite of a
    story from the last few days is a retelling, whatever its own quality:
 
@@ -50,10 +57,40 @@ empty — reject it and say so in the reason.
    ORDER BY a.created_at DESC;
    ```
 
-4. **Write the summary** for what you approve — see below.
+4. **Look further** where the rules below say to.
+5. **Write the verdict** for each one — see below.
 
 Work the queue in order. Score every item on its own merits first, then apply
 the daily caps at the end, when you can see the whole night.
+
+## Looking further
+
+The web tools are for facts the article cannot give you about itself. Use them
+when the answer could move the score across a band or across the approve line,
+and not otherwise. Nothing settled in triage needs them, nor anything that
+scores under 55 whatever the answer.
+
+- **Who is the publisher?** When a candidate you would approve comes from a
+  publisher the feed has not carried before (`sql_query` on `article` by
+  `publisher_id`), or from an aggregator source with a maker you do not know,
+  search for the maker. First-party or not, a lab or a solo developer, a
+  product with users or a landing page: this decides the first-party rule and
+  REACH.
+- **Does the evidence exist?** When the score rests on something the article
+  points at — weights, a repo, a paper, a benchmark table — and you would score
+  it 75 or above, fetch that thing. A repo with no code, a model card with no
+  weights, or a paper that does not report the claimed number is a claim, not
+  evidence.
+- **Is this the first report?** When a candidate retells a release and the feed
+  does not carry the release, search for the original to tell a retelling from
+  the first report, and to judge the release's own reach.
+- **What is this?** When a model, tool or term is new to you — after your
+  training data — search before deciding scope or reach. Do not guess that an
+  unfamiliar name is minor, or that it is major.
+
+Do not fetch the candidate's page to re-read what `get_content` returned, and do
+not search to find something nice to put in a summary. A night of forty
+candidates should need a handful of searches, not one per item.
 
 ## The rubric
 
@@ -217,11 +254,20 @@ that reader nothing. "Landing page with a 49% claim, no method and no repo"
 tells them everything. These verdicts are the next labelled set — write them as
 labels.
 
-**`summary`** — what a reader sees under the title, written from the page you
-fetched, not from the title. A hook line, then short bullets: what it actually
+**`summary`** — what a reader sees under the title, written from the article
+you read, not from the title. A hook line, then short bullets: what it actually
 shows, the numbers with their method, and what a reader would do with it. No
 marketing adjectives, no "this article discusses". If the page had nothing
 concrete in it, you should not be approving it.
+
+**`categories`, `kind`, `tags`** — from `vocabulary()`, chosen from the article
+you read, not the title. One or more categories (`models` for a model or its
+release, `dev` for building with AI, `research` for papers and findings). The
+kind is what the item is: a repo, a paper, a model, an announcement, a product
+page, a blog post; a github, huggingface or arxiv URL sets its own. Up to three
+tags, only where a tag's description fits the article's subject, not a passing
+mention. No tag is better than a wrong one. An unknown category or kind is
+refused, and the candidate stays pending until you approve it again.
 
 ## Before this runs unattended
 

@@ -208,11 +208,11 @@ def list_candidates() -> list[dict[str, str]]:
 
 
 def get_content(url: str) -> str:
-    """Return the article text the pipeline stored for one candidate.
+    """Return the article text the pipeline extracted for one candidate.
 
-    The fallback for pages that cannot be fetched: a newsletter item has no web
-    page of its own, so this is the only copy of what it said. Capped at the
-    first 2000 characters, which is what the pipeline keeps.
+    The same text a page fetch returns, cut at 12000 characters, so read here
+    first. Fetch the page only when this is empty, a teaser, or cut off before
+    the part you need.
     """
     _require_write()
     with _curation_session() as session:
@@ -222,18 +222,39 @@ def get_content(url: str) -> str:
             raise ToolError(str(exc))
 
 
-def approve(url: str, score: int, reason: str, summary: str) -> str:
-    """Publish a candidate: insert the article, then tag, categorize and embed it.
+def vocabulary() -> dict[str, object]:
+    """The labels `approve` accepts: `categories`, `kinds`, and `tags` as
+    slug -> description. Call it once per session, before the first approve."""
+    _require_write()
+    with _curation_session() as session:
+        return curation.vocabulary(session)
+
+
+def approve(
+    url: str,
+    score: int,
+    reason: str,
+    summary: str,
+    categories: list[str],
+    kind: str,
+    tags: list[str],
+) -> str:
+    """Publish a candidate with the labels you chose, then embed it.
 
     `score` is 1-100 on the same scale the rubric describes, `reason` one short
     sentence naming what decided it, and `summary` the text a reader sees under
-    the title. The candidate stops being pending in the same transaction that
-    inserts the article, so nothing is ever published twice.
+    the title. `categories` (one or more), `kind` and `tags` (up to 3) come from
+    `vocabulary`; a github, huggingface or arxiv URL sets its own kind. A label
+    that is not in the vocabulary is refused and the candidate stays pending.
+    The candidate stops being pending in the same transaction that inserts the
+    article, so nothing is ever published twice.
     """
     _require_write()
     with _curation_session() as session:
         try:
-            article_id = curation.approve(session, url, score, reason, summary)
+            article_id = curation.approve(
+                session, url, score, reason, summary, categories, kind, tags
+            )
         except curation.CandidateError as exc:
             raise ToolError(str(exc))
     return f"Published article #{article_id}: {url}"

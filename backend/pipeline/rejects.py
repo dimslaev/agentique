@@ -17,9 +17,15 @@ from pipeline.freshness import parse_date
 from pipeline.models import Reject, RejectStage
 from pipeline.types import Candidate
 
-# Enough to re-score with a longer input or re-embed with a better model later;
-# the full body would make the ledger most of the database.
+# What a settled reject keeps: enough to re-score with a longer input or
+# re-embed with a better model later; the full body would make the ledger most
+# of the database.
 CONTENT_CAP = 2000
+# What a pending candidate keeps, so the curation agent reads the article from
+# the db instead of fetching the page again. Trimmed to `CONTENT_CAP` once the
+# agent rejects it (`curation.reject`), so only the night's queue is ever this
+# large.
+CANDIDATE_CAP = 12000
 
 
 def _pg_text(text: str) -> str:
@@ -38,7 +44,8 @@ def record_reject(
     detail: dict[str, object] | None = None,
 ) -> None:
     """Stage a reject row. The caller commits, as it did for the bare URL."""
-    content = _pg_text(a["content"][:CONTENT_CAP])
+    cap = CANDIDATE_CAP if stage == RejectStage.pending else CONTENT_CAP
+    content = _pg_text(a["content"][:cap])
     session.merge(
         Reject(
             url=a["url"],

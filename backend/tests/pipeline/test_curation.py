@@ -13,9 +13,19 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.catalog.models import Publisher, PublisherKind, PublisherType, TrustLevel
+from app.catalog.models import (
+    Article,
+    ArticleKind,
+    Category,
+    Publisher,
+    PublisherKind,
+    PublisherType,
+    TrustLevel,
+)
 from pipeline import curation
 from pipeline.models import Reject, RejectStage
+from pipeline.rejects import CONTENT_CAP
+from pipeline.tags import Vocabulary
 
 
 class _FakeSession:
@@ -25,6 +35,7 @@ class _FakeSession:
     def __init__(self, *rows) -> None:
         self.rejects = {r.url: r for r in rows if isinstance(r, Reject)}
         self.publishers = {p.id: p for p in rows if isinstance(p, Publisher)}
+        self.articles: dict = {}
         self.deleted: list = []
         self.added: list = []
         self.commits = 0
@@ -32,6 +43,8 @@ class _FakeSession:
     def get(self, model, key):
         if model is Reject:
             return self.rejects.get(key)
+        if model is Article:
+            return self.articles.get(key)
         return self.publishers.get(key)
 
     def delete(self, obj) -> None:
@@ -72,9 +85,16 @@ def _pending_row(**overrides) -> Reject:
     return row
 
 
+VOCAB = Vocabulary(
+    slug_to_id={"agents": 1, "local-inference": 2},
+    slug_to_description={"agents": "Agent frameworks", "local-inference": ""},
+)
+
+
 @pytest.fixture
 def stub_publish(monkeypatch: pytest.MonkeyPatch) -> dict:
-    """Stand in for the insert-and-enrich tail, and record what it was handed."""
+    """Stand in for the insert and the embedding, and record what they were
+    handed."""
     seen: dict = {}
 
     def insert(_session, items):
@@ -82,27 +102,32 @@ def stub_publish(monkeypatch: pytest.MonkeyPatch) -> dict:
         return [{**items[0], "id": 42}]
 
     monkeypatch.setattr(curation, "insert_articles", insert)
-    monkeypatch.setattr(curation, "load_vocabulary", lambda session: "vocab")
+    monkeypatch.setattr(curation, "load_vocabulary", lambda session: VOCAB)
     monkeypatch.setattr(
         curation,
-        "categorize_and_tag_articles",
-        lambda _s, items, vocab: seen.setdefault("tagged", (items, vocab)) and [],
+        "write_article_tags",
+        lambda _s, article_id, slugs, vocab: seen.setdefault("tags", slugs),
     )
     monkeypatch.setattr(
         curation, "embed_articles", lambda _s, items: seen.setdefault("embedded", items)
     )
-    # No network in a unit test: the stored text is what gets published.
-    monkeypatch.setattr(
-        curation, "fetch_and_extract", lambda url, cap: (_ for _ in ()).throw(OSError())
-    )
     return seen
+
+
+def _approve(session, url, score=84, reason="r", summary="s", **labels):
+    labels = {
+        "categories": ["models"],
+        "kind": "announcement",
+        "tags": ["agents"],
+    } | labels
+    return curation.approve(session, url, score, reason, summary, **labels)
 
 
 def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
     row = _pending_row()
     session = _FakeSession(row, _publisher())
 
-    article_id = curation.approve(
+    article_id = _approve(
         session, row.url, 84, "Open weights, downloadable today.", "A summary."
     )
 
@@ -117,45 +142,62 @@ def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
     )
     assert item["summary"] == "A summary."
     assert (item["trust"], item["publisher_kind"]) == ("high", "individual")
-
-
-def test_approving_falls_back_to_the_stored_text_when_the_page_is_gone(
-    stub_publish: dict,
-):
-    """A newsletter item has no page to re-read. The stored copy is all there
-    is, and a failed fetch must never publish an article with less text than
-    the pipeline already had."""
-    row = _pending_row()
-    session = _FakeSession(row, _publisher())
-
-    curation.approve(session, row.url, 70, "reason", "summary")
-
-    [item] = stub_publish["inserted"]
+    # The stored text is the article: approving never fetches the page again.
     assert item["content"] == "the stored two thousand characters"
+    assert stub_publish["embedded"][0]["id"] == 42
 
 
-def test_a_longer_re_fetch_wins(monkeypatch: pytest.MonkeyPatch, stub_publish: dict):
-    monkeypatch.setattr(curation, "fetch_and_extract", lambda url, cap: "x" * 5000)
+def test_the_agents_labels_are_written(stub_publish: dict):
     row = _pending_row()
+    article = Article(id=42, title="t", url=row.url, publisher_id=7)
     session = _FakeSession(row, _publisher())
+    session.articles = {42: article}
 
-    curation.approve(session, row.url, 70, "reason", "summary")
-
-    assert len(stub_publish["inserted"][0]["content"]) == 5000
-
-
-def test_a_shorter_re_fetch_does_not_shrink_the_article(
-    monkeypatch: pytest.MonkeyPatch, stub_publish: dict
-):
-    monkeypatch.setattr(curation, "fetch_and_extract", lambda url, cap: "nope")
-    row = _pending_row()
-    session = _FakeSession(row, _publisher())
-
-    curation.approve(session, row.url, 70, "reason", "summary")
-
-    assert (
-        stub_publish["inserted"][0]["content"] == "the stored two thousand characters"
+    _approve(
+        session,
+        row.url,
+        categories=["Models", "research", "nope"],
+        kind="announcement",
+        tags=["agents", "not-a-tag"],
     )
+
+    assert article.categories == [Category.models, Category.research]
+    assert article.kind == ArticleKind.announcement
+    # Off-list tags are dropped, never minted.
+    assert stub_publish["tags"] == ["agents"]
+
+
+@pytest.mark.usefixtures("stub_publish")
+def test_the_url_host_overrules_the_agents_kind():
+    url = "https://github.com/someone/thing"
+    row = _pending_row(url=url)
+    article = Article(id=42, title="t", url=url, publisher_id=7)
+    session = _FakeSession(row, _publisher())
+    session.articles = {42: article}
+
+    _approve(session, url, kind="blog")
+
+    assert article.kind == ArticleKind.repo
+
+
+@pytest.mark.parametrize(
+    "labels, message",
+    [
+        ({"categories": ["crypto"]}, "No valid category"),
+        ({"categories": []}, "No valid category"),
+        ({"kind": "podcast"}, "Unknown kind"),
+    ],
+)
+def test_a_bad_label_leaves_the_candidate_pending(
+    stub_publish: dict, labels: dict, message: str
+):
+    row = _pending_row()
+    session = _FakeSession(row, _publisher())
+
+    with pytest.raises(curation.CandidateError, match=message):
+        _approve(session, row.url, **labels)
+    assert session.deleted == []
+    assert "inserted" not in stub_publish
 
 
 def test_rejecting_keeps_the_row_with_the_verdict_on_it():
@@ -172,6 +214,17 @@ def test_rejecting_keeps_the_row_with_the_verdict_on_it():
     assert session.deleted == []
 
 
+def test_rejecting_trims_the_full_text_back_to_the_ledger_cap():
+    """A candidate carries the whole article so the agent can read it; a settled
+    reject keeps only what the ledger keeps for every other reject."""
+    row = _pending_row(content="x" * (CONTENT_CAP * 5))
+    session = _FakeSession(row)
+
+    curation.reject(session, row.url, 20, "reason")
+
+    assert len(row.content) == CONTENT_CAP
+
+
 def test_a_url_that_was_never_queued_is_a_message_not_a_traceback():
     session = _FakeSession()
     with pytest.raises(curation.CandidateError, match="No candidate for"):
@@ -183,7 +236,7 @@ def test_a_candidate_cannot_be_judged_twice():
     session = _FakeSession(row, _publisher())
 
     with pytest.raises(curation.CandidateError, match="already"):
-        curation.approve(session, row.url, 90, "reason", "summary")
+        _approve(session, row.url, 90)
 
 
 def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
@@ -193,7 +246,7 @@ def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
     session = _FakeSession(row)
 
     with pytest.raises(curation.CandidateError, match="no publisher"):
-        curation.approve(session, row.url, 90, "reason", "summary")
+        _approve(session, row.url, 90)
     assert "inserted" not in stub_publish
 
 

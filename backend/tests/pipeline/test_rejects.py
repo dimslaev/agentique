@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pipeline.models import RejectStage
-from pipeline.rejects import CONTENT_CAP, record_reject
+from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP, record_reject
 from pipeline.types import Candidate
 
 
@@ -53,6 +53,14 @@ def test_caps_content_and_strips_nul_bytes():
     assert row.title == "t"
     assert "\x00" not in row.content
     assert len(row.content) < CONTENT_CAP
+
+
+def test_a_pending_candidate_keeps_the_article_for_the_agent_to_read():
+    session = _FakeSession()
+    record_reject(
+        session, _candidate(content="x" * (CANDIDATE_CAP * 2)), RejectStage.pending
+    )
+    assert len(session.rows[0].content) == CANDIDATE_CAP
 
 
 def test_empty_content_is_stored_as_null():
