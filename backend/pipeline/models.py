@@ -57,7 +57,7 @@ class Reject(SQLModel, table=True):
     content: str | None = None
     traction: str | None = None
     score: int | None = None
-    # The scorer's one-sentence account of the score; below_threshold only.
+    # The judge's one-sentence account of the score; below_threshold only.
     reason: str | None = None
     # Stage-specific evidence: {"stars": 12}, {"keep_proba": 0.08},
     # {"dup_of": "<url>"}.

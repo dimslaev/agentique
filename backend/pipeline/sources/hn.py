@@ -270,9 +270,9 @@ def _to_article(item: dict) -> RawItem | None:
         "content": "",
         "published_date": pub_date or datetime.now(UTC).isoformat(),
         "source": "Hacker News",
-        # Carried to the scorer, not just used as a gate: told that a submission
-        # is a Show HN sitting at 3 points, the model stops reading its title as
-        # if it were an announcement.
+        # Shown to the curation agent, not just used as a gate: told that a
+        # submission is a Show HN sitting at 3 points, it stops reading the
+        # title as if it were an announcement.
         "traction": f"{points} points, {comments} comments on Hacker News",
     }
 
