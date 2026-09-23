@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.sources.substack import _entry_content
+from pipeline.fetching.extract_content import Page
+from pipeline.sources.substack import _entry_item
 from pipeline.steps import fetch as fetch_step
 from pipeline.steps.fetch import MIN_CONTENT_CHARS, MIN_SUMMARIZABLE_CHARS
 from pipeline.urls import feed_url
@@ -77,6 +78,10 @@ def test_feed_url_is_idempotent():
     assert feed_url(once) == once
 
 
+def _entry_content(entry: dict) -> str:
+    return _entry_item(entry, "Feed A")["content"]
+
+
 def test_content_encoded_preferred_over_summary_teaser():
     entry = {
         "summary": "<p>A short teaser.</p>",
@@ -110,6 +115,22 @@ def test_missing_fields_do_not_raise():
     assert _entry_content({}) == ""
 
 
+def test_a_feed_item_carries_the_links_its_body_makes():
+    html = _ARTICLE_HTML.replace(
+        "</div>",
+        '<p>Code is on <a href="https://github.com/anthropics/sdk/tree/main">'
+        "GitHub</a> for anyone who wants it.</p></div>",
+    )
+    entry = {"link": "https://example.com/post", "content": [{"value": html}]}
+    item = _entry_item(entry, "Feed A")
+    assert item["links"] == {"repo": ["https://github.com/anthropics/sdk"]}
+
+
+def test_a_teaser_carries_no_links():
+    entry = {"summary": '<p><a href="https://github.com/a/b">x</a></p>'}
+    assert "links" not in _entry_item(entry, "Feed A")
+
+
 # ─── the fetch step's re-fetch gate ──────────────────────────────────────────
 # This is what makes a thin source safe to carry. Lab Watch items arrive as a
 # one-line search snippet and Hacker News items arrive with no content at all;
@@ -127,9 +148,13 @@ def _stub_refetch(monkeypatch, content_map: dict[str, str]) -> list[list[str]]:
     """Replace the network re-fetch, recording which URLs it was asked for."""
     asked: list[list[str]] = []
 
-    def fetch_full_content(urls: list[str]) -> dict[str, str]:
+    def fetch_full_content(urls: list[str]) -> dict[str, Page]:
         asked.append(urls)
-        return {u: content_map[u] for u in urls if u in content_map}
+        return {
+            u: Page(content_map[u], {"paper": ["https://arxiv.org/abs/1"]})
+            for u in urls
+            if u in content_map
+        }
 
     monkeypatch.setattr(fetch_step, "fetch_full_content", fetch_full_content)
     return asked
@@ -140,6 +165,7 @@ def test_thin_item_is_refetched_and_kept_when_the_refetch_lands(monkeypatch):
     kept = fetch_step._with_content([_fetched("u1", "a snippet")], "Lab Watch")
     assert asked == [["u1"]]
     assert kept[0]["content"] == _FULL_TEXT
+    assert kept[0]["links"] == {"paper": ["https://arxiv.org/abs/1"]}
 
 
 def test_thin_item_the_refetch_could_not_fill_is_dropped(monkeypatch):

@@ -43,9 +43,12 @@ class RawItem(TypedDict):
     published_date: str | None
     source: str
     # Only the aggregator sources that carry a public reception signal (Hacker
-    # News points/comments) have one. Passed to the scorer as evidence, not
+    # News points/comments) have one. Shown to the agent as evidence, not
     # merely used as a gate -- see sources/hn.py.
     traction: NotRequired[str]
+    # The repo / model / paper / docs links the article body makes, grouped by
+    # ``fetching.page_facts``. Absent when the text came from nowhere with HTML.
+    links: NotRequired[dict[str, list[str]]]
 
 
 class Candidate(RawItem):

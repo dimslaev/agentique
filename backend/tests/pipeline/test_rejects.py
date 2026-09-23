@@ -67,3 +67,16 @@ def test_empty_content_is_stored_as_null():
     session = _FakeSession()
     record_reject(session, _candidate(content=""), RejectStage.prefilter)
     assert session.rows[0].content is None
+
+
+def test_keeps_the_links_extraction_found():
+    session = _FakeSession()
+    links = {"repo": ["https://github.com/someone/thing"]}
+    record_reject(session, _candidate(links=links), RejectStage.pending)
+    assert session.rows[0].links == links
+
+
+def test_no_links_is_stored_as_null():
+    session = _FakeSession()
+    record_reject(session, _candidate(links={}), RejectStage.pending)
+    assert session.rows[0].links is None

@@ -1,9 +1,14 @@
-"""Fetch a URL and extract its readable text (trafilatura), with a proxy retry."""
+"""Fetch a URL and extract its readable text (trafilatura), with a proxy retry.
+
+The text comes back with the links the article body makes (``page_facts``), so
+the one fetch serves both.
+"""
 
 from __future__ import annotations
 
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import NamedTuple
 
 import trafilatura
 
@@ -13,6 +18,7 @@ from pipeline.fetching.http import (
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.fetching.page_facts import outbound_links
 from pipeline.types import RawItem
 from pipeline.urls import hostname
 
@@ -39,6 +45,16 @@ BLOCKER_PATTERNS: list[re.Pattern] = [
     re.compile(r"access\s+denied", re.IGNORECASE),
     re.compile(r"403\s+forbidden", re.IGNORECASE),
 ]
+
+
+class Page(NamedTuple):
+    """One fetched page: its readable text and the links its body makes."""
+
+    text: str
+    links: dict[str, list[str]]
+
+
+EMPTY_PAGE = Page("", {})
 
 
 def _should_skip(url: str) -> bool:
@@ -76,18 +92,24 @@ def extract_text(html: str, max_length: int | None = None) -> str:
     """Readable text from an HTML string, or "" if it is a blocker/teaser.
 
     Also used on feed-embedded HTML (``content:encoded``), so the text from a
-    feed and the text from a network fetch stay comparable.
+    feed and the text from a network fetch stay comparable. Tables are kept: a
+    benchmark table is often the evidence a release post rests on.
     """
     if not html:
         return ""
-    text = trafilatura.extract(html, include_comments=False, include_tables=False) or ""
+    text = trafilatura.extract(html, include_comments=False, include_tables=True) or ""
     text = re.sub(r"\s+", " ", text).strip()
     if not text or _is_blocker(text):
         return ""
     return text[:max_length] if max_length else text
 
 
-def fetch_and_extract(url: str, max_length: int | None = None) -> str:
+def _page(html: str, url: str, max_length: int | None) -> Page:
+    text = extract_text(html, max_length)
+    return Page(text, outbound_links(html, url)) if text else EMPTY_PAGE
+
+
+def fetch_page(url: str, max_length: int | None = None) -> Page:
     """Fetch a URL directly, falling back to the residential proxy.
 
     An empty result from the direct attempt covers every failure mode we care
@@ -96,22 +118,27 @@ def fetch_and_extract(url: str, max_length: int | None = None) -> str:
     The proxy is metered, so it never runs first.
     """
     if _should_skip(url):
-        return ""
+        return EMPTY_PAGE
 
-    text = extract_text(_fetch_html(url), max_length)
-    if text or not RESIDENTIAL_PROXY_URL:
-        return text
+    page = _page(_fetch_html(url), url, max_length)
+    if page.text or not RESIDENTIAL_PROXY_URL:
+        return page
 
-    text = extract_text(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), max_length)
-    if text:
+    page = _page(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), url, max_length)
+    if page.text:
         log(f"    Proxy recovered: {url}")
-    return text
+    return page
 
 
-def _fetch_texts(
+def fetch_and_extract(url: str, max_length: int | None = None) -> str:
+    """The readable text at a URL, or "" — ``fetch_page`` without the links."""
+    return fetch_page(url, max_length).text
+
+
+def _fetch_pages(
     urls: list[str], max_length: int | None = None, verbose: bool = False
-) -> dict[str, str]:
-    """Fetch and extract many URLs in parallel -> {url: text}, skipping failures.
+) -> dict[str, Page]:
+    """Fetch and extract many URLs in parallel -> {url: page}, skipping failures.
 
     Shared core of ``extract_content`` (short snippets, quiet) and
     ``fetch_full_content`` (full text, logs per-URL progress because it is the
@@ -119,27 +146,27 @@ def _fetch_texts(
     """
     total = len(urls)
 
-    def one(idx_url: tuple[int, str]) -> tuple[str, str]:
+    def one(idx_url: tuple[int, str]) -> tuple[str, Page]:
         idx, url = idx_url
         if verbose:
             log(f"    [{idx + 1}/{total}] Fetching: {url}")
-        text = fetch_and_extract(url, max_length)
+        page = fetch_page(url, max_length)
         if verbose:
-            size = f"OK ({len(text)} chars)" if text else "no content"
+            size = f"OK ({len(page.text)} chars)" if page.text else "no content"
             log(f"    [{idx + 1}/{total}] {size}: {url}")
-        return url, text
+        return url, page
 
-    texts: dict[str, str] = {}
+    pages: dict[str, Page] = {}
     with ThreadPoolExecutor(max_workers=CONCURRENCY) as executor:
         futures = [executor.submit(one, pair) for pair in enumerate(urls)]
         for future in as_completed(futures):
             try:
-                url, text = future.result()
-                if text:
-                    texts[url] = text
+                url, page = future.result()
+                if page.text:
+                    pages[url] = page
             except Exception:
                 pass
-    return texts
+    return pages
 
 
 def extract_content(articles: list[RawItem]) -> list[RawItem]:
@@ -151,26 +178,27 @@ def extract_content(articles: list[RawItem]) -> list[RawItem]:
     unique_urls = list(dict.fromkeys(a["url"] for a in needs))
     log(f"  Extracting content for {len(unique_urls)} URLs...")
 
-    snippet_map = _fetch_texts(unique_urls, max_length=SNIPPET_MAX_LENGTH)
+    snippet_map = _fetch_pages(unique_urls, max_length=SNIPPET_MAX_LENGTH)
     log(f"  Extracted {len(snippet_map)}/{len(unique_urls)} snippets")
 
     result: list[RawItem] = []
     for a in articles:
-        if not a["content"] and a["url"] in snippet_map:
-            result.append({**a, "content": snippet_map[a["url"]]})
+        page = snippet_map.get(a["url"])
+        if not a["content"] and page:
+            result.append({**a, "content": page.text, "links": page.links})
         else:
             result.append(a)
     return result
 
 
-def fetch_full_content(urls: list[str]) -> dict[str, str]:
-    """Fetch full article text for already-inserted articles -> {url: text}."""
+def fetch_full_content(urls: list[str]) -> dict[str, Page]:
+    """Fetch the full text and links of thin items -> {url: page}."""
     if not urls:
         return {}
 
     unique_urls = list(dict.fromkeys(urls))
     log(f"  Re-extracting full content for {len(unique_urls)} URLs...")
 
-    content_map = _fetch_texts(unique_urls, verbose=True)
+    content_map = _fetch_pages(unique_urls, verbose=True)
     log(f"  Re-extracted {len(content_map)}/{len(unique_urls)} full texts")
     return content_map

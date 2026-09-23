@@ -118,11 +118,12 @@ def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
     """
     thin = [a for a in articles if len(a["content"]) < MIN_CONTENT_CHARS]
     if thin:
-        content_map = fetch_full_content([a["url"] for a in thin])
+        pages = fetch_full_content([a["url"] for a in thin])
         for a in thin:
-            full = content_map.get(a["url"])
-            if full:
-                a["content"] = full
+            page = pages.get(a["url"])
+            if page:
+                a["content"] = page.text
+                a["links"] = page.links
 
     kept = [a for a in articles if len(a["content"].strip()) >= MIN_SUMMARIZABLE_CHARS]
     dropped = len(articles) - len(kept)

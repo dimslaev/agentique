@@ -66,6 +66,11 @@ class Reject(SQLModel, table=True):
     detail: dict[str, object] | None = Field(
         default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )
+    # The repo / model / paper / docs links the article body makes,
+    # {"repo": [...], "paper": [...]}; see ``fetching.page_facts``.
+    links: dict[str, list[str]] | None = Field(
+        default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
+    )
 
 
 class PipelineRun(SQLModel, table=True):

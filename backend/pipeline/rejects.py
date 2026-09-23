@@ -56,6 +56,7 @@ def record_reject(
             published_at=parse_date(a["published_date"]),
             content=content or None,
             traction=a.get("traction"),
+            links=a.get("links") or None,
             score=score,
             reason=reason,
             detail=detail,
