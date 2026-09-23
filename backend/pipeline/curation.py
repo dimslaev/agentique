@@ -27,7 +27,7 @@ from datetime import UTC, datetime, timedelta
 from typing import NotRequired, TypedDict
 
 import numpy as np
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.catalog.models import Article, ArticleKind, Category, Publisher
 from app.platform.logging import log
@@ -49,6 +49,9 @@ LIST_SNIPPET = 200
 # the cap is here so a backlog after a missed session comes back in readable
 # pages rather than all at once.
 LIST_LIMIT = 200
+# How far back a publisher's approval rate reaches. Long enough that a weekly
+# blog has a record, short enough to follow a publisher that changed.
+APPROVAL_WINDOW_DAYS = 90
 # One page of `get_content`. Enough to triage on; an approval reads on to the end.
 PAGE_LIMIT = 4000
 # Two texts this close are the same story. Same-story pairs sit at 0.29-0.35
@@ -76,12 +79,55 @@ def _pending(session: Session, url: str) -> Reject:
     return row
 
 
+def approval_rate(approved: int, rejected: int) -> str:
+    """A publisher's record as the agent reads it: "3/10", or "new". Pure."""
+    decided = approved + rejected
+    return f"{approved}/{decided}" if decided else "new"
+
+
+def approval_counts(
+    session: Session, publisher_ids: list[int], since: datetime
+) -> dict[int, tuple[int, int]]:
+    """``{publisher_id: (approved, rejected)}`` for verdicts since ``since``.
+
+    An approval is an Article, a rejection a `below_threshold` row. Both are
+    dated by when the candidate was queued, which is within a night of when it
+    was judged.
+    """
+    if not publisher_ids:
+        return {}
+    approved = session.exec(
+        select(col(Article.publisher_id), func.count())
+        .where(
+            col(Article.publisher_id).in_(publisher_ids),
+            col(Article.created_at) >= since,
+        )
+        .group_by(col(Article.publisher_id))
+    ).all()
+    rejected = session.exec(
+        select(col(Reject.publisher_id), func.count())
+        .where(
+            col(Reject.publisher_id).in_(publisher_ids),
+            col(Reject.stage) == RejectStage.below_threshold,
+            col(Reject.created_at) >= since,
+        )
+        .group_by(col(Reject.publisher_id))
+    ).all()
+    counts: dict[int, tuple[int, int]] = {}
+    for pid, n in approved:
+        counts[pid] = (n, 0)
+    for pid, n in rejected:
+        if pid is not None:
+            counts[pid] = (counts.get(pid, (0, 0))[0], n)
+    return counts
+
+
 def list_candidates(session: Session, limit: int = LIST_LIMIT) -> list[dict[str, str]]:
     """Every candidate waiting on a verdict, freshest first.
 
     One row per URL with what a triage pass needs and nothing more: the
-    publisher and its trust tag, the traction the source reported, the dates,
-    and the opening `LIST_SNIPPET` characters.
+    publisher and its approval rate over `APPROVAL_WINDOW_DAYS`, the traction
+    the source reported, the dates, and the opening `LIST_SNIPPET` characters.
     """
     rows = session.exec(
         select(Reject, Publisher)
@@ -91,13 +137,17 @@ def list_candidates(session: Session, limit: int = LIST_LIMIT) -> list[dict[str,
         .limit(limit)
     ).all()
 
+    since = datetime.now(UTC) - timedelta(days=APPROVAL_WINDOW_DAYS)
+    ids = list({r.publisher_id for r, _ in rows if r.publisher_id is not None})
+    counts = approval_counts(session, ids, since)
+
     return [
         {
             "url": r.url,
             "title": r.title or "",
             "source": r.source or "",
             "publisher": p.name if p else "",
-            "trust": str(p.trust) if p else "",
+            "approved": approval_rate(*counts.get(r.publisher_id or 0, (0, 0))),
             "traction": r.traction or "",
             "published_at": r.published_at.date().isoformat() if r.published_at else "",
             "queued_at": r.created_at.date().isoformat(),
@@ -494,8 +544,6 @@ def approve(
         "published_date": row.published_at.isoformat() if row.published_at else None,
         "source": row.source or "",
         "publisher_id": publisher.id,
-        "trust": str(publisher.trust),
-        "publisher_kind": str(publisher.kind),
         "score": score,
         "score_reason": reason,
         "summary": summary,

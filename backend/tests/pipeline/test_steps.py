@@ -7,8 +7,6 @@ the I/O steps and pinned here.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from pipeline.steps import fetch as fetch_step
 from pipeline.steps.persist import best_per_url
 
@@ -63,8 +61,6 @@ def _raw(url: str, source: str) -> dict:
 class _FakePublisher:
     def __init__(self, id_: int = 1) -> None:
         self.id = id_
-        self.trust = SimpleNamespace(value="high")
-        self.kind = SimpleNamespace(value="individual")
 
 
 class _FakeResolver:
@@ -87,8 +83,6 @@ def test_every_item_is_stamped_with_its_publisher():
         [_raw("u1", "Feed A"), _raw("u2", "Feed B")], resolver
     )
     assert [c["publisher_id"] for c in candidates] == [1, 1]
-    assert [c["trust"] for c in candidates] == ["high", "high"]
-    assert [c["publisher_kind"] for c in candidates] == ["individual", "individual"]
 
 
 def test_credits_the_author_over_the_aggregator_that_found_it():

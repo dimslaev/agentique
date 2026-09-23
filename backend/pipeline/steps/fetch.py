@@ -136,9 +136,8 @@ def resolve_publishers(
 ) -> list[Candidate]:
     """Turn fetched items into candidates by resolving each one's publisher.
 
-    publisher_id, trust and publisher_kind come from the Publisher row: the
-    one whose site the URL is on when we know it, else the one named by the
-    source (auto-quarantined if unknown).
+    The Publisher is the one whose site the URL is on when we know it, else the
+    one named by the source (auto-quarantined if unknown).
 
     Crediting by URL first is what lets an individual's post found through
     Hacker News or a newsletter count as theirs. ``source`` is left alone: it
@@ -146,18 +145,11 @@ def resolve_publishers(
 
     Returns new dicts rather than stamping the fetched ones in place: it is the
     only producer of ``Candidate``, which is what lets every step below it read
-    those keys without a default.
+    ``publisher_id`` without a default.
     """
     candidates: list[Candidate] = []
     for a in articles:
         publisher = resolver.credit(a["url"]) or resolver.resolve(a["source"])
         assert publisher.id is not None
-        candidates.append(
-            {
-                **a,
-                "publisher_id": publisher.id,
-                "trust": publisher.trust.value,
-                "publisher_kind": publisher.kind.value,
-            }
-        )
+        candidates.append({**a, "publisher_id": publisher.id})
     return candidates

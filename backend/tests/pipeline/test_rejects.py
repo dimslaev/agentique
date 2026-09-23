@@ -23,7 +23,6 @@ def _candidate(**overrides) -> Candidate:
         "published_date": "2026-09-12T10:00:00+00:00",
         "source": "Hacker News",
         "publisher_id": 7,
-        "trust": "medium",
         "traction": "3 points, 0 comments on Hacker News",
     }
     return {**a, **overrides}

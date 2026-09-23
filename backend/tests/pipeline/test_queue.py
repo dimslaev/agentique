@@ -35,8 +35,6 @@ def _candidate(url: str, **overrides) -> Candidate:
         "published_date": "2026-09-12T10:00:00+00:00",
         "source": "Hacker News",
         "publisher_id": 7,
-        "trust": "medium",
-        "publisher_kind": "company",
     }
     return {**a, **overrides}
 

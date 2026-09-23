@@ -1,6 +1,6 @@
 """The pipeline's steps, in the order run.py applies them.
 
-    fetch     - poll each source, fill content, stamp publisher/trust per item
+    fetch     - poll each source, fill content, stamp each item's publisher
     filter    - drop URLs already judged or already waiting
     queue     - park each survivor as a pending candidate. The last step.
 

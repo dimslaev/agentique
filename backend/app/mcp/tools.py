@@ -196,8 +196,9 @@ def list_candidates() -> list[dict[str, str]]:
     """List the articles waiting on a curation verdict, freshest first.
 
     One row per candidate: `url`, `title`, `source` (where the link was found),
-    `publisher`, `trust`, `traction`, `published_at`, `queued_at`, and a
-    200-character `snippet`. Deliberately not the full text — call
+    `publisher`, `approved` (the publisher's approvals / decisions over the
+    last 90 days, e.g. "3/10", or "new" when it has none), `traction`,
+    `published_at`, `queued_at`, and a 200-character `snippet`. Deliberately not the full text — call
     `get_content` for a candidate worth a closer look.
 
     A candidate stays listed until `approve` or `reject` is called on it, so a

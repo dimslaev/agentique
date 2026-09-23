@@ -10,7 +10,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, the RSS/Substack feeds, a lab-watch crawler, email newsletters. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
 
-- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Shown to the curation agent beside each candidate. Not on the public API.
+- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. No longer read (ADR 11): the curation agent sees each publisher's approval rate instead (`approved` in `list_candidates`: approvals / decisions over 90 days, or "new"). The column stays. Not on the public API.
 
 - **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). No longer read: the fetch step used to drop its off-topic titles, and the curation agent judges topic now (ADR 11). The column stays. Hacker News keeps its own title keyword gate (`is_on_topic` in `pipeline/sources/hn.py`).
 
@@ -32,7 +32,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **RawItem / Candidate / Scored / Persisted** (`pipeline/types.py`) - the four shapes an article takes going down the funnel, one per stage.
   - **RawItem** - what a source adapter emitted. Title, url, content, date, source name. Nothing else known yet.
-  - **Candidate** - a raw item resolved to its Publisher: carries `publisher_id`, `trust`, `publisher_kind`.
+  - **Candidate** - a raw item resolved to its Publisher: carries `publisher_id`.
   - **Scored** - a candidate the curation agent approved, with its score. The nightly run never produces one: it ends at a pending candidate, and `curation.approve` builds the shape from the row the agent judged.
   - **Persisted** - a scored article now stored as an `Article` row: has an `id`, sanitized title and content.
   - Each stage extends the one before, so a step's signature says where in the funnel it belongs. Enrichment narrows a `Persisted` to a `ProcessedArticle`: just the fields the embedding text is built from.

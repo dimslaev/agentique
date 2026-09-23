@@ -55,9 +55,6 @@ class Candidate(RawItem):
     """An item resolved to the Publisher it came from."""
 
     publisher_id: int
-    trust: str
-    # PublisherKind value.
-    publisher_kind: str
 
 
 class Scored(Candidate):

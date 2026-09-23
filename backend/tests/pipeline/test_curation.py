@@ -145,7 +145,7 @@ def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
         "Open weights, downloadable today.",
     )
     assert item["summary"] == "A summary."
-    assert (item["trust"], item["publisher_kind"]) == ("high", "individual")
+    assert item["publisher_id"] == 7
     # The stored text is the article: approving never fetches the page again.
     assert item["content"] == "the stored two thousand characters"
     assert stub_publish["embedded"][0]["id"] == 42
@@ -252,6 +252,17 @@ def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
     with pytest.raises(curation.CandidateError, match="no publisher"):
         _approve(session, row.url, 90)
     assert "inserted" not in stub_publish
+
+
+# ─── approval rate ───────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "approved, rejected, expected",
+    [(3, 7, "3/10"), (0, 4, "0/4"), (2, 0, "2/2"), (0, 0, "new")],
+)
+def test_approval_rate(approved, rejected, expected):
+    assert curation.approval_rate(approved, rejected) == expected
 
 
 # ─── get_content paging ──────────────────────────────────────────────────────

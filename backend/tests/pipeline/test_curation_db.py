@@ -1,9 +1,9 @@
-"""`similar` and `stories` against the real schema, with the embedding stubbed.
+"""The curation queries against the real schema, with the embedding stubbed.
 
-The distance maths is pinned on synthetic vectors in test_curation.py. This
-pins the part those cannot: that the queries read the right rows (the feed's
-stored vectors, every ledger stage, the window), and that the rows come back
-with their publisher and stage.
+The pure parts are pinned in test_curation.py. This pins what those cannot:
+that `similar` and `stories` read the right rows (the feed's stored vectors,
+every ledger stage, the window) and that `list_candidates` counts a publisher's
+record from the right ones.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pytest
-from sqlmodel import Session, col, delete
+from sqlmodel import Session, col, delete, select
 
 from app.catalog.models import Article, Publisher, PublisherKind, PublisherType
 from pipeline import curation
@@ -160,3 +160,28 @@ def test_stories_groups_the_queue_with_the_feed(db: Session, world: dict):
     [story] = groups
     assert {m["url"] for m in story["members"]} == {world["verge"], world["feed"]}
     assert story["coverage"] == 2
+
+
+def test_list_candidates_shows_each_publishers_approval_rate(db: Session, world: dict):
+    rows = {r["url"]: r for r in curation.list_candidates(db)}
+    # Verge: nothing published, nothing turned down yet.
+    assert rows[world["verge"]]["approved"] == "new"
+    assert "trust" not in rows[world["verge"]]
+    # Blog's one article is 30 days old: outside `similar`'s week, inside the
+    # 90 days a record reaches.
+    assert rows[world["lone"]]["approved"] == "1/1"
+
+
+def test_approval_counts_reads_articles_and_agent_rejects(db: Session, world: dict):
+    ids = {
+        p.name: p.id
+        for p in db.exec(select(Publisher).where(col(Publisher.slug).startswith(TAG)))
+    }
+    since = datetime.now(UTC) - timedelta(days=90)
+    counts = curation.approval_counts(db, [i for i in ids.values() if i], since)
+
+    assert counts[ids[f"{TAG} OpenAI"]] == (1, 0)
+    assert counts[ids[f"{TAG} Wired"]] == (0, 1)
+    # A pending row is not a decision.
+    assert ids[f"{TAG} Verge"] not in counts
+    assert world
