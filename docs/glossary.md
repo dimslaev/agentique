@@ -20,7 +20,9 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
   - The *type* `Candidate` (`pipeline/types.py`) - a raw item resolved to its Publisher, mid-funnel.
   - A *candidate* in the feed's sense - an article the nightly run has queued and the curation agent has not judged yet: a `Reject` row at stage `pending`. It becomes an `Article` on approval and a `below_threshold` reject otherwise. Until then it is not visible anywhere a reader can see.
 
-- **Curation agent** - the Claude Code session that runs at 05:00, an hour after the pipeline, reads the pending candidates through the MCP tools (`list_candidates`, `get_content`, `approve`, `reject`) and decides each one. Its rubric is `.claude/skills/curate/SKILL.md`. It is the only judge the feed has and the only thing that writes an `Article`.
+- **Curation agent** - the Claude Code session that runs at 05:00, an hour after the pipeline, reads the pending candidates through the MCP tools (`list_candidates`, `get_content`, `similar`, `stories`, `check_link`, `approve`, `reject`, `reject_many`) and decides each one. Its rubric is `.claude/skills/curate/SKILL.md`. It is the only judge the feed has and the only thing that writes an `Article`.
+
+- **Coverage** - how many distinct publishers carry one story, counted by `similar` and `stories` (`pipeline/curation.py`): rows within 0.30 cosine distance of each other across the feed and the ledger. Reach evidence for the curation agent, like traction.
 
 - **Traction** - outside signal that people found a story worth reading, independent of the pipeline's own score: Hacker News points/comments past a minimum, or a GitHub repo's star count. Holds back low-traction submissions from the "everyone can post" sources. A first-party URL (`pipeline/first_party.py`) skips the gate - a lab's own announcement counts as news at zero votes.
 

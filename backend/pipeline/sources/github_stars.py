@@ -1,4 +1,4 @@
-"""Star counts for GitHub repos, from the public REST API.
+"""GitHub repos from the public REST API: star counts, and the repo object.
 
 One repo, one signal: how many people have starred it. That is the cheapest
 honest answer to "is this a project anyone uses, or a weekend upload the author
@@ -43,7 +43,12 @@ def _headers() -> dict[str, str]:
     return headers
 
 
-def _fetch_stars(owner: str, repo: str) -> int | None:
+def repo_for(owner: str, repo: str) -> dict[str, object] | None:
+    """The repo object the REST API returns, or None when it cannot be read.
+
+    Uncached: the curation agent's ``check_link`` calls this from the long-lived
+    API process, where a cached answer would go stale across nights.
+    """
     try:
         resp = fetch_with_timeout(
             f"{GITHUB_API}/{owner}/{repo}",
@@ -51,7 +56,7 @@ def _fetch_stars(owner: str, repo: str) -> int | None:
             headers=_headers(),
         )
     except Exception as e:
-        log(f"  GitHub stars lookup failed for {owner}/{repo}: {e}")
+        log(f"  GitHub lookup failed for {owner}/{repo}: {e}")
         return None
 
     if resp.status_code == 404:
@@ -59,16 +64,40 @@ def _fetch_stars(owner: str, repo: str) -> int | None:
         # telling us this URL is not a repo we can read.
         return None
     if resp.status_code == 403 and "rate limit" in resp.text.lower():
-        log("  GitHub API rate limit hit — repo gate is off for the rest of this run")
+        log("  GitHub API rate limit hit")
         return None
     if resp.status_code != 200:
-        log(f"  GitHub stars lookup for {owner}/{repo}: HTTP {resp.status_code}")
+        log(f"  GitHub lookup for {owner}/{repo}: HTTP {resp.status_code}")
         return None
 
     try:
-        return int(resp.json()["stargazers_count"])
+        data = resp.json()
     except Exception:
         return None
+    return data if isinstance(data, dict) else None
+
+
+def has_readme(owner: str, repo: str) -> bool | None:
+    """True or False when GitHub says; None when the lookup failed."""
+    try:
+        resp = fetch_with_timeout(
+            f"{GITHUB_API}/{owner}/{repo}/readme",
+            timeout=STARS_TIMEOUT_SECS,
+            headers=_headers(),
+        )
+    except Exception:
+        return None
+    if resp.status_code == 200:
+        return True
+    if resp.status_code == 404:
+        return False
+    return None
+
+
+def _fetch_stars(owner: str, repo: str) -> int | None:
+    data = repo_for(owner, repo)
+    count = data.get("stargazers_count") if data else None
+    return count if isinstance(count, int) else None
 
 
 def stars_for(repos: list[tuple[str, str]]) -> dict[tuple[str, str], int | None]:

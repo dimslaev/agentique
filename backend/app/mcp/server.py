@@ -10,10 +10,14 @@ from fastmcp.server.auth import AccessToken, TokenVerifier
 from app.mcp.tools import (
     WRITE_SCOPE,
     approve,
+    check_link,
     get_content,
     list_candidates,
     reject,
+    reject_many,
+    similar,
     sql_query,
+    stories,
     vocabulary,
     web_fetch,
     web_search,
@@ -62,8 +66,10 @@ mcp: FastMCP = FastMCP(
         "the Postgres database (publishers, articles, scores, pipeline runs), "
         "`web_fetch` reads one page, `web_search` finds pages. Curation, with "
         "the write token only: `list_candidates` lists what is waiting on a "
-        "verdict, `get_content` returns the stored text for one of them, "
-        "`vocabulary` lists the labels, and `approve` and `reject` settle it."
+        "verdict, `get_content` pages through the stored text for one of them, "
+        "`similar` and `stories` compare candidates with the feed, "
+        "`check_link` looks up a repo or model, `vocabulary` lists the labels, "
+        "and `approve`, `reject` and `reject_many` settle them."
     ),
     auth=SharedSecret(),
     tools=[
@@ -72,9 +78,13 @@ mcp: FastMCP = FastMCP(
         web_search,
         list_candidates,
         get_content,
+        similar,
+        stories,
+        check_link,
         vocabulary,
         approve,
         reject,
+        reject_many,
     ],
 )
 
