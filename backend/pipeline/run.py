@@ -19,12 +19,12 @@ from sqlmodel import Session
 
 from app.platform.logging import log, short_error
 from pipeline.db import get_engine
-from pipeline.health import RunStats, check_liveness, record_run, report_run
 from pipeline.publishers import PublisherResolver
+from pipeline.runs import RunStats, record_new, record_polled, record_run
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
 from pipeline.steps.filter import filter_known_urls
 from pipeline.steps.queue import queue_candidates
-from pipeline.types import RawItem
+from pipeline.types import Candidate
 
 
 def run_pipeline(stats: RunStats) -> None:
@@ -37,10 +37,10 @@ def run_pipeline(stats: RunStats) -> None:
             log(f"\n=== Processing {source.label} ===")
             s = stats.source(source.label)
 
-            # Held outside the try so the publisher stats below survive a
-            # failure in any step after the fetch.
-            fetched: list[RawItem] = []
+            # Held outside the try so the publisher bookkeeping below survives
+            # a failure in any step after the fetch.
             fetch_errors: dict[str, str] = {}
+            queued: list[Candidate] = []
             fetched_ok = False
 
             try:
@@ -54,30 +54,34 @@ def run_pipeline(stats: RunStats) -> None:
                 # not queued twice. Topic, reach and duplicates are the agent's
                 # call (ADR 11).
                 fresh = filter_known_urls(session, candidates, source.label)
-                s.filtered_known = len(candidates) - len(fresh)
 
                 # The end of the funnel: the agent is the judge, so the run
                 # stops at a pending row.
-                s.queued = len(queue_candidates(session, fresh))
+                queued = queue_candidates(session, fresh)
+                s.queued = len(queued)
             except Exception as e:
                 # One source failing must not sink the others — record and move
                 # on. The message is truncated: a BAML failure carries every
                 # attempt's prompt and the upstream's HTML, and this string is
                 # stored in pipeline_run and emailed.
                 message = short_error(e)
-                s.errors.append(message)
+                s.error = message
                 log(f"  !! {source.label} failed: {message}")
                 session.rollback()
             finally:
-                # Per-publisher health is recorded whatever happened after the
-                # fetch. It used to sit mid-try, so the 2026-09-03 scoring
-                # failure took it with it and 99 feeds dropped out of the run's
-                # stats on exactly the night something was wrong. A fetch that
-                # itself failed records nothing: there are no counts to report.
-                if fetched_ok and source.publisher_names:
-                    stats.record_publishers(
-                        source.publisher_names, fetched, fetch_errors
-                    )
+                # Whatever happened after the fetch, the publishers it polled
+                # get stamped: on 2026-09-03 a failure after the fetch took the
+                # per-publisher record with it on exactly the night something
+                # was wrong. A fetch that itself failed stamps nothing — there
+                # was no answer to record. Best-effort: bookkeeping never fails
+                # a source.
+                try:
+                    if fetched_ok and source.publisher_names:
+                        record_polled(session, source.publisher_names, fetch_errors)
+                    record_new(session, (a["publisher_id"] for a in queued))
+                except Exception as e:
+                    log(f"  Publisher bookkeeping failed: {short_error(e)}")
+                    session.rollback()
 
         if resolver.quarantined:
             log(
@@ -91,13 +95,6 @@ def run_pipeline(stats: RunStats) -> None:
 # ─── CLI ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # Dead-man's-switch: did last night's run die silently? (best-effort)
-    try:
-        with Session(get_engine()) as session:
-            check_liveness(session)
-    except Exception as e:
-        print(f"Liveness check failed: {e}", file=sys.stderr)
-
     stats = RunStats()
     crashed: Exception | None = None
     try:
@@ -108,18 +105,13 @@ if __name__ == "__main__":
 
     stats.finish(ok=crashed is None)
 
-    # Record stats, and email only what cannot wait. Best-effort: never flips
-    # the exit code.
+    # No email from here. The daily mail (`python -m pipeline.report`) reads
+    # this row after the curation session: a crashed run, or no run at all, is
+    # the first thing it says. Best-effort: never flips the exit code.
     try:
         with Session(get_engine()) as session:
             record_run(session, stats)
-        # This run has landed nothing yet, so its report would be a page of
-        # counts an hour before the articles exist. The night's one email goes
-        # out after the agent has read the candidates (`python -m
-        # pipeline.report`). A crash does not wait for that.
-        if not stats.ok:
-            report_run(stats)
     except Exception as e:
-        print(f"Health recording/report failed: {e}", file=sys.stderr)
+        print(f"Recording the run failed: {e}", file=sys.stderr)
 
     sys.exit(1 if crashed else 0)

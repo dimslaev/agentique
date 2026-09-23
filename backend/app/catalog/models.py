@@ -112,6 +112,19 @@ class Publisher(PublisherBase, table=True):
     # off-topic titles, and the curation agent judges topic now (ADR 11). The
     # column stays because deploy runs additive migrations only.
     topic_gated: bool = Field(default=False, nullable=False)
+    # What the nightly run last saw of this publisher, written by
+    # pipeline.runs: when its feed last answered, when it last gave us a new
+    # candidate, and the error it last failed with (cleared by the next good
+    # fetch). Ingestion bookkeeping, not on the public API.
+    last_fetched_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    last_new_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    last_error: str | None = None
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
