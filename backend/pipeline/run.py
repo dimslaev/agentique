@@ -8,8 +8,7 @@ others down with it.
 The funnel ends at `queue_candidates`: every survivor is written as a pending
 candidate and nothing is scored, summarized or inserted. The curation agent
 reads those candidates an hour later and decides what becomes an Article — see
-docs/adr/0009-agent-curation.md. `LLM_SCORING=1` restores the old scoring tail
-(score → summarize → insert → enrich) while the agent is being trusted.
+docs/adr/0009-agent-curation.md.
 """
 
 from __future__ import annotations
@@ -22,11 +21,6 @@ from app.platform.logging import log, short_error
 from pipeline.db import get_engine
 from pipeline.health import RunStats, check_liveness, record_run, report_run
 from pipeline.publishers import PublisherResolver
-from pipeline.steps.enrich import (
-    categorize_and_tag_articles,
-    embed_articles,
-    improve_titles,
-)
 from pipeline.steps.fetch import (
     build_sources,
     drop_off_topic,
@@ -39,12 +33,8 @@ from pipeline.steps.filter import (
     filter_known_urls,
     filter_thin_repos,
 )
-from pipeline.steps.persist import insert_articles
 from pipeline.steps.queue import queue_candidates
-from pipeline.steps.score import llm_scoring_enabled, score_articles
-from pipeline.steps.summarize import summarize_articles
-from pipeline.tags import load_vocabulary
-from pipeline.types import Persisted, RawItem
+from pipeline.types import RawItem
 
 
 def run_pipeline(stats: RunStats) -> None:
@@ -52,7 +42,6 @@ def run_pipeline(stats: RunStats) -> None:
 
     with Session(get_engine()) as session:
         resolver = PublisherResolver(session=session)
-        vocab = load_vocabulary(session)
 
         for source in build_sources(session):
             log(f"\n=== Processing {source.label} ===")
@@ -62,7 +51,6 @@ def run_pipeline(stats: RunStats) -> None:
             # failure in any step after the fetch.
             fetched: list[RawItem] = []
             fetch_errors: dict[str, str] = {}
-            inserted: list[Persisted] = []
             fetched_ok = False
 
             try:
@@ -73,7 +61,7 @@ def run_pipeline(stats: RunStats) -> None:
                 candidates = resolve_publishers(fetched, resolver)
 
                 # First gate, and the cheapest: a title regex on the broad
-                # publishers. Ahead of every DB, DNS, embedding and LLM cost
+                # publishers. Ahead of every DB, DNS and embedding cost
                 # below, so an off-topic post from a gated feed costs nothing.
                 on_topic = drop_off_topic(candidates, source.label)
                 s.filtered_off_topic = s.fetched - len(on_topic)
@@ -85,53 +73,30 @@ def run_pipeline(stats: RunStats) -> None:
                 s.filtered_dead = len(fresh) - len(alive)
 
                 # A repo nobody has starred is noise whichever source linked it,
-                # and one API call settles it — cheaper than the embedding and
-                # scoring calls below, so it goes ahead of them.
+                # and one API call settles it — cheaper than the embedding
+                # below, so it goes ahead of it.
                 real = filter_thin_repos(session, alive, source.label)
                 s.filtered_thin_repo = len(alive) - len(real)
 
-                # Before scoring: a story we already carry must never cost an
-                # LLM call.
+                # A story we already carry never reaches the agent.
                 unique = dedup_semantic(session, real, source.label)
                 s.deduped = len(real) - len(unique)
 
-                if not llm_scoring_enabled():
-                    # The end of the funnel: the agent is the judge, so the run
-                    # stops at a pending row. Titles, categories, tags and the
-                    # embedding are enrichment of an Article, and there is no
-                    # Article until the agent approves one.
-                    s.queued = len(queue_candidates(session, unique))
-                else:
-                    scored = score_articles(session, unique)
-                    s.below_threshold = len(unique) - len(scored)
-
-                    # Before the insert, not in enrichment: an article the model
-                    # cannot summarize is never inserted without a summary.
-                    summarized = summarize_articles(session, scored)
-                    s.unsummarized = len(scored) - len(summarized)
-
-                    inserted = insert_articles(session, summarized)
-                    s.inserted = len(inserted)
-
-                    improve_titles(session, inserted)
-                    processed = categorize_and_tag_articles(session, inserted, vocab)
-                    embed_articles(session, processed)
+                # The end of the funnel: the agent is the judge, so the run
+                # stops at a pending row. Titles, categories, tags and the
+                # embedding are enrichment of an Article, and there is no
+                # Article until the agent approves one.
+                s.queued = len(queue_candidates(session, unique))
             except Exception as e:
                 # One source failing must not sink the others — record and move
                 # on. The message is truncated: a BAML failure carries every
                 # attempt's prompt and the upstream's HTML, and this string is
-                # stored in pipeline_run and emailed with the run report.
+                # stored in pipeline_run and emailed.
                 message = short_error(e)
                 s.errors.append(message)
                 log(f"  !! {source.label} failed: {message}")
                 session.rollback()
             finally:
-                # Recorded here, not beside the insert, so the titles are the
-                # rewritten ones: improve_titles edits each item in place, and
-                # a failure in enrichment must still leave the run reporting
-                # what it inserted.
-                s.record_articles(inserted)
-
                 # Per-publisher health is recorded whatever happened after the
                 # fetch. It used to sit mid-try, so the 2026-09-03 scoring
                 # failure took it with it and 99 feeds dropped out of the run's
@@ -139,7 +104,7 @@ def run_pipeline(stats: RunStats) -> None:
                 # itself failed records nothing: there are no counts to report.
                 if fetched_ok and source.publisher_names:
                     stats.record_publishers(
-                        source.publisher_names, fetched, inserted, fetch_errors
+                        source.publisher_names, fetched, fetch_errors
                     )
 
         if resolver.quarantined:
@@ -176,11 +141,11 @@ if __name__ == "__main__":
     try:
         with Session(get_engine()) as session:
             record_run(session, stats)
-        # Under agent curation this run has landed nothing yet, so its report
-        # would be a page of counts an hour before the articles exist. The
-        # night's one email goes out after the agent has read the candidates
-        # (`python -m pipeline.report`). A crash does not wait for that.
-        if llm_scoring_enabled() or not stats.ok:
+        # This run has landed nothing yet, so its report would be a page of
+        # counts an hour before the articles exist. The night's one email goes
+        # out after the agent has read the candidates (`python -m
+        # pipeline.report`). A crash does not wait for that.
+        if not stats.ok:
             report_run(stats)
     except Exception as e:
         print(f"Health recording/report failed: {e}", file=sys.stderr)

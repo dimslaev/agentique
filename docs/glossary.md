@@ -10,9 +10,9 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, an AI-news aggregator, a curated Substack list, GitHub stars, Reddit, a lab-watch crawler, email ingestion. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
 
-- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Weights or gates pipeline decisions. A high-trust `individual` publisher's articles pass at 55 instead of 65 (`threshold_for` in `pipeline/steps/score.py`). Not on the public API.
+- **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Shown to the curation agent beside each candidate. Not on the public API.
 
-- **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). When set, the fetch step drops anything whose title misses the AI keyword list before spending an embedding or LLM call on it. Ingestion policy, not part of the public read API.
+- **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). When set, the fetch step drops anything whose title misses the AI keyword list before spending an embedding on it. Ingestion policy, not part of the public read API.
 
 - **Score** (`Article.score`) - a 1-100 rating of how actionable the article is for a developer building with AI right now. Written by the curation agent, which reads the page before it decides (see **Candidate** below and ADR 9); an LLM in the pipeline used to write it from a title and a 200-char snippet. The one-sentence reason is kept in `Article.score_reason` (internal, not on the public API) and, for rejects, in `Reject.reason`.
 
@@ -30,7 +30,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **RawItem / Candidate / Scored / Persisted** (`pipeline/types.py`) - the four shapes an article takes going down the funnel, one per stage.
   - **RawItem** - what a source adapter emitted. Title, url, content, date, source name. Nothing else known yet.
-  - **Candidate** - a raw item resolved to its Publisher: carries `publisher_id`, `trust`, `topic_gated`. Worth spending filter, embedding, LLM budget on.
-  - **Scored** - a candidate rated at or above the threshold. Only survivors reach this stage. The nightly run no longer produces one: it ends at a pending candidate, and the shape is built again by `curation.approve` from the row the agent judged.
+  - **Candidate** - a raw item resolved to its Publisher: carries `publisher_id`, `trust`, `topic_gated`. Worth spending filter and embedding budget on.
+  - **Scored** - a candidate the curation agent approved, with its score. The nightly run never produces one: it ends at a pending candidate, and `curation.approve` builds the shape from the row the agent judged.
   - **Persisted** - a scored article now stored as an `Article` row: has an `id`, sanitized title and content.
   - Each stage extends the one before, so a step's signature says where in the funnel it belongs. Enrichment narrows a `Persisted` to a `ProcessedArticle`: just the fields the embedding text is built from.

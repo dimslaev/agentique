@@ -1,10 +1,10 @@
 """Pipeline health: capture per-run stats and email the night's report —
 what landed, a short account of what did not, and the funnel behind both.
 
-The fetch and the verdict are an hour apart now (the run queues candidates at
+The fetch and the verdict are an hour apart (the run queues candidates at
 04:00, the curation agent reads them at 05:00), so the report is sent by
 `pipeline.report` after the agent, not by the run itself. `report_run` stays
-for the crash email and for `LLM_SCORING=1`.
+for the crash email.
 
 Runs in-process at the end of `pipeline.run`. Everything is best-effort — a bug
 here must never change whether the pipeline itself succeeded.
@@ -28,7 +28,7 @@ from sqlmodel import Session, col, func, select
 from app.catalog.models import Article, Publisher
 from app.platform.logging import log
 from pipeline.models import PipelineRun, Reject, RejectStage
-from pipeline.types import Persisted, RawItem
+from pipeline.types import RawItem
 
 
 @dataclass(frozen=True)
@@ -69,13 +69,7 @@ LOUDEST_PUBLISHERS = 3
 
 @dataclass
 class InsertedArticle:
-    """One article that landed in the catalog — the report's headline content.
-
-    ``publisher`` is the per-item source label (a feed name under "Feeds", the
-    aggregator's own name elsewhere), so a row says which feed a story came
-    from without joining anything. The nightly report fills it from the
-    publisher row instead, which is the same name by a different route.
-    """
+    """One article that landed in the catalog — the report's headline content."""
 
     id: int
     title: str
@@ -89,10 +83,8 @@ class SourceStats:
     """Funnel counts for one source in one run. Every drop is accounted for:
     fetched → off-topic → known → dead → dup → queued.
 
-    ``below_threshold``, ``unsummarized`` and ``inserted`` are the tail of the
-    superseded scoring path and stay 0 unless ``LLM_SCORING`` is on; ``queued``
-    is what the run now ends with — candidates written for the curation agent,
-    which inserts them itself once it has read them."""
+    ``queued`` is what the run ends with — candidates written for the curation
+    agent, which inserts them itself once it has read them."""
 
     # `source` here is the run-level fetcher label (Hacker News / AI News /
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
@@ -105,36 +97,17 @@ class SourceStats:
     filtered_thin_repo: int = 0
     deduped: int = 0
     queued: int = 0
-    below_threshold: int = 0
-    unsummarized: int = 0
-    inserted: int = 0
-    articles: list[InsertedArticle] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
-
-    def record_articles(self, inserted: Sequence[Persisted]) -> None:
-        """Record what landed. Called after enrichment, so the titles are the
-        rewritten ones a reader will actually see in the app."""
-        self.articles = [
-            InsertedArticle(
-                id=a["id"],
-                title=a["title"],
-                url=a["url"],
-                score=a["score"],
-                publisher=a["source"],
-            )
-            for a in inserted
-        ]
 
 
 @dataclass
 class PublisherStats:
-    """Fetch/insert counts for one publisher within the "Feeds" source in one
-    run — the granularity ``SourceStats`` can't give, since "Feeds" aggregates
-    every RSS/substack publisher under one label."""
+    """Fetch counts for one publisher within the "Feeds" source in one run —
+    the granularity ``SourceStats`` can't give, since "Feeds" aggregates every
+    RSS/substack publisher under one label."""
 
     name: str
     fetched: int = 0
-    inserted: int = 0
     error: str | None = None
 
 
@@ -156,10 +129,9 @@ class RunStats:
         self,
         expected_names: tuple[str, ...],
         fetched: Sequence[RawItem],
-        inserted: Sequence[Persisted],
         errors: dict[str, str],
     ) -> None:
-        """Record per-publisher fetch/insert counts for one source's run.
+        """Record per-publisher fetch counts for one source's run.
 
         ``expected_names`` is every publisher this source was supposed to
         poll, so a publisher that fetched nothing still gets a row (fetched=0)
@@ -168,16 +140,12 @@ class RunStats:
         fetched_counts: dict[str, int] = {}
         for a in fetched:
             fetched_counts[a["source"]] = fetched_counts.get(a["source"], 0) + 1
-        inserted_counts: dict[str, int] = {}
-        for a in inserted:
-            inserted_counts[a["source"]] = inserted_counts.get(a["source"], 0) + 1
 
         for name in expected_names:
             self.publishers.append(
                 PublisherStats(
                     name=name,
                     fetched=fetched_counts.get(name, 0),
-                    inserted=inserted_counts.get(name, 0),
                     error=errors.get(name),
                 )
             )
@@ -244,18 +212,16 @@ def check_liveness(session: Session) -> None:
 
 
 def report_run(stats: RunStats) -> None:
-    """Email what this run inserted, plus the funnel behind it."""
+    """Email what this run queued, plus the funnel behind it."""
     subject = "Pipeline run report" if stats.ok else "Pipeline run CRASHED"
     _send_alert(subject=subject, body=_format_report(stats))
-    log(f"  Reported {_total_inserted(stats)} inserted article(s)")
-
-
-def _total_inserted(stats: RunStats) -> int:
-    return sum(len(s.articles) for s in stats.sources)
+    log(f"  Reported {sum(s.queued for s in stats.sources)} queued candidate(s)")
 
 
 def _format_report(stats: RunStats) -> str:
-    lines = _inserted_section(stats) + _funnel_section(stats.sources)
+    queued = sum(s.queued for s in stats.sources)
+    lines = [f"{queued} candidate(s) queued for review.", ""]
+    lines += _funnel_section(stats.sources)
 
     errors = _errors(stats)
     if errors:
@@ -265,36 +231,6 @@ def _format_report(stats: RunStats) -> str:
     dur = f"{stats.duration_ms / 1000:.0f}s" if stats.duration_ms else "?"
     lines += ["", f"Run {'OK' if stats.ok else 'CRASHED'} in {dur}."]
     return "\n".join(lines)
-
-
-def _inserted_section(stats: RunStats) -> list[str]:
-    total = _total_inserted(stats)
-    heading = f"INSERTED ({total})"
-    lines = [heading, "=" * len(heading)]
-    if not total:
-        queued = sum(s.queued for s in stats.sources)
-        # The run inserts nothing of its own under agent curation: it hands the
-        # agent candidates and the agent inserts what it approves. Saying so
-        # keeps an empty INSERTED block from reading as a dead pipeline.
-        waiting = (
-            f"  Nothing inserted this run; {queued} candidate(s) queued for review."
-            if queued
-            else "  Nothing inserted this run."
-        )
-        return lines + [waiting, ""]
-
-    for s in stats.sources:
-        if not s.articles:
-            continue
-        lines.append(f"  {s.source}")
-        for a in s.articles:
-            # The publisher is only worth a line of its own under an aggregate
-            # source; for Hacker News and friends it just repeats the label.
-            byline = f" — {a.publisher}" if a.publisher != s.source else ""
-            lines.append(f"    [{a.score}/100] {a.title}{byline}")
-            lines.append(f"      {a.url}")
-    lines.append("")
-    return lines
 
 
 def _funnel_section(sources: Sequence[SourceStats]) -> list[str]:
@@ -307,10 +243,7 @@ def _funnel_section(sources: Sequence[SourceStats]) -> list[str]:
             f"→ dead -{s.filtered_dead} "
             f"→ thin-repo -{s.filtered_thin_repo} "
             f"→ dup -{s.deduped} "
-            f"→ queued {s.queued} "
-            f"→ below-threshold -{s.below_threshold} "
-            f"→ unsummarized -{s.unsummarized} "
-            f"→ inserted {s.inserted}"
+            f"→ queued {s.queued}"
         )
         if s.errors:
             row += f"   [errors: {len(s.errors)}]"
@@ -355,7 +288,7 @@ def _source_stats(run: PipelineRun | None) -> list[SourceStats]:
     """
     if run is None:
         return []
-    known = {f.name for f in fields(SourceStats)} - {"articles"}
+    known = {f.name for f in fields(SourceStats)}
     return [
         SourceStats(**{k: v for k, v in source.items() if k in known})
         for source in run.sources

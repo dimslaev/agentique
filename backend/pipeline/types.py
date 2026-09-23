@@ -4,13 +4,13 @@ One type per stage, each fully populated by the step that produces it:
 
     RawItem    what a source emits -- title, url, content, date, source
     Candidate  + the publisher it belongs to   (fetch.resolve_publishers)
-    Scored     + the score the LLM gave it     (score.score_articles)
-    Summarized + the summary a reader sees      (summarize.summarize_articles)
+    Scored     + the curation agent's score    (curation.approve)
+    Summarized + the summary a reader sees      (curation.approve)
     Persisted  + the id of the row it landed in (persist.insert_articles)
 
 Each stage subclasses the one before, so a step that only needs a ``Candidate``
 also accepts a ``Scored`` or a ``Persisted``, while a step that needs a score
-cannot be handed something that has not been through the scorer. The signatures
+cannot be handed something that has not been judged. The signatures
 are the funnel: reading them tells you the order without opening ``run.py``.
 
 This replaced a single ``FetchedArticle`` where every key was optional at every
@@ -18,7 +18,7 @@ stage. That shape could not say which step filled what, so each step's contract
 lived in a docstring and a mis-ordered call failed at runtime with a KeyError
 instead of at the call site.
 
-``categorize_and_tag_articles`` reshapes a ``Persisted`` into the narrower
+``curation.approve`` reshapes a ``Persisted`` into the narrower
 ``ProcessedArticle`` that ``embed_articles`` consumes.
 """
 
@@ -64,18 +64,16 @@ class Candidate(RawItem):
 
 
 class Scored(Candidate):
-    """A candidate the scorer has rated. Only the ones above the threshold get
-    this far -- ``score_articles`` drops the rest."""
+    """A candidate the curation agent approved, with the score it gave."""
 
     score: int
-    # The scorer's one-sentence account of the score; None if it gave none.
+    # The agent's one-sentence account of the score.
     score_reason: str | None
 
 
 class Summarized(Scored):
-    """A scored article with its summary. Only the ones the model could
-    summarize get this far -- ``summarize_articles`` drops the rest, so nothing
-    is inserted without one."""
+    """A scored article with the summary the agent wrote. Nothing is inserted
+    without one."""
 
     summary: str
 

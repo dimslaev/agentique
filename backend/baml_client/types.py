@@ -37,46 +37,16 @@ def get_checks(checks: typing.Dict[CheckName, Check]) -> typing.List[Check]:
 def all_succeeded(checks: typing.Dict[CheckName, Check]) -> bool:
     return all(check.status == "succeeded" for check in get_checks(checks))
 # #########################################################################
-# Generated enums (3)
+# Generated enums (1)
 # #########################################################################
-
-class ArticleCategory(str, Enum):
-    Models = "Models"
-    Dev = "Dev"
-    Research = "Research"
-
-class ArticleKind(str, Enum):
-    Repo = "Repo"
-    Paper = "Paper"
-    Model = "Model"
-    Blog = "Blog"
-    Product = "Product"
-    Announcement = "Announcement"
 
 class NewsletterItemKind(str, Enum):
     Product = "Product"
     Article = "Article"
 
 # #########################################################################
-# Generated classes (11)
+# Generated classes (5)
 # #########################################################################
-
-class ArticleInput(BaseModel):
-    url: str
-    title: str
-    source: str
-    snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
-    trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
-    traction: typing.Optional[str] = Field(default=None, description='How the item was received where it was posted, e.g. "7 points, 1 comments on Hacker News". Absent for sources with no public reception signal.')
-    seen_on: typing.Optional[str] = Field(default=None, description='Date the pipeline picked the item up, YYYY-MM-DD. What \'old\' is measured against: a feed or HN date is when it was posted there, not when the work was published.')
-
-class CategorizeAndTagResult(BaseModel):
-    categories: typing.List[ArticleCategory] = Field(description='1-2 categories')
-    kind: ArticleKind
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class ClassifyKindResult(BaseModel):
-    kind: ArticleKind
 
 class NewsletterItem(BaseModel):
     kind: NewsletterItemKind
@@ -98,23 +68,10 @@ class ProfileVerdict(BaseModel):
     isAiRelated: bool
     confidence: int = Field(description='0-100 confidence that AI/ML/LLMs is the PRIMARY focus')
 
-class ScoredArticle(BaseModel):
-    url: str
-    score: int = Field(description='1-100 developer-actionability rating')
-    reason: str = Field(description='One short sentence naming what decided the score: out of scope, the evidence shown or missing, the reach, or the rule that capped it.')
-
 class SearchCandidate(BaseModel):
     title: str
     url: str
     snippet: str
-
-class TagOption(BaseModel):
-    slug: str
-    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
-
-class TitleFix(BaseModel):
-    url: str = Field(description='The exact URL from the matching input article - copy verbatim')
-    title: str = Field(description='Plain English title text on a single line. No markdown, no quotes, no leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
 
 # #########################################################################
 # Generated type aliases (0)

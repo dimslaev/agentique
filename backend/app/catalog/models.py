@@ -145,12 +145,12 @@ class Article(ArticleBase, table=True):
     embedding: list[float] | None = Field(
         default=None, sa_column=Column(Vector(256), nullable=True)
     )
-    # The scorer's one-sentence account of `score`. Internal, not on the public
+    # The judge's one-sentence account of `score`. Internal, not on the public
     # API; null for articles scored before the scorer gave one.
     score_reason: str | None = None
-    # Set by scripts/rescore_articles.py: when this row was last rescored, and
-    # whether that rescore put it under the pipeline's threshold. Marking only;
-    # nothing deletes a marked row automatically.
+    # Set by the retired rescore script (removed with the LLM scorer): when this
+    # row was last rescored, and whether that rescore put it under the old
+    # threshold. Marking only; nothing deletes a marked row automatically.
     rescored_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),  # type: ignore

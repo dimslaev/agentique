@@ -16,15 +16,6 @@ from . import stream_types
 
 type_map = {
 
-    "types.ArticleInput": types.ArticleInput,
-    "stream_types.ArticleInput": stream_types.ArticleInput,
-
-    "types.CategorizeAndTagResult": types.CategorizeAndTagResult,
-    "stream_types.CategorizeAndTagResult": stream_types.CategorizeAndTagResult,
-
-    "types.ClassifyKindResult": types.ClassifyKindResult,
-    "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
-
     "types.NewsletterItem": types.NewsletterItem,
     "stream_types.NewsletterItem": stream_types.NewsletterItem,
 
@@ -37,22 +28,9 @@ type_map = {
     "types.ProfileVerdict": types.ProfileVerdict,
     "stream_types.ProfileVerdict": stream_types.ProfileVerdict,
 
-    "types.ScoredArticle": types.ScoredArticle,
-    "stream_types.ScoredArticle": stream_types.ScoredArticle,
-
     "types.SearchCandidate": types.SearchCandidate,
     "stream_types.SearchCandidate": stream_types.SearchCandidate,
 
-    "types.TagOption": types.TagOption,
-    "stream_types.TagOption": stream_types.TagOption,
-
-    "types.TitleFix": types.TitleFix,
-    "stream_types.TitleFix": stream_types.TitleFix,
-
-
-    "types.ArticleCategory": types.ArticleCategory,
-
-    "types.ArticleKind": types.ArticleKind,
 
     "types.NewsletterItemKind": types.NewsletterItemKind,
 

@@ -14,8 +14,7 @@ retry_policy Burst {
   }
 }
 
-// First choice since 2026-09-13: ScoreArticles calls it directly and the Nvidia
-// wrapper below tries it first. Second in line from 2026-09-03, replacing
+// First in the Nvidia wrapper below since 2026-09-13. Second in line from 2026-09-03, replacing
 // NVIDIA's gpt-oss-120b, which reached end of life that morning and answered
 // every call with 410 Gone - dead weight for hours before anyone noticed,
 // because a fallback only speaks up when the primary fails.
@@ -49,11 +48,9 @@ client<llm> Nemotron {
   }
 }
 
-// Second in the Nvidia fallback, and --model gpt-oss-20b in the rescore scripts
-// (scripts/rescoring.py). The smaller sibling of the gpt-oss-120b that led
-// scoring until its endpoint reached end of life. Only measured on
-// ScoreArticles so far (2026-09-13): clean JSON, but it read the rubric's
-// 70 floor for lab releases as a cap.
+// Second in the Nvidia fallback. The smaller sibling of the gpt-oss-120b that
+// led scoring until its endpoint reached end of life. Measured on the old
+// scoring prompt (2026-09-13): clean JSON, but it read a rubric floor as a cap.
 client<llm> GptOss20b {
   provider openai-generic
   retry_policy Burst
@@ -68,8 +65,9 @@ client<llm> GptOss20b {
 }
 
 // Last in the Nvidia fallback since 2026-09-13; primary from 2026-08-06 until
-// then. Fast (2-3s) and reliable, but a lower-quality judge - see the variance
-// warning on the Nvidia wrapper below before moving it back up. It stays as
+// then. Fast (2-3s) and reliable, but a lower-quality judge: ±15 run-to-run
+// variance on identical scoring input, and it intermittently returned fewer
+// results than it was given. It stays as
 // the last resort because it is the only client not on NIM: when NIM refuses a
 // burst, the two clients above it fail together.
 client<llm> Ministral {
@@ -87,10 +85,9 @@ client<llm> Ministral {
   }
 }
 
-// The name every function already references. A fallback wrapper: Nemotron
-// first, then gpt-oss-20b, then Ministral. Renaming would mean editing all 12
-// `client Nvidia` sites for no gain, so the name stays - and with two NIM
-// models in front it is mostly true again.
+// The name every function references. A fallback wrapper: Nemotron first, then
+// gpt-oss-20b, then Ministral. The name stays - with two NIM models in front it
+// is mostly true.
 //
 // A Gemini Flash client sat third here until 2026-09-03, when the run that
 // needed it got 400 FAILED_PRECONDITION "User location is not supported for
@@ -98,14 +95,6 @@ client<llm> Ministral {
 // the last resort had never been able to answer. Removed rather than left in
 // place: a client that always fails is not a fallback, it just hides how thin
 // the chain really is. A replacement has to be reachable from the box.
-//
-// ScoreArticles no longer runs through this wrapper (2026-09-13): it calls
-// Nemotron directly. Ministral-3-14B judged with ±15 run-to-run variance on
-// identical input, intermittently returned fewer results than it was given
-// (apply_scores reads a missing score as 0, a silent reject), and over the ten
-// runs before the switch put 15 articles at 90+ and passed items the rubric
-// rules out. A fallback to it would mix two judges' scales in one feed, so
-// scoring has none.
 client<llm> Nvidia {
   provider fallback
   options {

@@ -94,34 +94,6 @@ class BamlSyncClient:
     def parse_stream(self):
       return self.__llm_stream_parser
 
-    def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> types.CategorizeAndTagResult:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.CategorizeAndTag(title=title,content=content,vocabulary=vocabulary,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="CategorizeAndTag", args={
-                "title": title,"content": content,"vocabulary": vocabulary,
-            })
-            return typing.cast(types.CategorizeAndTagResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def ClassifyKind(self, title: str,url: str,
-        baml_options: BamlCallOptions = {},
-    ) -> types.ClassifyKindResult:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.ClassifyKind(title=title,url=url,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ClassifyKind", args={
-                "title": title,"url": url,
-            })
-            return typing.cast(types.ClassifyKindResult, __result__.cast_to(types, types, stream_types, False, __runtime__))
     def ClassifyProfiles(self, profiles: typing.List["types.ProfileInput"],
         baml_options: BamlCallOptions = {},
     ) -> typing.List["types.ProfileVerdict"]:
@@ -150,34 +122,6 @@ class BamlSyncClient:
                 "newsletterText": newsletterText,
             })
             return typing.cast(typing.List["types.NewsletterItem"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.TitleFix"]:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.ImproveTitles(articles=articles,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ImproveTitles", args={
-                "articles": articles,
-            })
-            return typing.cast(typing.List["types.TitleFix"], __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.ScoredArticle"]:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.ScoreArticles(articles=articles,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="ScoreArticles", args={
-                "articles": articles,
-            })
-            return typing.cast(typing.List["types.ScoredArticle"], __result__.cast_to(types, types, stream_types, False, __runtime__))
     def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> typing.List[int]:
@@ -206,20 +150,6 @@ class BamlSyncClient:
                 "productName": productName,"productDescription": productDescription,"candidates": candidates,
             })
             return typing.cast(types.ProductLinkChoice, __result__.cast_to(types, types, stream_types, False, __runtime__))
-    def SummarizeArticle(self, title: str,content: str,bullet_count: int,
-        baml_options: BamlCallOptions = {},
-    ) -> str:
-        # Check if on_tick is provided
-        if 'on_tick' in baml_options:
-            __stream__ = self.stream.SummarizeArticle(title=title,content=content,bullet_count=bullet_count,
-                baml_options=baml_options)
-            return __stream__.get_final_response()
-        else:
-            # Original non-streaming code
-            __result__ = self.__options.merge_options(baml_options).call_function_sync(function_name="SummarizeArticle", args={
-                "title": title,"content": content,"bullet_count": bullet_count,
-            })
-            return typing.cast(str, __result__.cast_to(types, types, stream_types, False, __runtime__))
     
 
 
@@ -229,30 +159,6 @@ class BamlStreamClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[stream_types.CategorizeAndTagResult, types.CategorizeAndTagResult]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="CategorizeAndTag", args={
-            "title": title,"content": content,"vocabulary": vocabulary,
-        })
-        return baml_py.BamlSyncStream[stream_types.CategorizeAndTagResult, types.CategorizeAndTagResult](
-          __result__,
-          lambda x: typing.cast(stream_types.CategorizeAndTagResult, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(types.CategorizeAndTagResult, x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
-    def ClassifyKind(self, title: str,url: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[stream_types.ClassifyKindResult, types.ClassifyKindResult]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ClassifyKind", args={
-            "title": title,"url": url,
-        })
-        return baml_py.BamlSyncStream[stream_types.ClassifyKindResult, types.ClassifyKindResult](
-          __result__,
-          lambda x: typing.cast(stream_types.ClassifyKindResult, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(types.ClassifyKindResult, x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
     def ClassifyProfiles(self, profiles: typing.List["types.ProfileInput"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.BamlSyncStream[typing.List["stream_types.ProfileVerdict"], typing.List["types.ProfileVerdict"]]:
@@ -275,30 +181,6 @@ class BamlStreamClient:
           __result__,
           lambda x: typing.cast(typing.List["stream_types.NewsletterItem"], x.cast_to(types, types, stream_types, True, __runtime__)),
           lambda x: typing.cast(typing.List["types.NewsletterItem"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
-    def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[typing.List["stream_types.TitleFix"], typing.List["types.TitleFix"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ImproveTitles", args={
-            "articles": articles,
-        })
-        return baml_py.BamlSyncStream[typing.List["stream_types.TitleFix"], typing.List["types.TitleFix"]](
-          __result__,
-          lambda x: typing.cast(typing.List["stream_types.TitleFix"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.TitleFix"], x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
-    def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[typing.List["stream_types.ScoredArticle"], typing.List["types.ScoredArticle"]]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="ScoreArticles", args={
-            "articles": articles,
-        })
-        return baml_py.BamlSyncStream[typing.List["stream_types.ScoredArticle"], typing.List["types.ScoredArticle"]](
-          __result__,
-          lambda x: typing.cast(typing.List["stream_types.ScoredArticle"], x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(typing.List["types.ScoredArticle"], x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
     def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
@@ -325,18 +207,6 @@ class BamlStreamClient:
           lambda x: typing.cast(types.ProductLinkChoice, x.cast_to(types, types, stream_types, False, __runtime__)),
           __ctx__,
         )
-    def SummarizeArticle(self, title: str,content: str,bullet_count: int,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.BamlSyncStream[str, str]:
-        __ctx__, __result__ = self.__options.merge_options(baml_options).create_sync_stream(function_name="SummarizeArticle", args={
-            "title": title,"content": content,"bullet_count": bullet_count,
-        })
-        return baml_py.BamlSyncStream[str, str](
-          __result__,
-          lambda x: typing.cast(str, x.cast_to(types, types, stream_types, True, __runtime__)),
-          lambda x: typing.cast(str, x.cast_to(types, types, stream_types, False, __runtime__)),
-          __ctx__,
-        )
     
 
 class BamlHttpRequestClient:
@@ -345,20 +215,6 @@ class BamlHttpRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="CategorizeAndTag", args={
-            "title": title,"content": content,"vocabulary": vocabulary,
-        }, mode="request")
-        return __result__
-    def ClassifyKind(self, title: str,url: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ClassifyKind", args={
-            "title": title,"url": url,
-        }, mode="request")
-        return __result__
     def ClassifyProfiles(self, profiles: typing.List["types.ProfileInput"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -373,20 +229,6 @@ class BamlHttpRequestClient:
             "newsletterText": newsletterText,
         }, mode="request")
         return __result__
-    def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ImproveTitles", args={
-            "articles": articles,
-        }, mode="request")
-        return __result__
-    def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ScoreArticles", args={
-            "articles": articles,
-        }, mode="request")
-        return __result__
     def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -399,13 +241,6 @@ class BamlHttpRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectProductLink", args={
             "productName": productName,"productDescription": productDescription,"candidates": candidates,
-        }, mode="request")
-        return __result__
-    def SummarizeArticle(self, title: str,content: str,bullet_count: int,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SummarizeArticle", args={
-            "title": title,"content": content,"bullet_count": bullet_count,
         }, mode="request")
         return __result__
     
@@ -416,20 +251,6 @@ class BamlHttpStreamRequestClient:
     def __init__(self, options: DoNotUseDirectlyCallManager):
         self.__options = options
 
-    def CategorizeAndTag(self, title: str,content: str,vocabulary: typing.List["types.TagOption"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="CategorizeAndTag", args={
-            "title": title,"content": content,"vocabulary": vocabulary,
-        }, mode="stream")
-        return __result__
-    def ClassifyKind(self, title: str,url: str,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ClassifyKind", args={
-            "title": title,"url": url,
-        }, mode="stream")
-        return __result__
     def ClassifyProfiles(self, profiles: typing.List["types.ProfileInput"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -444,20 +265,6 @@ class BamlHttpStreamRequestClient:
             "newsletterText": newsletterText,
         }, mode="stream")
         return __result__
-    def ImproveTitles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ImproveTitles", args={
-            "articles": articles,
-        }, mode="stream")
-        return __result__
-    def ScoreArticles(self, articles: typing.List["types.ArticleInput"],
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="ScoreArticles", args={
-            "articles": articles,
-        }, mode="stream")
-        return __result__
     def SelectNotableItems(self, items: typing.List["types.NewsletterItem"],
         baml_options: BamlCallOptions = {},
     ) -> baml_py.baml_py.HTTPRequest:
@@ -470,13 +277,6 @@ class BamlHttpStreamRequestClient:
     ) -> baml_py.baml_py.HTTPRequest:
         __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SelectProductLink", args={
             "productName": productName,"productDescription": productDescription,"candidates": candidates,
-        }, mode="stream")
-        return __result__
-    def SummarizeArticle(self, title: str,content: str,bullet_count: int,
-        baml_options: BamlCallOptions = {},
-    ) -> baml_py.baml_py.HTTPRequest:
-        __result__ = self.__options.merge_options(baml_options).create_http_request_sync(function_name="SummarizeArticle", args={
-            "title": title,"content": content,"bullet_count": bullet_count,
         }, mode="stream")
         return __result__
     
