@@ -18,19 +18,30 @@ before approving anything.**
 
 From the `agentique` MCP server, with the curation token:
 
-- `list_candidates()` — everything waiting on a verdict. URL, title, source,
-  publisher, trust, traction, dates, and a 200-character snippet.
-- `get_content(url)` — the article text the pipeline extracted, up to 12000
-  characters: the same text `web_fetch` would return, cut at that length. Read
-  here first.
-- `vocabulary()` — the categories, kinds and tags `approve` accepts. Call it
-  once, before the first approve.
+- `list_candidates()` — everything waiting on a verdict: URL, title, source,
+  publisher, `approved` (the publisher's approvals / decisions over 90 days, or
+  "new"), traction, dates, a 200-character snippet.
+- `get_content(url, offset=0, limit=4000)` — one page of the stored article
+  text (up to 12000 characters in all). Page one also carries `links`: the
+  repo, model, paper and docs URLs the article body links. `next_offset` reads
+  on; null means you have the end.
+- `stories(days=7)` — the pending candidates that are one story, with each
+  other or with an article already published. Once a night, after triage.
+- `similar(url, days=7)` — the published articles and ledger rows closest to
+  one candidate, with `coverage`: how many publishers carry the story.
+- `check_link(url)` — stars, last push, license and README for a GitHub or
+  GitLab repo; downloads, license and whether weights exist for a Hugging Face
+  model. Refuses anything else.
+- `vocabulary()` — the categories, kinds and tags `approve` accepts. Once,
+  before the first approve.
 - `approve(url, score, reason, summary, categories, kind, tags)` — publishes
   it with your labels, then embeds it.
-- `reject(url, score, reason)` — turns it down, keeping both for the record.
-- `sql_query(sql)` — read-only. Use it to check what the feed already carries.
-- `web_fetch(url)`, `web_search(query)` — for what the stored text cannot tell
-  you. See **Looking further** for when.
+- `reject(url, score, reason)` — turns one down, keeping both for the record.
+- `reject_many([{url, score, reason}, ...])` — the same for many at once, one
+  result line each.
+- `sql_query(sql)` — read-only, for anything the tools above do not answer.
+- `web_fetch(url)`, `web_search(query)` — for what the stored text and
+  `check_link` cannot tell you. See **Looking further** for when.
 
 Every candidate must end in exactly one `approve` or `reject`. A candidate you
 skip stays pending and comes back tomorrow, which is a slow way of never
@@ -40,25 +51,23 @@ is down — reject it and say so in the reason.
 ## Rounds
 
 1. **Triage on title and snippet.** Most candidates are settled here: an
-   availability notice, a funding round, a vendor's console walkthrough. Reject
-   them and move on.
-2. **Read `get_content` for everything else** — anything borderline, and
-   everything you are considering approving. Do not approve an article you have
-   not read. Call `web_fetch` on the candidate's own URL only when the stored
-   text is empty, a teaser or cookie wall, or ends at 12000 characters before
-   the part that decides it.
-3. **Check what the feed already carries** before approving. A rewrite of a
-   story from the last few days is a retelling, whatever its own quality:
-
-   ```sql
-   SELECT a.title, a.url, a.score, p.name
-   FROM article a LEFT JOIN publisher p ON p.id = a.publisher_id
-   WHERE a.created_at > now() - interval '5 days'
-   ORDER BY a.created_at DESC;
-   ```
-
-4. **Look further** where the rules below say to.
-5. **Write the verdict** for each one — see below.
+   availability notice, a funding round, a vendor's console walkthrough, a
+   post off the AI map entirely (the pipeline no longer filters by topic).
+   Reject them together in one `reject_many`.
+2. **Call `stories()` once.** It shows which of what is left is one story told
+   several times, and which the feed already carries. Read it before reading
+   any article: it decides which copy of a story is worth reading closely.
+3. **Read page one of `get_content`** for everything past triage. A reject may
+   stop at page one. Anything you approve is read to the end, or to 12000
+   characters: do not approve an article you have not read. When the score
+   rests on a repo or model in `links`, `check_link` it. Call `web_fetch` on
+   the candidate's own URL only when the stored text is empty, a teaser or
+   cookie wall, or ends at 12000 characters before the part that decides it.
+4. **Call `similar(url)` before each approval.** A rewrite of a story the feed
+   already carries (a `published` row under 0.30) is a retelling, whatever its
+   own quality. `coverage` feeds REACH — see **Coverage**.
+5. **Look further** where the rules below say to.
+6. **Write the verdict** for each one — see below.
 
 Work the queue in order. Score every item on its own merits first, then apply
 the daily caps at the end, when you can see the whole night.
@@ -71,19 +80,20 @@ and not otherwise. Nothing settled in triage needs them, nor anything that
 scores under 55 whatever the answer.
 
 - **Who is the publisher?** When a candidate you would approve comes from a
-  publisher the feed has not carried before (`sql_query` on `article` by
-  `publisher_id`), or from an aggregator source with a maker you do not know,
-  search for the maker. First-party or not, a lab or a solo developer, a
+  publisher with no record (`approved` is "new"), or from an aggregator source
+  with a maker you do not know, search for the maker. First-party or not, a lab or a solo developer, a
   product with users or a landing page: this decides the first-party rule and
   REACH.
 - **Does the evidence exist?** When the score rests on something the article
   points at — weights, a repo, a paper, a benchmark table — and you would score
-  it 75 or above, fetch that thing. A repo with no code, a model card with no
-  weights, or a paper that does not report the claimed number is a claim, not
-  evidence.
-- **Is this the first report?** When a candidate retells a release and the feed
-  does not carry the release, search for the original to tell a retelling from
-  the first report, and to judge the release's own reach.
+  it 75 or above, check that thing. For a repo or a model, `check_link` first:
+  it answers stars, last push, README and weights without a fetch. `web_fetch`
+  only what it refuses (a paper, a docs page) or what it cannot settle. A repo
+  with no code, a model card with no weights, or a paper that does not report
+  the claimed number is a claim, not evidence.
+- **Is this the first report?** When a candidate retells a release and neither
+  `stories` nor `similar` shows the release itself, search for the original to
+  tell a retelling from the first report, and to judge the release's own reach.
 - **What is this?** When a model, tool or term is new to you — after your
   training data — search before deciding scope or reach. Do not guess that an
   unfamiliar name is minor, or that it is major.
@@ -225,8 +235,10 @@ Out, and over-scored by the old scorer — reject these even when they read well
 - **Topic is never a bonus.** Local inference, quantization, privacy, on-device
   and token cost are common subjects, not merit. A shallow post on a fashionable
   topic scores below a rigorous post on a dull one.
-- **Trust tag:** high +3, low -3, applied after the band is chosen. It breaks
-  ties; it never moves an article between bands.
+- **Approval rate:** a publisher whose record is mostly approvals (at least
+  five decisions, three in four approved) +3; mostly rejections (at least five,
+  one in four or fewer) -3; "new" or anything between, 0. Applied after the
+  band is chosen. It breaks ties; it never moves an article between bands.
 - **Traction**, when given, is evidence about REACH and nothing else.
   Single-digit points with no comments is a post nobody read: 45 at most, and 35
   for "Show HN"-style self-promotion. Strong numbers confirm reach but never
@@ -235,6 +247,24 @@ Out, and over-scored by the old scorer — reject these even when they read well
   cap 70.
 - **Use the whole range.** 74, 68 and 52 are real scores. If four of five
   candidates are above 85, you have stopped discriminating.
+
+### Coverage
+
+Coverage — how many publishers carry a story, from `similar` and `stories` — is
+REACH evidence, like traction, and nothing else. It says many people will hear
+of the thing; it never lifts thin evidence.
+
+- **High coverage with no primary article in the feed** (three or more
+  publishers, no `published` row, the release itself not queued): approve the
+  best first-party item for the story — the maker's own post, or the closest
+  thing to it in the queue — and reject the copies as retellings. When no
+  first-party item is queued, approve the one copy with the most substance
+  and say in the reason that it stands in for the release.
+- **The feed already carries the story:** every copy is a retelling. Reject it
+  unless it adds evidence of its own — testing, benchmarking or building with
+  the thing — and judge that on its own evidence.
+- **Coverage of one** is not a mark against an article. Most of the best
+  write-ups are read by the people who need them and retold by nobody.
 
 ### Daily caps
 
@@ -272,6 +302,6 @@ refused, and the candidate stays pending until you approve it again.
 ## Before this runs unattended
 
 Run the rubric against `regression.md` in this directory and compare with the
-labels there. The bar: **noise kept under 3 of 21, loved dropped under 3 of 27.**
-Worse than that and the prompt goes back on the bench rather than into the
-schedule.
+labels there. The bar: **noise kept under 3 of 21, loved dropped under 3 of 27,
+and every coverage case landing as labelled.** Worse than that and the prompt
+goes back on the bench rather than into the schedule.
