@@ -1,7 +1,7 @@
 """The pipeline's steps, in the order run.py applies them.
 
     fetch     - poll each source, fill content, stamp publisher/trust per item
-    filter    - drop known URLs, dead domains, semantic duplicates
+    filter    - drop URLs already judged or already waiting
     queue     - park each survivor as a pending candidate. The last step.
 
 The curation agent takes it from there (pipeline/curation.py): approving a

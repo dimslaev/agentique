@@ -11,8 +11,7 @@ import time
 import pytest
 
 from pipeline.sources import hn
-from pipeline.sources.hn import _to_article, has_traction
-from pipeline.topic_gate import is_on_topic
+from pipeline.sources.hn import _to_article, has_traction, is_on_topic
 
 HOUR = 3600
 

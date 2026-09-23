@@ -52,18 +52,12 @@ class RawItem(TypedDict):
 
 
 class Candidate(RawItem):
-    """An item resolved to the Publisher it came from, and so worth spending on.
-
-    Everything downstream of ``resolve_publishers`` reads ``trust`` (it goes to
-    the scoring prompt) and ``topic_gated`` (the title gate), so both are
-    required here rather than looked up defensively at each use.
-    """
+    """An item resolved to the Publisher it came from."""
 
     publisher_id: int
     trust: str
-    # PublisherKind value; with trust it decides the scoring threshold.
+    # PublisherKind value.
     publisher_kind: str
-    topic_gated: bool
 
 
 class Scored(Candidate):

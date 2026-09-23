@@ -24,7 +24,6 @@ def _candidate(**overrides) -> Candidate:
         "source": "Hacker News",
         "publisher_id": 7,
         "trust": "medium",
-        "topic_gated": False,
         "traction": "3 points, 0 comments on Hacker News",
     }
     return {**a, **overrides}

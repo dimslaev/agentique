@@ -108,10 +108,9 @@ class PublisherBase(SQLModel):
 class Publisher(PublisherBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     # Broad publishers (a general engineering blog, not an AI one) that post
-    # mostly off-topic. When set, the fetch step drops anything whose title
-    # fails the topic gate before it costs an embedding or an LLM call —
-    # see pipeline.steps.fetch.drop_off_topic. Deliberately not on
-    # PublisherBase: this is ingestion policy, not part of the public read API.
+    # mostly off-topic. No longer read: the fetch step used to drop their
+    # off-topic titles, and the curation agent judges topic now (ADR 11). The
+    # column stays because deploy runs additive migrations only.
     topic_gated: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         default_factory=get_datetime_utc,

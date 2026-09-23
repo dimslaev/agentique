@@ -44,11 +44,7 @@ def _stub_run(monkeypatch, sources, **overrides):
     monkeypatch.setattr(run_module, "PublisherResolver", _FakeResolver)
     monkeypatch.setattr(run_module, "build_sources", lambda session: sources)
     monkeypatch.setattr(run_module, "resolve_publishers", lambda a, r: a)
-    monkeypatch.setattr(run_module, "drop_off_topic", lambda a, label: a)
     monkeypatch.setattr(run_module, "filter_known_urls", lambda s, a, label: a)
-    monkeypatch.setattr(run_module, "filter_dead_domains", lambda a, label: a)
-    monkeypatch.setattr(run_module, "filter_thin_repos", lambda s, a, label: a)
-    monkeypatch.setattr(run_module, "dedup_semantic", lambda s, a, label: a)
     monkeypatch.setattr(run_module, "queue_candidates", lambda s, a: a)
     monkeypatch.setattr(
         run_module, "fetch_source", lambda source: (source.fetcher(), {})

@@ -80,8 +80,7 @@ class InsertedArticle:
 
 @dataclass
 class SourceStats:
-    """Funnel counts for one source in one run. Every drop is accounted for:
-    fetched → off-topic → known → dead → dup → queued.
+    """Funnel counts for one source in one run: fetched → known → queued.
 
     ``queued`` is what the run ends with — candidates written for the curation
     agent, which inserts them itself once it has read them."""
@@ -91,11 +90,7 @@ class SourceStats:
     # granularity within "Feeds".
     source: str
     fetched: int = 0
-    filtered_off_topic: int = 0
     filtered_known: int = 0
-    filtered_dead: int = 0
-    filtered_thin_repo: int = 0
-    deduped: int = 0
     queued: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -238,11 +233,7 @@ def _funnel_section(sources: Sequence[SourceStats]) -> list[str]:
     for s in sources:
         row = (
             f"  {s.source}: fetched {s.fetched} "
-            f"→ off-topic -{s.filtered_off_topic} "
             f"→ known -{s.filtered_known} "
-            f"→ dead -{s.filtered_dead} "
-            f"→ thin-repo -{s.filtered_thin_repo} "
-            f"→ dup -{s.deduped} "
             f"→ queued {s.queued}"
         )
         if s.errors:

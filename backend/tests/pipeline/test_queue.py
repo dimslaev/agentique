@@ -37,7 +37,6 @@ def _candidate(url: str, **overrides) -> Candidate:
         "publisher_id": 7,
         "trust": "medium",
         "publisher_kind": "company",
-        "topic_gated": False,
     }
     return {**a, **overrides}
 

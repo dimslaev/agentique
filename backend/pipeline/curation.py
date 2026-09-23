@@ -496,7 +496,6 @@ def approve(
         "publisher_id": publisher.id,
         "trust": str(publisher.trust),
         "publisher_kind": str(publisher.kind),
-        "topic_gated": publisher.topic_gated,
         "score": score,
         "score_reason": reason,
         "summary": summary,

@@ -21,18 +21,8 @@ from app.platform.logging import log, short_error
 from pipeline.db import get_engine
 from pipeline.health import RunStats, check_liveness, record_run, report_run
 from pipeline.publishers import PublisherResolver
-from pipeline.steps.fetch import (
-    build_sources,
-    drop_off_topic,
-    fetch_source,
-    resolve_publishers,
-)
-from pipeline.steps.filter import (
-    dedup_semantic,
-    filter_dead_domains,
-    filter_known_urls,
-    filter_thin_repos,
-)
+from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
+from pipeline.steps.filter import filter_known_urls
 from pipeline.steps.queue import queue_candidates
 from pipeline.types import RawItem
 
@@ -60,33 +50,15 @@ def run_pipeline(stats: RunStats) -> None:
 
                 candidates = resolve_publishers(fetched, resolver)
 
-                # First gate, and the cheapest: a title regex on the broad
-                # publishers. Ahead of every DB, DNS and embedding cost
-                # below, so an off-topic post from a gated feed costs nothing.
-                on_topic = drop_off_topic(candidates, source.label)
-                s.filtered_off_topic = s.fetched - len(on_topic)
-
-                fresh = filter_known_urls(session, on_topic, source.label)
-                s.filtered_known = len(on_topic) - len(fresh)
-
-                alive = filter_dead_domains(fresh, source.label)
-                s.filtered_dead = len(fresh) - len(alive)
-
-                # A repo nobody has starred is noise whichever source linked it,
-                # and one API call settles it — cheaper than the embedding
-                # below, so it goes ahead of it.
-                real = filter_thin_repos(session, alive, source.label)
-                s.filtered_thin_repo = len(alive) - len(real)
-
-                # A story we already carry never reaches the agent.
-                unique = dedup_semantic(session, real, source.label)
-                s.deduped = len(real) - len(unique)
+                # The only gate: a URL already judged, or already waiting, is
+                # not queued twice. Topic, reach and duplicates are the agent's
+                # call (ADR 11).
+                fresh = filter_known_urls(session, candidates, source.label)
+                s.filtered_known = len(candidates) - len(fresh)
 
                 # The end of the funnel: the agent is the judge, so the run
-                # stops at a pending row. Titles, categories, tags and the
-                # embedding are enrichment of an Article, and there is no
-                # Article until the agent approves one.
-                s.queued = len(queue_candidates(session, unique))
+                # stops at a pending row.
+                s.queued = len(queue_candidates(session, fresh))
             except Exception as e:
                 # One source failing must not sink the others — record and move
                 # on. The message is truncated: a BAML failure carries every

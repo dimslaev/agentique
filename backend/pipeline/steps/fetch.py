@@ -19,7 +19,6 @@ from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.substack import fetch_feeds
-from pipeline.topic_gate import is_on_topic
 from pipeline.types import Candidate, RawItem
 
 # Below this, content is a teaser/blurb rather than an article, and the
@@ -137,11 +136,9 @@ def resolve_publishers(
 ) -> list[Candidate]:
     """Turn fetched items into candidates by resolving each one's publisher.
 
-    publisher_id, trust, publisher_kind and topic_gated all come from the
-    Publisher row: the one whose site the URL is on when we know it, else the
-    one named by the source (auto-quarantined if unknown). Runs right after
-    fetch so trust is available to the scoring/dedup BAML calls and
-    ``topic_gated`` to ``drop_off_topic``.
+    publisher_id, trust and publisher_kind come from the Publisher row: the
+    one whose site the URL is on when we know it, else the one named by the
+    source (auto-quarantined if unknown).
 
     Crediting by URL first is what lets an individual's post found through
     Hacker News or a newsletter count as theirs. ``source`` is left alone: it
@@ -149,7 +146,7 @@ def resolve_publishers(
 
     Returns new dicts rather than stamping the fetched ones in place: it is the
     only producer of ``Candidate``, which is what lets every step below it read
-    those three keys without a default.
+    those keys without a default.
     """
     candidates: list[Candidate] = []
     for a in articles:
@@ -161,28 +158,6 @@ def resolve_publishers(
                 "publisher_id": publisher.id,
                 "trust": publisher.trust.value,
                 "publisher_kind": publisher.kind.value,
-                "topic_gated": publisher.topic_gated,
             }
         )
     return candidates
-
-
-def drop_off_topic(articles: list[Candidate], label: str) -> list[Candidate]:
-    """Drop off-topic items from publishers marked ``topic_gated``.
-
-    Some feeds worth carrying are broad engineering blogs that happen to post
-    about AI a few times a month (Stripe, Figma, Spotify). Without a gate every
-    one of their release notes and hiring posts reaches the scorer, and the LLM
-    bill scales with the feed, not with the signal. So a gated publisher's items
-    must pass ``topic_gate.is_on_topic`` on the title alone.
-
-    Title-only and deliberately early — before dedup's embeddings and before
-    the scorer — so a rejected item costs one regex and nothing else. Publishers that are on-topic by definition (an AI lab's own blog) are
-    left ungated and pass through untouched; the recall/precision trade-off is
-    the same one documented on ``topic_gate.AI_TITLE_KEYWORDS`` itself.
-    """
-    kept = [a for a in articles if not a["topic_gated"] or is_on_topic(a["title"])]
-    dropped = len(articles) - len(kept)
-    if dropped:
-        log(f"  {label}: dropped {dropped} off-topic item(s) from gated publishers")
-    return kept
