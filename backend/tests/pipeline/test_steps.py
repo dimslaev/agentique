@@ -183,8 +183,6 @@ def test_every_channel_is_polled(monkeypatch):
     assert labels == [
         "Feeds",
         "Hacker News",
-        "Reddit",
-        "AI News",
         "Newsletter",
         "Lab Watch",
     ]

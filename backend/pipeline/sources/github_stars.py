@@ -29,7 +29,7 @@ STARS_CONCURRENCY = 8
 
 # One process-wide cache. A repo's star count does not move meaningfully inside
 # a single run, and the same repo shows up on more than one source (HN links the
-# release, Reddit links the same repo) — those must not be two API calls against
+# release, a newsletter links the same repo) — those must not be two API calls against
 # a 60/hour budget.
 _cache: dict[tuple[str, str], int | None] = {}
 _cache_lock = threading.Lock()

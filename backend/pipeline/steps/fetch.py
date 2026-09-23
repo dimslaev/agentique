@@ -15,11 +15,9 @@ from pipeline.publishers import (
     lab_watch_targets_from_db,
     newsletter_senders_from_db,
 )
-from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
-from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
 from pipeline.topic_gate import is_on_topic
 from pipeline.types import Candidate, RawItem
@@ -67,12 +65,12 @@ def build_sources(session: Session) -> list[Source]:
     problem, not a channel problem: ``_with_content`` re-fetches anything under
     ``MIN_CONTENT_CHARS`` and drops what stays thin, which is the same path
     that makes Hacker News (also thin at fetch) safe. So it is routed through
-    it like every other source. AI News extracts its own content inline (see
-    ``sources/ainews.py``), so it does not need the re-fetch path.
+    it like every other source.
 
-    Hacker News and Reddit are firehoses rather than publishers: both filter
-    hard at the source (a keyword gate on HN, the subreddit itself on Reddit)
-    and both arrive thin, so they lean on the re-fetch path too.
+    Hacker News is a firehose rather than a publisher: it filters hard at the
+    source (a keyword gate) and arrives thin, so it leans on the re-fetch path
+    too. Reddit and AI News were dropped on 2026-09-23 after a week of fetching
+    nothing.
 
     "Newsletter" is the IMAP channel: unread mail in the "sub" mailbox matched
     against every active publisher with an ``email`` link (DB-driven via
@@ -92,8 +90,6 @@ def build_sources(session: Session) -> list[Source]:
             publisher_names=tuple(s["name"] for s in feed_sources),
         ),
         Source("Hacker News", lambda: (fetch_hn(), {})),
-        Source("Reddit", lambda: (fetch_reddit(), {})),
-        Source("AI News", lambda: (fetch_ai_news(), {})),
         Source("Newsletter", lambda: (fetch_newsletter(newsletter_senders), {})),
         Source(
             "Lab Watch",

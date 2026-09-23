@@ -33,7 +33,7 @@ class RawItem(TypedDict):
     """One item as a source adapter emits it, before anything is known about it.
 
     ``content`` may be empty at this point: the thin sources (Hacker News,
-    Reddit, Lab Watch, Newsletter) arrive with a blurb or nothing at all, and
+    Lab Watch, Newsletter) arrive with a blurb or nothing at all, and
     ``fetch._with_content`` fills it before the item goes any further.
     """
 

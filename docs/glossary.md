@@ -8,7 +8,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
   - `kind` (`PublisherKind`) - what the publisher is: `individual`, `company`, `community`, `media`. Shown to readers.
   - `type` (`PublisherType`) - how the pipeline finds its articles: `rss`, `substack`, `search`, `hn`, `reddit`, `email`, `ainews`, `other`. Internal ingestion detail, not on the public API.
 
-- **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, an AI-news aggregator, a curated Substack list, GitHub stars, Reddit, a lab-watch crawler, email ingestion. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
+- **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, the RSS/Substack feeds, a lab-watch crawler, email newsletters. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
 
 - **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. Shown to the curation agent beside each candidate. Not on the public API.
 

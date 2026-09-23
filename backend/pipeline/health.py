@@ -86,7 +86,7 @@ class SourceStats:
     ``queued`` is what the run ends with — candidates written for the curation
     agent, which inserts them itself once it has read them."""
 
-    # `source` here is the run-level fetcher label (Hacker News / AI News /
+    # `source` here is the run-level fetcher label (Hacker News / Newsletter /
     # Feeds), not a publisher — see `PublisherStats` below for per-publisher
     # granularity within "Feeds".
     source: str
