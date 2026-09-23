@@ -1,15 +1,18 @@
 """Newsletter (IMAP) pipeline source.
 
 Reads recent emails from known newsletter senders in the "sub" mailbox and
-extracts the items each issue reports on via BAML. What "resolving" means
-depends on the kind:
+turns each issue's links into items. Links are pulled out of the HTML by regex,
+the obvious plumbing is dropped by rule, and each survivor is classified by one
+Jev request: sponsor, plumbing, on-topic, and what kind of thing it points at.
+What "resolving" an item means depends on that kind:
 
-- a Product (a named launch) has no trustworthy href in the mail — newsletter
-  links are tracking redirects — so its identity comes from the text and its
-  canonical URL is rediscovered by web search.
+- a Product (a named launch) whose href is not the maker's own page — a
+  write-up, a tweet mirror, an aggregator — has its canonical URL rediscovered
+  by web search.
 - an Article (a post someone wrote) IS its link. Searching for it would land
   on some other page about the same topic, so its href is followed instead,
-  which resolves the redirect to the real destination.
+  which resolves the redirect to the real destination. A product already
+  linked first-party is resolved the same way.
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from __future__ import annotations
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from html import unescape
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
@@ -27,6 +30,7 @@ from imap_tools import AND, MailBox
 from app.platform.logging import log, short_error
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
+from pipeline import jev
 from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
 from pipeline.types import RawItem
 from pipeline.urls import hostname
@@ -133,47 +137,304 @@ def _match_sender(address: str, sources: list[tuple[str, str]]) -> str | None:
     return None
 
 
-def _html_to_text(html: str) -> str:
-    """Strip an email's HTML to text, keeping anchor text with hrefs as a weak
-    hint. Hrefs are usually tracking redirects, so product identity comes from
-    the surrounding words, not the link.
+# Beehiiv and TLDR pad the preheader with hundreds of these. Left in, they
+# fill the whole leading context window of the first real links. U+034F is the
+# "&#847;" that commonly pairs with them.
+_ZERO_WIDTH_RE = re.compile("[\u200b-\u200f\ufeff\u00ad\u034f\u2060]")
+
+# TLDR puts an item's description after its link, so the window leans forward.
+CONTEXT_BEFORE = 300
+CONTEXT_AFTER = 400
+# Enough of the text after a link to name what it is — the product search
+# query and SelectProductLink's description, not the stored content.
+BLURB_CHARS = 200
+
+_NON_HTTP_RE = re.compile(r"^(?!https?://)", re.IGNORECASE)
+# Only the unambiguous cases. Anything subtler is Jev's is_admin question.
+# Endpoints match only as the whole last path segment, so a post at
+# /privacy-in-llms is not mistaken for /privacy.
+_ADMIN_HREF_RE = re.compile(
+    r"unsubscribe|manage[-_]?(?:preferences|subscription)|list-manage\.com"
+    r"|view[-_]?in[-_]?browser|webversion"
+    r"|/(?:preferences|subscribe|sign-?up|refer(?:ral)?|advertise|privacy(?:-policy)?"
+    r"|terms(?:-of-(?:service|use))?)/?(?:$|[?#])",
+    re.IGNORECASE,
+)
+_ADMIN_TEXT_RE = re.compile(
+    r"^(?:unsubscribe|manage (?:your )?(?:preferences|subscription)"
+    r"|update (?:your )?preferences|view (?:it |this email )?(?:in|on) (?:your )?"
+    r"(?:browser|web)|view online|read online|subscribe|sign up|advertise(?: with us)?"
+    r"|refer a friend|share|forward|privacy policy|terms(?: of service)?)[.!]?$",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class Link:
+    href: str
+    anchor: str
+    context: str
+    blurb: str = field(default="", compare=False)
+
+
+def _plain(fragment: str) -> str:
+    text = unescape(_TAG_RE.sub(" ", fragment))
+    # After unescape: the padding usually arrives as entities (&zwnj;, &#8203;).
+    text = _ZERO_WIDTH_RE.sub("", text)
+    return _WS_RE.sub(" ", text).strip()
+
+
+def extract(html: str) -> list[Link]:
+    """Every anchor in an email, with the plain text around it.
+
+    The text is rendered once for the whole email and each anchor's offset
+    into it recorded, so the context of one link can reach into the next.
     """
-    cleaned = _STYLE_RE.sub("", html)
-    cleaned = _SCRIPT_RE.sub("", cleaned)
+    html = _SCRIPT_RE.sub("", _STYLE_RE.sub("", html))
+    pieces: list[str] = []
+    length = 0
+    spans: list[tuple[str, str, int, int]] = []
 
-    def _anchor(m: re.Match[str]) -> str:
-        text = _TAG_RE.sub("", m.group(2)).strip()
-        return f"[{text}]({m.group(1)})" if text else ""
+    def append(chunk: str) -> int:
+        nonlocal length
+        if not chunk:
+            return length
+        if pieces:
+            pieces.append(" ")
+            length += 1
+        start = length
+        pieces.append(chunk)
+        length += len(chunk)
+        return start
 
-    cleaned = _ANCHOR_RE.sub(_anchor, cleaned)
-    cleaned = _TAG_RE.sub(" ", cleaned)
-    cleaned = unescape(cleaned)
-    cleaned = _WS_RE.sub(" ", cleaned).strip()
-    return cleaned[:50_000]
+    pos = 0
+    for m in _ANCHOR_RE.finditer(html):
+        append(_plain(html[pos : m.start()]))
+        anchor = _plain(m.group(2))
+        start = append(anchor)
+        spans.append((unescape(m.group(1)).strip(), anchor, start, start + len(anchor)))
+        pos = m.end()
+    append(_plain(html[pos:]))
 
-
-def _extract_items(html: str, newsletter_name: str, email_date: str) -> list[dict]:
-    text = _html_to_text(html)
-    if not text:
-        return []
-    try:
-        items = b.ExtractItems(text)
-    except Exception as e:
-        log(f"  Failed to extract items from {newsletter_name}: {e}")
-        return []
+    text = "".join(pieces)
     return [
-        {
-            "kind": item.kind,
-            "name": item.name.strip(),
-            "description": (item.description or "").strip(),
-            # Only an Article carries one, and it is still the raw redirect here.
-            "url": (item.url or "").strip(),
-            "email_date": email_date,
-            "newsletter_name": newsletter_name,
-        }
-        for item in items
-        if item.name and item.name.strip()
+        Link(
+            href=href,
+            anchor=anchor,
+            context=text[max(0, start - CONTEXT_BEFORE) : end + CONTEXT_AFTER],
+            blurb=text[end : end + BLURB_CHARS].strip(),
+        )
+        for href, anchor, start, end in spans
     ]
+
+
+def _destination(href: str) -> str:
+    return _unwrap_tracking_url(href) or href
+
+
+def _known_host(href: str) -> str | None:
+    """The destination's host, or None while an opaque tracker still hides it."""
+    host = hostname(_destination(href))
+    return None if not host or host in REDIRECTOR_HOSTS else host
+
+
+# Many unrelated newsletters send from these. A post on writer.substack.com is
+# someone else's content, not the sender's own site.
+SHARED_SENDER_DOMAINS = (
+    "substack.com",
+    "beehiiv.com",
+    "convertkit.com",
+    "kit.com",
+    "ghost.io",
+    "buttondown.email",
+    "mailchimp.com",
+    "mcsv.net",
+)
+
+
+def _own_host(sender: str) -> str:
+    """The sender's site, or "" when it sends through a shared platform."""
+    host = sender.rpartition("@")[2].lower().removeprefix("www.")
+    if any(_same_site(host, d) for d in SHARED_SENDER_DOMAINS):
+        return ""
+    return host
+
+
+def _same_site(host: str, own_host: str) -> bool:
+    return (
+        host == own_host
+        or host.endswith(f".{own_host}")
+        or own_host.endswith(f".{host}")
+    )
+
+
+def _drop_reason(link: Link, own_host: str) -> str | None:
+    if _NON_HTTP_RE.match(link.href):
+        return "non_http"
+    if not link.anchor:
+        # An image tile. Its text twin, when there is one, carries the title.
+        return "no_text"
+    destination = _destination(link.href)
+    if _ADMIN_HREF_RE.search(destination) or _ADMIN_TEXT_RE.match(link.anchor):
+        return "admin"
+    host = _known_host(link.href)
+    if host is None:
+        return None
+    if _is_denied(destination):
+        return "denied"
+    if own_host and _same_site(host, own_host):
+        return "own_host"
+    return None
+
+
+def prefilter(
+    links: list[Link], own_host: str
+) -> tuple[list[Link], dict[str, list[Link]]]:
+    """Drop what is plumbing by rule, before any of it costs a request.
+
+    Dedup runs last so an image tile dropped for having no text does not
+    shadow the titled link to the same place.
+    """
+    own_host = own_host.lower().removeprefix("www.")
+    kept: list[Link] = []
+    dropped: dict[str, list[Link]] = {}
+    seen: set[str] = set()
+    for link in links:
+        reason = _drop_reason(link, own_host)
+        if reason is None:
+            key = _canonical_url(_destination(link.href))
+            if key in seen:
+                reason = "duplicate"
+            else:
+                seen.add(key)
+        if reason is None:
+            kept.append(link)
+        else:
+            dropped.setdefault(reason, []).append(link)
+    return kept, dropped
+
+
+# The exact wording every threshold below was measured with (2026-09-22/23,
+# TLDR and Pointer). Jev reads literally, so exclusions live in the question
+# text, not in code after it. Rewording means re-measuring.
+QUESTIONS = {
+    "is_sponsor": jev.noul(
+        "Is this link an advertisement or sponsored placement rather than editorial content?",
+        "The surrounding text is an ad read, a sponsor blurb, a 'presented by' / 'brought to you by' segment, a free-trial or demo call-to-action, or a vendor pitch the newsletter was paid to run.",
+        "The surrounding text is the newsletter's own editorial coverage of a news item.",
+    ),
+    "is_admin": jev.noul(
+        "Is this link newsletter plumbing rather than a story?",
+        "Unsubscribe, manage preferences, view in browser, read online, subscribe, archive, refer-a-friend, social profile, job board, podcast or merch link.",
+        "A link to a specific external story, product or write-up.",
+    ),
+    # The exclusion list is load-bearing: without it a crypto post titled
+    # "Bitcoin L2 agents: autonomous yield farming with onchain AI" scored
+    # 0.85, with it 0.07.
+    "is_ai_topic": jev.noul(
+        "Is the linked item about artificial intelligence, machine learning, LLMs, or AI developer tooling?",
+        "AI/ML models, agents, LLM infrastructure, AI research, AI products or AI developer tooling.",
+        "Answer no for crypto, web3, blockchain or onchain topics even when they mention AI or agents. Also no for general programming with no AI angle, non-AI security, chip supply chain, funding rounds, hiring, politics, lawsuits and corporate drama.",
+    ),
+    "kind": jev.choice(
+        "What is the newsletter pointing at with this link?",
+        {
+            "article": "A write-up someone authored: blog post, essay, paper, teardown, benchmark, guide, news story or analysis. The link itself is the thing to read.",
+            "product": "A named product, model, tool, SDK or dataset a reader could go use. The link is an announcement or landing page for that launch.",
+            "neither": "Anything else: an ad, newsletter plumbing, a social profile, a job posting or a section header.",
+        },
+    ),
+    # Unmeasured, unlike the four above: a first draft. It only decides
+    # whether a product costs a Tavily search, so a wrong answer costs a
+    # search or loses the canonical page, never a sponsor let through.
+    "is_first_party": jev.noul(
+        "Is the destination host the canonical home of the thing this link describes?",
+        "The host belongs to the maker: the vendor's own site, product page, model card, docs, or source repo.",
+        "The host is a publication, aggregator, social mirror or content farm writing about it rather than the maker's own page.",
+    ),
+}
+
+# Measured on the same two issues and nowhere else — there is no held-out set.
+# Sponsor sits at 0.75, not 0.5: real sponsors landed 0.87-0.96 and the highest
+# editorial link 0.64 (a promotional-sounding launch post). Do not tune past
+# those issues without re-measuring.
+ADMIN_THRESHOLD = 0.55
+SPONSOR_THRESHOLD = 0.75
+AI_TOPIC_THRESHOLD = 0.50
+FIRST_PARTY_THRESHOLD = 0.50  # unmeasured
+
+# Jev answered 152 links in 12.2s at this concurrency.
+CLASSIFY_CONCURRENCY = 10
+
+
+def verdict(answers: dict) -> str:
+    """ "keep", or the reason a classified link is dropped."""
+    if answers["is_admin"] > ADMIN_THRESHOLD:
+        return "admin"
+    if answers["is_sponsor"] > SPONSOR_THRESHOLD:
+        return "sponsor"
+    if answers["kind"] == "neither":
+        return "neither"
+    if answers["is_ai_topic"] < AI_TOPIC_THRESHOLD:
+        return "off_topic"
+    return "keep"
+
+
+def _classify(link: Link) -> jev.Reply:
+    host = _known_host(link.href)
+    state = {
+        "link_text": link.anchor,
+        "destination_host": host or "unknown",
+        "surrounding_newsletter_text": link.context,
+    }
+    return jev.ask(state, QUESTIONS)
+
+
+def _item(link: Link, answers: dict, newsletter_name: str, email_date: str) -> dict:
+    is_product = answers["kind"] == "product"
+    return {
+        "kind": NewsletterItemKind.Product
+        if is_product
+        else NewsletterItemKind.Article,
+        "name": link.anchor,
+        "description": link.blurb,
+        "url": link.href,
+        # Behind an opaque tracker Jev saw no host, so its answer is a guess.
+        "first_party": _known_host(link.href) is not None
+        and answers["is_first_party"] > FIRST_PARTY_THRESHOLD,
+        "email_date": email_date,
+        "newsletter_name": newsletter_name,
+    }
+
+
+def _extract_items(
+    html: str, newsletter_name: str, email_date: str, own_host: str
+) -> list[dict]:
+    kept, dropped = prefilter(extract(html), own_host)
+    reasons = {r: len(links) for r, links in dropped.items()}
+    log(f"    {len(kept)} link(s) to classify, prefilter dropped {reasons}")
+
+    items: list[dict] = []
+    verdicts: dict[str, int] = {}
+    cost = 0.0
+    with ThreadPoolExecutor(max_workers=CLASSIFY_CONCURRENCY) as ex:
+        futures = {ex.submit(_classify, link): link for link in kept}
+        for f in as_completed(futures):
+            link = futures[f]
+            try:
+                reply = f.result()
+            except Exception as e:
+                verdicts["failed"] = verdicts.get("failed", 0) + 1
+                log(f'    Classify failed for "{link.anchor}": {short_error(e)}')
+                continue
+            cost += reply.cost
+            v = verdict(reply.answers)
+            verdicts[v] = verdicts.get(v, 0) + 1
+            if v == "keep":
+                items.append(_item(link, reply.answers, newsletter_name, email_date))
+
+    log(f"    Jev verdicts {verdicts}, cost ${cost:.5f}")
+    return items
 
 
 def _is_denied(url: str) -> bool:
@@ -270,7 +531,8 @@ def _resolve_article(item: dict) -> RawItem | None:
     return {
         "title": name,
         "url": final,
-        "content": item["description"],
+        # Left empty: the fetch step re-fetches anything this thin anyway.
+        "content": "",
         "published_date": item["email_date"],
         "source": item["newsletter_name"],
     }
@@ -317,15 +579,16 @@ def _resolve_product(product: dict) -> RawItem | None:
     return {
         "title": name,
         "url": _canonical_url(picked["url"]),
-        "content": description,
+        "content": "",
         "published_date": product["email_date"],
         "source": product["newsletter_name"],
     }
 
 
 def _resolve_one(item: dict) -> RawItem | None:
-    """Route an item to the resolution its kind needs."""
-    if item["kind"] == NewsletterItemKind.Article:
+    """Route an item to the resolution its kind needs. A product already linked
+    at its maker's own page needs no search — its href is the answer."""
+    if item["kind"] == NewsletterItemKind.Article or item["first_party"]:
         return _resolve_article(item)
     return _resolve_product(item)
 
@@ -367,10 +630,14 @@ def _resolve_items(raw: list[dict]) -> list[RawItem]:
     except Exception as e:
         log(f"  Notability filter failed, resolving all: {e}")
 
-    products = sum(1 for i in items if i["kind"] == NewsletterItemKind.Product)
+    searched = sum(
+        1
+        for i in items
+        if i["kind"] == NewsletterItemKind.Product and not i["first_party"]
+    )
     log(
         f"  Resolving {len(items)} notable items "
-        f"({products} product(s) via search, {len(items) - products} article link(s)) "
+        f"({searched} product(s) via search, {len(items) - searched} link(s) followed) "
         f"— {len(raw)} raw -> {len(unique)} unique -> {len(items)} notable"
     )
 
@@ -430,7 +697,7 @@ def _run_imap_fetch(
                 continue
 
             email_date = (msg.date or datetime.now(UTC)).isoformat()
-            items = _extract_items(html, name, email_date)
+            items = _extract_items(html, name, email_date, _own_host(msg.from_ or ""))
             log(f"    Found {len(items)} items")
             raw.extend(items)
 

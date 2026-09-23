@@ -47,12 +47,6 @@ class LlmResponseParser:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractItems", llm_response=llm_response, mode="request")
         return typing.cast(typing.List["types.NewsletterItem"], __result__)
 
-    def ExtractLinks(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["types.ExtractedLink"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractLinks", llm_response=llm_response, mode="request")
-        return typing.cast(typing.List["types.ExtractedLink"], __result__)
-
     def ImproveTitles(
         self, llm_response: str, baml_options: BamlCallOptions = {},
     ) -> typing.List["types.TitleFix"]:
@@ -114,12 +108,6 @@ class LlmStreamParser:
     ) -> typing.List["stream_types.NewsletterItem"]:
         __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractItems", llm_response=llm_response, mode="stream")
         return typing.cast(typing.List["stream_types.NewsletterItem"], __result__)
-
-    def ExtractLinks(
-        self, llm_response: str, baml_options: BamlCallOptions = {},
-    ) -> typing.List["stream_types.ExtractedLink"]:
-        __result__ = self.__options.merge_options(baml_options).parse_response(function_name="ExtractLinks", llm_response=llm_response, mode="stream")
-        return typing.cast(typing.List["stream_types.ExtractedLink"], __result__)
 
     def ImproveTitles(
         self, llm_response: str, baml_options: BamlCallOptions = {},

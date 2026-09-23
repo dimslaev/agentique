@@ -74,4 +74,5 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | `LLM_SCORING` | `pipeline/steps/score.py` | `1` restores the superseded scoring tail (score → summarize → insert → enrich) instead of queueing candidates for the agent. Unset is the agent path. |
 | `GITHUB_MIN_STARS` | `pipeline/steps/filter.py` | Stars a repo needs to survive the thin-repo gate; `0` disables it. |
 | `DEDUP_DIST_THRESHOLD` | `pipeline/steps/filter.py` | Cosine distance below which two articles are the same story; `0` disables dedup. |
+| `OPENROUTER_API_KEY` | `pipeline/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
 | `PIPELINE_ALERT_EMAIL` | `pipeline/health.py` | Where the report and the liveness alert go; falls back to `EMAILS_FROM_EMAIL`. |

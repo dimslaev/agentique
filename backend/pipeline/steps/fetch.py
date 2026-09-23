@@ -76,10 +76,11 @@ def build_sources(session: Session) -> list[Source]:
 
     "Newsletter" is the IMAP channel: unread mail in the "sub" mailbox matched
     against every active publisher with an ``email`` link (DB-driven via
-    ``newsletter_senders_from_db``). An item is a product named in an issue,
-    resolved to a first-party URL by search rather than by the mail's own
-    tracking links, so it arrives carrying only the issue's blurb and leans on
-    the re-fetch path like the other thin sources.
+    ``newsletter_senders_from_db``). An item is a link in an issue that Jev
+    classified as on-topic editorial, resolved to its destination (or, for a
+    product linked off its maker's site, to a first-party URL by search). It
+    arrives with no content and leans on the re-fetch path like the other thin
+    sources.
     """
     feed_sources = feed_sources_from_db(session)
     lab_watch_targets = lab_watch_targets_from_db(session)

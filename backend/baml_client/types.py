@@ -58,7 +58,7 @@ class NewsletterItemKind(str, Enum):
     Article = "Article"
 
 # #########################################################################
-# Generated classes (12)
+# Generated classes (11)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -77,11 +77,6 @@ class CategorizeAndTagResult(BaseModel):
 
 class ClassifyKindResult(BaseModel):
     kind: ArticleKind
-
-class ExtractedLink(BaseModel):
-    title: str
-    url: str
-    snippet: str = Field(description='One-sentence description of the article')
 
 class NewsletterItem(BaseModel):
     kind: NewsletterItemKind

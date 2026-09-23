@@ -25,9 +25,6 @@ type_map = {
     "types.ClassifyKindResult": types.ClassifyKindResult,
     "stream_types.ClassifyKindResult": stream_types.ClassifyKindResult,
 
-    "types.ExtractedLink": types.ExtractedLink,
-    "stream_types.ExtractedLink": stream_types.ExtractedLink,
-
     "types.NewsletterItem": types.NewsletterItem,
     "stream_types.NewsletterItem": stream_types.NewsletterItem,
 

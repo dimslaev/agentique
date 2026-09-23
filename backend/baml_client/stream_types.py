@@ -23,7 +23,7 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (12)
+# Generated classes (11)
 # #########################################################################
 
 class ArticleInput(BaseModel):
@@ -42,11 +42,6 @@ class CategorizeAndTagResult(BaseModel):
 
 class ClassifyKindResult(BaseModel):
     kind: typing.Optional[types.ArticleKind] = None
-
-class ExtractedLink(BaseModel):
-    title: typing.Optional[str] = None
-    url: typing.Optional[str] = None
-    snippet: typing.Optional[str] = Field(default=None, description='One-sentence description of the article')
 
 class NewsletterItem(BaseModel):
     kind: typing.Optional[types.NewsletterItemKind] = None
