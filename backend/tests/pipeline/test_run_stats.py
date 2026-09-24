@@ -1,17 +1,16 @@
-"""What the run records: the articles it inserted, and what survives a source
-that fails partway through.
+"""What the run records: per-source counts, and the publishers it polled.
 
-On 2026-09-03 the Feeds source died at the scoring step and took the
-record_publishers call with it: the run stored 19 publishers instead of 118,
-so every feed was invisible to the verifier on exactly the night something was
-wrong. These pin that the per-publisher counts survive a failure after the
-fetch, and that the stored error stays a readable length.
+On 2026-09-03 the Feeds source died after the fetch and took the per-publisher
+record with it, so every feed was invisible on exactly the night something was
+wrong. These pin that the publisher bookkeeping survives a failure after the
+fetch, that a failed fetch stamps nothing, and that the stored error stays a
+readable length.
 """
 
 from __future__ import annotations
 
 from pipeline import run as run_module
-from pipeline.health import RunStats, _format_report
+from pipeline.runs import RunStats
 from pipeline.steps.fetch import Source
 
 
@@ -33,107 +32,110 @@ class _FakeResolver:
         pass
 
 
-def _article(url: str, source: str, title: str = "t", score: int = 80) -> dict:
+def _article(url: str, source: str, publisher_id: int = 1) -> dict:
     return {
-        "id": abs(hash(url)) % 10_000,
-        "title": title,
+        "title": "t",
         "url": url,
         "content": "body",
         "source": source,
-        "score": score,
+        "publisher_id": publisher_id,
     }
 
 
 def _stub_run(monkeypatch, sources, **overrides):
-    """Run the pipeline over ``sources`` with every step a no-op passthrough."""
+    """Run the pipeline over ``sources`` with every step a no-op passthrough.
+    Returns the stats and what the publisher bookkeeping was handed."""
+    seen: dict[str, list] = {"polled": [], "new": []}
     monkeypatch.setattr(run_module, "get_engine", lambda: None)
     monkeypatch.setattr(run_module, "Session", lambda engine: _FakeSession())
     monkeypatch.setattr(run_module, "PublisherResolver", _FakeResolver)
-    monkeypatch.setattr(run_module, "load_vocabulary", lambda session: None)
     monkeypatch.setattr(run_module, "build_sources", lambda session: sources)
     monkeypatch.setattr(run_module, "resolve_publishers", lambda a, r: a)
-    monkeypatch.setattr(run_module, "drop_off_topic", lambda a, label: a)
     monkeypatch.setattr(run_module, "filter_known_urls", lambda s, a, label: a)
-    monkeypatch.setattr(run_module, "filter_dead_domains", lambda a, label: a)
-    monkeypatch.setattr(run_module, "filter_thin_repos", lambda s, a, label: a)
-    monkeypatch.setattr(run_module, "dedup_semantic", lambda s, a, label: a)
-    # These pin the scoring tail, so they run it: `LLM_SCORING=1`'s branch. The
-    # queueing branch the pipeline takes by default is pinned at the bottom.
-    monkeypatch.setattr(run_module, "llm_scoring_enabled", lambda: True)
     monkeypatch.setattr(run_module, "queue_candidates", lambda s, a: a)
-    monkeypatch.setattr(run_module, "score_articles", lambda s, a: a)
-    monkeypatch.setattr(run_module, "summarize_articles", lambda s, a: a)
-    monkeypatch.setattr(run_module, "insert_articles", lambda s, a: a)
-    monkeypatch.setattr(run_module, "improve_titles", lambda s, a: None)
-    monkeypatch.setattr(run_module, "categorize_and_tag_articles", lambda s, a, v: [])
-    monkeypatch.setattr(run_module, "embed_articles", lambda s, a: None)
     monkeypatch.setattr(
         run_module, "fetch_source", lambda source: (source.fetcher(), {})
+    )
+    monkeypatch.setattr(
+        run_module,
+        "record_polled",
+        lambda s, names, errors: seen["polled"].append((names, errors)),
+    )
+    monkeypatch.setattr(
+        run_module, "record_new", lambda s, ids: seen["new"].append(sorted(ids))
     )
     for name, value in overrides.items():
         monkeypatch.setattr(run_module, name, value)
 
     stats = RunStats()
     run_module.run_pipeline(stats)
-    return stats
+    return stats, seen
 
 
 def _feeds_source() -> Source:
     return Source(
         "Feeds",
-        lambda: [_article("u1", "Feed A")],
+        lambda: [_article("u1", "Feed A", publisher_id=7)],
         publisher_names=("Feed A", "Feed B"),
     )
 
 
-def test_publisher_counts_survive_a_failure_after_the_fetch(monkeypatch):
+def test_a_clean_run_counts_and_stamps(monkeypatch):
+    stats, seen = _stub_run(monkeypatch, [_feeds_source()])
+
+    [source] = stats.sources
+    assert (source.fetched, source.queued, source.error) == (1, 1, None)
+    assert seen["polled"] == [(("Feed A", "Feed B"), {})]
+    assert seen["new"] == [[7]]
+
+
+def test_polled_publishers_are_stamped_after_a_failure_past_the_fetch(monkeypatch):
     def boom(_session, _articles):
-        raise RuntimeError("scorer down")
+        raise RuntimeError("queue down")
 
-    stats = _stub_run(monkeypatch, [_feeds_source()], score_articles=boom)
+    stats, seen = _stub_run(monkeypatch, [_feeds_source()], queue_candidates=boom)
 
-    assert [p.name for p in stats.publishers] == ["Feed A", "Feed B"]
-    # The fetch happened, the insert did not — that is what the row should say.
-    assert [(p.fetched, p.inserted) for p in stats.publishers] == [(1, 0), (0, 0)]
-    assert len(stats.sources[0].errors) == 1
+    assert seen["polled"] == [(("Feed A", "Feed B"), {})]
+    # Nothing was queued, so nothing is new.
+    assert seen["new"] == [[]]
+    assert stats.sources[0].error == "RuntimeError: queue down"
 
 
-def test_a_fetch_that_failed_records_no_publisher_counts(monkeypatch):
-    """Nothing was polled, so there are no counts — reporting 0 fetched for
-    every publisher would alert on each one for a single source-level error."""
+def test_a_fetch_that_failed_stamps_no_publisher(monkeypatch):
+    """Nothing was polled, so there was no answer to record — stamping every
+    publisher as fetched would hide a source that is down."""
 
     def boom(_source):
         raise RuntimeError("feeds unreachable")
 
-    stats = _stub_run(monkeypatch, [_feeds_source()], fetch_source=boom)
+    stats, seen = _stub_run(monkeypatch, [_feeds_source()], fetch_source=boom)
 
-    assert stats.publishers == []
-    assert len(stats.sources[0].errors) == 1
+    assert seen["polled"] == []
+    assert stats.sources[0].error == "RuntimeError: feeds unreachable"
 
 
-def test_a_clean_run_still_records_its_publishers(monkeypatch):
-    stats = _stub_run(monkeypatch, [_feeds_source()])
+def test_bookkeeping_that_fails_does_not_fail_the_source(monkeypatch):
+    def boom(*_args):
+        raise RuntimeError("db gone")
 
-    assert [(p.name, p.fetched, p.inserted) for p in stats.publishers] == [
-        ("Feed A", 1, 1),
-        ("Feed B", 0, 0),
-    ]
-    assert stats.sources[0].errors == []
+    stats, _ = _stub_run(monkeypatch, [_feeds_source()], record_polled=boom)
+
+    assert (stats.sources[0].queued, stats.sources[0].error) == (1, None)
 
 
 def test_one_source_failing_does_not_stop_the_next(monkeypatch):
     def boom(_session, articles):
         if articles[0]["source"] == "Feed A":
-            raise RuntimeError("scorer down")
+            raise RuntimeError("queue down")
         return articles
 
-    stats = _stub_run(
+    stats, _ = _stub_run(
         monkeypatch,
         [_feeds_source(), Source("Hacker News", lambda: [_article("u2", "HN")])],
-        score_articles=boom,
+        queue_candidates=boom,
     )
 
-    assert [(s.source, s.inserted) for s in stats.sources] == [
+    assert [(s.source, s.queued) for s in stats.sources] == [
         ("Feeds", 0),
         ("Hacker News", 1),
     ]
@@ -143,121 +145,8 @@ def test_the_stored_error_is_truncated(monkeypatch):
     def boom(_session, _articles):
         raise RuntimeError("x" * 50_000)
 
-    stats = _stub_run(monkeypatch, [_feeds_source()], score_articles=boom)
+    stats, _ = _stub_run(monkeypatch, [_feeds_source()], queue_candidates=boom)
 
-    error = stats.sources[0].errors[0]
+    error = stats.sources[0].error or ""
     assert len(error) < 1_000
     assert error.endswith("chars]")
-
-
-def test_the_run_records_the_articles_it_inserted(monkeypatch):
-    """The report's whole point: which stories landed, not just how many."""
-    source = Source(
-        "Feeds",
-        lambda: [_article("https://a.example/x", "Feed A", title="A title", score=91)],
-        publisher_names=("Feed A",),
-    )
-
-    stats = _stub_run(monkeypatch, [source])
-
-    (article,) = stats.sources[0].articles
-    assert (article.title, article.url, article.score, article.publisher) == (
-        "A title",
-        "https://a.example/x",
-        91,
-        "Feed A",
-    )
-
-
-def test_recorded_titles_are_the_rewritten_ones(monkeypatch):
-    """improve_titles edits each item in place after the insert, so recording
-    has to happen downstream of it or the email shows the raw feed title."""
-
-    def rewrite(_session, inserted):
-        for item in inserted:
-            item["title"] = "Rewritten"
-
-    stats = _stub_run(monkeypatch, [_feeds_source()], improve_titles=rewrite)
-
-    assert [a.title for a in stats.sources[0].articles] == ["Rewritten"]
-
-
-def test_a_source_that_failed_still_reports_what_it_inserted(monkeypatch):
-    """The failure is in enrichment, after the rows are committed — the report
-    must still name them."""
-
-    def boom(_session, _inserted, _vocab):
-        raise RuntimeError("tagger down")
-
-    stats = _stub_run(monkeypatch, [_feeds_source()], categorize_and_tag_articles=boom)
-
-    assert [a.url for a in stats.sources[0].articles] == ["u1"]
-    assert len(stats.sources[0].errors) == 1
-
-
-def test_the_report_lists_the_inserted_articles(monkeypatch):
-    stats = _stub_run(
-        monkeypatch,
-        [
-            Source(
-                "Feeds",
-                lambda: [_article("https://a.example/x", "Feed A", title="A title")],
-                publisher_names=("Feed A",),
-            )
-        ],
-    )
-    stats.finish(ok=True)
-
-    report = _format_report(stats)
-
-    assert "INSERTED (1)" in report
-    assert "[80/100] A title — Feed A" in report
-    assert "https://a.example/x" in report
-    # Anomaly detection is gone: no run-over-run judgement in the daily report.
-    assert "ANOMAL" not in report.upper()
-
-
-def test_the_report_says_so_when_nothing_landed(monkeypatch):
-    stats = _stub_run(monkeypatch, [Source("Hacker News", lambda: [])])
-    stats.finish(ok=True)
-
-    report = _format_report(stats)
-
-    assert "INSERTED (0)" in report
-    assert "Nothing inserted this run." in report
-
-
-def test_the_report_lists_errors(monkeypatch):
-    def boom(_session, _articles):
-        raise RuntimeError("scorer down")
-
-    stats = _stub_run(monkeypatch, [_feeds_source()], score_articles=boom)
-    stats.finish(ok=True)
-
-    report = _format_report(stats)
-
-    assert "ERRORS" in report
-    assert "Feeds: RuntimeError: scorer down" in report
-
-
-# ─── The default funnel: queue candidates, insert nothing ────────────────────
-
-
-def test_the_run_queues_its_survivors_and_inserts_nothing(monkeypatch):
-    """The agent is the judge, so the night's run ends at a pending row. An
-    `inserted` count here would mean something published without being read."""
-    stats = _stub_run(monkeypatch, [_feeds_source()], llm_scoring_enabled=lambda: False)
-
-    [source] = stats.sources
-    assert (source.queued, source.inserted) == (1, 0)
-    assert source.articles == []
-
-
-def test_the_report_says_what_is_waiting_when_nothing_landed(monkeypatch):
-    """An empty INSERTED block on its own reads as a dead pipeline; the queue
-    count is what says the run worked and the verdict has not happened yet."""
-    stats = _stub_run(monkeypatch, [_feeds_source()], llm_scoring_enabled=lambda: False)
-
-    report = _format_report(stats)
-    assert "1 candidate(s) queued for review" in report
-    assert "→ queued 1" in report

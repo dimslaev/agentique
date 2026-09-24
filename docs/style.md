@@ -16,7 +16,7 @@ express, enforced by review.
 - **Comments explain why, not what.** Well-named identifiers already say
   what the code does; a comment earns its place only for a hidden
   constraint, a subtle invariant, or a workaround for a specific bug.
-- **Pipeline stage modules are verb-named** (`fetch`, `filter`, `score`,
+- **Pipeline stage modules are verb-named** (`fetch`, `filter`, `queue`,
   `persist`, `enrich`) — they are stages in a funnel. **Domain modules are
   noun-named** (`articles`, `likes`, `publishers`) — they are resources.
   This is a deliberate, permanent difference: forcing one naming scheme on
@@ -25,8 +25,8 @@ express, enforced by review.
   one module is an implementation detail of that module — it does not move
   to a shared file. A constant read by two or more modules is a real
   interface and lives at that seam (see `SNIPPET_CAP` in
-  `pipeline/steps/filter.py` / `pipeline/steps/enrich.py` for the two-reader
-  case). See the constants-vs-config discussion in the refactor plan for
+  `pipeline/steps/__init__.py`, read by the embedding and by curation, for the
+  two-reader case). See the constants-vs-config discussion in the refactor plan for
   the reasoning.
 - **`app/` holds the running service; `backend/scripts/` holds ops
   entrypoints.** A module that exists to be run by hand or by `prestart.sh` —
@@ -37,7 +37,7 @@ express, enforced by review.
 - **Config is different from constants.** Deployment-varying, env-provided
   values (database URL, API keys) live in one settings object
   (`app/platform/settings.py`). Tuning knobs compiled into the code
-  (`SCORE_THRESHOLD`, `SNIPPET_CAP`) never move there.
+  (`CANDIDATE_CAP`, `SNIPPET_CAP`) never move there.
 - **The pipeline is the exception, on purpose.** It reads `os.environ` beside
   each consumer rather than through that settings object — see ADR 7. The index
   of what it reads lives in `deploy/README.md`; add a row there when you add a

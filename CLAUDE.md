@@ -33,9 +33,9 @@
 
 ## MCP tools
 - `.mcp.json` connects to the `agentique` MCP server (`backend/app/mcp/`), exposing `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
-- With the write token it also exposes `list_candidates`, `get_content`, `approve`, `reject` - the curation agent's tools. They publish to prod. Don't call them outside a curation session.
+- With the write token it also exposes `list_candidates`, `get_content`, `similar`, `stories`, `check_link`, `vocabulary`, `approve`, `reject`, `reject_many` - the curation agent's tools. They publish to prod. Don't call them outside a curation session.
 - Don't use any of these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
 
 ## Curation
-- The pipeline does not judge articles. It queues candidates (`RejectStage.pending`) and a Claude Code session decides each one - see `docs/adr/0009-agent-curation.md`.
+- The pipeline does not judge articles. It drops known URLs, queues the rest as candidates (`RejectStage.pending`), and a Claude Code session decides each one - see `docs/adr/0009-agent-curation.md` and `docs/adr/0011-collector-judge-split.md`.
 - The agent's rubric is `.claude/skills/curate/SKILL.md`. Changing it means re-running the regression set beside it before it goes back on the schedule.

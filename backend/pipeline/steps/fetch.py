@@ -15,13 +15,10 @@ from pipeline.publishers import (
     lab_watch_targets_from_db,
     newsletter_senders_from_db,
 )
-from pipeline.sources.ainews import fetch_ai_news
 from pipeline.sources.email import fetch_newsletter
 from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
-from pipeline.sources.reddit import fetch_reddit
 from pipeline.sources.substack import fetch_feeds
-from pipeline.topic_gate import is_on_topic
 from pipeline.types import Candidate, RawItem
 
 # Below this, content is a teaser/blurb rather than an article, and the
@@ -67,12 +64,12 @@ def build_sources(session: Session) -> list[Source]:
     problem, not a channel problem: ``_with_content`` re-fetches anything under
     ``MIN_CONTENT_CHARS`` and drops what stays thin, which is the same path
     that makes Hacker News (also thin at fetch) safe. So it is routed through
-    it like every other source. AI News extracts its own content inline (see
-    ``sources/ainews.py``), so it does not need the re-fetch path.
+    it like every other source.
 
-    Hacker News and Reddit are firehoses rather than publishers: both filter
-    hard at the source (a keyword gate on HN, the subreddit itself on Reddit)
-    and both arrive thin, so they lean on the re-fetch path too.
+    Hacker News is a firehose rather than a publisher: it filters hard at the
+    source (a keyword gate) and arrives thin, so it leans on the re-fetch path
+    too. Reddit and AI News were dropped on 2026-09-23 after a week of fetching
+    nothing.
 
     "Newsletter" is the IMAP channel: unread mail in the "sub" mailbox matched
     against every active publisher with an ``email`` link (DB-driven via
@@ -92,8 +89,6 @@ def build_sources(session: Session) -> list[Source]:
             publisher_names=tuple(s["name"] for s in feed_sources),
         ),
         Source("Hacker News", lambda: (fetch_hn(), {})),
-        Source("Reddit", lambda: (fetch_reddit(), {})),
-        Source("AI News", lambda: (fetch_ai_news(), {})),
         Source("Newsletter", lambda: (fetch_newsletter(newsletter_senders), {})),
         Source(
             "Lab Watch",
@@ -122,11 +117,12 @@ def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
     """
     thin = [a for a in articles if len(a["content"]) < MIN_CONTENT_CHARS]
     if thin:
-        content_map = fetch_full_content([a["url"] for a in thin])
+        pages = fetch_full_content([a["url"] for a in thin])
         for a in thin:
-            full = content_map.get(a["url"])
-            if full:
-                a["content"] = full
+            page = pages.get(a["url"])
+            if page:
+                a["content"] = page.text
+                a["links"] = page.links
 
     kept = [a for a in articles if len(a["content"].strip()) >= MIN_SUMMARIZABLE_CHARS]
     dropped = len(articles) - len(kept)
@@ -140,11 +136,8 @@ def resolve_publishers(
 ) -> list[Candidate]:
     """Turn fetched items into candidates by resolving each one's publisher.
 
-    publisher_id, trust, publisher_kind and topic_gated all come from the
-    Publisher row: the one whose site the URL is on when we know it, else the
-    one named by the source (auto-quarantined if unknown). Runs right after
-    fetch so trust is available to the scoring/dedup BAML calls and
-    ``topic_gated`` to ``drop_off_topic``.
+    The Publisher is the one whose site the URL is on when we know it, else the
+    one named by the source (auto-quarantined if unknown).
 
     Crediting by URL first is what lets an individual's post found through
     Hacker News or a newsletter count as theirs. ``source`` is left alone: it
@@ -152,40 +145,11 @@ def resolve_publishers(
 
     Returns new dicts rather than stamping the fetched ones in place: it is the
     only producer of ``Candidate``, which is what lets every step below it read
-    those three keys without a default.
+    ``publisher_id`` without a default.
     """
     candidates: list[Candidate] = []
     for a in articles:
         publisher = resolver.credit(a["url"]) or resolver.resolve(a["source"])
         assert publisher.id is not None
-        candidates.append(
-            {
-                **a,
-                "publisher_id": publisher.id,
-                "trust": publisher.trust.value,
-                "publisher_kind": publisher.kind.value,
-                "topic_gated": publisher.topic_gated,
-            }
-        )
+        candidates.append({**a, "publisher_id": publisher.id})
     return candidates
-
-
-def drop_off_topic(articles: list[Candidate], label: str) -> list[Candidate]:
-    """Drop off-topic items from publishers marked ``topic_gated``.
-
-    Some feeds worth carrying are broad engineering blogs that happen to post
-    about AI a few times a month (Stripe, Figma, Spotify). Without a gate every
-    one of their release notes and hiring posts reaches the scorer, and the LLM
-    bill scales with the feed, not with the signal. So a gated publisher's items
-    must pass ``topic_gate.is_on_topic`` on the title alone.
-
-    Title-only and deliberately early — before dedup's embeddings and before
-    the scorer — so a rejected item costs one regex and nothing else. Publishers that are on-topic by definition (an AI lab's own blog) are
-    left ungated and pass through untouched; the recall/precision trade-off is
-    the same one documented on ``topic_gate.AI_TITLE_KEYWORDS`` itself.
-    """
-    kept = [a for a in articles if not a["topic_gated"] or is_on_topic(a["title"])]
-    dropped = len(articles) - len(kept)
-    if dropped:
-        log(f"  {label}: dropped {dropped} off-topic item(s) from gated publishers")
-    return kept

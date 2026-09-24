@@ -23,25 +23,8 @@ class StreamState(BaseModel, typing.Generic[StreamStateValueT]):
     value: StreamStateValueT
     state: typing_extensions.Literal["Pending", "Incomplete", "Complete"]
 # #########################################################################
-# Generated classes (11)
+# Generated classes (5)
 # #########################################################################
-
-class ArticleInput(BaseModel):
-    url: typing.Optional[str] = None
-    title: typing.Optional[str] = None
-    source: typing.Optional[str] = None
-    snippet: typing.Optional[str] = Field(default=None, description='First ~200 chars of the article content, if any')
-    trust: typing.Optional[str] = Field(default=None, description='"high" | "medium" | "low" - source trust tag')
-    traction: typing.Optional[str] = Field(default=None, description='How the item was received where it was posted, e.g. "7 points, 1 comments on Hacker News". Absent for sources with no public reception signal.')
-    seen_on: typing.Optional[str] = Field(default=None, description='Date the pipeline picked the item up, YYYY-MM-DD. What \'old\' is measured against: a feed or HN date is when it was posted there, not when the work was published.')
-
-class CategorizeAndTagResult(BaseModel):
-    categories: typing.List[types.ArticleCategory] = Field(description='1-2 categories')
-    kind: typing.Optional[types.ArticleKind] = None
-    tags: typing.List[str] = Field(description='1-3 slugs copied verbatim from the vocabulary; most relevant first')
-
-class ClassifyKindResult(BaseModel):
-    kind: typing.Optional[types.ArticleKind] = None
 
 class NewsletterItem(BaseModel):
     kind: typing.Optional[types.NewsletterItemKind] = None
@@ -63,23 +46,10 @@ class ProfileVerdict(BaseModel):
     isAiRelated: typing.Optional[bool] = None
     confidence: typing.Optional[int] = Field(default=None, description='0-100 confidence that AI/ML/LLMs is the PRIMARY focus')
 
-class ScoredArticle(BaseModel):
-    url: typing.Optional[str] = None
-    score: typing.Optional[int] = Field(default=None, description='1-100 developer-actionability rating')
-    reason: typing.Optional[str] = Field(default=None, description='One short sentence naming what decided the score: out of scope, the evidence shown or missing, the reach, or the rule that capped it.')
-
 class SearchCandidate(BaseModel):
     title: typing.Optional[str] = None
     url: typing.Optional[str] = None
     snippet: typing.Optional[str] = None
-
-class TagOption(BaseModel):
-    slug: typing.Optional[str] = None
-    description: typing.Optional[str] = Field(default=None, description='When to apply this tag')
-
-class TitleFix(BaseModel):
-    url: typing.Optional[str] = Field(default=None, description='The exact URL from the matching input article - copy verbatim')
-    title: typing.Optional[str] = Field(default=None, description='Plain English title text on a single line. No markdown, no quotes, no leading source name or bracket tag. Max 12 words. Return the input title verbatim if it is already clear, specific, and informative.')
 
 # #########################################################################
 # Generated type aliases (0)

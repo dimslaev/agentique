@@ -19,6 +19,7 @@ from sqlmodel import Session
 from app.platform.db import engine
 from app.platform.settings import settings
 from pipeline import curation
+from pipeline.fetching import page_facts
 from pipeline.fetching.extract_content import fetch_and_extract
 from pipeline.fetching.http import tavily_search
 
@@ -172,8 +173,8 @@ def web_search(
 
 
 # ─── Curation ────────────────────────────────────────────────────────────────
-# The four verbs the curation agent drives the pipeline's tail with. Unlike the
-# three above they write, so each one checks for the write scope first: the
+# The verbs the curation agent drives the pipeline's tail with. Some write and
+# all of them read the queue, so each one checks for the write scope first: the
 # read token reaches `sql_query`, `web_fetch` and `web_search` and nothing else.
 
 
@@ -195,9 +196,10 @@ def list_candidates() -> list[dict[str, str]]:
     """List the articles waiting on a curation verdict, freshest first.
 
     One row per candidate: `url`, `title`, `source` (where the link was found),
-    `publisher`, `trust`, `traction`, `published_at`, `queued_at`, and a
-    200-character `snippet`. Deliberately not the full text — call
-    `get_content` for a candidate worth a closer look, or fetch the page.
+    `publisher`, `approved` (the publisher's approvals / decisions over the
+    last 90 days, e.g. "3/10", or "new" when it has none), `traction`,
+    `published_at`, `queued_at`, and a 200-character `snippet`. Deliberately not the full text — call
+    `get_content` for a candidate worth a closer look.
 
     A candidate stays listed until `approve` or `reject` is called on it, so a
     session that stops halfway leaves the rest for the next one.
@@ -207,19 +209,73 @@ def list_candidates() -> list[dict[str, str]]:
         return curation.list_candidates(session)
 
 
-def get_content(url: str) -> str:
-    """Return the article text the pipeline extracted for one candidate.
+def get_content(
+    url: str, offset: int = 0, limit: int = curation.PAGE_LIMIT
+) -> curation.ContentPage:
+    """Return one page of the article text the pipeline extracted for a candidate.
 
-    The same text a page fetch returns, cut at 12000 characters, so read here
-    first. Fetch the page only when this is empty, a teaser, or cut off before
-    the part you need.
+    The stored text is what a page fetch returns, cut at 12000 characters, so
+    read here first. Returns `text`, `offset`, `next_offset` (null on the last
+    page — pass it back as `offset` to read on), `total` characters, and, on
+    the first page only, `links`: the repo / model / paper / docs URLs the
+    article body links, grouped. Fetch the page only when this is empty, a
+    teaser, or cut off before the part you need.
     """
     _require_write()
     with _curation_session() as session:
         try:
-            return curation.get_content(session, url)
+            return curation.get_content(session, url, offset, limit)
         except curation.CandidateError as exc:
             raise ToolError(str(exc))
+
+
+def similar(url: str, days: int = 7, limit: int = 8) -> curation.Similar:
+    """Show what the feed and the ledger hold that is close to one candidate.
+
+    Compares by embedding against every published article and every candidate
+    or reject from the last `days`. `rows` lists up to `limit` neighbours, the
+    closest first: `url`, `title`, `publisher`, `stage` (`published`,
+    `pending`, or the reject stage), `score` and `distance` (under 0.30 is the
+    same story). `coverage` is how many distinct publishers carry this story,
+    this candidate's own included, with their names in `publishers`.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            return curation.similar(session, url, days, limit)
+        except curation.CandidateError as exc:
+            raise ToolError(str(exc))
+
+
+def stories(days: int = 7) -> list[curation.Story]:
+    """Group the pending candidates that are one story, with each other or with
+    an article published in the last `days`.
+
+    Only groups of two or more come back, largest first, each with its
+    `members` (same row shape as `similar`, without the distance), `coverage`
+    (distinct publishers) and `publishers`. A member at stage `published`
+    means the feed already carries the story. Call it once, after triage.
+    """
+    _require_write()
+    with _curation_session() as session:
+        return curation.stories(session, days)
+
+
+def check_link(url: str) -> dict[str, object]:
+    """Look up a GitHub or GitLab repo, or a Hugging Face model or dataset.
+
+    Repos: `stars`, `forks`, `last_push`, `license`, `archived`, `has_readme`,
+    `description`. Models and datasets: `downloads`, `likes`, `last_modified`,
+    `license`, `files` (count), and for a model `weights` (true when weight
+    files are present). A value the lookup could not get reads `unknown`, never
+    0; `lookup: unknown` means the whole lookup failed. Any other URL is
+    refused — read it with `web_fetch`.
+    """
+    _require_write()
+    try:
+        return page_facts.check_link(url)
+    except page_facts.LinkError as exc:
+        raise ToolError(str(exc))
 
 
 def vocabulary() -> dict[str, object]:
@@ -258,6 +314,19 @@ def approve(
         except curation.CandidateError as exc:
             raise ToolError(str(exc))
     return f"Published article #{article_id}: {url}"
+
+
+def reject_many(verdicts: list[curation.Verdict]) -> str:
+    """Turn down many candidates at once: each of `verdicts` is `{url, score,
+    reason}`, the same fields `reject` takes.
+
+    Each is settled on its own, so one URL that is not pending costs that line
+    and not the batch. Returns one line per verdict, in order, saying whether
+    it was rejected or why not.
+    """
+    _require_write()
+    with _curation_session() as session:
+        return "\n".join(curation.reject_many(session, verdicts))
 
 
 def reject(url: str, score: int, reason: str) -> str:

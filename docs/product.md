@@ -40,39 +40,35 @@ Stripe integration exists yet.
 
 ## How the pipeline works
 
-Once a day, a scheduled job goes out, gathers candidate articles from a handful of
-sources (Hacker News, an AI-news aggregator feed, and a curated list of Substack
-newsletters), and runs each fresh batch through a chain of small, focused steps:
+The pipeline collects and the agent judges (docs/adr/0011). Once a day, a
+scheduled job gathers candidate articles from a handful of sources (Hacker News,
+a curated list of RSS and Substack feeds, the labs' own sites, and email
+newsletters) and runs each fresh batch through a short chain:
 
-1. **Skip anything already seen** — URLs already in the database, or already evaluated
-   and rejected before, are dropped immediately.
-2. **Drop dead links** — a quick DNS check filters out URLs whose domains no longer
-   resolve.
-3. **Ask whether anyone else thought it was news** — an aggregator hands us every
-   submission, not an edited selection, so a repo its author uploaded yesterday
-   arrives looking exactly like a release half the field depends on. Two outside
-   signals separate them: on Hacker News, the story's own points and comments (a
-   post nobody read is held back rather than published, and re-checked the next
-   day once the votes have settled); for anything linking to a GitHub repo, the
-   repo's star count. A lab publishing on its own domain skips both — that is
-   news at zero votes.
-4. **Queue what survives** — everything left becomes a *candidate*: stored, but
+1. **Extract** — the article text, its tables, and the links its body makes to
+   repos, models, papers and first-party docs.
+2. **Skip anything already seen** — URLs already published, already waiting, or
+   already turned down are dropped. On Hacker News, a post nobody read yet is
+   held back and re-checked the next day once the votes have settled; a lab
+   publishing on its own domain skips that — it is news at zero votes.
+3. **Queue what survives** — everything left becomes a *candidate*: stored, but
    not published and not visible to anyone. The nightly run makes no judgement
-   about quality at all, and stops here.
-5. **An agent reads them** — an hour later, a Claude Code session picks up the
-   candidates, fetches each page, and approves or rejects it with a score, a
-   one-sentence reason, and the summary a reader will see. Approving is the only
-   thing that creates an article. This used to be an LLM call inside the pipeline
-   scoring from a title and a 200-character snippet; it could not separate the
-   articles the reader loved from the ones they called noise, because at 200
-   characters a write-up with real measurements and a landing page quoting the
-   same numbers look identical (docs/adr/0009).
-6. **Categorize & tag** — on approval, an LLM pass assigns category + kind and 1-3
-   tags from a controlled vocabulary, shown in the feed.
-7. **Embed** — a small, fast local embedding model turns the title + a content
+   about topic, quality or duplicates at all, and stops here.
+4. **An agent reads them** — an hour later, a Claude Code session picks up the
+   candidates, reads the stored text, groups the ones that are one story, checks
+   the repo or model an article rests on, and approves or rejects each with a
+   score, a one-sentence reason, the summary a reader will see, and its
+   category, kind and tags. Approving is the only thing that creates an
+   article. This used to be an LLM call inside the pipeline scoring from a
+   title and a 200-character snippet; it could not separate the articles the
+   reader loved from the ones they called noise, because at 200 characters a
+   write-up with real measurements and a landing page quoting the same numbers
+   look identical (docs/adr/0009).
+5. **Embed** — a small, fast local embedding model turns the title + a content
    snippet into a vector, which is what powers semantic search.
-8. **Report** — one email a night, after the verdicts: what landed, named one by
-   one, and what did not as a count and the publishers it came from.
+6. **Report** — one email a day, after the verdicts: whether the run happened,
+   what needs a look (a source that fetched nothing, a feed that failed), and
+   what landed, named one by one.
 
 The remaining LLM steps are defined declaratively as prompt functions (via BAML)
 rather than hand-rolled prompt strings scattered through the code, so tweaking a

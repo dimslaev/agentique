@@ -4,13 +4,13 @@ One type per stage, each fully populated by the step that produces it:
 
     RawItem    what a source emits -- title, url, content, date, source
     Candidate  + the publisher it belongs to   (fetch.resolve_publishers)
-    Scored     + the score the LLM gave it     (score.score_articles)
-    Summarized + the summary a reader sees      (summarize.summarize_articles)
+    Scored     + the curation agent's score    (curation.approve)
+    Summarized + the summary a reader sees      (curation.approve)
     Persisted  + the id of the row it landed in (persist.insert_articles)
 
 Each stage subclasses the one before, so a step that only needs a ``Candidate``
 also accepts a ``Scored`` or a ``Persisted``, while a step that needs a score
-cannot be handed something that has not been through the scorer. The signatures
+cannot be handed something that has not been judged. The signatures
 are the funnel: reading them tells you the order without opening ``run.py``.
 
 This replaced a single ``FetchedArticle`` where every key was optional at every
@@ -18,7 +18,7 @@ stage. That shape could not say which step filled what, so each step's contract
 lived in a docstring and a mis-ordered call failed at runtime with a KeyError
 instead of at the call site.
 
-``categorize_and_tag_articles`` reshapes a ``Persisted`` into the narrower
+``curation.approve`` reshapes a ``Persisted`` into the narrower
 ``ProcessedArticle`` that ``embed_articles`` consumes.
 """
 
@@ -33,7 +33,7 @@ class RawItem(TypedDict):
     """One item as a source adapter emits it, before anything is known about it.
 
     ``content`` may be empty at this point: the thin sources (Hacker News,
-    Reddit, Lab Watch, Newsletter) arrive with a blurb or nothing at all, and
+    Lab Watch, Newsletter) arrive with a blurb or nothing at all, and
     ``fetch._with_content`` fills it before the item goes any further.
     """
 
@@ -43,39 +43,31 @@ class RawItem(TypedDict):
     published_date: str | None
     source: str
     # Only the aggregator sources that carry a public reception signal (Hacker
-    # News points/comments) have one. Passed to the scorer as evidence, not
+    # News points/comments) have one. Shown to the agent as evidence, not
     # merely used as a gate -- see sources/hn.py.
     traction: NotRequired[str]
+    # The repo / model / paper / docs links the article body makes, grouped by
+    # ``fetching.page_facts``. Absent when the text came from nowhere with HTML.
+    links: NotRequired[dict[str, list[str]]]
 
 
 class Candidate(RawItem):
-    """An item resolved to the Publisher it came from, and so worth spending on.
-
-    Everything downstream of ``resolve_publishers`` reads ``trust`` (it goes to
-    the scoring prompt) and ``topic_gated`` (the title gate), so both are
-    required here rather than looked up defensively at each use.
-    """
+    """An item resolved to the Publisher it came from."""
 
     publisher_id: int
-    trust: str
-    # PublisherKind value; with trust it decides the scoring threshold.
-    publisher_kind: str
-    topic_gated: bool
 
 
 class Scored(Candidate):
-    """A candidate the scorer has rated. Only the ones above the threshold get
-    this far -- ``score_articles`` drops the rest."""
+    """A candidate the curation agent approved, with the score it gave."""
 
     score: int
-    # The scorer's one-sentence account of the score; None if it gave none.
+    # The agent's one-sentence account of the score.
     score_reason: str | None
 
 
 class Summarized(Scored):
-    """A scored article with its summary. Only the ones the model could
-    summarize get this far -- ``summarize_articles`` drops the rest, so nothing
-    is inserted without one."""
+    """A scored article with the summary the agent wrote. Nothing is inserted
+    without one."""
 
     summary: str
 

@@ -34,8 +34,7 @@ cd backend && uv run --env-file ../.env python -m pipeline.report
 ```
 
 `AGENTIQUE_MCP_TOKEN` must be the write token for `/curate` to publish anything;
-with the read token the session can list candidates and settle none. Set
-`LLM_SCORING=1` to run the superseded in-pipeline scorer instead.
+with the read token the session can list candidates and settle none.
 
 ## Pre-commit and linting
 

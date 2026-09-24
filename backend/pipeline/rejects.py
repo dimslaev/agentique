@@ -1,9 +1,9 @@
 """The reject ledger: every URL the funnel turned down, with what it saw and why.
 
 Two jobs. ``filter_known_urls`` reads it so a rejected URL is never fetched and
-judged again. And it keeps the evidence - the text the scorer saw, the score,
-the scorer's reason - so a reject can be audited, re-scored under a new rubric,
-or used as a training negative instead of vanishing.
+judged again. And it keeps the evidence - the text the judge saw, the links, the
+score, the judge's reason - so a reject can be audited, re-judged under a new
+rubric, or used as a training negative instead of vanishing.
 
 The embedding is deliberately not stored: it is a pure function of the stored
 title and ``content[:SNIPPET_CAP]``, so it can be rebuilt offline in seconds.
@@ -56,6 +56,7 @@ def record_reject(
             published_at=parse_date(a["published_date"]),
             content=content or None,
             traction=a.get("traction"),
+            links=a.get("links") or None,
             score=score,
             reason=reason,
             detail=detail,

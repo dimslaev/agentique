@@ -15,6 +15,7 @@ from pipeline.fetching.http import (
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
+from pipeline.fetching.page_facts import outbound_links
 from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
 from pipeline.types import RawItem
@@ -45,21 +46,38 @@ def _log_proxy_status_once() -> None:
         log(f"Substack proxy: set but unparseable (len {len(_PROXY_URL)})")
 
 
-def _entry_content(entry) -> str:
-    """Plain text for a feed entry, preferring ``content:encoded`` over the
-    ``summary`` teaser.
-
-    Both fields carry HTML, so they go through the same trafilatura pass the
-    network extractor uses — that keeps the text comparable and lets
-    ``_is_blocker`` reject teasers (anything under 50 chars) as empty rather
-    than passing a blurb off as an article.
-    """
+def _entry_html(entry) -> str:
+    """A feed entry's HTML, preferring ``content:encoded`` over the ``summary``
+    teaser."""
     encoded = max(
         ((c.get("value") or "") for c in (entry.get("content") or [])),
         key=len,
         default="",
     )
-    return extract_text(encoded or entry.get("summary") or "")
+    return encoded or entry.get("summary") or ""
+
+
+def _entry_item(entry, name: str) -> RawItem:
+    """One feed entry as an item: plain text and the links its body makes.
+
+    The HTML goes through the same trafilatura pass the network extractor uses
+    — that keeps the text comparable and lets ``_is_blocker`` reject teasers
+    (anything under 50 chars) as empty rather than passing a blurb off as an
+    article.
+    """
+    url = entry.get("link") or ""
+    html = _entry_html(entry)
+    content = extract_text(html)
+    item: RawItem = {
+        "title": clean_title(entry.get("title") or "(no title)"),
+        "url": url,
+        "content": content,
+        "published_date": entry.get("published") or entry.get("updated") or "",
+        "source": name,
+    }
+    if content:
+        item["links"] = outbound_links(html, url)
+    return item
 
 
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
@@ -103,16 +121,7 @@ def _fetch_source(source: dict) -> tuple[list[RawItem], str | None]:
             if is_within_window(it.get("published") or it.get("updated"))
         ]
         log(f"  {name}: {len(within)} in window")
-        return [
-            {
-                "title": clean_title(it.get("title") or "(no title)"),
-                "url": it.get("link") or "",
-                "content": _entry_content(it),
-                "published_date": it.get("published") or it.get("updated") or "",
-                "source": name,
-            }
-            for it in within
-        ], None
+        return [_entry_item(it, name) for it in within], None
     except Exception as e:
         log(f"  FAILED {name}: {e}")
         return [], f"{type(e).__name__}: {e}"

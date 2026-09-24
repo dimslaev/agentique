@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import numpy as np
 import pytest
 
 from app.catalog.models import (
@@ -24,7 +25,7 @@ from app.catalog.models import (
 )
 from pipeline import curation
 from pipeline.models import Reject, RejectStage
-from pipeline.rejects import CONTENT_CAP
+from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP
 from pipeline.tags import Vocabulary
 
 
@@ -55,6 +56,9 @@ class _FakeSession:
 
     def commit(self) -> None:
         self.commits += 1
+
+    def rollback(self) -> None:
+        self.rollbacks = getattr(self, "rollbacks", 0) + 1
 
 
 def _publisher() -> Publisher:
@@ -141,7 +145,7 @@ def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
         "Open weights, downloadable today.",
     )
     assert item["summary"] == "A summary."
-    assert (item["trust"], item["publisher_kind"]) == ("high", "individual")
+    assert item["publisher_id"] == 7
     # The stored text is the article: approving never fetches the page again.
     assert item["content"] == "the stored two thousand characters"
     assert stub_publish["embedded"][0]["id"] == 42
@@ -250,9 +254,185 @@ def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
     assert "inserted" not in stub_publish
 
 
-def test_get_content_returns_the_stored_text():
-    row = _pending_row()
+# ─── approval rate ───────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "approved, rejected, expected",
+    [(3, 7, "3/10"), (0, 4, "0/4"), (2, 0, "2/2"), (0, 0, "new")],
+)
+def test_approval_rate(approved, rejected, expected):
+    assert curation.approval_rate(approved, rejected) == expected
+
+
+# ─── get_content paging ──────────────────────────────────────────────────────
+
+
+def test_the_first_page_carries_the_text_and_the_links():
+    links = {"repo": ["https://github.com/a/b"]}
+    row = _pending_row(content="abcdefghij", links=links)
     session = _FakeSession(row)
-    assert (
-        curation.get_content(session, row.url) == "the stored two thousand characters"
+
+    page = curation.get_content(session, row.url, limit=4)
+
+    assert page == {
+        "text": "abcd",
+        "offset": 0,
+        "next_offset": 4,
+        "total": 10,
+        "links": links,
+    }
+
+
+def test_a_later_page_reads_on_without_the_links():
+    row = _pending_row(content="abcdefghij", links={"repo": ["x"]})
+    session = _FakeSession(row)
+
+    page = curation.get_content(session, row.url, offset=8, limit=4)
+
+    assert page == {"text": "ij", "offset": 8, "next_offset": None, "total": 10}
+
+
+def test_a_short_article_is_one_page():
+    row = _pending_row()
+    page = curation.get_content(_FakeSession(row), row.url)
+    assert page["text"] == "the stored two thousand characters"
+    assert page["next_offset"] is None
+    assert page["links"] == {}
+
+
+@pytest.mark.parametrize(
+    "total, offset, limit, expected",
+    [
+        (10, 0, 4, (0, 4)),
+        (10, 8, 4, (8, 10)),
+        (10, -5, 4, (0, 4)),  # a negative offset reads from the start
+        (10, 20, 4, (10, 10)),  # past the end is an empty page, not an error
+        (10, 0, 0, (0, 1)),  # a page is at least one character
+        (0, 0, 4, (0, 0)),
+        (CANDIDATE_CAP * 2, 0, CANDIDATE_CAP * 2, (0, CANDIDATE_CAP)),
+    ],
+)
+def test_page_bounds(total, offset, limit, expected):
+    assert curation.page_bounds(total, offset, limit) == expected
+
+
+def test_get_content_needs_a_pending_candidate():
+    row = _pending_row(stage=RejectStage.below_threshold)
+    with pytest.raises(curation.CandidateError, match="already"):
+        curation.get_content(_FakeSession(row), row.url)
+
+
+# ─── reject_many ─────────────────────────────────────────────────────────────
+
+
+def test_reject_many_settles_each_verdict_on_its_own():
+    first = _pending_row(url="https://a.example/1")
+    third = _pending_row(url="https://a.example/3")
+    session = _FakeSession(first, third)
+
+    lines = curation.reject_many(
+        session,
+        [
+            {"url": first.url, "score": 20, "reason": "Vendor tutorial."},
+            {"url": "https://a.example/2", "score": 30, "reason": "r"},
+            {"url": third.url, "score": 25, "reason": "Opinion, no evidence."},
+        ],
     )
+
+    assert lines == [
+        "Rejected [20/100] https://a.example/1",
+        "Skipped https://a.example/2: No candidate for https://a.example/2",
+        "Rejected [25/100] https://a.example/3",
+    ]
+    assert (first.stage, third.stage) == (RejectStage.below_threshold,) * 2
+    assert third.reason == "Opinion, no evidence."
+
+
+def test_reject_many_survives_a_failed_write():
+    first = _pending_row(url="https://a.example/1")
+    second = _pending_row(url="https://a.example/2")
+    session = _FakeSession(first, second)
+    calls = {"n": 0}
+
+    def commit_fails_once() -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("connection reset")
+
+    session.commit = commit_fails_once  # type: ignore[method-assign]
+
+    lines = curation.reject_many(
+        session,
+        [
+            {"url": first.url, "score": 20, "reason": "r"},
+            {"url": second.url, "score": 20, "reason": "r"},
+        ],
+    )
+
+    assert lines[0] == "Failed https://a.example/1: RuntimeError: connection reset"
+    assert lines[1] == "Rejected [20/100] https://a.example/2"
+    assert session.rollbacks == 1
+
+
+# ─── similar and stories: the pure parts ─────────────────────────────────────
+
+
+def _vecs(*rows: list[float]) -> np.ndarray:
+    return np.array(rows, dtype=np.float32)
+
+
+def test_cosine_distance_is_zero_for_the_same_direction():
+    d = curation.cosine_distances(_vecs([1, 0]), _vecs([2, 0], [0, 1], [-1, 0]))
+    assert np.allclose(d, [[0, 1, 2]])
+
+
+def test_cosine_distance_survives_a_zero_vector():
+    d = curation.cosine_distances(_vecs([0, 0]), _vecs([1, 0]))
+    assert np.isfinite(d).all()
+
+
+def test_nearest_is_closest_first_within_the_cutoff():
+    distances = np.array([0.40, 0.10, 0.50, 0.25])
+    assert curation.nearest(distances, cutoff=0.45, limit=8) == [1, 3, 0]
+    assert curation.nearest(distances, cutoff=0.45, limit=2) == [1, 3]
+
+
+def test_coverage_counts_distinct_publishers_under_the_cutoff_and_the_own():
+    publishers = ["The Verge", "The Verge", "Wired", "Simon Willison", ""]
+    distances = np.array([0.10, 0.20, 0.29, 0.40, 0.05])
+    assert curation.covering(publishers, distances, "OpenAI", 0.30) == [
+        "OpenAI",
+        "The Verge",
+        "Wired",
+    ]
+
+
+def test_story_groups_join_pending_rows_with_each_other_and_the_feed():
+    # 0, 1 pending and the same story; 2 a feed article on it; 3 a pending
+    # candidate on its own; 4 a feed article on nothing queued.
+    vecs = _vecs([1, 0, 0], [0.98, 0.1, 0], [0.97, 0.12, 0], [0, 1, 0], [0, 0, 1])
+    pending = [True, True, False, True, False]
+
+    groups = curation.story_groups(curation.cosine_distances(vecs, vecs), pending, 0.30)
+
+    assert [sorted(g) for g in groups] == [[0, 1, 2]]
+
+
+def test_feed_articles_do_not_chain_a_group_through_each_other():
+    # Pending 0 is close to article 1; article 2 is close to article 1 but not
+    # to 0. Without a pending end on every edge, 2 would ride in through 1.
+    distances = np.array(
+        [
+            [0.0, 0.2, 0.6],
+            [0.2, 0.0, 0.2],
+            [0.6, 0.2, 0.0],
+        ]
+    )
+    groups = curation.story_groups(distances, [True, False, False], 0.30)
+    assert [sorted(g) for g in groups] == [[0, 1]]
+
+
+def test_a_group_of_feed_articles_alone_is_not_a_story():
+    distances = np.array([[0.0, 0.1], [0.1, 0.0]])
+    assert curation.story_groups(distances, [False, False], 0.30) == []

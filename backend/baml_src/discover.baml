@@ -1,6 +1,6 @@
 // Batched relevance classifier for the Substack discovery crawler.
-// One LLM call judges many candidate profiles at once (see ScoreArticles for
-// the array-in/array-out batching pattern). Classification runs on cheap
+// One LLM call judges many candidate profiles at once (array in, array out).
+// Classification runs on cheap
 // metadata (name + description) BEFORE any per-profile post fetch, and gates
 // both DB insertion and whether the crawler recurses into that profile.
 

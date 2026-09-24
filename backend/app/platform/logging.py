@@ -27,8 +27,9 @@ def short_error(e: BaseException, limit: int = ERROR_CHARS) -> str:
 
     A provider error is not always one line: a BAML failure carries every
     attempt's rendered prompt and whatever HTML the upstream served, which is
-    tens of KB. That text is stored in ``pipeline_run.sources`` and emailed by
-    the verifier, so it gets cut here rather than at each call site.
+    tens of KB. That text is stored in ``pipeline_run.sources`` and
+    ``publisher.last_error`` and emailed in the daily mail, so it gets cut here
+    rather than at each call site.
     """
     message = f"{type(e).__name__}: {e}"
     collapsed = " ".join(message.split())

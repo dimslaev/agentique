@@ -11,8 +11,7 @@ import time
 import pytest
 
 from pipeline.sources import hn
-from pipeline.sources.hn import _to_article, has_traction
-from pipeline.topic_gate import is_on_topic
+from pipeline.sources.hn import _to_article, has_traction, is_on_topic
 
 HOUR = 3600
 
@@ -159,7 +158,6 @@ def _stub_hn(monkeypatch, ids_by_feed: dict[str, list[int]]) -> list[int]:
 
     monkeypatch.setattr(hn, "_story_ids", story_ids)
     monkeypatch.setattr(hn, "_fetch_item", fetch_item)
-    monkeypatch.setattr(hn, "extract_content", lambda articles: articles)
     return looked_up
 
 
@@ -183,6 +181,14 @@ def test_an_id_on_both_listings_is_fetched_once(monkeypatch):
 def test_both_listings_failing_yields_nothing(monkeypatch):
     _stub_hn(monkeypatch, {})
     assert hn.fetch_hn() == []
+
+
+def test_items_leave_the_source_with_no_content(monkeypatch):
+    """The fetch step re-fetches anything under 500 characters in full. A
+    500-character snippet filled here slipped past that check, so every HN
+    candidate was stored as a teaser and the agent fetched the page again."""
+    _stub_hn(monkeypatch, {"top": [1, 2]})
+    assert [a["content"] for a in hn.fetch_hn()] == ["", ""]
 
 
 # ─── traction gate ───────────────────────────────────────────────────────────

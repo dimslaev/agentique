@@ -1,19 +1,13 @@
 """The pipeline's steps, in the order run.py applies them.
 
-    fetch     - poll each source, fill content, stamp publisher/trust per item
-    filter    - drop known URLs, dead domains, semantic duplicates
+    fetch     - poll each source, fill content, stamp each item's publisher
+    filter    - drop URLs already judged or already waiting
     queue     - park each survivor as a pending candidate. The last step.
 
 The curation agent takes it from there (pipeline/curation.py): approving a
-candidate runs persist and the embedding on that one article, with the
-summary, categories, kind and tags the agent wrote. The steps below
-are the superseded scoring tail, reachable behind LLM_SCORING=1 -- see
-docs/adr/0009-agent-curation.md:
-
-    score     - the LLM scorer against the rubric in baml_src/score.baml
-    summarize - summary per article; one that cannot be summarized stops here
-    persist   - insert what passed
-    enrich    - titles, categories/kind/tags, embedding
+candidate runs persist and enrich (the embedding) on that one article, with
+the summary, categories, kind and tags the agent wrote -- see
+docs/adr/0009-agent-curation.md.
 
 Every step takes the session and a list of articles and returns the survivors,
 so run.py reads as the funnel it is. Steps own their own logging and commits.
@@ -25,31 +19,6 @@ in the funnel it belongs.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
-from baml_client.types import ArticleInput
-from pipeline.types import Candidate
-
-# Enough of the article for the LLM to judge it by; the full text would blow up
-# the prompt for no gain in the scoring/dedup/title calls.
+# How much of an article goes into its embedding. The title carries most of
+# the signal; the opening sentence or two sharpens it.
 SNIPPET_CAP = 200
-
-
-def to_baml_input(a: Candidate) -> ArticleInput:
-    """Build a BAML ArticleInput from a candidate.
-
-    Takes a ``Candidate`` rather than a ``RawItem`` because ``trust`` is part
-    of what the model is asked to weigh, and that is only known once the
-    publisher is resolved. ``traction`` stays optional: only the aggregator
-    sources have one to report.
-    """
-    content = a["content"]
-    return ArticleInput(
-        url=a["url"],
-        title=a["title"],
-        source=a["source"],
-        snippet=content[:SNIPPET_CAP] if content else None,
-        trust=a["trust"],
-        traction=a.get("traction"),
-        seen_on=datetime.now(UTC).date().isoformat(),
-    )

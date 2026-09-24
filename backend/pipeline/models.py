@@ -57,7 +57,7 @@ class Reject(SQLModel, table=True):
     content: str | None = None
     traction: str | None = None
     score: int | None = None
-    # The scorer's one-sentence account of the score; below_threshold only.
+    # The judge's one-sentence account of the score; below_threshold only.
     reason: str | None = None
     # Stage-specific evidence: {"stars": 12}, {"keep_proba": 0.08},
     # {"dup_of": "<url>"}.
@@ -66,10 +66,16 @@ class Reject(SQLModel, table=True):
     detail: dict[str, object] | None = Field(
         default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )
+    # The repo / model / paper / docs links the article body makes,
+    # {"repo": [...], "paper": [...]}; see ``fetching.page_facts``.
+    links: dict[str, list[str]] | None = Field(
+        default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
+    )
 
 
 class PipelineRun(SQLModel, table=True):
-    """One row per nightly pipeline run — what it inserted, and the counts behind it."""
+    """One row per nightly pipeline run: did it finish, how long it took, and
+    what each source fetched and queued."""
 
     __tablename__ = "pipeline_run"
     id: int | None = Field(default=None, primary_key=True)
@@ -83,12 +89,11 @@ class PipelineRun(SQLModel, table=True):
     )
     duration_ms: int | None = None
     ok: bool = Field(default=False)
-    # per-source funnel counts plus what landed:
-    # [{source, fetched, filtered_known, ..., inserted, articles, errors}]
+    # [{source, fetched, queued, error}]. Rows from before 2026-09-23 carry
+    # the older, longer funnel shape.
     sources: list[dict] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
-    # per-publisher fetch/insert counts within the "Feeds" source: [{name, fetched, inserted, error}]
-    publishers: list[dict] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=False)
-    )
+    # The table also has a `publishers` column, per-publisher counts from before
+    # the Publisher row kept its own (last_fetched_at, last_new_at, last_error).
+    # No longer written; its default fills it.
