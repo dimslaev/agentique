@@ -19,11 +19,9 @@ from pipeline.fetching.http import (
     fetch_with_timeout,
 )
 from pipeline.fetching.page_facts import outbound_links
-from pipeline.types import RawItem
 from pipeline.urls import hostname
 
 SKIP_DOMAINS: set[str] = {"x.com", "twitter.com"}
-SNIPPET_MAX_LENGTH = 500
 EXTRACT_TIMEOUT_SECS = 5.0
 # The proxy adds a hop and tends to land on slower exit nodes.
 PROXY_TIMEOUT_SECS = 20.0
@@ -140,9 +138,8 @@ def _fetch_pages(
 ) -> dict[str, Page]:
     """Fetch and extract many URLs in parallel -> {url: page}, skipping failures.
 
-    Shared core of ``extract_content`` (short snippets, quiet) and
-    ``fetch_full_content`` (full text, logs per-URL progress because it is the
-    slow step).
+    The core of ``fetch_full_content``; logs per-URL progress when ``verbose``
+    because it is the slow step.
     """
     total = len(urls)
 
@@ -167,28 +164,6 @@ def _fetch_pages(
             except Exception:
                 pass
     return pages
-
-
-def extract_content(articles: list[RawItem]) -> list[RawItem]:
-    """Fill in missing content snippets for a list of article dicts."""
-    needs = [a for a in articles if not a["content"]]
-    if not needs:
-        return articles
-
-    unique_urls = list(dict.fromkeys(a["url"] for a in needs))
-    log(f"  Extracting content for {len(unique_urls)} URLs...")
-
-    snippet_map = _fetch_pages(unique_urls, max_length=SNIPPET_MAX_LENGTH)
-    log(f"  Extracted {len(snippet_map)}/{len(unique_urls)} snippets")
-
-    result: list[RawItem] = []
-    for a in articles:
-        page = snippet_map.get(a["url"])
-        if not a["content"] and page:
-            result.append({**a, "content": page.text, "links": page.links})
-        else:
-            result.append(a)
-    return result
 
 
 def fetch_full_content(urls: list[str]) -> dict[str, Page]:

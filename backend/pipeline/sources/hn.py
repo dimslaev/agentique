@@ -8,7 +8,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from app.platform.logging import log
-from pipeline.fetching.extract_content import extract_content
 from pipeline.fetching.http import fetch_with_timeout
 from pipeline.first_party import is_first_party
 from pipeline.freshness import is_within_window
@@ -246,8 +245,9 @@ def _to_article(item: dict) -> RawItem | None:
 
     Gates, cheapest first: it must be a titled story, its title must look
     AI-related, it must fall inside the pipeline's recency window, and HN's own
-    readers must have given it some traction. Content stays empty here —
-    ``extract_content`` fills it for the survivors.
+    readers must have given it some traction. Content stays empty here: the
+    fetch step (``steps.fetch._with_content``) fetches the full text, as it
+    does for every thin source.
     """
     if not item or item.get("type") != "story" or not item.get("title"):
         return None
@@ -316,4 +316,4 @@ def fetch_hn() -> list[RawItem]:
         f"traction (>={hn_min_points()} points or >={hn_min_comments()} comments "
         f"after {hn_grace_hours():g}h); {len(ids)} ids scanned"
     )
-    return extract_content(articles)
+    return articles
