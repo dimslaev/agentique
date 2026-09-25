@@ -1,4 +1,4 @@
-// Unused page: kept for now but hidden from nav (unlinked from AppSidebar).
+// Unused page: kept for now but hidden from nav (not linked from the header).
 // The route, the /api/subscribe backend endpoint, and SubscribeForm all remain.
 import { createFileRoute } from "@tanstack/react-router"
 

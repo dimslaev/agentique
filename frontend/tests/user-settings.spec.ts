@@ -203,7 +203,7 @@ test.describe("Change password validation", () => {
   })
 })
 
-test("Appearance button is visible in sidebar", async ({ page }) => {
+test("Appearance button is visible in header", async ({ page }) => {
   await page.goto("/profile")
   await expect(page.getByTestId("theme-button")).toBeVisible()
 })

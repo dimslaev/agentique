@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ArticlesList } from "@/components/Articles/ArticlesList"
+import { Feed } from "@/components/Articles/Feed"
 
 export const Route = createFileRoute("/_layout/feed")({
-  component: ArticlesList,
+  component: Feed,
   head: () => ({
     meta: [{ title: "Feed - Agentique" }],
   }),
