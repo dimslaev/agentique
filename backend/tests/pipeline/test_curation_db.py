@@ -162,14 +162,45 @@ def test_stories_groups_the_queue_with_the_feed(db: Session, world: dict):
     assert story["coverage"] == 2
 
 
+def _all_candidates(db: Session, limit: int = curation.LIST_LIMIT) -> list[dict]:
+    """Every pending row, read page by page as the agent does."""
+    page = curation.list_candidates(db, limit=limit)
+    rows = page["rows"]
+    while page["next_offset"] is not None:
+        page = curation.list_candidates(db, offset=page["next_offset"], limit=limit)
+        rows += page["rows"]
+    return rows
+
+
 def test_list_candidates_shows_each_publishers_approval_rate(db: Session, world: dict):
-    rows = {r["url"]: r for r in curation.list_candidates(db)}
+    rows = {r["url"]: r for r in _all_candidates(db)}
     # Verge: nothing published, nothing turned down yet.
     assert rows[world["verge"]]["approved"] == "new"
     assert "trust" not in rows[world["verge"]]
     # Blog's one article is 30 days old: outside `similar`'s week, inside the
     # 90 days a record reaches.
     assert rows[world["lone"]]["approved"] == "1/1"
+
+
+def test_list_candidates_pages_through_the_whole_queue(db: Session, world: dict):
+    first = curation.list_candidates(db, limit=1)
+    assert first["offset"] == 0
+    assert len(first["rows"]) == 1
+
+    urls = [r["url"] for r in _all_candidates(db, limit=1)]
+
+    # Every pending row once, and only pending rows.
+    assert len(urls) == len(set(urls)) == first["total"]
+    assert {world["verge"], world["lone"]} <= set(urls)
+    assert f"https://wired.example/{TAG}/astra" not in urls
+
+
+def test_list_candidates_past_the_end_is_an_empty_last_page(db: Session, world: dict):
+    page = curation.list_candidates(db, offset=10**6)
+    assert page["rows"] == []
+    assert page["next_offset"] is None
+    assert page["offset"] == page["total"]
+    assert world
 
 
 def test_approval_counts_reads_articles_and_agent_rejects(db: Session, world: dict):

@@ -72,7 +72,7 @@ Run the agentique nightly curation session.
 
 Invoke the `curate` skill (`.claude/skills/curate/SKILL.md` in this repo) and follow it end to end:
 
-1. `list_candidates()` on the agentique MCP server for everything the 04:00 pipeline queued, and `vocabulary()` once for the labels.
+1. `list_candidates()` on the agentique MCP server for everything the 04:00 pipeline queued, passing `next_offset` back as `offset` until it is null — read every page before settling any candidate. `vocabulary()` once for the labels.
 2. Triage on title and snippet. Reject what triage settles in one `reject_many`.
 3. Call `stories()` once, to see which candidates are one story and which the feed already carries.
 4. Read page one of `get_content(url)` for everything past triage; read on to the end for anything you approve. `check_link` the repo or model an approval rests on. Use `web_fetch` only when the stored text is empty, a teaser or cut short, and the web tools otherwise only where the skill's "Looking further" section says to.

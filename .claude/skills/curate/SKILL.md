@@ -18,9 +18,12 @@ before approving anything.**
 
 From the `agentique` MCP server, with the curation token:
 
-- `list_candidates()` — everything waiting on a verdict: URL, title, source,
-  publisher, `approved` (the publisher's approvals / decisions over 90 days, or
-  "new"), traction, dates, a 200-character snippet.
+- `list_candidates(offset=0)` — one page of up to 50 candidates waiting on a
+  verdict: URL, title, source, publisher, `approved` (the publisher's
+  approvals / decisions over 90 days, or "new"), traction, dates, a
+  200-character snippet. `next_offset` reads on; null means you have them all.
+  Read every page before settling anything: a verdict shifts the pages after
+  it.
 - `get_content(url, offset=0, limit=4000)` — one page of the stored article
   text (up to 12000 characters in all). Page one also carries `links`: the
   repo, model, paper and docs URLs the article body links. `next_offset` reads
