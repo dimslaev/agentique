@@ -29,7 +29,7 @@ export type TopicDef = {
   category?: string
 }
 
-/** Rows shown per box, and the page size of every underlying request. */
+/** Page size of every underlying request; the box shows the top few of the merge. */
 export const BOX_LIMIT = 10
 
 /**
