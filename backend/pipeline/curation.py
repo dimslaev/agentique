@@ -45,10 +45,10 @@ from pipeline.url_kind import kind_from_url
 # candidates at full content is more than a reading pass can hold, and the
 # agent asks for `get_content` on the ones worth a second look.
 LIST_SNIPPET = 200
-# How many pending rows one listing returns. A night queues tens, not hundreds;
-# the cap is here so a backlog after a missed session comes back in readable
-# pages rather than all at once.
-LIST_LIMIT = 200
+# How many pending rows one page of `list_candidates` returns. A night queues
+# over 150, which at ~500 characters a row is more than one tool result may
+# carry; 50 keeps a page near 7k tokens.
+LIST_LIMIT = 50
 # How far back a publisher's approval rate reaches. Long enough that a weekly
 # blog has a record, short enough to follow a publisher that changed.
 APPROVAL_WINDOW_DAYS = 90
@@ -122,39 +122,70 @@ def approval_counts(
     return counts
 
 
-def list_candidates(session: Session, limit: int = LIST_LIMIT) -> list[dict[str, str]]:
-    """Every candidate waiting on a verdict, freshest first.
+class CandidatePage(TypedDict):
+    """One page of the pending queue. ``next_offset`` is None on the last page."""
+
+    rows: list[dict[str, str]]
+    offset: int
+    next_offset: int | None
+    total: int
+
+
+def list_candidates(
+    session: Session, offset: int = 0, limit: int = LIST_LIMIT
+) -> CandidatePage:
+    """One page of the candidates waiting on a verdict, freshest first.
 
     One row per URL with what a triage pass needs and nothing more: the
     publisher and its approval rate over `APPROVAL_WINDOW_DAYS`, the traction
     the source reported, the dates, and the opening `LIST_SNIPPET` characters.
+
+    Paged by offset, so a verdict shifts every page after it: read all the
+    pages before settling any candidate.
     """
+    pending = col(Reject.stage) == RejectStage.pending
+    total = session.exec(select(func.count()).select_from(Reject).where(pending)).one()
+    start = min(max(offset, 0), total)
+    size = min(max(limit, 1), LIST_LIMIT)
     rows = session.exec(
         select(Reject, Publisher)
         .join(Publisher, col(Publisher.id) == col(Reject.publisher_id), isouter=True)
-        .where(col(Reject.stage) == RejectStage.pending)
-        .order_by(col(Reject.published_at).desc().nulls_last(), col(Reject.created_at))
-        .limit(limit)
+        .where(pending)
+        .order_by(
+            col(Reject.published_at).desc().nulls_last(),
+            col(Reject.created_at),
+            col(Reject.url),
+        )
+        .offset(start)
+        .limit(size)
     ).all()
 
     since = datetime.now(UTC) - timedelta(days=APPROVAL_WINDOW_DAYS)
     ids = list({r.publisher_id for r, _ in rows if r.publisher_id is not None})
     counts = approval_counts(session, ids, since)
 
-    return [
-        {
-            "url": r.url,
-            "title": r.title or "",
-            "source": r.source or "",
-            "publisher": p.name if p else "",
-            "approved": approval_rate(*counts.get(r.publisher_id or 0, (0, 0))),
-            "traction": r.traction or "",
-            "published_at": r.published_at.date().isoformat() if r.published_at else "",
-            "queued_at": r.created_at.date().isoformat(),
-            "snippet": (r.content or "")[:LIST_SNIPPET],
-        }
-        for r, p in rows
-    ]
+    end = start + len(rows)
+    return {
+        "rows": [
+            {
+                "url": r.url,
+                "title": r.title or "",
+                "source": r.source or "",
+                "publisher": p.name if p else "",
+                "approved": approval_rate(*counts.get(r.publisher_id or 0, (0, 0))),
+                "traction": r.traction or "",
+                "published_at": r.published_at.date().isoformat()
+                if r.published_at
+                else "",
+                "queued_at": r.created_at.date().isoformat(),
+                "snippet": (r.content or "")[:LIST_SNIPPET],
+            }
+            for r, p in rows
+        ],
+        "offset": start,
+        "next_offset": end if end < total else None,
+        "total": total,
+    }
 
 
 class ContentPage(TypedDict):

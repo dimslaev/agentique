@@ -192,8 +192,15 @@ def _curation_session() -> Session:
     return Session(engine)
 
 
-def list_candidates() -> list[dict[str, str]]:
-    """List the articles waiting on a curation verdict, freshest first.
+def list_candidates(
+    offset: int = 0, limit: int = curation.LIST_LIMIT
+) -> curation.CandidatePage:
+    """List one page of the articles waiting on a curation verdict, freshest first.
+
+    Returns `rows`, `offset`, `next_offset` (null on the last page — pass it
+    back as `offset` for the next one) and `total` pending. Pages hold at most
+    50 rows. Read every page before settling any candidate: a verdict removes
+    its row and shifts the pages after it.
 
     One row per candidate: `url`, `title`, `source` (where the link was found),
     `publisher`, `approved` (the publisher's approvals / decisions over the
@@ -206,7 +213,7 @@ def list_candidates() -> list[dict[str, str]]:
     """
     _require_write()
     with _curation_session() as session:
-        return curation.list_candidates(session)
+        return curation.list_candidates(session, offset, limit)
 
 
 def get_content(
