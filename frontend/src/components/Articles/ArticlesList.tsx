@@ -53,7 +53,7 @@ export function ArticlesList() {
     <div className="relative">
       {/* Published and Sort change how the wire is shown rather than what is
           on it, so they sit with the wire instead of with the filters. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b pt-5 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-b pt-5 pb-3 max-sm:pt-0">
         <h1 className="font-display text-sm font-bold uppercase tracking-[0.1em] max-sm:w-full">
           The wire
         </h1>

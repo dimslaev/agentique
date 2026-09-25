@@ -45,33 +45,78 @@ export function FeedFilters() {
   const { filters, setFilter } = useFilters()
 
   return (
-    <section
-      aria-label="Filters"
-      className="flex flex-col gap-3.5 border-b pb-5"
-    >
-      <SearchInput />
-      <div className="flex flex-col gap-2">
-        <FilterRow label="Category">
-          <FilterOptions
-            label="Category"
-            options={CATEGORY_OPTIONS}
-            value={filters.category}
-            onChange={(v) => setFilter("category", v)}
-          />
-        </FilterRow>
-        <FilterRow label="Kind">
-          <FilterOptions
-            label="Kind"
-            options={KIND_OPTIONS}
-            value={filters.kind}
-            onChange={(v) => setFilter("kind", v)}
-          />
-        </FilterRow>
-        <FilterRow label="Tags">
-          <TagOptions />
-        </FilterRow>
-      </div>
-    </section>
+    <>
+      <MobileActiveFilters />
+      {/* Hidden on phones, where it pushed the wire half a screen down. */}
+      <section
+        aria-label="Filters"
+        className="flex flex-col gap-3.5 border-b pb-5 max-sm:hidden"
+      >
+        <SearchInput />
+        <div className="flex flex-col gap-2">
+          <FilterRow label="Category">
+            <FilterOptions
+              label="Category"
+              options={CATEGORY_OPTIONS}
+              value={filters.category}
+              onChange={(v) => setFilter("category", v)}
+            />
+          </FilterRow>
+          <FilterRow label="Kind">
+            <FilterOptions
+              label="Kind"
+              options={KIND_OPTIONS}
+              value={filters.kind}
+              onChange={(v) => setFilter("kind", v)}
+            />
+          </FilterRow>
+          <FilterRow label="Tags">
+            <TagOptions />
+          </FilterRow>
+        </div>
+      </section>
+    </>
+  )
+}
+
+/**
+ * Phones don't get the filter rows, but a filter can still be active there: a
+ * tag tapped on a row, or one set before the window narrowed. Say what is
+ * applied and offer a way out, or the wire looks inexplicably short.
+ */
+function MobileActiveFilters() {
+  const { filters, setFilter, setTag } = useFilters()
+  const { search, category, kind, tag, tagName } = filters
+
+  const applied = [
+    search && `"${search}"`,
+    CATEGORY_OPTIONS.find((o) => o.value === category && category)?.label,
+    KIND_OPTIONS.find((o) => o.value === kind && kind)?.label,
+    tag && `#${tagName || tag}`,
+  ].filter(Boolean)
+
+  if (applied.length === 0) return null
+
+  return (
+    <div className="mb-4 flex items-center gap-3 border-b pb-3 font-wire text-[11px] text-muted-foreground sm:hidden">
+      <span className="min-w-0 truncate">
+        Filtered by{" "}
+        <span className="text-foreground">{applied.join(" · ")}</span>
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          setFilter("search", "")
+          setFilter("category", "")
+          setFilter("kind", "")
+          setTag("", "")
+        }}
+        className="ml-auto flex shrink-0 items-center gap-1 py-2 uppercase tracking-[0.08em] hover:text-foreground"
+      >
+        <X className="h-3 w-3" />
+        Clear
+      </button>
+    </div>
   )
 }
 
@@ -97,6 +142,11 @@ function SearchInput() {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
   }, [])
+
+  // Clear from outside (the phone filter summary) has to empty the box too.
+  useEffect(() => {
+    if (filters.search === "") setLocalSearch("")
+  }, [filters.search])
 
   return (
     <div className="flex items-center gap-2 border bg-background px-2.5 focus-within:border-foreground">
