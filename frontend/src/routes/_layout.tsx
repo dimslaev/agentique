@@ -1,12 +1,8 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router"
+import { Appearance } from "@/components/Common/Appearance"
 import { Footer } from "@/components/Common/Footer"
 import { Logo } from "@/components/Common/Logo"
-import AppSidebar from "@/components/Sidebar/AppSidebar"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import { UserMenu } from "@/components/Common/UserMenu"
 import { FiltersProvider } from "@/context/filters"
 
 // Public shell: every page under it is readable logged out. Pages that need a
@@ -18,21 +14,21 @@ export const Route = createFileRoute("/_layout")({
 function Layout() {
   return (
     <FiltersProvider>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
-          <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4">
-            <SidebarTrigger className="-ml-1 text-muted-foreground" />
-            <Logo expandable className="md:hidden" />
-          </header>
-          <main className="flex-1 p-6 md:p-8">
-            <div className="mx-auto max-w-3xl">
-              <Outlet />
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-10 shrink-0 border-b bg-background">
+          <div className="mx-auto flex h-12 max-w-3xl items-center gap-4 px-4">
+            <Logo full className="-ml-2" />
+            <div className="ml-auto flex items-center gap-3">
+              <Appearance />
+              <UserMenu />
             </div>
-          </main>
-          <Footer />
-        </SidebarInset>
-      </SidebarProvider>
+          </div>
+        </header>
+        <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-7 pb-12">
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
     </FiltersProvider>
   )
 }

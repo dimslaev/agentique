@@ -1,6 +1,6 @@
 // Landing-page topic boxes.
 //
-// A box earns its place only if the /feed sidebar cannot express it. /feed is
+// A box earns its place only if the /feed filters cannot express it. /feed is
 // single-select (one tag, one kind, one category), so a union of tags or a
 // tag-crossed-with-kind is a box; a lone `tag=security` is just a filter chip
 // and does not belong here.
@@ -29,7 +29,7 @@ export type TopicDef = {
   category?: string
 }
 
-/** Rows shown per box, and the page size of every underlying request. */
+/** Page size of every underlying request; the box shows the top few of the merge. */
 export const BOX_LIMIT = 10
 
 /**
