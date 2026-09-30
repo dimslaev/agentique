@@ -1,4 +1,4 @@
-# 12. An agent drafts the weekly newsletter, a person sends it
+# 12. An agent drafts three weekly newsletters, a person sends one
 
 ## Status
 
@@ -7,59 +7,71 @@ Accepted.
 ## Context
 
 Subscribers have been collected into a Resend audience since the landing page
-went up, and nothing was ever sent to them. The feed already holds what an
-issue needs: every article was read by the curation agent (ADR 9), scored, and
-summarised from the full text, and carries an embedding.
+went up, and nothing was ever sent to them. The feed already holds the week:
+every article was read by the curation agent (ADR 9), scored, summarised from
+the full text, and embedded.
 
-What a list of the week's top scores does not give is the reason to open the
-email: the release beside an individual writer who measured it, or a repo that
-builds on it. That second article is often not in the same week, and it is
-sometimes not in the feed at all, because curation rejects a copy of a story
-the feed already carries as a retelling.
+A list of the week's top scores is not what a subscriber would open. What is
+worth an email is one thing explained well: what it is, how it works, and what
+the people who tried it found. That last part is rarely in the article the
+feed published. It is in an individual writer's post two weeks later, in the
+repo someone built on it, in a Hacker News thread, and sometimes in a copy
+curation rejected as a retelling.
+
+"Most talked-about" is also not something the feed can say on its own:
+curation approves one copy of a story and rejects the rest, so every story
+looks like it was carried once.
 
 ## Decision
 
-    Friday 07:52:  week -> pick 3-5 stories -> related for each -> draft_issue
-    a person:      reads the preview -> sends it from Resend
+    Friday 07:52:  week -> 3 topics -> for each: read, search, write -> draft_issue
+    a person:      reads the three previews -> sends one from Resend
 
 - **A Claude Code session writes it.** A second routine on claude.ai/code,
   like curation, runs `.claude/skills/newsletter/SKILL.md` against the MCP
   server with the write token.
-- **The tools rank and group; they do not judge.** `week` groups the week's
-  articles into stories with curation's embedding maths and ranks them by
-  score, then coverage. `related` looks 30 days back at the same subject,
-  published articles and rejects that scored 55 or more, and marks each row's
-  publisher kind and article kind so the skill can ask for an individual
-  writer or a repo directly.
-- **The agent writes words, not HTML.** `draft_issue` takes the issue as
-  structured fields and the box renders one autoescaped template, so every
-  issue looks the same and nothing written can break it.
+- **Popularity counts the ledger.** `week` groups the week's articles into
+  topics with curation's embedding maths, attaches the ledger rows on the same
+  story, and ranks by distinct publishers across both, then likes.
+- **The agent reads before it writes.** `related` reaches a month back, rejects
+  scored 35 or more included, and marks each row's publisher kind and article
+  kind; the agent fetches the first-party source, the individual writers and
+  repos, and searches for how people are taking it.
+- **One explainer per draft, in a person's voice.** 250-450 words in the tone
+  of Julia Evans's posts, linking at least three sources it read. It never
+  claims to have run anything itself.
+- **Three drafts, one send.** The agent drafts the top three topics; a person
+  picks one. The routine never calls `send_issue`.
+- **The agent writes prose, not HTML.** `draft_issue` takes plain text with
+  paragraphs, list lines, `[text](url)` links and code spans; the box escapes
+  the rest and renders one template: the site's wordmark, the prose, links to
+  the feed and to unsubscribe.
 - **The box holds the key.** The routine runs off-box with only an MCP token;
   `draft_issue` and `send_issue` call Resend from the backend.
-- **It drafts; a person sends.** The routine never calls `send_issue`. The
-  first issues are read before they go out.
-- **Nothing is stored.** An issue covers exactly the 7 days before it, so an
-  article cannot be in two, and Resend keeps every broadcast.
+- **Nothing is stored.** An issue covers the 7 days before it, and Resend keeps
+  every broadcast.
 
 ## Consequences
 
-The newsletter costs one session a week and no new table. The session's
-report names where each link came from, so a bad pick can be traced to the
-skill or to the data.
+The newsletter costs one session a week and no new table. The session reads
+more than curation does per item (up to 4 searches and 8 fetches a topic),
+which is affordable once a week and would not be every night.
 
-Sending waits on a person every Friday. That is deliberate until a few issues
-have gone out as drafted; then the routine can call `send_issue` itself, or
-draft with a scheduled send a person can cancel.
+Sending waits on a person every Friday, by design: they choose the topic as
+much as they approve the writing. Two unsent drafts a week pile up in Resend;
+deleting them there is the cleanup.
 
-`related` embeds the month's rejects on the fly in the API process, as
-`similar` does for the week. A few thousand rows a month is fine with
-model2vec; an order of magnitude more and the vectors belong on the row.
+The voice is the risk. A model imitating a writer's tone drifts toward the
+tics it was told to avoid, and a first person that "tried" things it never ran
+would be making things up. The skill forbids both; the person reading three
+previews a week is the check.
+
+`week` and `related` embed the ledger on the fly in the API process, as
+`similar` does. A week is under a thousand rows and a month a few thousand,
+fine with model2vec; an order of magnitude more and the vectors belong on the
+row.
 
 `publisher_kind` is only as good as the publisher rows: the pipeline creates
 unknown publishers as `media`, so the skill reads the URL too. Setting `kind`
-on the individual writers the feed already carries makes the newsletter better
-without a code change.
-
-Subscriber categories (`dev`, `models`, `research`) are stored on
-`newsletter_subscriber` but not on the Resend audience; every subscriber gets
-the same issue until the list is big enough to split.
+on the individual writers the feed already carries improves the drafts without
+a code change.

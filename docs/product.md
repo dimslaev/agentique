@@ -26,12 +26,13 @@ query and finds the nearest articles in vector space, so "how do I run a model l
 surfaces relevant pieces even if none of them use that exact phrase.
 
 **Newsletter.** Visitors can subscribe with just an email from the landing page;
-subscribers are synced to a Resend audience. Every Friday a Claude Code session reads
-the week's articles, picks a lead story and a few more, backs each with an individual
-writer's hands-on take, a repo or a paper from the feed, adds a handful of quick hits,
-and drafts the issue as a Resend broadcast. A person reads the preview and sends it
-(docs/adr/0012). Separate from creating an account — subscribing doesn't create a
-login, and signing up for an account doesn't subscribe you.
+subscribers are synced to a Resend audience. Every Friday a Claude Code session finds
+the week's most talked-about topics, reads what individual writers, repos and
+discussions say about each, and writes three short explainers, one per topic: what the
+thing is, how it works, how people are taking it, with links to the sources. They land
+as Resend drafts and a person sends one (docs/adr/0012). Separate from creating an
+account — subscribing doesn't create a login, and signing up for an account doesn't
+subscribe you.
 
 **A developer API — public, paid tier not live yet.** The article endpoints (list,
 search, facets, publishers, tags, stats) are open and unauthenticated, with no date

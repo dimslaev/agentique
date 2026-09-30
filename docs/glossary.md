@@ -24,7 +24,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 
 - **Coverage** - how many distinct publishers carry one story, counted by `similar` and `stories` (`pipeline/curation.py`): rows within 0.30 cosine distance of each other across the feed and the ledger. Reach evidence for the curation agent, like traction.
 
-- **Issue** - one weekly newsletter email: a lead story and 2-4 more, each with up to three "go further" links (an individual writer's take, a repo, a paper), and a few quick hits. Drafted on Fridays by the newsletter agent (`.claude/skills/newsletter/SKILL.md`) through `week`, `related` and `draft_issue` (`app/newsletter/`), as a Resend broadcast. Not stored here: Resend keeps them, and an issue covers exactly the 7 days before it, so no article is in two.
+- **Issue** - one weekly newsletter email: a 250-450 word explainer of one topic, what it is, how it works and how people are taking it, linking the sources it was written from. The newsletter agent (`.claude/skills/newsletter/SKILL.md`) drafts three a week, one per topic, through `week`, `related` and `draft_issue` (`app/newsletter/`), and a person sends one. Not stored here: Resend keeps the broadcasts.
 
 - **Traction** - outside signal that people found a story worth reading, independent of the agent's score: Hacker News points/comments past a minimum, which hold back low-traction submissions from the "everyone can post" source; a repo's stars or a model's downloads, which the curation agent reads with `check_link`; and coverage (above). A first-party URL (`pipeline/first_party.py`) skips the gate - a lab's own announcement counts as news at zero votes.
 

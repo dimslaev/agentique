@@ -1,135 +1,140 @@
 ---
 name: newsletter
-description: Draft the weekly agentique newsletter from the week's published articles - pick the best stories, back each one with an individual writer's take, a repo or a paper, and draft it as a Resend broadcast. Use when running the Friday newsletter session, or when asked to draft, write or preview the weekly issue.
+description: Draft three candidate weekly agentique newsletters, one per topic - find the week's most talked-about topics, read what individual writers, repos and discussions say about each, and write a short explainer in the tone of Julia Evans. Use when running the Friday newsletter session, or when asked to draft, write or preview the weekly issue.
 ---
 
 # Draft the weekly issue
 
-The feed already judged every article: the curation agent read each one,
-scored it and wrote its summary. You do not re-judge. You pick the stories a
-builder most needs from the week, find what backs each one, and write the email.
-
-The reader builds with AI and gets one email a week from us. It should leave
-them knowing what shipped and with something to open: a post that measured it,
-a repo that uses it.
+Each week you write three drafts, one per topic, and a person picks the one
+that goes out. Each draft is one short essay: what this new thing actually is,
+how it works, how people are using it and what they make of it, with links to
+the sources you read. It takes one to two minutes to read and sounds like a
+person wrote it, because a person will put their name to it.
 
 ## Tools
 
 From the `agentique` MCP server, with the curation token:
 
-- `week(days=7, min_score=70)` - the week's articles grouped into stories,
-  highest `top_score` first, then widest `coverage`. Each article carries
-  `publisher_kind`, `kind`, `score`, `likes` and the curation `summary`.
-- `related(url, days=30, limit=12)` - what else covers one article's subject:
-  published articles and rejects scored 55+, closest first, with `distance`
-  (under 0.30 the same story, up to 0.45 the same subject), `summary` for a
-  published row and curation's `reason` for a rejected one.
+- `week(days=7, limit=12)` - the week's topics, the most talked-about first:
+  `coverage` counts every publisher that carried it, including the copies
+  curation rejected as retellings (`covered_by`). Each topic's `articles`
+  carry the `summary` curation wrote after reading them.
+- `related(url, days=30, limit=12)` - what else covers a topic over the last
+  month: published articles and rejects scored 35+, with `publisher_kind`,
+  `kind`, `distance`, and a `summary` or curation's `reason`.
+- `web_fetch(url)` - read a page. `web_search(query)` - find pages.
 - `check_link(url)` - stars, last push, README for a repo; downloads and
   weights for a model.
-- `web_search(query)`, `web_fetch(url)` - see **Looking further**.
 - `sql_query(sql)` - read-only, for anything the tools above do not answer.
-- `draft_issue(subject, preheader, intro, stories, quick_hits)` - renders the
-  issue into the template, creates a Resend draft and mails a preview.
+- `draft_issue(label, subject, preheader, body)` - renders one draft into the
+  site's template, creates it in Resend, and mails a preview.
 - `send_issue(broadcast_id)` - mails every subscriber. **Never call it** unless
-  a person in this session read the preview and asked you to.
+  a person in this session read the drafts and asked you to.
 
 ## Rounds
 
-1. **`week()` once.** Read every story before picking any.
-2. **Pick 3-5 stories:** a lead and 2-4 more. See **Picking**.
-3. **`related(url)` for each picked story.** Pick its go-further links. See
-   **Go further**.
-4. **Look further** only where the rules below say to.
-5. **Pick 4-8 quick hits.**
-6. **Write**, check, and `draft_issue`.
+1. **`week()` once.** Read every topic before choosing.
+2. **Choose three topics.** See **Choosing**.
+3. **For each topic, research it.** See **Reading**.
+4. **For each topic, write the essay** and call `draft_issue`. See **Writing**.
+5. **Report.** See **Finish**.
 
-If `week()` has fewer than 3 stories, draft with what there is. If it has
-none, do not draft: report that the week was empty.
+Work one topic to its draft before starting the next, so a long session still
+leaves drafts behind.
 
-## Picking
+## Choosing
 
-- **The lead** is the story a builder most needs to know about this week. Start
-  from `top_score`; among close scores, reach decides: coverage of 3 or more, a
-  first-party release, likes. A 90+ release you can run today beats an 85
-  write-up; an 85 write-up with measurements beats an 88 retold announcement.
-- **The rest:** next highest score, but no two stories on the same subject, and
-  a mix - not all model releases, not all dev tooling. At most one Claude Code
-  story.
-- **Which article stands for a story:** the first-party one (the maker's own
-  post) when the group has one, otherwise the highest-scored. The other members
-  are copies of it: never link them.
-- **Skip** availability and pricing notices, and any story whose summary gives
-  you nothing concrete to say.
+- Start from the top of `week()`: coverage, then likes. The most talked-about
+  topic a builder can do something with is the first draft.
+- Pass over a topic with nothing to explain: an availability or pricing
+  notice, a funding round, a benchmark number with no method. Take the next.
+- Two topics that are one subject (a release and a post about the same
+  release) are one topic. Merge them.
+- Three different subjects. If the week has fewer than three worth writing,
+  draft what there is and say why.
 
-## Go further
+## Reading
 
-For each story, up to 2 links (3 at most), in this order of preference:
+For each topic, read before you write. Nothing goes in the essay that you did
+not read on a page this session.
 
-1. **An individual writer** who tested, benchmarked or built with the thing.
-   `publisher_kind = individual` is reliable when set, but publishers the
-   pipeline created on its own default to `media`: read the URL and the name
-   too. A personal domain, a Substack, a github.io page is usually one person.
-2. **A repo** that uses or extends it (`kind = repo`, a GitHub or GitLab URL).
-   `check_link` it: skip archived repos, repos with no README, and repos with
-   no push in months.
-3. **A paper, or a first-party doc** that explains how it works.
+1. **The thing itself.** `web_fetch` the first-party article (the maker's post,
+   the repo, the paper). If `week()` only has a retelling, search for the
+   original first.
+2. **`related(url)`** on the topic's lead article. It reaches back a month,
+   so it finds the post that came out after the release.
+3. **The people who tried it.** `web_fetch` 2-4 of these, in order:
+   - individual writers who tested, measured or built with it
+     (`publisher_kind = individual`, or a personal domain, a Substack, a
+     github.io page: the pipeline files unknown publishers as `media`)
+   - repos that use or extend it: `check_link`, then fetch the README if the
+     repo is live
+   - a paper or doc that explains how it works
+4. **How it is being taken.** `web_search` for what `related` did not have:
+   "<thing> hacker news", "<thing> review", "<thing> benchmark", "github
+   <thing>". Fetch the one or two best: a Hacker News thread, a writer's post,
+   an issue on the repo. This is where "how people perceive it" comes from.
 
-A `rejected` row can be a go-further link when its `reason` says it was turned
-down as a retelling of a story the feed already carried and it shows something
-of its own - numbers, code, steps. A row rejected for scope or quality is not.
-
-Never link a news outlet's retelling of the same announcement, the story's own
-URL, or an article already used in the issue. A story with nothing worth
-linking gets no go-further links. Empty beats filler.
-
-## Looking further
-
-- **Only for the lead**, and only when `related` gives neither an individual
-  take nor a repo: search for one ("<thing> benchmark", "<thing> review",
-  "github <thing>"). `web_fetch` a hit before linking it: it must be real, on
-  the subject, and show something. `check_link` a repo.
-- At most 5 searches and 5 fetches in the whole session.
-- Do not fetch articles from `week()` to write their bodies: the summary was
-  written by an agent that read the whole article. Fetch one only when its
-  summary is empty or too thin for two sentences.
-
-## Quick hits
-
-Articles from `week()` scored 75 or more that are not already in the issue, as
-a story or a go-further link. One line each: what it is and why a builder would
-open it. Vary the subjects.
+Per topic: at most 4 searches and 8 fetches. Skip a page that is a retelling
+of the announcement; you already have that.
 
 ## Writing
 
-- **Subject:** the lead, concrete, under 70 characters. "Ollama runs on MLX,
-  twice as fast on a Mac", not "This week in AI".
-- **Preheader:** the next two stories, one line.
-- **Intro:** 2-3 sentences. The thread through the week if there is one,
-  otherwise the lead. No greeting, no "welcome to".
-- **Story title:** a plain statement of what happened, not the article's
-  headline.
-- **Story body:** the lead about 120 words, the others about 60. What shipped or
-  was shown, the numbers with their method, what a reader would do with it.
-  Plain text, a blank line between paragraphs, no markdown, no emoji.
-- **Go-further note:** one line on what the link adds: "measured it on three
-  Macs", "a CI setup built on it". `by` is the writer's name when you know it,
-  else the publisher.
-- No marketing adjectives, no "exciting", no "this article discusses". A number
-  without its method gets its method or gets cut. Terse and concrete, like the
-  feed's summaries.
+Write in the tone of Julia Evans's blog posts (jvns.ca): curious, plain, and
+concrete. Her voice, not her words: never copy her text or say she wrote it.
+What that means here:
 
-Before drafting, check: every URL came from `week()`, `related()` or a page you
-fetched, never from memory; no URL appears twice; 3-5 stories.
+- **Start from the question.** What would a builder wonder when they first see
+  this? "I kept seeing X this week and couldn't tell what it actually does."
+- **Explain it simply first.** Say what the thing is in plain words before
+  anything about why it matters. Define a term the first time you use it.
+- **One mechanism, concretely.** The one idea that makes it work, with an
+  example: a command, a number, a before and after.
+- **What people found.** Who tried it and what they saw, by name and linked.
+  Where people disagree, say so. "Some people on Hacker News pointed out..."
+- **Be honest about gaps.** "I'm not sure yet whether...", "nobody I read has
+  tested..." is better than smoothing over what is unknown.
+- **End with something to do**, or the open question. Never a summary.
+- Short paragraphs, short sentences, simple words. Real enthusiasm when
+  something is clever ("the part I think is really cool is..."), and only
+  then.
+
+The "I" is the newsletter's voice: someone who read all of this and is
+explaining it. It can wonder, read and notice. It never claims to have run,
+installed or measured anything: those experiences belong to the people you
+link, and saying otherwise is making things up.
+
+Never: "delve", "landscape", "game-changer", "revolutionize", "it's worth
+noting", "in conclusion", "in today's fast-paced world", em dashes, lists of
+three adjectives, a closing paragraph that restates the essay.
+
+**Format.** `body` is plain text: a blank line between paragraphs, `- ` at the
+start of each list line, `[link text](url)` for links, backticks for a command
+or a name in code. Nothing else renders; no headings, no bold.
+
+- **Length:** 250-450 words. The tool refuses under 150 or over 600.
+- **Links:** 4-8, inline, on the words they support ("[Simon Willison ran
+  it](...) on..."), never "here" or "this link". The first-party page once.
+  Every URL is one you fetched or one a tool returned, never from memory.
+- **`subject`:** a question or a plain statement a person would write, under
+  70 characters. "What does Ollama's MLX backend actually do?", not "This week
+  in AI".
+- **`preheader`:** one line that makes someone open it.
+- **`label`:** the topic in a few words, for telling the drafts apart.
+
+Before each `draft_issue`, reread the body once as the reader: does every
+sentence say something a builder did not know? Cut the ones that do not.
 
 ## Finish
 
-Call `draft_issue`. Do not call `send_issue`. Then report:
+Three `draft_issue` calls, then report:
 
-- the stories picked, and why the lead
-- each go-further link and where it came from (related published, related
-  rejected, search)
+- the three topics, in draft order, and why each was chosen over the next one
+  in `week()`
+- for each draft, the sources you read and linked, and where each came from
+  (`week`, `related`, search)
 - how many searches, fetches and `check_link` calls you made
-- the line `draft_issue` returned
+- the three lines `draft_issue` returned
 
-If a tool answers "This tool needs the curation token", stop and say so: the
-session has the read token, not the write token.
+Do not call `send_issue`. If a tool answers "This tool needs the curation
+token", stop and say so: the session has the read token, not the write token.

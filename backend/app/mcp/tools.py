@@ -356,35 +356,36 @@ def reject(url: str, score: int, reason: str) -> str:
 
 
 # ─── Newsletter ──────────────────────────────────────────────────────────────
-# The weekly issue: read the week, find what backs each story, draft it. Behind
-# the same write scope as curation, because `send_issue` mails every subscriber.
+# The weekly issue: find the week's topics, what backs each one, draft it.
+# Behind the same write scope as curation, because `send_issue` mails every
+# subscriber.
 
 
-def week(
-    days: int = 7, min_score: int = digest.WEEK_MIN_SCORE
-) -> list[digest.WeekStory]:
-    """The weekly newsletter's material: articles published in the last `days`
-    scoring `min_score` or more, grouped into stories.
+def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[digest.WeekTopic]:
+    """The weekly newsletter's material: the last `days` of published articles
+    grouped into topics, the most talked-about first.
 
-    Highest `top_score` first, then widest `coverage` (distinct publishers
-    carrying the story). Each story's `articles` hold `url`, `title`,
-    `publisher`, `publisher_kind` (`individual`, `company`, `community`,
-    `media`), `kind`, `categories`, `score`, `likes` and the `summary` curation
-    wrote after reading the article.
+    Ranked by `coverage` (distinct publishers carrying it, counting the copies
+    curation rejected as retellings), then `likes`, then `top_score`; up to
+    `limit` topics. Each topic's `articles` are the published ones - `url`,
+    `title`, `publisher`, `publisher_kind` (`individual`, `company`,
+    `community`, `media`), `kind`, `score`, `likes`, and the `summary` curation
+    wrote after reading it - and `covered_by` the other outlets' copies from
+    the ledger, with curation's `reason`.
     """
     _require_write()
     with _curation_session() as session:
-        return digest.week(session, days, min_score)
+        return digest.week(session, days, limit)
 
 
 def related(
     url: str, days: int = digest.RELATED_DAYS, limit: int = digest.RELATED_LIMIT
 ) -> digest.Related:
-    """What else covers one published article's subject, for the newsletter's
-    "go further" links.
+    """What else covers one published article's subject: the individual writer
+    who tried it, the repo built on it, the commentary on it.
 
     Compares by embedding against every article from the last `days` and every
-    reject from that window that scored 55 or more. Up to `limit` rows, the
+    reject from that window that scored 35 or more. Up to `limit` rows, the
     closest first: `url`, `title`, `publisher`, `publisher_kind`, `kind`,
     `stage` (`published` or `rejected`), `score`, `distance` (under 0.30 is the
     same story, up to 0.45 is the same subject), and `summary` for a published
@@ -398,30 +399,23 @@ def related(
             raise ToolError(str(exc))
 
 
-def draft_issue(
-    subject: str,
-    preheader: str,
-    intro: str,
-    stories: list[broadcast.IssueStory],
-    quick_hits: list[broadcast.QuickHit],
-) -> str:
-    """Draft the weekly issue as a Resend broadcast and mail a preview.
+def draft_issue(label: str, subject: str, preheader: str, body: str) -> str:
+    """Draft one weekly issue as a Resend broadcast and mail a preview.
 
-    Structured, not HTML: the server renders one template. `subject` up to 120
-    characters; `preheader` the one line an inbox shows after it; `intro`
-    plain text. `stories` (1-6), each `{title, url, body, further}`, where
-    `body` is plain text with a blank line between paragraphs and `further`
-    holds up to 3 `{title, url, by, note}` links. `quick_hits` (up to 10), each
-    `{title, url, line}`. Returns the broadcast id. Nothing is sent to
+    `label` names the draft in Resend (the topic, up to 60 characters);
+    `subject` up to 90 characters; `preheader` the one line an inbox shows
+    after it. `body` is the essay in plain text, 150-600 words: a blank line
+    between paragraphs, `- ` to start a list line, `[text](url)` for a link
+    (at least 3 distinct sources), backticks for code. The server renders it
+    into the site's template. Returns the broadcast id. Nothing is sent to
     subscribers: that is `send_issue`, or the Resend dashboard.
     """
     _require_write()
     issue: broadcast.Issue = {
+        "label": label,
         "subject": subject,
         "preheader": preheader,
-        "intro": intro,
-        "stories": stories,
-        "quick_hits": quick_hits,
+        "body": body,
     }
     try:
         return broadcast.draft(issue)

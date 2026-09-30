@@ -1,9 +1,9 @@
 """The newsletter's reads against the real schema, with the embedding stubbed.
 
 The grouping maths is curation's and pinned there. This pins what the
-newsletter adds: that `week` keeps every article in exactly one story and
-ranks them, and that `related` reaches the individual review, the repo and the
-reject that curation turned down as a retelling, and nothing outside the window.
+newsletter adds: that `week` ranks topics by how many publishers carried them,
+counting the copies curation rejected, and that `related` reaches the
+individual review, the repo and the commentary, and nothing outside the window.
 """
 
 from __future__ import annotations
@@ -36,9 +36,10 @@ TAG = random_lower_string()[:8]
 def _axis(i: int, wobble: float = 0.0) -> list[float]:
     """A vector along one of the high axes, far from anything real.
 
-    Against ``_axis(i)``, a wobble of 0.05 is the same story (distance ~0.001),
-    1.0 is the same subject (~0.29) and 1.2 is related but a different story
-    (~0.36).
+    Against ``_axis(i)``, a wobble of 0.05 or -0.5 is the same story (distance
+    under 0.30) and 1.2 is the same subject, a different story (~0.36). Rows on
+    opposite sides of the axis stay apart, so no row sits between two articles
+    and joins them into one topic.
     """
     v = np.zeros(DIM, dtype=np.float32)
     v[200 + i] = 1.0
@@ -51,11 +52,14 @@ def _noise(text: str) -> list[float]:
     return np.random.default_rng(seed).standard_normal(DIM).tolist()
 
 
-# Title -> vector, for the rows embedded on the fly (no stored embedding).
+# Title -> vector, for the ledger rows (embedded on the fly).
 VECTORS = {
-    f"{TAG} My weekend with Ollama MLX": _axis(0, 1.1),
-    f"{TAG} Ollama MLX is bad, a hot take": _axis(0, 0.9),
-    f"{TAG} Ollama MLX, still waiting": _axis(0, 0.9),
+    f"{TAG} Kernels, again": _axis(1, 0.05),
+    f"{TAG} Kernels, once more": _axis(1, 0.08),
+    f"{TAG} My weekend with Ollama MLX": _axis(0, 1.3),
+    f"{TAG} What Ollama MLX means": _axis(0, 1.25),
+    f"{TAG} Ollama MLX is bad, a hot take": _axis(0, -0.5),
+    f"{TAG} Ollama MLX, still waiting": _axis(0, -0.5),
 }
 
 
@@ -84,13 +88,15 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
             ("Writer", PublisherKind.individual),
             ("Maker", PublisherKind.individual),
             ("Blog", PublisherKind.media),
+            ("Wired", PublisherKind.media),
+            ("Register", PublisherKind.media),
         )
     }
     db.add_all(publishers.values())
     db.commit()
     now = datetime.now(UTC)
 
-    def article(pub: str, url: str, score: int, vec: list[float] | None, **kw):
+    def article(pub: str, url: str, score: int, vec: list[float], **kw):
         return Article(
             title=f"{TAG} {url}",
             url=url,
@@ -98,6 +104,16 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
             score=score,
             embedding=vec,
             summary=f"summary of {url}",
+            **kw,
+        )
+
+    def reject(url: str, title: str, score: int, pub: str | None = None, **kw):
+        return Reject(
+            url=url,
+            stage=kw.pop("stage", RejectStage.below_threshold),
+            title=f"{TAG} {title}",
+            publisher_id=publishers[pub].id if pub else None,
+            score=score,
             **kw,
         )
 
@@ -112,7 +128,7 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
         kind=ArticleKind.repo,
         created_at=now - timedelta(days=20),
     )
-    lone = article("Blog", _url("blog.example", "kernels"), 80, _axis(1))
+    kernels = article("Blog", _url("blog.example", "kernels"), 80, _axis(1))
     minor = article("Blog", _url("blog.example", "minor"), 60, _axis(2))
     ancient = article(
         "Blog",
@@ -128,30 +144,42 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
         _axis(0),
         marked_for_deletion_at=now,
     )
-    rejects = [
-        Reject(
-            url=_url("reader.example", "weekend"),
-            stage=RejectStage.below_threshold,
-            title=f"{TAG} My weekend with Ollama MLX",
-            publisher_id=publishers["Writer"].id,
-            score=70,
+    rejects = {
+        "wired": reject(
+            _url("wired.example", "kernels"),
+            "Kernels, again",
+            40,
+            "Wired",
+            reason="Retelling of the kernel post.",
+        ),
+        "register": reject(
+            _url("register.example", "kernels"), "Kernels, once more", 38, "Register"
+        ),
+        "weekend": reject(
+            _url("reader.example", "weekend"),
+            "My weekend with Ollama MLX",
+            70,
+            "Writer",
             reason="Retelling of a release the feed already carries.",
         ),
-        Reject(
-            url=_url("reader.example", "hot-take"),
-            stage=RejectStage.below_threshold,
-            title=f"{TAG} Ollama MLX is bad, a hot take",
-            score=30,
-            reason="Opinion with nothing to check.",
+        "take": reject(
+            _url("reader.example", "take"),
+            "What Ollama MLX means",
+            40,
+            reason="Commentary with nothing to check.",
         ),
-        Reject(
-            url=_url("reader.example", "pending"),
+        "hot_take": reject(
+            _url("reader.example", "hot-take"), "Ollama MLX is bad, a hot take", 30
+        ),
+        "pending": reject(
+            _url("reader.example", "pending"),
+            "Ollama MLX, still waiting",
+            0,
             stage=RejectStage.pending,
-            title=f"{TAG} Ollama MLX, still waiting",
         ),
-    ]
-    db.add_all([release, retelling, review, repo, lone, minor, ancient, marked])
-    db.add_all(rejects)
+    }
+    db.add_all([release, retelling, review, repo, kernels, minor, ancient, marked])
+    db.add_all(rejects.values())
     db.commit()
     user = create_random_user(db)
     db.add(ArticleLike(user_id=user.id, article_id=release.id or 0))
@@ -162,13 +190,11 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
         "retelling": retelling.url,
         "review": review.url,
         "repo": repo.url,
-        "lone": lone.url,
+        "kernels": kernels.url,
         "minor": minor.url,
         "ancient": ancient.url,
         "marked": marked.url,
-        "weekend": rejects[0].url,
-        "hot_take": rejects[1].url,
-        "pending": rejects[2].url,
+        **{name: r.url for name, r in rejects.items()},
     }
 
     db.exec(delete(ArticleLike).where(col(ArticleLike.user_id) == user.id))
@@ -179,51 +205,77 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
     db.commit()
 
 
-def _ours(stories: list[digest.WeekStory]) -> list[list[str]]:
+def _ours(db: Session) -> list[digest.WeekTopic]:
+    # A high limit: the local db carries other articles from this week.
     return [
-        [a["url"] for a in s["articles"]]
-        for s in stories
-        if any(TAG in a["url"] for a in s["articles"])
+        t
+        for t in digest.week(db, limit=1000)
+        if any(TAG in a["url"] for a in t["articles"])
     ]
 
 
-def test_week_groups_one_story_and_keeps_the_rest_on_their_own(
+def _topic(db: Session, url: str) -> digest.WeekTopic:
+    [topic] = [t for t in _ours(db) if t["articles"][0]["url"] == url]
+    return topic
+
+
+def test_week_ranks_topics_by_how_many_publishers_carried_them(
     db: Session, world: dict
 ):
-    assert _ours(digest.week(db)) == [
-        [world["release"], world["retelling"]],
-        [world["review"]],
-        [world["lone"]],
+    """The kernel post scores lowest of the three, and two outlets whose copies
+    curation rejected carried it too: it is the week's most talked-about."""
+    assert [t["articles"][0]["url"] for t in _ours(db)] == [
+        world["kernels"],
+        world["release"],
+        world["review"],
+        world["minor"],
     ]
 
 
-def test_week_leaves_out_what_the_newsletter_would_not_lead_with(
-    db: Session, world: dict
-):
-    urls = {u for story in _ours(digest.week(db)) for u in story}
-    # Under the score floor, older than the week, or marked for deletion.
-    for name in ("minor", "repo", "ancient", "marked"):
-        assert world[name] not in urls
-    assert world["minor"] in {
-        u for story in _ours(digest.week(db, min_score=50)) for u in story
+def test_week_counts_the_rejected_copies_as_coverage(db: Session, world: dict):
+    topic = _topic(db, world["kernels"])
+    assert topic["coverage"] == 3
+    assert topic["publishers"] == [f"{TAG} Blog", f"{TAG} Register", f"{TAG} Wired"]
+    assert {c["url"] for c in topic["covered_by"]} == {
+        world["wired"],
+        world["register"],
     }
+    [wired] = [c for c in topic["covered_by"] if c["url"] == world["wired"]]
+    assert wired["reason"] == "Retelling of the kernel post."
 
 
-def test_a_week_story_carries_coverage_likes_and_the_publisher_kind(
+def test_a_week_topic_carries_its_articles_likes_and_summaries(
     db: Session, world: dict
 ):
-    [story] = [
-        s for s in digest.week(db) if s["articles"][0]["url"] == world["release"]
+    topic = _topic(db, world["release"])
+    assert [a["url"] for a in topic["articles"]] == [
+        world["release"],
+        world["retelling"],
     ]
-    assert story["top_score"] == 92
-    assert story["coverage"] == 2
-    lead = story["articles"][0]
-    assert lead["likes"] == 1
+    # Rows with no publisher join the topic without counting as coverage.
+    assert topic["coverage"] == 2
+    assert {world["hot_take"], world["pending"]} <= {
+        c["url"] for c in topic["covered_by"]
+    }
+    assert topic["likes"] == 1
+    assert topic["top_score"] == 92
+    lead = topic["articles"][0]
     assert lead["publisher_kind"] == "company"
     assert lead["summary"] == f"summary of {world['release']}"
 
 
-def test_related_reaches_the_review_the_repo_and_a_retelling_reject(
+def test_week_leaves_out_what_is_not_this_weeks(db: Session, world: dict):
+    urls = {a["url"] for t in _ours(db) for a in t["articles"]}
+    for name in ("repo", "ancient", "marked"):
+        assert world[name] not in urls
+
+
+def test_week_returns_at_most_limit_topics(db: Session, world: dict):
+    assert world
+    assert len(digest.week(db, limit=1)) == 1
+
+
+def test_related_reaches_the_review_the_repo_and_the_commentary(
     db: Session, world: dict
 ):
     result = digest.related(db, world["release"])
@@ -237,15 +289,15 @@ def test_related_reaches_the_review_the_repo_and_a_retelling_reject(
     assert weekend["stage"] == digest.REJECTED
     assert weekend["reason"].startswith("Retelling")
     assert weekend["publisher_kind"] == "individual"
+    # Commentary scores under the approve line and still counts.
+    assert rows[world["take"]]["score"] == 40
     distances = [r["distance"] for r in result["rows"]]
     assert distances == sorted(distances)
 
 
-def test_related_leaves_out_weak_rejects_the_queue_and_the_window(
-    db: Session, world: dict
-):
+def test_related_leaves_out_slop_the_queue_and_the_window(db: Session, world: dict):
     urls = {r["url"] for r in digest.related(db, world["release"])["rows"]}
-    for name in ("release", "hot_take", "pending", "ancient", "marked", "lone"):
+    for name in ("release", "hot_take", "pending", "ancient", "marked", "kernels"):
         assert world[name] not in urls
 
 

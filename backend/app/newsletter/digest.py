@@ -1,15 +1,20 @@
-"""What the weekly newsletter draws on: the week's stories, and what else the
-feed and the ledger hold on the same subject.
+"""What the weekly newsletter draws on: the week's most talked-about topics,
+and what else the feed and the ledger hold on each one.
 
 The curation agent already read and scored every article, so nothing here
-judges. `week` groups the week's articles into stories and ranks them; `related`
-puts one story beside everything close to it, so the newsletter agent can find
-an individual writer's review or a repo that builds on a release.
+judges. `week` groups the week into topics and ranks them by how many
+publishers carried them; `related` puts one topic beside everything close to it
+over a longer window, so the newsletter agent can find the individual writer
+who tried the thing, or the repo that builds on it.
 
-The maths is curation's (`pipeline.curation`): one story is rows within
-`DEDUP_DIST_THRESHOLD` of each other, and related is out to `RELATED_DIST`. A
-review of a release sits in between: close enough to be about it, far enough
-not to be a retelling.
+Popularity counts the ledger too. Curation approves one copy of a story and
+rejects the rest as retellings, so the feed alone says every story was carried
+once; the rejects are where the other outlets are.
+
+The maths is curation's (`pipeline.curation`): one topic is rows within
+`DEDUP_DIST_THRESHOLD` of a published article, and related is out to
+`RELATED_DIST`. A review of a release sits in between: close enough to be about
+it, far enough not to be a retelling.
 """
 
 from __future__ import annotations
@@ -34,16 +39,15 @@ from pipeline.models import Reject, RejectStage
 from pipeline.steps import SNIPPET_CAP
 from pipeline.url_kind import kind_from_url
 
-# Below this an article is not a story the newsletter leads with or lists as a
-# quick hit, and a week of everything the agent approved is more than one
-# reading pass holds.
-WEEK_MIN_SCORE = 70
+# The agent drafts three issues a week; the rest are there so it can pass over a
+# topic it finds nothing to say about.
+WEEK_LIMIT = 12
 # Long enough to reach the review that came out two weeks after a release.
 RELATED_DAYS = 30
 RELATED_LIMIT = 12
-# A reject under this was turned down on its own merits, not as a retelling of
-# something the feed carried, so it is nothing to point a reader at.
-RELATED_MIN_SCORE = 55
+# Under this a reject is out of scope or slop. Commentary lands above it, and
+# how people took a thing is part of what the issue explains.
+RELATED_MIN_SCORE = 35
 
 PUBLISHED = "published"
 REJECTED = "rejected"
@@ -59,18 +63,31 @@ class WeekArticle(TypedDict):
     publisher: str
     publisher_kind: str
     kind: str
-    categories: list[str]
     score: int
     likes: int
     summary: str
 
 
-class WeekStory(TypedDict):
-    top_score: int
-    # Distinct publishers carrying the story this week.
+class CoveredBy(TypedDict):
+    """A ledger row on the same story: another outlet's copy, usually rejected
+    as a retelling."""
+
+    url: str
+    title: str
+    publisher: str
+    publisher_kind: str
+    score: int | None
+    reason: str
+
+
+class WeekTopic(TypedDict):
+    # Distinct publishers carrying it this week, the ledger's included.
     coverage: int
     publishers: list[str]
+    likes: int
+    top_score: int
     articles: list[WeekArticle]
+    covered_by: list[CoveredBy]
 
 
 class RelatedRow(TypedDict):
@@ -111,67 +128,101 @@ def _vectors(articles: list[Article]) -> list[list[float]]:
     ]
 
 
+def _ledger_text(row: Reject) -> str:
+    return to_embedding_text(row.title or "", (row.content or "")[:SNIPPET_CAP])
+
+
 def week(
     session: Session,
     days: int = 7,
-    min_score: int = WEEK_MIN_SCORE,
+    limit: int = WEEK_LIMIT,
     now: datetime | None = None,
-) -> list[WeekStory]:
-    """The articles published in the last ``days`` scoring ``min_score`` or
-    more, grouped into stories, highest score first and then widest coverage.
+) -> list[WeekTopic]:
+    """The last ``days`` of published articles grouped into topics, with the
+    ledger rows on the same story, most publishers first, then most likes, then
+    highest score. Up to ``limit`` topics.
 
-    Every article is in exactly one story; most stories are one article.
+    Every topic has at least one published article, so a story only the
+    rejects carried (off scope, or slop) never ranks.
     """
     since = (now or datetime.now(UTC)) - timedelta(days=days)
     likes = like_counts_subquery()
-    rows = session.exec(
+    feed = session.exec(
         select(Article, Publisher, func.coalesce(likes.c.like_count, 0))
         .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .outerjoin(likes, likes.c.article_id == Article.id)
         .where(
             col(Article.created_at) >= since,
-            col(Article.score) >= min_score,
             col(Article.marked_for_deletion_at).is_(None),
         )
     ).all()
-    if not rows:
+    if not feed:
         return []
+    ledger = session.exec(
+        select(Reject, Publisher)
+        .join(Publisher, col(Publisher.id) == col(Reject.publisher_id), isouter=True)
+        .where(col(Reject.created_at) >= since, col(Reject.title).is_not(None))
+    ).all()
 
-    vecs = np.array(_vectors([a for a, _, _ in rows]), dtype=np.float32)
-    groups = story_groups(
-        cosine_distances(vecs, vecs), [True] * len(rows), DEDUP_DIST_THRESHOLD
+    vecs = np.array(
+        _vectors([a for a, _, _ in feed])
+        + embed_batch([_ledger_text(r) for r, _ in ledger]),
+        dtype=np.float32,
     )
+    # Anchored on the articles: an edge needs one at an end, so rejects never
+    # join a topic through each other.
+    anchors = [True] * len(feed) + [False] * len(ledger)
+    groups = story_groups(cosine_distances(vecs, vecs), anchors, DEDUP_DIST_THRESHOLD)
     grouped = {i for g in groups for i in g}
-    groups += [[i] for i in range(len(rows)) if i not in grouped]
+    groups += [[i] for i in range(len(feed)) if i not in grouped]
 
-    stories: list[WeekStory] = []
+    topics: list[WeekTopic] = []
     for group in groups:
-        articles: list[WeekArticle] = [
-            {
-                "url": a.url,
-                "title": a.title,
-                "publisher": p.name,
-                "publisher_kind": str(p.kind),
-                "kind": str(a.kind),
-                "categories": [str(c) for c in a.categories],
-                "score": a.score,
-                "likes": int(n),
-                "summary": a.summary or "",
-            }
-            for a, p, n in (rows[i] for i in group)
-        ]
+        articles: list[WeekArticle] = []
+        covered_by: list[CoveredBy] = []
+        for i in group:
+            if i < len(feed):
+                a, p, n = feed[i]
+                articles.append(
+                    {
+                        "url": a.url,
+                        "title": a.title,
+                        "publisher": p.name,
+                        "publisher_kind": str(p.kind),
+                        "kind": str(a.kind),
+                        "score": a.score,
+                        "likes": int(n),
+                        "summary": a.summary or "",
+                    }
+                )
+            else:
+                r, rp = ledger[i - len(feed)]
+                covered_by.append(
+                    {
+                        "url": r.url,
+                        "title": r.title or "",
+                        "publisher": rp.name if rp else "",
+                        "publisher_kind": str(rp.kind) if rp else "",
+                        "score": r.score,
+                        "reason": r.reason or "",
+                    }
+                )
         articles.sort(key=lambda r: r["score"], reverse=True)
-        publishers = sorted({r["publisher"] for r in articles})
-        stories.append(
+        publishers = sorted(
+            {r["publisher"] for r in [*articles, *covered_by] if r["publisher"]}
+        )
+        topics.append(
             {
-                "top_score": articles[0]["score"],
                 "coverage": len(publishers),
                 "publishers": publishers,
+                "likes": sum(a["likes"] for a in articles),
+                "top_score": articles[0]["score"],
                 "articles": articles,
+                "covered_by": covered_by,
             }
         )
-    stories.sort(key=lambda s: (s["top_score"], s["coverage"]), reverse=True)
-    return stories
+    topics.sort(key=lambda t: (t["coverage"], t["likes"], t["top_score"]), reverse=True)
+    return topics[:limit]
 
 
 def related(
@@ -247,10 +298,7 @@ def related(
         return {"url": url, "title": target.title, "rows": []}
 
     vecs = _vectors([a for a, _ in feed]) + embed_batch(
-        [
-            to_embedding_text(r.title or "", (r.content or "")[:SNIPPET_CAP])
-            for r, _ in ledger
-        ]
+        [_ledger_text(r) for r, _ in ledger]
     )
     distances = cosine_distances(target_vec[None, :], np.array(vecs, dtype=np.float32))[
         0

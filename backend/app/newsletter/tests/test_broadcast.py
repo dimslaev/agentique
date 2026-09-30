@@ -1,13 +1,12 @@
-"""The weekly issue's render and its hand-off to Resend.
+"""The weekly issue's markup, its render, and its hand-off to Resend.
 
 Resend is stubbed: these pin what we send it (a draft, never a send, with the
-unsubscribe placeholder in the broadcast and not in the preview) and that
-nothing the agent writes reaches the HTML unescaped.
+unsubscribe placeholder in the broadcast and not in the preview), that the
+body's marks render and nothing else does, and that the length and sourcing
+rules hold.
 """
 
 from __future__ import annotations
-
-from datetime import date
 
 import pytest
 import resend
@@ -15,36 +14,23 @@ import resend
 from app.newsletter import broadcast
 from app.platform.settings import settings
 
-DAY = date(2026, 10, 2)
+FILLER = " ".join(["word"] * 70)
+BODY = (
+    "I kept seeing [the MLX backend](https://ollama.example/blog/mlx) this week,\n"
+    f"so I tried to work out what it changes. {FILLER}\n\n"
+    "- [a benchmark](https://writer.example/mlx) on three Macs\n"
+    "- [a repo](https://github.com/someone/ollama-ci) that runs it in CI\n\n"
+    f"Try `ollama run llama3` and see for yourself. {FILLER}"
+)
+REPO = "https://github.com/someone/ollama-ci"
 
 
-def _issue(**overrides: object) -> broadcast.Issue:
+def _issue(**overrides: str) -> broadcast.Issue:
     issue: broadcast.Issue = {
-        "subject": "Ollama runs on MLX",
-        "preheader": "And a week of agent tooling.",
-        "intro": "Three things shipped.\n\nOne of them you can run today.",
-        "stories": [
-            {
-                "title": "Ollama 0.9 ships an MLX backend",
-                "url": "https://ollama.example/blog/mlx",
-                "body": "Twice the tokens per second.\n\nMeasured on an M3.",
-                "further": [
-                    {
-                        "title": "I benchmarked it",
-                        "url": "https://writer.example/mlx",
-                        "by": "A Writer",
-                        "note": "Numbers on three Macs.",
-                    }
-                ],
-            }
-        ],
-        "quick_hits": [
-            {
-                "title": "A kernel post",
-                "url": "https://blog.example/kernels",
-                "line": "Fused attention, explained.",
-            }
-        ],
+        "label": "Ollama on MLX",
+        "subject": "What Ollama's MLX backend actually does",
+        "preheader": "And why people on three Macs got different numbers.",
+        "body": BODY,
     }
     return {**issue, **overrides}  # type: ignore[typeddict-item]
 
@@ -56,6 +42,7 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> dict[str, list]:
     monkeypatch.setattr(settings, "EMAILS_FROM_EMAIL", "news@agentique.example")
     monkeypatch.setattr(settings, "EMAILS_FROM_NAME", "agentique")
     monkeypatch.setattr(settings, "NEWSLETTER_PREVIEW_EMAIL", "me@agentique.example")
+    monkeypatch.setattr(settings, "FRONTEND_HOST", "https://agentique.example")
     calls: dict[str, list] = {"create": [], "send": [], "email": []}
 
     def create(params):
@@ -68,60 +55,39 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> dict[str, list]:
     return calls
 
 
-def test_the_html_has_every_story_link_and_the_unsubscribe_link():
-    html = broadcast.render_html(_issue(), DAY, broadcast.UNSUBSCRIBE_PLACEHOLDER)
-    for url in (
-        "https://ollama.example/blog/mlx",
-        "https://writer.example/mlx",
-        "https://blog.example/kernels",
-    ):
-        assert f'href="{url}"' in html
-    assert f'href="{broadcast.UNSUBSCRIBE_PLACEHOLDER}"' in html
-    assert "2 October 2026" in html
-    assert "<p" in html and "Measured on an M3." in html
+def test_blocks_are_paragraphs_and_lists():
+    assert broadcast.blocks("One\nline.\n\n- a\n- b\n\n- a\nnot a list\n\n\n") == [
+        {"kind": "p", "lines": ["One line."]},
+        {"kind": "ul", "lines": ["a", "b"]},
+        {"kind": "p", "lines": ["- a not a list"]},
+    ]
 
 
-def test_what_the_agent_writes_is_escaped():
-    issue = _issue(intro="<script>alert(1)</script> & more")
-    html = broadcast.render_html(issue, DAY, "#")
-    assert "<script>" not in html
-    assert "&lt;script&gt;" in html
+def test_inline_html_links_code_and_escapes_the_rest():
+    html = broadcast.inline_html("<b>[see](https://a.example/?x=1&y=2)</b> `a<b`")
+    assert html.startswith('&lt;b&gt;<a href="https://a.example/?x=1&amp;y=2"')
+    assert ">see</a>&lt;/b&gt;" in html
+    assert "a&lt;b</code>" in html
 
 
-def test_the_text_twin_carries_the_links():
-    text = broadcast.render_text(_issue(), "https://unsubscribe.example")
-    assert "https://ollama.example/blog/mlx" in text
-    assert "- I benchmarked it (A Writer) - Numbers on three Macs." in text
-    assert text.endswith("Unsubscribe: https://unsubscribe.example")
+def test_inline_text_spells_the_link_out():
+    line = "Read [this](https://a.example) and run `ls`."
+    assert broadcast.inline_text(line) == "Read this (https://a.example) and run ls."
+
+
+def test_word_count_skips_the_urls():
+    assert broadcast.word_count("[two words](https://a.example/long/path) `x`") == 3
 
 
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [
         ({"subject": " "}, "subject"),
-        ({"intro": ""}, "intro"),
-        ({"stories": []}, "1-6 stories"),
-        (
-            {
-                "stories": [
-                    {"title": "t", "url": "ollama.example", "body": "b", "further": []}
-                ]
-            },
-            "no http",
-        ),
-        (
-            {
-                "stories": [
-                    {
-                        "title": "t",
-                        "url": "https://a.example",
-                        "body": "",
-                        "further": [],
-                    }
-                ]
-            },
-            "no body",
-        ),
+        ({"label": ""}, "label"),
+        ({"body": "Too short, [a](https://a.example)."}, "one to two minutes"),
+        ({"body": BODY + " " + " ".join(["more"] * 500)}, "one to two minutes"),
+        ({"body": BODY.replace("https://writer.example", "writer.example")}, "http"),
+        ({"body": BODY.replace(REPO, "https://ollama.example/blog/mlx")}, "at least 3"),
     ],
 )
 def test_an_issue_a_reader_should_not_get_is_refused(overrides: dict, message: str):
@@ -129,19 +95,53 @@ def test_an_issue_a_reader_should_not_get_is_refused(overrides: dict, message: s
         broadcast.validate(_issue(**overrides))
 
 
-def test_draft_creates_a_broadcast_and_mails_a_preview(configured: dict[str, list]):
-    result = broadcast.draft(_issue(), DAY)
+@pytest.mark.usefixtures("configured")
+def test_the_html_is_the_wordmark_the_prose_and_two_links():
+    html = broadcast.render_html(_issue(), broadcast.UNSUBSCRIBE_PLACEHOLDER)
+    assert ">agentique</a>" in html
+    for url in (
+        "https://agentique.example",
+        "https://ollama.example/blog/mlx",
+        "https://writer.example/mlx",
+        REPO,
+        "https://agentique.example/feed",
+        broadcast.UNSUBSCRIBE_PLACEHOLDER,
+    ):
+        assert f'href="{url}"' in html
+    assert "<li" in html and "<code" in html
 
-    assert result == "Drafted broadcast b-1; preview sent to me@agentique.example."
+
+@pytest.mark.usefixtures("configured")
+def test_the_text_twin_ends_with_the_feed_and_unsubscribe():
+    text = broadcast.render_text(_issue(), "https://unsubscribe.example")
+    assert "I kept seeing the MLX backend (https://ollama.example/blog/mlx)" in text
+    assert "- a benchmark (https://writer.example/mlx) on three Macs" in text
+    assert text.endswith(
+        "The feed: https://agentique.example/feed\n"
+        "Unsubscribe: https://unsubscribe.example"
+    )
+
+
+def test_draft_creates_a_named_broadcast_and_mails_a_preview(
+    configured: dict[str, list],
+):
+    result = broadcast.draft(_issue())
+
+    assert result == (
+        "Drafted broadcast b-1 (Ollama on MLX); preview sent to me@agentique.example."
+    )
     [created] = configured["create"]
     assert created["audience_id"] == "audience"
     assert created["from"] == "agentique <news@agentique.example>"
+    assert created["name"].endswith(" · Ollama on MLX")
     assert "send" not in created
     assert broadcast.UNSUBSCRIBE_PLACEHOLDER in created["html"]
     assert broadcast.UNSUBSCRIBE_PLACEHOLDER in created["text"]
     [preview] = configured["email"]
     assert preview["to"] == "me@agentique.example"
-    assert preview["subject"] == "[Draft] Ollama runs on MLX"
+    assert preview["subject"] == (
+        "[Draft · Ollama on MLX] What Ollama's MLX backend actually does"
+    )
     assert broadcast.UNSUBSCRIBE_PLACEHOLDER not in preview["html"]
     assert configured["send"] == []
 
@@ -152,8 +152,8 @@ def test_a_failed_preview_still_leaves_the_draft(monkeypatch: pytest.MonkeyPatch
         raise RuntimeError("rate limited")
 
     monkeypatch.setattr(resend.Emails, "send", fail)
-    result = broadcast.draft(_issue(), DAY)
-    assert result == "Drafted broadcast b-1; preview failed: rate limited."
+    result = broadcast.draft(_issue())
+    assert result.endswith("preview failed: rate limited.")
 
 
 def test_draft_without_resend_says_what_is_missing(
@@ -161,7 +161,7 @@ def test_draft_without_resend_says_what_is_missing(
 ):
     monkeypatch.setattr(settings, "RESEND_AUDIENCE_ID", None)
     with pytest.raises(broadcast.IssueError, match="RESEND_AUDIENCE_ID unset"):
-        broadcast.draft(_issue(), DAY)
+        broadcast.draft(_issue())
     assert configured["create"] == []
 
 

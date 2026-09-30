@@ -37,7 +37,7 @@ cd backend && uv run --env-file ../.env python -m pipeline.report
 with the read token the session can list candidates and settle none.
 
 The weekly newsletter is the same shape: `claude "/newsletter"` reads the week
-through the MCP server and drafts the issue as a Resend broadcast. It sends
+through the MCP server and drafts three issues as Resend broadcasts. It sends
 nothing.
 
 ## Pre-commit and linting
@@ -101,5 +101,5 @@ uv run alembic upgrade head
 
 - One transactional email: password recovery
 - Template: `app/platform/email-templates/`, next to `app/platform/email.py`, which renders and sends it
-- The weekly newsletter issue: `weekly_issue.html` in the same folder, rendered (autoescaped) and drafted by `app/newsletter/broadcast.py`
+- The weekly newsletter issue: `weekly_issue.html` in the same folder, the site's wordmark over plain prose, rendered (autoescaped) and drafted by `app/newsletter/broadcast.py`
 - No MJML source - edit the HTML directly

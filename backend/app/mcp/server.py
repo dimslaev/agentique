@@ -74,9 +74,9 @@ mcp: FastMCP = FastMCP(
         "`similar` and `stories` compare candidates with the feed, "
         "`check_link` looks up a repo or model, `vocabulary` lists the labels, "
         "and `approve`, `reject` and `reject_many` settle them. Weekly "
-        "newsletter, with the write token only: `week` groups the week's "
-        "articles into stories, `related` finds what else covers one, "
-        "`draft_issue` drafts the issue and `send_issue` sends it."
+        "newsletter, with the write token only: `week` ranks the week's "
+        "topics, `related` finds what else covers one, `draft_issue` drafts "
+        "an issue and `send_issue` sends it."
     ),
     auth=SharedSecret(),
     tools=[

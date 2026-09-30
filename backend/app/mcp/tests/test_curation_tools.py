@@ -63,7 +63,7 @@ def _call(name: str):
         ),
         "week": lambda: tools.week(),
         "related": lambda: tools.related("https://example.com"),
-        "draft_issue": lambda: tools.draft_issue("s", "p", "i", [], []),
+        "draft_issue": lambda: tools.draft_issue("l", "s", "p", "b"),
         "send_issue": lambda: tools.send_issue("b"),
     }[name]()
 
