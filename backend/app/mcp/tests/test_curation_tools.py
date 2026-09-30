@@ -25,6 +25,10 @@ WRITE_TOOLS = (
     "approve",
     "reject",
     "reject_many",
+    "week",
+    "related",
+    "draft_issue",
+    "send_issue",
 )
 
 
@@ -57,6 +61,10 @@ def _call(name: str):
         "reject_many": lambda: tools.reject_many(
             [{"url": "https://example.com", "score": 20, "reason": "r"}]
         ),
+        "week": lambda: tools.week(),
+        "related": lambda: tools.related("https://example.com"),
+        "draft_issue": lambda: tools.draft_issue("s", "p", "i", [], []),
+        "send_issue": lambda: tools.send_issue("b"),
     }[name]()
 
 

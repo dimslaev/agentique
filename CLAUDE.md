@@ -34,6 +34,7 @@
 ## MCP tools
 - `.mcp.json` connects to the `agentique` MCP server (`backend/app/mcp/`), exposing `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
 - With the write token it also exposes `list_candidates`, `get_content`, `similar`, `stories`, `check_link`, `vocabulary`, `approve`, `reject`, `reject_many` - the curation agent's tools. They publish to prod. Don't call them outside a curation session.
+- The write token also reaches `week`, `related`, `draft_issue`, `send_issue` - the newsletter agent's tools (`.claude/skills/newsletter/SKILL.md`). `send_issue` mails every subscriber: never call it unless the user asks after reading the preview.
 - Don't use any of these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
 
 ## Curation

@@ -1,8 +1,10 @@
-"""What an agent can do against agentique: read the db and the web, and curate.
+"""What an agent can do against agentique: read the db and the web, curate, and
+draft the weekly newsletter.
 
 Two groups, two tokens. `sql_query`, `web_fetch` and `web_search` read and are
-reachable with `MCP_TOKEN`. The curation tools at the bottom publish and reject
-articles, and need `MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
+reachable with `MCP_TOKEN`. The curation tools publish and reject articles, and
+the newsletter tools at the bottom mail subscribers; both need
+`MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_access_token
 from sqlmodel import Session
 
+from app.newsletter import broadcast, digest
 from app.platform.db import engine
 from app.platform.settings import settings
 from pipeline import curation
@@ -350,3 +353,87 @@ def reject(url: str, score: int, reason: str) -> str:
         except curation.CandidateError as exc:
             raise ToolError(str(exc))
     return f"Rejected [{score}/100] {url}"
+
+
+# ─── Newsletter ──────────────────────────────────────────────────────────────
+# The weekly issue: read the week, find what backs each story, draft it. Behind
+# the same write scope as curation, because `send_issue` mails every subscriber.
+
+
+def week(
+    days: int = 7, min_score: int = digest.WEEK_MIN_SCORE
+) -> list[digest.WeekStory]:
+    """The weekly newsletter's material: articles published in the last `days`
+    scoring `min_score` or more, grouped into stories.
+
+    Highest `top_score` first, then widest `coverage` (distinct publishers
+    carrying the story). Each story's `articles` hold `url`, `title`,
+    `publisher`, `publisher_kind` (`individual`, `company`, `community`,
+    `media`), `kind`, `categories`, `score`, `likes` and the `summary` curation
+    wrote after reading the article.
+    """
+    _require_write()
+    with _curation_session() as session:
+        return digest.week(session, days, min_score)
+
+
+def related(
+    url: str, days: int = digest.RELATED_DAYS, limit: int = digest.RELATED_LIMIT
+) -> digest.Related:
+    """What else covers one published article's subject, for the newsletter's
+    "go further" links.
+
+    Compares by embedding against every article from the last `days` and every
+    reject from that window that scored 55 or more. Up to `limit` rows, the
+    closest first: `url`, `title`, `publisher`, `publisher_kind`, `kind`,
+    `stage` (`published` or `rejected`), `score`, `distance` (under 0.30 is the
+    same story, up to 0.45 is the same subject), and `summary` for a published
+    row or curation's `reason` for a rejected one.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            return digest.related(session, url, days, limit)
+        except digest.DigestError as exc:
+            raise ToolError(str(exc))
+
+
+def draft_issue(
+    subject: str,
+    preheader: str,
+    intro: str,
+    stories: list[broadcast.IssueStory],
+    quick_hits: list[broadcast.QuickHit],
+) -> str:
+    """Draft the weekly issue as a Resend broadcast and mail a preview.
+
+    Structured, not HTML: the server renders one template. `subject` up to 120
+    characters; `preheader` the one line an inbox shows after it; `intro`
+    plain text. `stories` (1-6), each `{title, url, body, further}`, where
+    `body` is plain text with a blank line between paragraphs and `further`
+    holds up to 3 `{title, url, by, note}` links. `quick_hits` (up to 10), each
+    `{title, url, line}`. Returns the broadcast id. Nothing is sent to
+    subscribers: that is `send_issue`, or the Resend dashboard.
+    """
+    _require_write()
+    issue: broadcast.Issue = {
+        "subject": subject,
+        "preheader": preheader,
+        "intro": intro,
+        "stories": stories,
+        "quick_hits": quick_hits,
+    }
+    try:
+        return broadcast.draft(issue)
+    except broadcast.IssueError as exc:
+        raise ToolError(str(exc))
+
+
+def send_issue(broadcast_id: str) -> str:
+    """Send a drafted weekly issue to every newsletter subscriber. Cannot be
+    undone. Only when a person has read the preview and asked for it."""
+    _require_write()
+    try:
+        return broadcast.send(broadcast_id)
+    except broadcast.IssueError as exc:
+        raise ToolError(str(exc))
