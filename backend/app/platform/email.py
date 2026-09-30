@@ -83,3 +83,11 @@ def generate_reset_password_email(email_to: str, email: str, token: str) -> Emai
         },
     )
     return EmailData(html_content=html_content, subject=subject)
+
+
+def generate_newsletter_welcome_email() -> EmailData:
+    html_content = render_email_template(
+        template_name="newsletter_welcome.html",
+        context={"feed_link": f"{settings.FRONTEND_HOST}/feed"},
+    )
+    return EmailData(html_content=html_content, subject="Welcome to Agentique")
