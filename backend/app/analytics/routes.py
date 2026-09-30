@@ -32,8 +32,10 @@ def collect_event(
     event = AnalyticsEvent(
         event=_truncate(payload.event) or "pageview",
         path=_truncate(payload.path),
-        referrer=_truncate(payload.referrer)
-        or _truncate(request.headers.get("referer")),
+        # Only the client's `document.referrer` is meaningful. The request's own
+        # Referer header is always our site, so a fallback to it would file every
+        # direct visit under agentique.ch.
+        referrer=_truncate(payload.referrer),
         visitor_id=_truncate(payload.visitor_id),
         user_id=current_user.id if current_user else None,
         user_agent=_truncate(request.headers.get("user-agent")),

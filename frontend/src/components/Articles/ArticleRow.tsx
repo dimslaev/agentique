@@ -1,4 +1,5 @@
 import type { ArticlePublic, TagPublic } from "@/client"
+import { articleClickHandlers } from "@/lib/analytics"
 import { LikeButton } from "./LikeButton"
 import { ScoreRail } from "./ScoreRail"
 
@@ -39,6 +40,7 @@ export function ArticleRow({
           href={article.url}
           target="_blank"
           rel="noreferrer"
+          {...articleClickHandlers(article)}
           className="font-medium leading-snug no-underline decoration-muted-foreground underline-offset-[3px] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {article.title}

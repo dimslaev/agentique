@@ -34,6 +34,18 @@ def test_collect_anonymous_pageview(client: TestClient, db: Session) -> None:
     assert event.user_agent is not None
 
 
+def test_collect_ignores_referer_header(client: TestClient, db: Session) -> None:
+    r = client.post(
+        f"{settings.API_V1_STR}/analytics/collect",
+        headers={"Referer": "https://agentique.ch/feed"},
+        json={"path": "/feed", "visitor_id": "anon-5"},
+    )
+    assert r.status_code == 204
+    event = _latest_event(db, "anon-5")
+    assert event is not None
+    assert event.referrer is None
+
+
 def test_collect_defaults_event_to_pageview(client: TestClient, db: Session) -> None:
     r = client.post(
         f"{settings.API_V1_STR}/analytics/collect",

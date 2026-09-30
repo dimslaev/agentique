@@ -2,6 +2,7 @@ import type { ArticlePublic } from "@/client"
 import { ScoreRail } from "@/components/Articles/ScoreRail"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useInView } from "@/hooks/useInView"
+import { articleClickHandlers } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import type { TopicDef } from "./topics"
 import { useTopicArticles } from "./useTopicArticles"
@@ -52,7 +53,7 @@ export function TopicLane({
           </li>
         ) : (
           visible.map((article) => (
-            <LaneRow key={article.id} article={article} />
+            <LaneRow key={article.id} article={article} topic={topic.slug} />
           ))
         )}
       </ul>
@@ -60,7 +61,13 @@ export function TopicLane({
   )
 }
 
-function LaneRow({ article }: { article: ArticlePublic }) {
+function LaneRow({
+  article,
+  topic,
+}: {
+  article: ArticlePublic
+  topic: string
+}) {
   return (
     <li className="group flex h-26 shrink-0 gap-3 border-b border-wire py-3 last:border-b-0">
       <ScoreRail score={article.score} />
@@ -69,6 +76,7 @@ function LaneRow({ article }: { article: ArticlePublic }) {
           href={article.url}
           target="_blank"
           rel="noreferrer"
+          {...articleClickHandlers(article, { topic })}
           className="line-clamp-2 text-sm font-medium leading-snug text-paper no-underline transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
         >
           {article.title}
