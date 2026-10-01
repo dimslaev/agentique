@@ -25,7 +25,7 @@ looks like it was carried once.
 ## Decision
 
     Friday 07:52:  week -> 3 topics -> for each: read, search, write -> draft_issue
-    a person:      reads the three previews -> sends one from Resend
+    a person:      reads the three drafts in Resend -> sends one
 
 - **A Claude Code session writes it.** A second routine on claude.ai/code,
   like curation, runs `.claude/skills/newsletter/SKILL.md` against the MCP
@@ -41,13 +41,14 @@ looks like it was carried once.
   of Julia Evans's posts, linking at least three sources it read. It never
   claims to have run anything itself.
 - **Three drafts, one send.** The agent drafts the top three topics; a person
-  picks one. The routine never calls `send_issue`.
+  reads them in the Resend dashboard and sends one. Nothing in the code sends a
+  broadcast or mails a preview: the person opens Resend to send anyway.
 - **The agent writes prose, not HTML.** `draft_issue` takes plain text with
   paragraphs, list lines, `[text](url)` links and code spans; the box escapes
   the rest and renders one template: the site's wordmark, the prose, links to
   the feed and to unsubscribe.
 - **The box holds the key.** The routine runs off-box with only an MCP token;
-  `draft_issue` and `send_issue` call Resend from the backend.
+  `draft_issue` calls Resend from the backend.
 - **Nothing is stored.** An issue covers the 7 days before it, and Resend keeps
   every broadcast.
 
@@ -64,7 +65,7 @@ deleting them there is the cleanup.
 The voice is the risk. A model imitating a writer's tone drifts toward the
 tics it was told to avoid, and a first person that "tried" things it never ran
 would be making things up. The skill forbids both; the person reading three
-previews a week is the check.
+drafts a week is the check.
 
 `week` and `related` embed the ledger on the fly in the API process, as
 `similar` does. A week is under a thousand rows and a month a few thousand,

@@ -17,7 +17,6 @@ from app.mcp.tools import (
     reject,
     reject_many,
     related,
-    send_issue,
     similar,
     sql_query,
     stories,
@@ -75,8 +74,8 @@ mcp: FastMCP = FastMCP(
         "`check_link` looks up a repo or model, `vocabulary` lists the labels, "
         "and `approve`, `reject` and `reject_many` settle them. Weekly "
         "newsletter, with the write token only: `week` ranks the week's "
-        "topics, `related` finds what else covers one, `draft_issue` drafts "
-        "an issue and `send_issue` sends it."
+        "topics, `related` finds what else covers one, and `draft_issue` "
+        "drafts an issue for a person to send."
     ),
     auth=SharedSecret(),
     tools=[
@@ -95,7 +94,6 @@ mcp: FastMCP = FastMCP(
         week,
         related,
         draft_issue,
-        send_issue,
     ],
 )
 

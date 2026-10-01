@@ -1,6 +1,6 @@
 ---
 name: newsletter
-description: Draft three candidate weekly agentique newsletters, one per topic - find the week's most talked-about topics, read what individual writers, repos and discussions say about each, and write a short explainer in the tone of Julia Evans. Use when running the Friday newsletter session, or when asked to draft, write or preview the weekly issue.
+description: Draft three candidate weekly agentique newsletters, one per topic - find the week's most talked-about topics, read what individual writers, repos and discussions say about each, and write a short explainer in the tone of Julia Evans. Use when running the Friday newsletter session, or when asked to draft or write the weekly issue.
 ---
 
 # Draft the weekly issue
@@ -27,9 +27,8 @@ From the `agentique` MCP server, with the curation token:
   weights for a model.
 - `sql_query(sql)` - read-only, for anything the tools above do not answer.
 - `draft_issue(label, subject, preheader, body)` - renders one draft into the
-  site's template, creates it in Resend, and mails a preview.
-- `send_issue(broadcast_id)` - mails every subscriber. **Never call it** unless
-  a person in this session read the drafts and asked you to.
+  site's template and creates it in Resend. Nothing is sent: a person reads the
+  three drafts there and sends one.
 
 ## Rounds
 
@@ -136,5 +135,5 @@ Three `draft_issue` calls, then report:
 - how many searches, fetches and `check_link` calls you made
 - the three lines `draft_issue` returned
 
-Do not call `send_issue`. If a tool answers "This tool needs the curation
+If a tool answers "This tool needs the curation
 token", stop and say so: the session has the read token, not the write token.

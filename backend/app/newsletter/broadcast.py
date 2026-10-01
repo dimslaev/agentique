@@ -7,8 +7,9 @@ and `[text](url)` for a link (plus backticks for code). This module escapes
 everything else, so nothing the agent writes can break the layout, and renders
 it into `weekly_issue.html` and a plain-text twin.
 
-The agent drafts three a week, one per topic, and a person sends one. Nothing
-is stored here: Resend keeps every broadcast, drafted and sent.
+The agent drafts three a week, one per topic, and a person reads them and sends
+one from the Resend dashboard. Nothing here sends, and nothing is stored:
+Resend keeps every broadcast, drafted and sent.
 """
 
 from __future__ import annotations
@@ -25,8 +26,7 @@ from app.platform.email import TEMPLATES
 from app.platform.logging import log
 from app.platform.settings import settings
 
-# Resend swaps this for each recipient's own unsubscribe link, in a broadcast
-# only. A preview is a plain email, so it gets the site instead.
+# Resend swaps this for each recipient's own unsubscribe link.
 UNSUBSCRIBE_PLACEHOLDER = "{{{RESEND_UNSUBSCRIBE_URL}}}"
 
 MAX_SUBJECT = 90
@@ -149,7 +149,7 @@ def validate(issue: Issue) -> None:
         )
 
 
-def render_html(issue: Issue, unsubscribe_url: str) -> str:
+def render_html(issue: Issue) -> str:
     return _templates.get_template("weekly_issue.html").render(
         subject=issue["subject"],
         preheader=issue["preheader"],
@@ -158,11 +158,11 @@ def render_html(issue: Issue, unsubscribe_url: str) -> str:
             for b in blocks(issue["body"])
         ],
         site_url=settings.FRONTEND_HOST.rstrip("/"),
-        unsubscribe_url=unsubscribe_url,
+        unsubscribe_url=UNSUBSCRIBE_PLACEHOLDER,
     )
 
 
-def render_text(issue: Issue, unsubscribe_url: str) -> str:
+def render_text(issue: Issue) -> str:
     """The plain-text twin, for clients that do not show HTML. Pure."""
     out: list[str] = []
     for b in blocks(issue["body"]):
@@ -171,7 +171,7 @@ def render_text(issue: Issue, unsubscribe_url: str) -> str:
             "\n".join(f"- {line}" for line in lines) if b["kind"] == "ul" else lines[0]
         )
     site = settings.FRONTEND_HOST.rstrip("/")
-    out.append(f"The feed: {site}/feed\nUnsubscribe: {unsubscribe_url}")
+    out.append(f"The feed: {site}/feed\nUnsubscribe: {UNSUBSCRIBE_PLACEHOLDER}")
     return "\n\n".join(out)
 
 
@@ -192,51 +192,22 @@ def _sender() -> str:
 
 
 def draft(issue: Issue, issue_date: date | None = None) -> str:
-    """Create the issue as a draft broadcast and mail a preview. Returns what
-    happened, the broadcast id first.
-
-    Sending is a separate step (`send`), from here or the Resend dashboard. A
-    failed preview is reported, not raised: the draft exists either way.
-    """
+    """Create the issue as a draft broadcast. Returns the line the agent
+    reports, the broadcast id first. Sending is a person's, from the Resend
+    dashboard."""
     validate(issue)
     sender = _sender()
     issue_date = issue_date or date.today()
-    subject = issue["subject"].strip()
     label = issue["label"].strip()
     created = resend.Broadcasts.create(
         {
             "audience_id": settings.RESEND_AUDIENCE_ID or "",
             "from": sender,
-            "subject": subject,
-            "html": render_html(issue, UNSUBSCRIBE_PLACEHOLDER),
-            "text": render_text(issue, UNSUBSCRIBE_PLACEHOLDER),
+            "subject": issue["subject"].strip(),
+            "html": render_html(issue),
+            "text": render_text(issue),
             "name": f"Weekly {issue_date.isoformat()} · {label}",
         }
     )
-    broadcast_id = created["id"]
-    log(f"  Drafted weekly issue {label!r} as broadcast {broadcast_id}")
-
-    preview_to = settings.NEWSLETTER_PREVIEW_EMAIL or settings.EMAILS_FROM_EMAIL
-    site = settings.FRONTEND_HOST
-    try:
-        resend.Emails.send(
-            {
-                "from": sender,
-                "to": str(preview_to),
-                "subject": f"[Draft · {label}] {subject}",
-                "html": render_html(issue, site),
-                "text": render_text(issue, site),
-            }
-        )
-        preview = f"preview sent to {preview_to}"
-    except Exception as exc:
-        preview = f"preview failed: {exc}"
-    return f"Drafted broadcast {broadcast_id} ({label}); {preview}."
-
-
-def send(broadcast_id: str) -> str:
-    """Send a drafted broadcast to every subscriber in the audience."""
-    _sender()
-    resend.Broadcasts.send({"broadcast_id": broadcast_id})
-    log(f"  Sent weekly issue broadcast {broadcast_id}")
-    return f"Sent broadcast {broadcast_id}."
+    log(f"  Drafted weekly issue {label!r} as broadcast {created['id']}")
+    return f"Drafted broadcast {created['id']} ({label})."

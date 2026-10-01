@@ -3,8 +3,8 @@ draft the weekly newsletter.
 
 Two groups, two tokens. `sql_query`, `web_fetch` and `web_search` read and are
 reachable with `MCP_TOKEN`. The curation tools publish and reject articles, and
-the newsletter tools at the bottom mail subscribers; both need
-`MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
+the newsletter tools at the bottom draft emails addressed to every subscriber;
+both need `MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
 """
 
 from __future__ import annotations
@@ -357,8 +357,8 @@ def reject(url: str, score: int, reason: str) -> str:
 
 # ─── Newsletter ──────────────────────────────────────────────────────────────
 # The weekly issue: find the week's topics, what backs each one, draft it.
-# Behind the same write scope as curation, because `send_issue` mails every
-# subscriber.
+# Behind the same write scope as curation, because a draft lands in the audience
+# subscribers are mailed from. Sending is a person's, from the Resend dashboard.
 
 
 def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[digest.WeekTopic]:
@@ -400,15 +400,15 @@ def related(
 
 
 def draft_issue(label: str, subject: str, preheader: str, body: str) -> str:
-    """Draft one weekly issue as a Resend broadcast and mail a preview.
+    """Draft one weekly issue as a Resend broadcast.
 
     `label` names the draft in Resend (the topic, up to 60 characters);
     `subject` up to 90 characters; `preheader` the one line an inbox shows
     after it. `body` is the essay in plain text, 150-600 words: a blank line
     between paragraphs, `- ` to start a list line, `[text](url)` for a link
     (at least 3 distinct sources), backticks for code. The server renders it
-    into the site's template. Returns the broadcast id. Nothing is sent to
-    subscribers: that is `send_issue`, or the Resend dashboard.
+    into the site's template. Returns the broadcast id. Nothing is sent: a
+    person reads the drafts and sends one from the Resend dashboard.
     """
     _require_write()
     issue: broadcast.Issue = {
@@ -419,15 +419,5 @@ def draft_issue(label: str, subject: str, preheader: str, body: str) -> str:
     }
     try:
         return broadcast.draft(issue)
-    except broadcast.IssueError as exc:
-        raise ToolError(str(exc))
-
-
-def send_issue(broadcast_id: str) -> str:
-    """Send a drafted weekly issue to every newsletter subscriber. Cannot be
-    undone. Only when a person has read the preview and asked for it."""
-    _require_write()
-    try:
-        return broadcast.send(broadcast_id)
     except broadcast.IssueError as exc:
         raise ToolError(str(exc))

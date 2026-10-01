@@ -134,8 +134,6 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     # The Resend audience newsletter subscribers are synced to, and the weekly
     # issue is broadcast to. The signup route reads it from os.environ.
     RESEND_AUDIENCE_ID: str | None = None
-    # Where a drafted weekly issue's preview goes; EMAILS_FROM_EMAIL when unset.
-    NEWSLETTER_PREVIEW_EMAIL: EmailStr | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

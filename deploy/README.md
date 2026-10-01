@@ -95,9 +95,9 @@ It runs Fridays at 07:52 Europe/Zurich (`CRON_TZ=Europe/Zurich 52 7 * * 5`),
 after that morning's curation and report, and reads the 7 days before it.
 
 - It writes three drafts, one per topic, as Resend broadcasts to
-  `RESEND_AUDIENCE_ID`, and mails a preview of each. A person picks one and
-  sends it from the Resend dashboard; the other two stay drafts.
-- It never sends. `send_issue` exists for a session a person is in.
+  `RESEND_AUDIENCE_ID`. A person reads them in the Resend dashboard and sends
+  one; the other two stay drafts.
+- Nothing in the code sends a broadcast. Sending is only ever done by hand.
 - Nothing about an issue is stored here. Resend keeps the broadcasts.
 
 The routine's prompt, to paste there when it changes:
@@ -112,7 +112,7 @@ Invoke the `newsletter` skill (`.claude/skills/newsletter/SKILL.md` in this repo
 3. For each topic, one at a time: read the first-party source, `related(url)`, the individual writers and repos that tried it, and search for how people are taking it. At most 4 searches and 8 fetches per topic.
 4. Write a 250-450 word explainer in the tone the skill describes, linking 4-8 sources you read, and call `draft_issue`.
 
-Do not call `send_issue`. Do not edit files or commit anything; this session reads and drafts, nothing else.
+Do not edit files or commit anything; this session reads and drafts, nothing else.
 
 If a tool answers "This tool needs the curation token", the environment's AGENTIQUE_MCP_TOKEN is the read token rather than MCP_WRITE_TOKEN. Stop and say so plainly.
 
@@ -125,10 +125,9 @@ Read by the backend through `app/platform/settings.py`.
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
-| `RESEND_API_KEY` | `app/newsletter/broadcast.py` | Unset: `draft_issue` and `send_issue` refuse, naming it. |
+| `RESEND_API_KEY` | `app/newsletter/broadcast.py` | Unset: `draft_issue` refuses, naming it. |
 | `RESEND_AUDIENCE_ID` | `app/newsletter/broadcast.py`, `app/newsletter/routes.py` | The audience signups are synced to and the issue is broadcast to. |
 | `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/newsletter/broadcast.py` | The issue's sender. |
-| `NEWSLETTER_PREVIEW_EMAIL` | `app/newsletter/broadcast.py` | Where the draft's preview goes; `EMAILS_FROM_EMAIL` when unset. |
 
 ## Pipeline environment
 

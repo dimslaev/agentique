@@ -1,9 +1,8 @@
 """The weekly issue's markup, its render, and its hand-off to Resend.
 
-Resend is stubbed: these pin what we send it (a draft, never a send, with the
-unsubscribe placeholder in the broadcast and not in the preview), that the
-body's marks render and nothing else does, and that the length and sourcing
-rules hold.
+Resend is stubbed: these pin what we send it (a draft, never a send, with
+Resend's unsubscribe placeholder), that the body's marks render and nothing
+else does, and that the length and sourcing rules hold.
 """
 
 from __future__ import annotations
@@ -41,17 +40,14 @@ def configured(monkeypatch: pytest.MonkeyPatch) -> dict[str, list]:
     monkeypatch.setattr(settings, "RESEND_AUDIENCE_ID", "audience")
     monkeypatch.setattr(settings, "EMAILS_FROM_EMAIL", "news@agentique.example")
     monkeypatch.setattr(settings, "EMAILS_FROM_NAME", "agentique")
-    monkeypatch.setattr(settings, "NEWSLETTER_PREVIEW_EMAIL", "me@agentique.example")
     monkeypatch.setattr(settings, "FRONTEND_HOST", "https://agentique.example")
-    calls: dict[str, list] = {"create": [], "send": [], "email": []}
+    calls: dict[str, list] = {"create": []}
 
     def create(params):
         calls["create"].append(params)
         return {"id": "b-1"}
 
     monkeypatch.setattr(resend.Broadcasts, "create", create)
-    monkeypatch.setattr(resend.Broadcasts, "send", calls["send"].append)
-    monkeypatch.setattr(resend.Emails, "send", calls["email"].append)
     return calls
 
 
@@ -97,7 +93,7 @@ def test_an_issue_a_reader_should_not_get_is_refused(overrides: dict, message: s
 
 @pytest.mark.usefixtures("configured")
 def test_the_html_is_the_wordmark_the_prose_and_two_links():
-    html = broadcast.render_html(_issue(), broadcast.UNSUBSCRIBE_PLACEHOLDER)
+    html = broadcast.render_html(_issue())
     assert ">agentique</a>" in html
     for url in (
         "https://agentique.example",
@@ -113,47 +109,25 @@ def test_the_html_is_the_wordmark_the_prose_and_two_links():
 
 @pytest.mark.usefixtures("configured")
 def test_the_text_twin_ends_with_the_feed_and_unsubscribe():
-    text = broadcast.render_text(_issue(), "https://unsubscribe.example")
+    text = broadcast.render_text(_issue())
     assert "I kept seeing the MLX backend (https://ollama.example/blog/mlx)" in text
     assert "- a benchmark (https://writer.example/mlx) on three Macs" in text
     assert text.endswith(
         "The feed: https://agentique.example/feed\n"
-        "Unsubscribe: https://unsubscribe.example"
+        f"Unsubscribe: {broadcast.UNSUBSCRIBE_PLACEHOLDER}"
     )
 
 
-def test_draft_creates_a_named_broadcast_and_mails_a_preview(
-    configured: dict[str, list],
-):
-    result = broadcast.draft(_issue())
-
-    assert result == (
-        "Drafted broadcast b-1 (Ollama on MLX); preview sent to me@agentique.example."
-    )
+def test_draft_creates_a_named_draft_broadcast(configured: dict[str, list]):
+    assert broadcast.draft(_issue()) == "Drafted broadcast b-1 (Ollama on MLX)."
     [created] = configured["create"]
     assert created["audience_id"] == "audience"
     assert created["from"] == "agentique <news@agentique.example>"
+    assert created["subject"] == "What Ollama's MLX backend actually does"
     assert created["name"].endswith(" · Ollama on MLX")
     assert "send" not in created
     assert broadcast.UNSUBSCRIBE_PLACEHOLDER in created["html"]
     assert broadcast.UNSUBSCRIBE_PLACEHOLDER in created["text"]
-    [preview] = configured["email"]
-    assert preview["to"] == "me@agentique.example"
-    assert preview["subject"] == (
-        "[Draft · Ollama on MLX] What Ollama's MLX backend actually does"
-    )
-    assert broadcast.UNSUBSCRIBE_PLACEHOLDER not in preview["html"]
-    assert configured["send"] == []
-
-
-@pytest.mark.usefixtures("configured")
-def test_a_failed_preview_still_leaves_the_draft(monkeypatch: pytest.MonkeyPatch):
-    def fail(_params):
-        raise RuntimeError("rate limited")
-
-    monkeypatch.setattr(resend.Emails, "send", fail)
-    result = broadcast.draft(_issue())
-    assert result.endswith("preview failed: rate limited.")
 
 
 def test_draft_without_resend_says_what_is_missing(
@@ -163,8 +137,3 @@ def test_draft_without_resend_says_what_is_missing(
     with pytest.raises(broadcast.IssueError, match="RESEND_AUDIENCE_ID unset"):
         broadcast.draft(_issue())
     assert configured["create"] == []
-
-
-def test_send_sends_the_broadcast(configured: dict[str, list]):
-    assert broadcast.send("b-1") == "Sent broadcast b-1."
-    assert configured["send"] == [{"broadcast_id": "b-1"}]
