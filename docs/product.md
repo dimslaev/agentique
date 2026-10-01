@@ -25,10 +25,14 @@ blog, product, announcement). You can filter by category, kind, score, and time 
 query and finds the nearest articles in vector space, so "how do I run a model locally"
 surfaces relevant pieces even if none of them use that exact phrase.
 
-**Newsletter signup.** Visitors can subscribe with just an email from the landing page;
-subscribers are synced to a Resend audience for future digest emails (the sending side
-isn't built yet — this is capture only, for now). Separate from creating an account —
-subscribing doesn't create a login, and signing up for an account doesn't subscribe you.
+**Newsletter.** Visitors can subscribe with just an email from the landing page;
+subscribers are synced to a Resend audience. Every Friday a Claude Code session finds
+the week's most talked-about topics, reads what individual writers, repos and
+discussions say about each, and writes three short explainers, one per topic: what the
+thing is, how it works, how people are taking it, with links to the sources. They land
+as Resend drafts and a person sends one (docs/adr/0012). Separate from creating an
+account — subscribing doesn't create a login, and signing up for an account doesn't
+subscribe you.
 
 **A developer API — public, paid tier not live yet.** The article endpoints (list,
 search, facets, publishers, tags, stats) are open and unauthenticated, with no date
@@ -89,7 +93,8 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
   their embedding vectors, so relevance search is just a SQL query.
 - **Pipeline**: a separate scheduled Python process (once a day, 04:00) that fetches
   and filters, plus a Claude Code session an hour later that judges what it queued and
-  a report email an hour after that.
+  a report email an hour after that. A second Claude Code session drafts the newsletter
+  on Friday mornings.
 - **Embeddings**: model2vec — a tiny, fast, CPU-only static embedding model, no GPU or
   external API call needed for search.
 - **Frontend**: React + Vite + Tailwind, talking to the backend through a generated
@@ -101,10 +106,10 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
 ## Where things stand / what's next
 
 The product today is deliberately narrow: a public landing page, a public feed and
-search, one capture-only newsletter form. Things explicitly not
-built yet (and worth knowing about if you're picking up work here): sending the actual
-newsletter digest, a real Pro API with keys and billing (currently a "coming soon"
-button), saved articles / personalization, an MCP server so AI agents can query the
+search, one weekly newsletter. Things explicitly not built yet (and worth knowing
+about if you're picking up work here): sending the newsletter without a person
+pressing send, per-category issues, a real Pro API with keys and billing (currently a
+"coming soon" button), saved articles / personalization, an MCP server so AI agents can query the
 feed directly, the Substack discovery crawler and email-newsletter ingestion mentioned
 above, and a real load/scale test (current data volume is small — this has been an
 architecture spike more than a performance one so far).

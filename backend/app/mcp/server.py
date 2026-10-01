@@ -11,16 +11,19 @@ from app.mcp.tools import (
     WRITE_SCOPE,
     approve,
     check_link,
+    draft_issue,
     get_content,
     list_candidates,
     reject,
     reject_many,
+    related,
     similar,
     sql_query,
     stories,
     vocabulary,
     web_fetch,
     web_search,
+    week,
 )
 from app.platform.settings import settings
 
@@ -69,7 +72,10 @@ mcp: FastMCP = FastMCP(
         "verdict, `get_content` pages through the stored text for one of them, "
         "`similar` and `stories` compare candidates with the feed, "
         "`check_link` looks up a repo or model, `vocabulary` lists the labels, "
-        "and `approve`, `reject` and `reject_many` settle them."
+        "and `approve`, `reject` and `reject_many` settle them. Weekly "
+        "newsletter, with the write token only: `week` ranks the week's "
+        "topics, `related` finds what else covers one, and `draft_issue` "
+        "drafts an issue for a person to send."
     ),
     auth=SharedSecret(),
     tools=[
@@ -85,6 +91,9 @@ mcp: FastMCP = FastMCP(
         approve,
         reject,
         reject_many,
+        week,
+        related,
+        draft_issue,
     ],
 )
 

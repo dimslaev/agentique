@@ -36,6 +36,10 @@ cd backend && uv run --env-file ../.env python -m pipeline.report
 `AGENTIQUE_MCP_TOKEN` must be the write token for `/curate` to publish anything;
 with the read token the session can list candidates and settle none.
 
+The weekly newsletter is the same shape: `claude "/newsletter"` reads the week
+through the MCP server and drafts three issues as Resend broadcasts. It sends
+nothing.
+
 ## Pre-commit and linting
 
 Uses [prek](https://prek.j178.dev/). Config: `.pre-commit-config.yaml`.
@@ -97,4 +101,5 @@ uv run alembic upgrade head
 
 - One transactional email: password recovery
 - Template: `app/platform/email-templates/`, next to `app/platform/email.py`, which renders and sends it
+- The weekly newsletter issue: `weekly_issue.html` in the same folder, the site's wordmark over plain prose, rendered (autoescaped) and drafted by `app/newsletter/broadcast.py`
 - No MJML source - edit the HTML directly

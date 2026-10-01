@@ -86,6 +86,49 @@ If `list_candidates` comes back with "This tool needs the curation token", the e
 Finish with a short report: how many approved, how many rejected, how many web searches, fetches and check_link calls you made, and anything that blocked you.
 ```
 
+## Newsletter
+
+The weekly issue is drafted by a second off-box routine, the same way as
+curation: a scheduled task on claude.ai/code against this repo, with the same
+write token, invoking `/newsletter` (`.claude/skills/newsletter/SKILL.md`).
+It runs Fridays at 07:52 Europe/Zurich (`CRON_TZ=Europe/Zurich 52 7 * * 5`),
+after that morning's curation and report, and reads the 7 days before it.
+
+- It writes three drafts, one per topic, as Resend broadcasts to
+  `RESEND_AUDIENCE_ID`. A person reads them in the Resend dashboard and sends
+  one; the other two stay drafts.
+- Nothing in the code sends a broadcast. Sending is only ever done by hand.
+- Nothing about an issue is stored here. Resend keeps the broadcasts.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the agentique weekly newsletter session.
+
+Invoke the `newsletter` skill (`.claude/skills/newsletter/SKILL.md` in this repo) and follow it end to end:
+
+1. `week()` on the agentique MCP server, once, and read every topic before choosing.
+2. Choose the three most talked-about topics a builder can do something with, as the skill's "Choosing" section says.
+3. For each topic, one at a time: read the first-party source, `related(url)`, the individual writers and repos that tried it, and search for how people are taking it. At most 4 searches and 8 fetches per topic.
+4. Write a 250-450 word explainer in the tone the skill describes, linking 4-8 sources you read, and call `draft_issue`.
+
+Do not edit files or commit anything; this session reads and drafts, nothing else.
+
+If a tool answers "This tool needs the curation token", the environment's AGENTIQUE_MCP_TOKEN is the read token rather than MCP_WRITE_TOKEN. Stop and say so plainly.
+
+Finish with a short report: the three topics and why each, the sources behind each draft and where they came from, how many searches, fetches and check_link calls you made, and the three lines draft_issue returned.
+```
+
+## Newsletter environment
+
+Read by the backend through `app/platform/settings.py`.
+
+| Variable | Read by | Effect |
+| --- | --- | --- |
+| `RESEND_API_KEY` | `app/newsletter/broadcast.py` | Unset: `draft_issue` refuses, naming it. |
+| `RESEND_AUDIENCE_ID` | `app/newsletter/broadcast.py`, `app/newsletter/routes.py` | The audience signups are synced to and the issue is broadcast to. |
+| `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/newsletter/broadcast.py` | The issue's sender. |
+
 ## Pipeline environment
 
 Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
