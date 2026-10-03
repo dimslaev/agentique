@@ -9,7 +9,7 @@ test.describe("Logged-in likes", () => {
   test("clicking the fire toggles the like optimistically", async ({
     page,
   }) => {
-    await page.goto("/feed")
+    await page.goto("/")
     const firstRow = page.getByTestId("article-row").first()
     const likeButton = firstRow.getByTestId("like-button")
     const likeCount = firstRow.getByTestId("like-count")
@@ -42,7 +42,7 @@ test.describe("Popular sort", () => {
   test("sort filter shows Popular and selecting it reorders the list", async ({
     page,
   }) => {
-    await page.goto("/feed")
+    await page.goto("/")
     const popularOption = page.getByRole("button", { name: "Popular" })
     await expect(popularOption).toBeVisible()
     await popularOption.click()
@@ -63,7 +63,7 @@ test.describe("Profile page", () => {
     test("the feed is readable and liking sends you to login", async ({
       page,
     }) => {
-      await page.goto("/feed")
+      await page.goto("/")
       const firstRow = page.getByTestId("article-row").first()
       await expect(firstRow).toBeVisible()
 
@@ -88,7 +88,7 @@ test.describe("Profile page", () => {
   test("a liked article appears in the Liked tab; unliking removes it", async ({
     page,
   }) => {
-    await page.goto("/feed")
+    await page.goto("/")
     const firstRow = page.getByTestId("article-row").first()
     const href = await firstRow.locator("a").first().getAttribute("href")
     await firstRow.getByTestId("like-button").click()

@@ -32,8 +32,9 @@ def read_articles(
     q: str | None = None,
     min_score: int | None = Query(default=None, ge=1, le=10),
     origin: Origin | None = None,
-    kind: str | None = None,
-    tag: str | None = None,
+    # Repeatable: `?tag=a&tag=b` matches either. A feed topic is a set of these.
+    kind: list[str] | None = Query(default=None),
+    tag: list[str] | None = Query(default=None),
     publisher: str | None = None,
     sort: str = Query(default="score-desc"),
 ) -> ArticlesPublic:
@@ -54,8 +55,8 @@ def read_articles(
         q=q,
         min_score=min_score,
         origin=origin,
-        kind=kind,
-        tag=tag,
+        kinds=kind,
+        tags=tag,
         publisher=publisher,
         sort=sort,
     )

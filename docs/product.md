@@ -8,24 +8,20 @@ across all of it.
 
 ## What it does today
 
-**A public landing page (`/`).** Anyone gets a hardcoded "top selection" of articles —
-one box per source (a few model labs, a newsletters box aggregating Ben's Bites/TLDR/
-The Batch/etc.) — plus the newsletter signup and a link to create an account. It's a
-static marketing page, not backed by the live article API; a separate agent keeps its
-source data current.
-
-**A filtered, ranked article feed (`/feed`, public — no account needed).** Lists recent
+**A filtered, ranked article feed (`/`, public — no account needed).** It is the
+homepage; `/feed` redirects to it. Lists recent
 articles sorted by a "developer-actionability" score the curation agent assigns (or
 by recency).
 Each entry shows its publisher, and its kind when it is a repo, paper or model. You filter by where it is from (Labs,
-Companies, Writers, Media, Repos, Papers, Models), by tag, and by time window
+Companies, Writers, Media, Repos, Papers, Models), by topic (a hand-curated set of
+tags and kinds, e.g. "Open weights" or "Harnesses"), and by time window
 (last 3 days / week / month).
 
 **Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
 query and finds the nearest articles in vector space, so "how do I run a model locally"
 surfaces relevant pieces even if none of them use that exact phrase.
 
-**Newsletter.** Visitors can subscribe with just an email from the landing page;
+**Newsletter.** Visitors can subscribe with just an email from `/newsletter`;
 subscribers are synced to a Resend audience. Every Friday a Claude Code session finds
 the week's most talked-about topics, reads what individual writers, repos and
 discussions say about each, and writes three short explainers, one per topic: what the
@@ -105,7 +101,7 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
 
 ## Where things stand / what's next
 
-The product today is deliberately narrow: a public landing page, a public feed and
+The product today is deliberately narrow: a public feed and
 search, one weekly newsletter. Things explicitly not built yet (and worth knowing
 about if you're picking up work here): sending the newsletter without a person
 pressing send, per-category issues, a real Pro API with keys and billing (currently a

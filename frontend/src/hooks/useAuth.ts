@@ -54,7 +54,7 @@ const useAuth = () => {
       if (redirectTo) {
         navigate({ href: redirectTo })
       } else {
-        navigate({ to: "/feed" })
+        navigate({ to: "/" })
       }
     },
     onError: handleError.bind(showErrorToast),

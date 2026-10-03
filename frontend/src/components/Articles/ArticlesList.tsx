@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { ArticleRow } from "./ArticleRow"
 import { FilterOptions } from "./FilterOption"
 import { SCORE_STANDOUT } from "./ScoreRail"
+import { findTopic } from "./topics"
 
 const PUBLISHED_DAYS: Record<string, number> = { "3d": 3, "1w": 7, "1m": 30 }
 
@@ -27,8 +28,9 @@ function cutoffIso(days: number): string {
 }
 
 export function ArticlesList() {
-  const { filters, setFilter, setTag } = useFilters()
-  const { search, dateRange, sort, origin, tag } = filters
+  const { filters, setFilter } = useFilters()
+  const { search, dateRange, sort, origin, topic } = filters
+  const topicDef = findTopic(topic)
 
   const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
@@ -37,7 +39,7 @@ export function ArticlesList() {
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: search
       ? ["articles", "search", search]
-      : ["articles", dateRange, sort, origin, tag],
+      : ["articles", dateRange, sort, origin, topic],
     queryFn: () =>
       search
         ? ArticlesService.searchArticles({ q: search, limit: 50 })
@@ -46,7 +48,8 @@ export function ArticlesList() {
             since,
             sort,
             origin: (origin || undefined) as Origin | undefined,
-            tag: tag || undefined,
+            tag: topicDef?.tags,
+            kind: topicDef?.kinds,
           }),
     placeholderData: keepPreviousData,
   })
@@ -103,16 +106,7 @@ export function ArticlesList() {
           )}
         >
           {articles.map((article) => (
-            <ArticleRow
-              key={article.id}
-              article={article}
-              onTagClick={(t) => {
-                // A tag filter does nothing during a search, so leave it.
-                setFilter("search", "")
-                setTag(t.slug, t.name)
-                window.scrollTo({ top: 0 })
-              }}
-            />
+            <ArticleRow key={article.id} article={article} />
           ))}
         </ul>
       )}

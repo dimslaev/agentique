@@ -248,7 +248,7 @@ ${bodyHtml}
   })
 }
 
-// Real, indexable SPA routes. Everything else — /feed, /developers,
+// Real, indexable SPA routes. Everything else — /developers,
 // /newsletter, login, settings, admin, profile — sits behind the login
 // guard and bounces anonymous visitors (and crawlers) to "/", so there's
 // nothing there for Google to rank.

@@ -50,8 +50,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Landing-page palette and type. Deliberately NOT wired into the shadcn
-     tokens above — /feed and the app shell keep their own look. */
+  /* Wire palette and type. */
   --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
   --font-wire: "IBM Plex Mono", ui-monospace, monospace;
   --font-body: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
@@ -169,38 +168,6 @@
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background-color: var(--color-muted-foreground);
     border-radius: 9999px;
-  }
-}
-
-@layer components {
-  /* No longer scopes anything — --background/--foreground are the wire
-     palette app-wide now, so this just restates the default. Left in place
-     since LandingPage.tsx still carries the class name. */
-  .landing {
-    background-color: var(--ink);
-    color: var(--paper);
-    font-family: var(--font-body);
-  }
-
-  /* Terminal caret after the headline. Steps, not a fade — a fading caret
-     reads as a generic pulse effect; a hard on/off reads as a real prompt. */
-  .caret {
-    animation: caret-blink 1.1s steps(1) infinite;
-  }
-  @keyframes caret-blink {
-    0%,
-    50% {
-      opacity: 1;
-    }
-    50.01%,
-    100% {
-      opacity: 0;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .caret {
-      animation: none;
-    }
   }
 }
 

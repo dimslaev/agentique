@@ -152,7 +152,7 @@ export type AnalyticsCollectEventData = {
 export type AnalyticsCollectEventResponse = (void);
 
 export type ArticlesReadArticlesData = {
-    kind?: (string | null);
+    kind?: (Array<(string)> | null);
     limit?: number;
     minScore?: (number | null);
     origin?: (Origin | null);
@@ -160,7 +160,7 @@ export type ArticlesReadArticlesData = {
     q?: (string | null);
     since?: (string | null);
     sort?: string;
-    tag?: (string | null);
+    tag?: (Array<(string)> | null);
 };
 
 export type ArticlesReadArticlesResponse = (ArticlesPublic);

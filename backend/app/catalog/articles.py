@@ -136,8 +136,8 @@ def _filters(
     q: str | None,
     min_score: int | None,
     origin: Origin | None,
-    kind: str | None,
-    tag: str | None,
+    kinds: list[str] | None,
+    tags: list[str] | None,
     publisher: str | None,
 ) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
@@ -153,16 +153,16 @@ def _filters(
         )
     if min_score is not None:
         conditions.append(col(Article.score) >= min_score)
-    if kind is not None:
-        conditions.append(col(Article.kind) == kind)
+    if kinds:
+        conditions.append(col(Article.kind).in_(kinds))
     if origin is not None:
         conditions.append(origin_condition(origin))
-    if tag is not None:
+    if tags:
         conditions.append(
             col(Article.id).in_(
                 select(ArticleTag.article_id)
                 .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
-                .where(Tag.slug == tag)
+                .where(col(Tag.slug).in_(tags))
             )
         )
     if publisher is not None:
@@ -183,17 +183,19 @@ def list_articles(
     q: str | None = None,
     min_score: int | None = None,
     origin: Origin | None = None,
-    kind: str | None = None,
-    tag: str | None = None,
+    kinds: list[str] | None = None,
+    tags: list[str] | None = None,
     publisher: str | None = None,
     sort: str = "score-desc",
 ) -> ArticlesPublic:
     """The feed: filtered, sorted, capped. `count` is the unlimited match total.
 
+    `kinds` and `tags` each match any of their values; the two still AND.
+
     `viewer_id` only decides whether `liked_by_me` is filled in — the feed is
     public and a token is optional.
     """
-    conditions = _filters(since, q, min_score, origin, kind, tag, publisher)
+    conditions = _filters(since, q, min_score, origin, kinds, tags, publisher)
 
     count = session.exec(
         select(func.count()).select_from(Article).where(*conditions)

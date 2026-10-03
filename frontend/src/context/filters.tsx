@@ -6,16 +6,13 @@ export type Filters = {
   sort: string
   /** The "From" row: who published it, or what it is. */
   origin: string
-  tag: string
-  /** Display name for `tag`, which may not be among the top facets when it
-   *  came from a row or from search. Not sent to the API. */
-  tagName: string
+  /** A slug from `TOPICS`. */
+  topic: string
 }
 
 type FiltersContextType = {
   filters: Filters
   setFilter: (key: keyof Filters, value: string) => void
-  setTag: (slug: string, name: string) => void
 }
 
 const FiltersContext = createContext<FiltersContextType | null>(null)
@@ -26,20 +23,15 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     dateRange: "1w",
     sort: "published_at-desc",
     origin: "",
-    tag: "",
-    tagName: "",
+    topic: "",
   })
 
   const setFilter = (key: keyof Filters, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
   }
 
-  const setTag = (slug: string, name: string) => {
-    setFilters((prev) => ({ ...prev, tag: slug, tagName: name }))
-  }
-
   return (
-    <FiltersContext.Provider value={{ filters, setFilter, setTag }}>
+    <FiltersContext.Provider value={{ filters, setFilter }}>
       {children}
     </FiltersContext.Provider>
   )

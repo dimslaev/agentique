@@ -1,4 +1,4 @@
-import type { ArticlePublic, TagPublic } from "@/client"
+import type { ArticlePublic } from "@/client"
 import { articleClickHandlers } from "@/lib/analytics"
 import { LikeButton } from "./LikeButton"
 import { ScoreRail } from "./ScoreRail"
@@ -10,15 +10,7 @@ function formatDate(iso: string): string {
   })
 }
 
-export function ArticleRow({
-  article,
-  onTagClick,
-}: {
-  article: ArticlePublic
-  /** Makes tags clickable. Without it (e.g. on the profile page, where there
-   *  is no feed to filter) tags render as plain text. */
-  onTagClick?: (tag: TagPublic) => void
-}) {
+export function ArticleRow({ article }: { article: ArticlePublic }) {
   return (
     <li
       data-testid="article-row"
@@ -53,20 +45,9 @@ export function ArticleRow({
         <div className="flex items-center gap-3">
           {article.tags && article.tags.length > 0 && (
             <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 font-wire text-[11px] text-muted-foreground">
-              {article.tags.map((tag) =>
-                onTagClick ? (
-                  <button
-                    key={tag.slug}
-                    type="button"
-                    onClick={() => onTagClick(tag)}
-                    className="transition-colors hover:text-foreground"
-                  >
-                    #{tag.slug}
-                  </button>
-                ) : (
-                  <span key={tag.slug}>#{tag.slug}</span>
-                ),
-              )}
+              {article.tags.map((tag) => (
+                <span key={tag.slug}>#{tag.slug}</span>
+              ))}
             </div>
           )}
           <div className="ml-auto shrink-0">

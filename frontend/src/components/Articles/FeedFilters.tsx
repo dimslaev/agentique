@@ -1,24 +1,9 @@
-import { useQuery } from "@tanstack/react-query"
-import { Check, ChevronsUpDown, Search, X } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { ArticlesService } from "@/client"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Search, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { useFilters } from "@/context/filters"
-import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { cn } from "@/lib/utils"
 import { FilterOptions, FilterRow } from "./FilterOption"
+import { findTopic, TOPICS } from "./topics"
 
 // Who published it, or what it is when that is settled. Each article falls
 // under exactly one: a repo is a repo whoever published it.
@@ -33,9 +18,10 @@ const ORIGIN_OPTIONS = [
   { value: "model", label: "Models" },
 ]
 
-// Enough to show the busiest tags on one line at desktop width; the rest are
-// behind "More…".
-const TOP_TAGS = 4
+const TOPIC_OPTIONS = [
+  { value: "", label: "All" },
+  ...TOPICS.map((t) => ({ value: t.slug, label: t.label })),
+]
 
 export function FeedFilters() {
   const { filters, setFilter } = useFilters()
@@ -62,8 +48,13 @@ export function FeedFilters() {
               onChange={(v) => setFilter("origin", v)}
             />
           </FilterRow>
-          <FilterRow label="Tags">
-            <TagOptions />
+          <FilterRow label="Topics">
+            <FilterOptions
+              label="Topics"
+              options={TOPIC_OPTIONS}
+              value={filters.topic}
+              onChange={(v) => setFilter("topic", v)}
+            />
           </FilterRow>
         </div>
       </section>
@@ -72,20 +63,20 @@ export function FeedFilters() {
 }
 
 /**
- * Phones don't get the filter rows, but a filter can still be active there: a
- * tag tapped on a row, or one set before the window narrowed. Say what is
+ * Phones don't get the filter rows, but a filter can still be active there:
+ * one set before the window narrowed. Say what is
  * applied and offer a way out, or the wire looks inexplicably short.
  */
 function MobileActiveFilters() {
-  const { filters, setFilter, setTag } = useFilters()
-  const { search, origin, tag, tagName } = filters
+  const { filters, setFilter } = useFilters()
+  const { search, origin, topic } = filters
 
   // A search ignores the other filters, so name only the search.
   const applied = search
     ? [`"${search}"`]
     : [
         ORIGIN_OPTIONS.find((o) => o.value === origin && origin)?.label,
-        tag && `#${tagName || tag}`,
+        findTopic(topic)?.label,
       ].filter(Boolean)
 
   if (applied.length === 0) return null
@@ -101,7 +92,7 @@ function MobileActiveFilters() {
         onClick={() => {
           setFilter("search", "")
           setFilter("origin", "")
-          setTag("", "")
+          setFilter("topic", "")
         }}
         className="ml-auto flex shrink-0 items-center gap-1 py-2 uppercase tracking-[0.08em] hover:text-foreground"
       >
@@ -162,98 +153,5 @@ function SearchInput() {
         </button>
       )}
     </div>
-  )
-}
-
-function TagOptions() {
-  const { filters, setTag } = useFilters()
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
-  const debouncedQuery = useDebouncedValue(query, 250)
-
-  const { data: facets } = useQuery({
-    queryKey: ["article-facets", TOP_TAGS],
-    queryFn: () => ArticlesService.articleFacets({ limit: TOP_TAGS }),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const { data: results, isFetching } = useQuery({
-    queryKey: ["facet-search", "tags", debouncedQuery],
-    queryFn: () => ArticlesService.searchTags({ q: debouncedQuery, limit: 20 }),
-    enabled: open,
-    placeholderData: (prev) => prev,
-  })
-
-  // The selected tag may have come from a row or from search rather than the
-  // top facets; show it anyway so the active filter is always visible.
-  const options = useMemo(() => {
-    const top = (facets?.tags ?? []).map((t) => ({
-      value: t.slug,
-      label: t.name,
-    }))
-    const selected = filters.tag
-    const extra =
-      selected && !top.some((t) => t.value === selected)
-        ? [{ value: selected, label: filters.tagName || selected }]
-        : []
-    return [{ value: "", label: "All" }, ...extra, ...top]
-  }, [facets, filters.tag, filters.tagName])
-
-  return (
-    <FilterOptions
-      label="Tags"
-      options={options}
-      value={filters.tag}
-      onChange={(slug) =>
-        setTag(slug, options.find((o) => o.value === slug)?.label ?? "")
-      }
-    >
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="flex items-center gap-1 whitespace-nowrap px-1.5 py-1 text-[13px] leading-4 text-muted-foreground transition-colors hover:text-foreground max-sm:px-2 max-sm:py-2"
-          >
-            <ChevronsUpDown className="h-3 w-3 shrink-0" />
-            More…
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-56 p-0">
-          <Command shouldFilter={false}>
-            <CommandInput
-              placeholder="Search tags…"
-              value={query}
-              onValueChange={setQuery}
-            />
-            <CommandList>
-              <CommandEmpty>
-                {isFetching ? "Searching…" : "No results."}
-              </CommandEmpty>
-              <CommandGroup>
-                {(results ?? []).map((item) => (
-                  <CommandItem
-                    key={item.slug}
-                    value={item.slug}
-                    onSelect={() => {
-                      setTag(item.slug, item.name)
-                      setOpen(false)
-                      setQuery("")
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "h-3.5 w-3.5",
-                        item.slug === filters.tag ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    {item.name}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </FilterOptions>
   )
 }

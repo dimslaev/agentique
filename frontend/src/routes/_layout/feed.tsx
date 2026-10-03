@@ -1,9 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { Feed } from "@/components/Articles/Feed"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
+// The feed moved to "/"; old links and bookmarks still land on it.
 export const Route = createFileRoute("/_layout/feed")({
-  component: Feed,
-  head: () => ({
-    meta: [{ title: "Feed - Agentique" }],
-  }),
+  beforeLoad: () => {
+    throw redirect({ to: "/", replace: true })
+  },
 })
