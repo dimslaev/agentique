@@ -26,14 +26,14 @@ const RESPONSE_SHAPE = `{
       "published_at": "ISO datetime | null",
       "score": "integer",
       "summary": "string | null",
-      "categories": ["string"],
-      "kind": "string",
+      "kind": "post | repo | paper | model",
+      "found_via": "string | null",
       "created_at": "ISO datetime | null",
       "publisher": {
         "id": 1,
         "slug": "string",
         "name": "string",
-        "kind": "individual | company | community | media",
+        "kind": "lab | company | individual | media | community | unknown",
         "image": "string | null"
       },
       "tags": [{ "slug": "string", "name": "string" }],
@@ -100,13 +100,13 @@ function DevelopersPage() {
             },
             { name: "min_score", description: "integer · 1-10 · optional" },
             {
-              name: "category",
-              description: "models | dev | research · optional",
+              name: "origin",
+              description:
+                "lab | company | individual | media | repo | paper | model · optional · a repo, paper or model by kind, anything else by its publisher's kind",
             },
             {
               name: "kind",
-              description:
-                "repo | paper | model | blog | product | announcement · optional",
+              description: "post | repo | paper | model · optional",
             },
             { name: "tag", description: "tag slug · optional" },
             {

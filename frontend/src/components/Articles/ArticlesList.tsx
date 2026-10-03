@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { ArticlesService } from "@/client"
+import { ArticlesService, type Origin } from "@/client"
 import { useFilters } from "@/context/filters"
 import { cn } from "@/lib/utils"
 import { ArticleRow } from "./ArticleRow"
@@ -28,7 +28,7 @@ function cutoffIso(days: number): string {
 
 export function ArticlesList() {
   const { filters, setFilter, setTag } = useFilters()
-  const { search, dateRange, sort, category, kind, tag } = filters
+  const { search, dateRange, sort, origin, tag } = filters
 
   const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
@@ -37,7 +37,7 @@ export function ArticlesList() {
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: search
       ? ["articles", "search", search]
-      : ["articles", dateRange, sort, category, kind, tag],
+      : ["articles", dateRange, sort, origin, tag],
     queryFn: () =>
       search
         ? ArticlesService.searchArticles({ q: search, limit: 50 })
@@ -45,8 +45,7 @@ export function ArticlesList() {
             limit: 50,
             since,
             sort,
-            category: category || undefined,
-            kind: kind || undefined,
+            origin: (origin || undefined) as Origin | undefined,
             tag: tag || undefined,
           }),
     placeholderData: keepPreviousData,

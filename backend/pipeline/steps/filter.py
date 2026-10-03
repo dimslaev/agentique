@@ -1,4 +1,4 @@
-"""Step 2: drop what we have already seen.
+"""Drop what we have already seen, before anything is spent on it.
 
 A URL that is an Article, a pending candidate or a settled reject is never
 fetched and judged again. Nothing else is filtered: the curation agent judges
@@ -13,12 +13,12 @@ from sqlmodel import Session, select
 from app.catalog.models import Article
 from app.platform.logging import log
 from pipeline.models import Reject
-from pipeline.types import Candidate
+from pipeline.types import RawItem
 
 
-def filter_known_urls(
-    session: Session, articles: list[Candidate], label: str
-) -> list[Candidate]:
+def filter_known_urls[T: RawItem](
+    session: Session, articles: list[T], label: str
+) -> list[T]:
     if not articles:
         return []
     all_urls = [a["url"] for a in articles]

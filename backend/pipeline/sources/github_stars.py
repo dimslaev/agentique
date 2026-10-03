@@ -1,4 +1,5 @@
-"""GitHub repos from the public REST API, for the curation agent's ``check_link``.
+"""GitHub repos from the public REST API, for the curation agent's ``check_link``,
+and the account type publisher resolution reads to tell a person from an org.
 
 Stars, forks and the last push are the outside view of a repo: unlike a title
 or a README they cannot be written to sound impressive. Not a source any more:
@@ -80,3 +81,25 @@ def has_readme(owner: str, repo: str) -> bool | None:
     if resp.status_code == 404:
         return False
     return None
+
+
+def account_type(owner: str) -> str | None:
+    """``"User"`` or ``"Organization"`` for a GitHub account, None when the
+    lookup failed."""
+    try:
+        resp = fetch_with_timeout(
+            f"https://api.github.com/users/{owner}",
+            timeout=LOOKUP_TIMEOUT_SECS,
+            headers=_headers(),
+        )
+    except Exception as e:
+        log(f"  GitHub lookup failed for {owner}: {e}")
+        return None
+    if resp.status_code != 200:
+        log(f"  GitHub lookup for {owner}: HTTP {resp.status_code}")
+        return None
+    try:
+        kind = resp.json().get("type")
+    except Exception:
+        return None
+    return kind if isinstance(kind, str) else None

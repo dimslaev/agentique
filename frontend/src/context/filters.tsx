@@ -4,8 +4,8 @@ export type Filters = {
   search: string
   dateRange: string
   sort: string
-  category: string
-  kind: string
+  /** The "From" row: who published it, or what it is. */
+  origin: string
   tag: string
   /** Display name for `tag`, which may not be among the top facets when it
    *  came from a row or from search. Not sent to the API. */
@@ -25,8 +25,7 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     search: "",
     dateRange: "1w",
     sort: "published_at-desc",
-    category: "",
-    kind: "",
+    origin: "",
     tag: "",
     tagName: "",
   })

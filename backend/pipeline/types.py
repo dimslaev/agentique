@@ -15,7 +15,7 @@ are the funnel: reading them tells you the order without opening ``run.py``.
 
 This replaced a single ``FetchedArticle`` where every key was optional at every
 stage. That shape could not say which step filled what, so each step's contract
-lived in a docstring and a mis-ordered call failed at runtime with a KeyError
+lived in a docstring and a misordered call failed at runtime with a KeyError
 instead of at the call site.
 
 ``curation.approve`` reshapes a ``Persisted`` into the narrower
@@ -25,8 +25,6 @@ instead of at the call site.
 from __future__ import annotations
 
 from typing import NotRequired, TypedDict
-
-from app.catalog.models import Category
 
 
 class RawItem(TypedDict):
@@ -91,4 +89,3 @@ class ProcessedArticle(TypedDict):
     title: str
     score: int
     snippet: str
-    categories: list[Category]

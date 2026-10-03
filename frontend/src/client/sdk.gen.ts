@@ -38,7 +38,7 @@ export class ArticlesService {
      * @param data.since
      * @param data.q
      * @param data.minScore
-     * @param data.category
+     * @param data.origin
      * @param data.kind
      * @param data.tag
      * @param data.publisher
@@ -55,7 +55,7 @@ export class ArticlesService {
                 since: data.since,
                 q: data.q,
                 min_score: data.minScore,
-                category: data.category,
+                origin: data.origin,
                 kind: data.kind,
                 tag: data.tag,
                 publisher: data.publisher,

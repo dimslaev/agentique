@@ -206,7 +206,9 @@ def list_candidates(
     its row and shifts the pages after it.
 
     One row per candidate: `url`, `title`, `source` (where the link was found),
-    `publisher`, `approved` (the publisher's approvals / decisions over the
+    `publisher`, `publisher_kind` (`unknown` for a site the pipeline has just
+    created a publisher for: `approve` then needs one), `approved` (the
+    publisher's approvals / decisions over the
     last 90 days, e.g. "3/10", or "new" when it has none), `traction`,
     `published_at`, `queued_at`, and a 200-character `snippet`. Deliberately not the full text — call
     `get_content` for a candidate worth a closer look.
@@ -289,7 +291,7 @@ def check_link(url: str) -> dict[str, object]:
 
 
 def vocabulary() -> dict[str, object]:
-    """The labels `approve` accepts: `categories`, `kinds`, and `tags` as
+    """The labels `approve` accepts: `kinds`, `publisher_kinds`, and `tags` as
     slug -> description. Call it once per session, before the first approve."""
     _require_write()
     with _curation_session() as session:
@@ -301,16 +303,20 @@ def approve(
     score: int,
     reason: str,
     summary: str,
-    categories: list[str],
     kind: str,
     tags: list[str],
+    publisher_kind: str | None = None,
+    publisher_name: str | None = None,
 ) -> str:
     """Publish a candidate with the labels you chose, then embed it.
 
     `score` is 1-100 on the same scale the rubric describes, `reason` one short
     sentence naming what decided it, and `summary` the text a reader sees under
-    the title. `categories` (one or more), `kind` and `tags` (up to 3) come from
-    `vocabulary`; a github, huggingface or arxiv URL sets its own kind. A label
+    the title. `kind` and `tags` (up to 3) come from `vocabulary`; a github,
+    huggingface or arxiv URL sets its own kind. When the candidate's
+    `publisher_kind` is `unknown`, pass `publisher_kind` (from
+    `vocabulary`'s `publisher_kinds`) and, if its host is not a readable name,
+    `publisher_name`; both are ignored for a publisher that has a kind. A label
     that is not in the vocabulary is refused and the candidate stays pending.
     The candidate stops being pending in the same transaction that inserts the
     article, so nothing is ever published twice.
@@ -319,7 +325,15 @@ def approve(
     with _curation_session() as session:
         try:
             article_id = curation.approve(
-                session, url, score, reason, summary, categories, kind, tags
+                session,
+                url,
+                score,
+                reason,
+                summary,
+                kind,
+                tags,
+                publisher_kind,
+                publisher_name,
             )
         except curation.CandidateError as exc:
             raise ToolError(str(exc))
@@ -368,8 +382,8 @@ def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[digest.WeekTopic
     Ranked by `coverage` (distinct publishers carrying it, counting the copies
     curation rejected as retellings), then `likes`, then `top_score`; up to
     `limit` topics. Each topic's `articles` are the published ones - `url`,
-    `title`, `publisher`, `publisher_kind` (`individual`, `company`,
-    `community`, `media`), `kind`, `score`, `likes`, and the `summary` curation
+    `title`, `publisher`, `publisher_kind` (`lab`, `company`, `individual`,
+    `media`, `community`, `unknown`), `kind`, `score`, `likes`, and the `summary` curation
     wrote after reading it - and `covered_by` the other outlets' copies from
     the ledger, with curation's `reason`.
     """

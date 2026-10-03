@@ -31,10 +31,17 @@ def slugify(name: str) -> str:
 
 
 class PublisherKind(StrEnum):
-    individual = "individual"
+    # Makes models and posts about them on its own domain.
+    lab = "lab"
     company = "company"
-    community = "community"
+    individual = "individual"
     media = "media"
+    # Aggregators (Hacker News, Reddit). Credited only for posts on their own
+    # site; anything they link to is credited to its author.
+    community = "community"
+    # A publisher the pipeline created from a URL it had not seen. The curation
+    # agent sets the real kind the first time it approves one of its articles.
+    unknown = "unknown"
 
 
 class PublisherType(StrEnum):
@@ -57,14 +64,31 @@ class TrustLevel(StrEnum):
 
 
 class ArticleKind(StrEnum):
-    blog = "blog"
-    product = "product"
-    announcement = "announcement"
+    # A blog post, launch post or announcement: what kind of post it is follows
+    # from who published it (PublisherKind), not from a label on the article.
+    post = "post"
     repo = "repo"
     paper = "paper"
     model = "model"
 
 
+class Origin(StrEnum):
+    """The feed's "From" filter: what the article is when that is settled (a
+    repo, a paper, a model), otherwise who published it. Not stored; each
+    article falls under exactly one, see `catalog.articles.origin_condition`."""
+
+    lab = "lab"
+    company = "company"
+    individual = "individual"
+    media = "media"
+    repo = "repo"
+    paper = "paper"
+    model = "model"
+
+
+# No longer written: `dev` covered most of the feed, and publisher kind plus
+# article kind split it better. The column stays because deploy runs additive
+# migrations only.
 class Category(StrEnum):
     dev = "dev"
     models = "models"
@@ -143,7 +167,7 @@ class ArticleBase(SQLModel):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     score: int
-    kind: ArticleKind = ArticleKind.blog
+    kind: ArticleKind = ArticleKind.post
     categories: list[Category] = Field(
         default_factory=list, sa_column=Column(JSON, nullable=False)
     )
@@ -160,6 +184,9 @@ class Article(ArticleBase, table=True):
     # The judge's one-sentence account of `score`. Internal, not on the public
     # API; null for articles scored before the scorer gave one.
     score_reason: str | None = None
+    # The aggregator that found the link (Hacker News, a newsletter), when that
+    # is not the publisher itself. Null for an article from its publisher's feed.
+    found_via: str | None = None
     # Set by the retired rescore script (removed with the LLM scorer): when this
     # row was last rescored, and whether that rescore put it under the old
     # threshold. Marking only; nothing deletes a marked row automatically.
@@ -220,7 +247,7 @@ class ArticlePublic(SQLModel):
     summary: str | None = None
     score: int
     kind: ArticleKind
-    categories: list[Category] = Field(default_factory=list)
+    found_via: str | None = None
     published_at: datetime | None = None
     created_at: datetime | None = None
     publisher: PublisherPublic

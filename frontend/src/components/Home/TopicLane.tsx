@@ -83,8 +83,12 @@ function LaneRow({
         </a>
         <div className="mt-1.5 flex items-center gap-1.5 overflow-hidden font-wire text-[10px] uppercase tracking-[0.08em] text-dim">
           <span className="truncate">{article.publisher.name}</span>
-          <span className="shrink-0">/</span>
-          <span className="shrink-0">{article.kind}</span>
+          {article.kind !== "post" && (
+            <>
+              <span className="shrink-0">/</span>
+              <span className="shrink-0">{article.kind}</span>
+            </>
+          )}
           {article.published_at && (
             <span className="ml-auto shrink-0 tabular-nums normal-case">
               {formatDate(article.published_at)}

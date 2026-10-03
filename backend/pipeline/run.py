@@ -48,16 +48,17 @@ def run_pipeline(stats: RunStats) -> None:
                 fetched_ok = True
                 s.fetched = len(fetched)
 
-                candidates = resolve_publishers(fetched, resolver)
-
                 # The only gate: a URL already judged, or already waiting, is
                 # not queued twice. Topic, reach and duplicates are the agent's
-                # call (ADR 11).
-                fresh = filter_known_urls(session, candidates, source.label)
+                # call (ADR 11). Ahead of resolving publishers, so a link seen
+                # before never costs a lookup or creates one.
+                fresh = filter_known_urls(session, fetched, source.label)
+
+                candidates = resolve_publishers(fresh, resolver)
 
                 # The end of the funnel: the agent is the judge, so the run
                 # stops at a pending row.
-                queued = queue_candidates(session, fresh)
+                queued = queue_candidates(session, candidates)
                 s.queued = len(queued)
             except Exception as e:
                 # One source failing must not sink the others — record and move
@@ -87,6 +88,11 @@ def run_pipeline(stats: RunStats) -> None:
             log(
                 f"\n{len(resolver.quarantined)} publisher(s) quarantined this run: "
                 f"{', '.join(resolver.quarantined)}"
+            )
+        if resolver.created:
+            log(
+                f"\n{len(resolver.created)} publisher(s) created for new sites: "
+                f"{', '.join(resolver.created)}"
             )
 
     log("=== Pipeline complete ===")

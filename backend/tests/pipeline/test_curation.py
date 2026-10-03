@@ -17,7 +17,6 @@ import pytest
 from app.catalog.models import (
     Article,
     ArticleKind,
-    Category,
     Publisher,
     PublisherKind,
     PublisherType,
@@ -61,12 +60,12 @@ class _FakeSession:
         self.rollbacks = getattr(self, "rollbacks", 0) + 1
 
 
-def _publisher() -> Publisher:
+def _publisher(kind: PublisherKind = PublisherKind.individual) -> Publisher:
     return Publisher(
         id=7,
         name="Simon Willison",
         slug="simon-willison",
-        kind=PublisherKind.individual,
+        kind=kind,
         type=PublisherType.rss,
         trust=TrustLevel.high,
         topic_gated=False,
@@ -120,8 +119,7 @@ def stub_publish(monkeypatch: pytest.MonkeyPatch) -> dict:
 
 def _approve(session, url, score=84, reason="r", summary="s", **labels):
     labels = {
-        "categories": ["models"],
-        "kind": "announcement",
+        "kind": "post",
         "tags": ["agents"],
     } | labels
     return curation.approve(session, url, score, reason, summary, **labels)
@@ -157,18 +155,60 @@ def test_the_agents_labels_are_written(stub_publish: dict):
     session = _FakeSession(row, _publisher())
     session.articles = {42: article}
 
-    _approve(
-        session,
-        row.url,
-        categories=["Models", "research", "nope"],
-        kind="announcement",
-        tags=["agents", "not-a-tag"],
-    )
+    _approve(session, row.url, kind="Post", tags=["agents", "not-a-tag"])
 
-    assert article.categories == [Category.models, Category.research]
-    assert article.kind == ArticleKind.announcement
+    assert article.kind == ArticleKind.post
     # Off-list tags are dropped, never minted.
     assert stub_publish["tags"] == ["agents"]
+
+
+@pytest.mark.usefixtures("stub_publish")
+def test_the_aggregator_that_found_it_is_kept():
+    row = _pending_row(source="Hacker News")
+    article = Article(id=42, title="t", url=row.url, publisher_id=7)
+    session = _FakeSession(row, _publisher())
+    session.articles = {42: article}
+
+    _approve(session, row.url)
+
+    assert article.found_via == "Hacker News"
+
+
+@pytest.mark.usefixtures("stub_publish")
+def test_a_feeds_own_item_was_found_via_nothing():
+    row = _pending_row(source="Simon Willison")
+    article = Article(id=42, title="t", url=row.url, publisher_id=7)
+    session = _FakeSession(row, _publisher())
+    session.articles = {42: article}
+
+    _approve(session, row.url)
+
+    assert article.found_via is None
+
+
+@pytest.mark.usefixtures("stub_publish")
+def test_approving_names_a_new_publisher():
+    publisher = _publisher(PublisherKind.unknown)
+    row = _pending_row()
+    session = _FakeSession(row, publisher)
+
+    _approve(session, row.url, publisher_kind="Individual", publisher_name=" Simon ")
+
+    assert publisher.kind == PublisherKind.individual
+    assert publisher.name == "Simon"
+
+
+@pytest.mark.usefixtures("stub_publish")
+def test_a_publishers_kind_once_set_stays():
+    """The agent cannot relabel a publisher from one night to the next."""
+    publisher = _publisher(PublisherKind.individual)
+    row = _pending_row()
+    session = _FakeSession(row, publisher)
+
+    _approve(session, row.url, publisher_kind="company", publisher_name="Other")
+
+    assert publisher.kind == PublisherKind.individual
+    assert publisher.name == "Simon Willison"
 
 
 @pytest.mark.usefixtures("stub_publish")
@@ -187,16 +227,20 @@ def test_the_url_host_overrules_the_agents_kind():
 @pytest.mark.parametrize(
     "labels, message",
     [
-        ({"categories": ["crypto"]}, "No valid category"),
-        ({"categories": []}, "No valid category"),
         ({"kind": "podcast"}, "Unknown kind"),
+        ({"kind": "blog"}, "Unknown kind"),
+        ({}, "new publisher; pass publisher_kind"),
+        ({"publisher_kind": "community"}, "Unknown publisher_kind"),
     ],
 )
 def test_a_bad_label_leaves_the_candidate_pending(
     stub_publish: dict, labels: dict, message: str
 ):
     row = _pending_row()
-    session = _FakeSession(row, _publisher())
+    unknown = "publisher_kind" in labels or not labels
+    session = _FakeSession(
+        row, _publisher(PublisherKind.unknown if unknown else PublisherKind.individual)
+    )
 
     with pytest.raises(curation.CandidateError, match=message):
         _approve(session, row.url, **labels)

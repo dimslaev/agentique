@@ -74,7 +74,7 @@ export const ArticleFacetsSchema = {
 
 export const ArticleKindSchema = {
     type: 'string',
-    enum: ['blog', 'product', 'announcement', 'repo', 'paper', 'model'],
+    enum: ['post', 'repo', 'paper', 'model'],
     title: 'ArticleKind'
 } as const;
 
@@ -110,12 +110,16 @@ export const ArticlePublicSchema = {
         kind: {
             '$ref': '#/components/schemas/ArticleKind'
         },
-        categories: {
-            items: {
-                '$ref': '#/components/schemas/Category'
-            },
-            type: 'array',
-            title: 'Categories'
+        found_via: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Found Via'
         },
         published_at: {
             anyOf: [
@@ -243,12 +247,6 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
-export const CategorySchema = {
-    type: 'string',
-    enum: ['dev', 'models', 'research'],
-    title: 'Category'
-} as const;
-
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -340,6 +338,15 @@ export const NewsletterSubscribeResponseSchema = {
     title: 'NewsletterSubscribeResponse'
 } as const;
 
+export const OriginSchema = {
+    type: 'string',
+    enum: ['lab', 'company', 'individual', 'media', 'repo', 'paper', 'model'],
+    title: 'Origin',
+    description: `The feed's "From" filter: what the article is when that is settled (a
+repo, a paper, a model), otherwise who published it. Not stored; each
+article falls under exactly one, see \`catalog.articles.origin_condition\`.`
+} as const;
+
 export const PublisherFacetSchema = {
     properties: {
         slug: {
@@ -362,7 +369,7 @@ export const PublisherFacetSchema = {
 
 export const PublisherKindSchema = {
     type: 'string',
-    enum: ['individual', 'company', 'community', 'media'],
+    enum: ['lab', 'company', 'individual', 'media', 'community', 'unknown'],
     title: 'PublisherKind'
 } as const;
 

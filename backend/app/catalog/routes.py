@@ -8,7 +8,13 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.catalog import facets, semantic_search
 from app.catalog.articles import list_articles, stats
-from app.catalog.models import ArticleFacets, ArticlesPublic, PublisherFacet, TagFacet
+from app.catalog.models import (
+    ArticleFacets,
+    ArticlesPublic,
+    Origin,
+    PublisherFacet,
+    TagFacet,
+)
 from app.deps import CurrentUserOptional, SessionDep
 
 router = APIRouter(prefix="/articles", tags=["articles"])
@@ -25,7 +31,7 @@ def read_articles(
     since: str | None = None,
     q: str | None = None,
     min_score: int | None = Query(default=None, ge=1, le=10),
-    category: str | None = None,
+    origin: Origin | None = None,
     kind: str | None = None,
     tag: str | None = None,
     publisher: str | None = None,
@@ -47,7 +53,7 @@ def read_articles(
         since=since_dt,
         q=q,
         min_score=min_score,
-        category=category,
+        origin=origin,
         kind=kind,
         tag=tag,
         publisher=publisher,

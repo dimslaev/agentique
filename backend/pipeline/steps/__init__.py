@@ -6,7 +6,7 @@
 
 The curation agent takes it from there (pipeline/curation.py): approving a
 candidate runs persist and enrich (the embedding) on that one article, with
-the summary, categories, kind and tags the agent wrote -- see
+the summary, kind and tags the agent wrote -- see
 docs/adr/0009-agent-curation.md.
 
 Every step takes the session and a list of articles and returns the survivors,

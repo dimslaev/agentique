@@ -2,10 +2,10 @@
 
 Glossary for words the code uses. If a term below and the code disagree, the code wins - file a fix.
 
-- **Publisher** - the outlet an article came from (a blog, a lab's news page, a subreddit). Different from a *source* (below): one publisher can be reached through more than one source. `Publisher.type` records the source actually used. An article is credited to the publisher whose site its URL is on when one is known, even when an aggregator found it; the item's `source` still names the aggregator.
+- **Publisher** - who wrote an article: a person's blog, a lab's news page, a company's engineering blog, a GitHub account. Different from a *source* (below): one publisher can be reached through more than one source. `Publisher.type` records the source actually used. An article is credited to the site its URL is on, never to the aggregator that found it (ADR 13): a site we do not carry gets a publisher of its own, inactive and never polled, and on GitHub, Hugging Face and Medium the account in the path is the publisher. The item's `source` and the article's `found_via` still name the aggregator.
 
 - **Publisher kind vs type** - two enums on the same model, easy to confuse.
-  - `kind` (`PublisherKind`) - what the publisher is: `individual`, `company`, `community`, `media`. Shown to readers.
+  - `kind` (`PublisherKind`) - what the publisher is: `lab` (makes models, writing on its own site), `company`, `individual`, `media`, `community` (an aggregator, credited only for its own pages), or `unknown` (a site the pipeline just made a publisher for; the curation agent names it on its first approval, and a kind once set stays). Shown to readers.
   - `type` (`PublisherType`) - how the pipeline finds its articles: `rss`, `substack`, `search`, `hn`, `reddit`, `email`, `ainews`, `other`. Internal ingestion detail, not on the public API.
 
 - **Source** - one of the pipeline's fetch adapters (`pipeline/sources/*.py`): Hacker News, the RSS/Substack feeds, a lab-watch crawler, email newsletters. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
@@ -13,6 +13,10 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 - **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. No longer read (ADR 11): the curation agent sees each publisher's approval rate instead (`approved` in `list_candidates`: approvals / decisions over 90 days, or "new"). The column stays. Not on the public API.
 
 - **Topic-gated** (`Publisher.topic_gated`) - a publisher flagged as mostly off-topic (a general engineering blog, not an AI one). No longer read: the fetch step used to drop its off-topic titles, and the curation agent judges topic now (ADR 11). The column stays. Hacker News keeps its own title keyword gate (`is_on_topic` in `pipeline/sources/hn.py`).
+
+- **Found via** (`Article.found_via`) - the aggregator (Hacker News, a newsletter) that found an article, when that is not its publisher. Null for an article from its publisher's own feed.
+
+- **Origin** (`Origin`, the feed's "From" filter) - what an article is when that is settled (`repo`, `paper`, `model`), otherwise its publisher's kind (`lab`, `company`, `individual`, `media`; `community` counts as `media`). Not stored: each article falls under exactly one. Replaced the Category and Kind filters; `Article.categories` is no longer written.
 
 - **Score** (`Article.score`) - a 1-100 rating of how actionable the article is for a developer building with AI right now. Written by the curation agent, which reads the page before it decides (see **Candidate** below and ADR 9); an LLM in the pipeline used to write it from a title and a 200-char snippet. The one-sentence reason is kept in `Article.score_reason` (internal, not on the public API) and, for rejects, in `Reject.reason`.
 

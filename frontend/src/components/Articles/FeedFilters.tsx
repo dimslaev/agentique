@@ -20,21 +20,17 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue"
 import { cn } from "@/lib/utils"
 import { FilterOptions, FilterRow } from "./FilterOption"
 
-const CATEGORY_OPTIONS = [
+// Who published it, or what it is when that is settled. Each article falls
+// under exactly one: a repo is a repo whoever published it.
+const ORIGIN_OPTIONS = [
   { value: "", label: "All" },
-  { value: "models", label: "Models" },
-  { value: "dev", label: "Dev" },
-  { value: "research", label: "Research" },
-]
-
-const KIND_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "repo", label: "Repo" },
-  { value: "paper", label: "Paper" },
-  { value: "model", label: "Model" },
-  { value: "blog", label: "Blog" },
-  { value: "product", label: "Product" },
-  { value: "announcement", label: "Announcement" },
+  { value: "lab", label: "Labs" },
+  { value: "company", label: "Companies" },
+  { value: "individual", label: "Writers" },
+  { value: "media", label: "Media" },
+  { value: "repo", label: "Repos" },
+  { value: "paper", label: "Papers" },
+  { value: "model", label: "Models" },
 ]
 
 // Enough to show the busiest tags on one line at desktop width; the rest are
@@ -58,20 +54,12 @@ export function FeedFilters() {
           inert={!!filters.search}
           className={cn("flex flex-col gap-2", filters.search && "opacity-40")}
         >
-          <FilterRow label="Category">
+          <FilterRow label="From">
             <FilterOptions
-              label="Category"
-              options={CATEGORY_OPTIONS}
-              value={filters.category}
-              onChange={(v) => setFilter("category", v)}
-            />
-          </FilterRow>
-          <FilterRow label="Kind">
-            <FilterOptions
-              label="Kind"
-              options={KIND_OPTIONS}
-              value={filters.kind}
-              onChange={(v) => setFilter("kind", v)}
+              label="From"
+              options={ORIGIN_OPTIONS}
+              value={filters.origin}
+              onChange={(v) => setFilter("origin", v)}
             />
           </FilterRow>
           <FilterRow label="Tags">
@@ -90,14 +78,13 @@ export function FeedFilters() {
  */
 function MobileActiveFilters() {
   const { filters, setFilter, setTag } = useFilters()
-  const { search, category, kind, tag, tagName } = filters
+  const { search, origin, tag, tagName } = filters
 
   // A search ignores the other filters, so name only the search.
   const applied = search
     ? [`"${search}"`]
     : [
-        CATEGORY_OPTIONS.find((o) => o.value === category && category)?.label,
-        KIND_OPTIONS.find((o) => o.value === kind && kind)?.label,
+        ORIGIN_OPTIONS.find((o) => o.value === origin && origin)?.label,
         tag && `#${tagName || tag}`,
       ].filter(Boolean)
 
@@ -113,8 +100,7 @@ function MobileActiveFilters() {
         type="button"
         onClick={() => {
           setFilter("search", "")
-          setFilter("category", "")
-          setFilter("kind", "")
+          setFilter("origin", "")
           setTag("", "")
         }}
         className="ml-auto flex shrink-0 items-center gap-1 py-2 uppercase tracking-[0.08em] hover:text-foreground"

@@ -15,7 +15,7 @@ export type ArticleFacets = {
     tags: Array<TagFacet>;
 };
 
-export type ArticleKind = 'blog' | 'product' | 'announcement' | 'repo' | 'paper' | 'model';
+export type ArticleKind = 'post' | 'repo' | 'paper' | 'model';
 
 export type ArticlePublic = {
     id: number;
@@ -24,7 +24,7 @@ export type ArticlePublic = {
     summary?: (string | null);
     score: number;
     kind: ArticleKind;
-    categories?: Array<Category>;
+    found_via?: (string | null);
     published_at?: (string | null);
     created_at?: (string | null);
     publisher: PublisherPublic;
@@ -46,8 +46,6 @@ export type Body_login_login_access_token = {
     client_id?: (string | null);
     client_secret?: (string | null);
 };
-
-export type Category = 'dev' | 'models' | 'research';
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -73,13 +71,20 @@ export type NewsletterSubscribeResponse = {
     ok?: boolean;
 };
 
+/**
+ * The feed's "From" filter: what the article is when that is settled (a
+ * repo, a paper, a model), otherwise who published it. Not stored; each
+ * article falls under exactly one, see `catalog.articles.origin_condition`.
+ */
+export type Origin = 'lab' | 'company' | 'individual' | 'media' | 'repo' | 'paper' | 'model';
+
 export type PublisherFacet = {
     slug: string;
     name: string;
     count: number;
 };
 
-export type PublisherKind = 'individual' | 'company' | 'community' | 'media';
+export type PublisherKind = 'lab' | 'company' | 'individual' | 'media' | 'community' | 'unknown';
 
 export type PublisherPublic = {
     id: number;
@@ -147,10 +152,10 @@ export type AnalyticsCollectEventData = {
 export type AnalyticsCollectEventResponse = (void);
 
 export type ArticlesReadArticlesData = {
-    category?: (string | null);
     kind?: (string | null);
     limit?: number;
     minScore?: (number | null);
+    origin?: (Origin | null);
     publisher?: (string | null);
     q?: (string | null);
     since?: (string | null);

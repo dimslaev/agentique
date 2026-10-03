@@ -27,6 +27,7 @@ class _FakeSession:
 
 class _FakeResolver:
     quarantined: list[str] = []
+    created: list[str] = []
 
     def __init__(self, **kwargs) -> None:
         pass

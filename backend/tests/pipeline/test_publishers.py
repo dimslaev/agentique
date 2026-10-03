@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from pipeline.publishers import hosts_to_publishers, match_publisher
+import pytest
+
+from app.catalog.models import PublisherKind
+from pipeline.publishers import (
+    host_kind,
+    hosts_to_publishers,
+    match_publisher,
+    owner_key,
+)
 
 
 def _pub(id_: int, **links: str) -> SimpleNamespace:
@@ -54,3 +62,40 @@ def test_an_unknown_host_credits_nobody():
         _credited("https://nobody-we-know.dev/post", _pub(8, website="https://a.dev"))
         is None
     )
+
+
+def test_a_platform_owner_is_credited_by_path():
+    anthropic = _pub(
+        9, website="https://anthropic.com", github="https://github.com/anthropics"
+    )
+    assert _credited("https://github.com/anthropics/claude-code/pull/1", anthropic) == 9
+    assert _credited("https://github.com/someone-else/repo", anthropic) is None
+
+
+def test_a_hugging_face_blog_feed_claims_the_blog_not_the_models():
+    hf = _pub(10, rss="https://huggingface.co/blog/feed.xml")
+    assert _credited("https://huggingface.co/blog/smolagents", hf) == 10
+    assert _credited("https://huggingface.co/Qwen/Qwen3", hf) is None
+
+
+@pytest.mark.parametrize(
+    "url, key",
+    [
+        ("https://github.com/MattPocock/skills", "github.com/mattpocock"),
+        ("https://github.com/features/copilot", None),
+        ("https://huggingface.co/datasets/allenai/tulu", "huggingface.co/allenai"),
+        ("https://hf.co/Qwen/Qwen3", "huggingface.co/qwen"),
+        ("https://huggingface.co/papers/2609.1", None),
+        ("https://medium.com/feed/airbnb-engineering", "medium.com/airbnb-engineering"),
+        ("https://medium.com/@someone/a-post-123", "medium.com/@someone"),
+        ("https://medium.com/tag/ai", None),
+        ("https://simonwillison.net/2026/", None),
+    ],
+)
+def test_owner_key(url: str, key: str | None):
+    assert owner_key(url) == key
+
+
+def test_a_personal_host_is_an_individual():
+    assert host_kind("someone.github.io") == PublisherKind.individual
+    assert host_kind("goodfire.ai") == PublisherKind.unknown

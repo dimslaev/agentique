@@ -12,17 +12,19 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 
-from sqlalchemy import ColumnElement, Subquery, cast, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import ColumnElement, Subquery, func
 from sqlmodel import Session, col, select
 
 from app.audience.models import ArticleLike
 from app.catalog.models import (
     Article,
+    ArticleKind,
     ArticlePublic,
     ArticlesPublic,
     ArticleTag,
+    Origin,
     Publisher,
+    PublisherKind,
     PublisherPublic,
     Tag,
     TagPublic,
@@ -79,7 +81,7 @@ def to_public(
         summary=article.summary,
         score=article.score,
         kind=article.kind,
-        categories=article.categories,
+        found_via=article.found_via,
         published_at=article.published_at,
         created_at=article.created_at,
         publisher=PublisherPublic(
@@ -107,11 +109,33 @@ def build_rows(
     return out
 
 
+# The article kinds that are their own origin, whoever published them.
+ARTIFACT_KINDS = {
+    Origin.repo: ArticleKind.repo,
+    Origin.paper: ArticleKind.paper,
+    Origin.model: ArticleKind.model,
+}
+
+
+def origin_condition(origin: Origin) -> ColumnElement[bool]:
+    """A repo, paper or model is that whoever published it; a post falls under
+    its publisher's kind. Community aggregators show under media, and an
+    `unknown` publisher under none until the curation agent names its kind."""
+    if origin in ARTIFACT_KINDS:
+        return col(Article.kind) == ARTIFACT_KINDS[origin]
+    kinds = [PublisherKind(origin.value)]
+    if origin == Origin.media:
+        kinds.append(PublisherKind.community)
+    return (col(Article.kind) == ArticleKind.post) & col(Article.publisher_id).in_(
+        select(Publisher.id).where(col(Publisher.kind).in_(kinds))
+    )
+
+
 def _filters(
     since: datetime | None,
     q: str | None,
     min_score: int | None,
-    category: str | None,
+    origin: Origin | None,
     kind: str | None,
     tag: str | None,
     publisher: str | None,
@@ -131,10 +155,8 @@ def _filters(
         conditions.append(col(Article.score) >= min_score)
     if kind is not None:
         conditions.append(col(Article.kind) == kind)
-    if category is not None:
-        conditions.append(
-            cast(Article.categories, JSONB).contains([category])  # type: ignore[arg-type]
-        )
+    if origin is not None:
+        conditions.append(origin_condition(origin))
     if tag is not None:
         conditions.append(
             col(Article.id).in_(
@@ -160,7 +182,7 @@ def list_articles(
     since: datetime | None = None,
     q: str | None = None,
     min_score: int | None = None,
-    category: str | None = None,
+    origin: Origin | None = None,
     kind: str | None = None,
     tag: str | None = None,
     publisher: str | None = None,
@@ -171,7 +193,7 @@ def list_articles(
     `viewer_id` only decides whether `liked_by_me` is filled in — the feed is
     public and a token is optional.
     """
-    conditions = _filters(since, q, min_score, category, kind, tag, publisher)
+    conditions = _filters(since, q, min_score, origin, kind, tag, publisher)
 
     count = session.exec(
         select(func.count()).select_from(Article).where(*conditions)

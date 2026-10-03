@@ -68,11 +68,8 @@ class _FakeResolver:
         self._publisher = _FakePublisher()
         self._credited = credited or {}
 
-    def credit(self, url: str) -> _FakePublisher | None:
-        return self._credited.get(url)
-
-    def resolve(self, source: str) -> _FakePublisher:
-        return self._publisher
+    def publisher_for(self, url: str, source: str) -> _FakePublisher:
+        return self._credited.get(url) or self._publisher
 
 
 def test_every_item_is_stamped_with_its_publisher():

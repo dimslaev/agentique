@@ -58,8 +58,7 @@ def create_random_article(db: Session, **overrides: object) -> Article:
         "url": f"https://example.com/{random_lower_string()}",
         "score": random.randint(1, 10),
         "summary": random_lower_string(),
-        "categories": ["dev"],
-        "kind": ArticleKind.blog,
+        "kind": ArticleKind.post,
         "content": random_lower_string(),
     }
     defaults.update(overrides)

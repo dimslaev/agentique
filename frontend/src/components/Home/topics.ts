@@ -1,7 +1,7 @@
 // Landing-page topic boxes.
 //
 // A box earns its place only if the /feed filters cannot express it. /feed is
-// single-select (one tag, one kind, one category), so a union of tags or a
+// single-select (one tag, one origin), so a union of tags or a
 // tag-crossed-with-kind is a box; a lone `tag=security` is just a filter chip
 // and does not belong here.
 //
@@ -26,7 +26,6 @@ export type TopicDef = {
   tags?: string[]
   /** Article kinds, OR'd: one request each, crossed with `tags`. */
   kinds?: string[]
-  category?: string
 }
 
 /** Page size of every underlying request; the box shows the top few of the merge. */
@@ -71,8 +70,7 @@ export const TOPICS: TopicDef[] = [
     slug: "new-models",
     label: "New models",
     blurb: "Fresh model announcements",
-    kinds: ["announcement"],
-    category: "models",
+    tags: ["model-releases"],
   },
   {
     slug: "open-challengers",
@@ -107,28 +105,25 @@ export const TOPICS: TopicDef[] = [
     slug: "launches",
     label: "Launches",
     blurb: "Products shipping for developers",
-    kinds: ["product"],
-    category: "dev",
+    tags: ["product-launches"],
   },
   {
     slug: "open-source-drops",
     label: "Open source drops",
     blurb: "New repos worth cloning",
     kinds: ["repo"],
-    category: "dev",
   },
   {
     slug: "harness",
     label: "Agent harnesses",
     blurb: "The tooling wrapped around the model — runners, loops, CLIs",
     tags: ["orchestration", "agents", "coding-assistants"],
-    kinds: ["repo", "product"],
+    kinds: ["repo"],
   },
   {
     slug: "papers",
     label: "Papers",
     blurb: "Research worth the read",
     kinds: ["paper"],
-    category: "research",
   },
 ]

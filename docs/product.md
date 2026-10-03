@@ -17,8 +17,8 @@ source data current.
 **A filtered, ranked article feed (`/feed`, public — no account needed).** Lists recent
 articles sorted by a "developer-actionability" score the curation agent assigns (or
 by recency).
-Each entry shows a category (Models / Dev / Research) and a "kind" (repo, paper, model,
-blog, product, announcement). You can filter by category, kind, score, and time window
+Each entry shows its publisher, and its kind when it is a repo, paper or model. You filter by where it is from (Labs,
+Companies, Writers, Media, Repos, Papers, Models), by tag, and by time window
 (last 3 days / week / month).
 
 **Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
@@ -62,7 +62,7 @@ newsletters) and runs each fresh batch through a short chain:
    candidates, reads the stored text, groups the ones that are one story, checks
    the repo or model an article rests on, and approves or rejects each with a
    score, a one-sentence reason, the summary a reader will see, and its
-   category, kind and tags. Approving is the only thing that creates an
+   kind and tags, plus the kind of a publisher it has not seen before. Approving is the only thing that creates an
    article. This used to be an LLM call inside the pipeline scoring from a
    title and a 200-character snippet; it could not separate the articles the
    reader loved from the ones they called noise, because at 200 characters a

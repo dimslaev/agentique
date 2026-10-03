@@ -8,7 +8,8 @@ Article now, so the whole insert-and-enrich tail lives here, reusing the
 pipeline's own steps rather than a second copy of them.
 
 The agent read the page, so it writes everything a reader sees: the summary,
-the categories, the kind and the tags. Approving makes no LLM call and no fetch;
+the kind and the tags, and the kind of a publisher the pipeline has only just
+created for a new site. Approving makes no LLM call and no fetch;
 the only enrichment left is the embedding, which is local and best-effort.
 
 A candidate is never half-published: the pending row is deleted in the same
@@ -29,7 +30,7 @@ from typing import NotRequired, TypedDict
 import numpy as np
 from sqlmodel import Session, col, func, select
 
-from app.catalog.models import Article, ArticleKind, Category, Publisher
+from app.catalog.models import Article, ArticleKind, Publisher, PublisherKind
 from app.platform.logging import log
 from pipeline.embedding import embed_batch, to_embedding_text
 from pipeline.models import Reject, RejectStage
@@ -137,7 +138,8 @@ def list_candidates(
     """One page of the candidates waiting on a verdict, freshest first.
 
     One row per URL with what a triage pass needs and nothing more: the
-    publisher and its approval rate over `APPROVAL_WINDOW_DAYS`, the traction
+    publisher, its kind (`unknown` for a site the pipeline has just created
+    one for) and its approval rate over `APPROVAL_WINDOW_DAYS`, the traction
     the source reported, the dates, and the opening `LIST_SNIPPET` characters.
 
     Paged by offset, so a verdict shifts every page after it: read all the
@@ -172,6 +174,7 @@ def list_candidates(
                 "title": r.title or "",
                 "source": r.source or "",
                 "publisher": p.name if p else "",
+                "publisher_kind": p.kind.value if p else "",
                 "approved": approval_rate(*counts.get(r.publisher_id or 0, (0, 0))),
                 "traction": r.traction or "",
                 "published_at": r.published_at.date().isoformat()
@@ -506,24 +509,42 @@ def stories(session: Session, days: int = 7) -> list[Story]:
     return out
 
 
+# What the agent may call a publisher. `community` is for the aggregators,
+# which are set up by hand; `unknown` is what it is being asked to replace.
+NAMEABLE_KINDS = (
+    PublisherKind.lab,
+    PublisherKind.company,
+    PublisherKind.individual,
+    PublisherKind.media,
+)
+
+
 def vocabulary(session: Session) -> dict[str, object]:
-    """The labels `approve` accepts: categories, kinds, and the tag list with
-    each tag's description. Read from the db, so a tag added there is offered
-    the same night."""
+    """The labels `approve` accepts: kinds, publisher kinds, and the tag list
+    with each tag's description. Read from the db, so a tag added there is
+    offered the same night."""
     vocab = load_vocabulary(session)
     return {
-        "categories": [c.value for c in Category],
         "kinds": [k.value for k in ArticleKind],
+        "publisher_kinds": [k.value for k in NAMEABLE_KINDS],
         "tags": dict(sorted(vocab.slug_to_description.items())),
     }
 
 
-def _categories(raw: list[str]) -> list[Category]:
-    valid = {c.value for c in Category}
-    out = [Category(c.lower()) for c in raw if c.lower() in valid]
-    if not out:
-        raise CandidateError(f"No valid category in {raw}; pick from {sorted(valid)}")
-    return list(dict.fromkeys(out))
+def _publisher_kind(publisher: Publisher, raw: str | None) -> PublisherKind | None:
+    """The kind to give a publisher still `unknown`, None for one that already
+    has a kind: once set it stays, so the agent cannot relabel a publisher
+    differently from one night to the next."""
+    if publisher.kind != PublisherKind.unknown:
+        return None
+    names = [k.value for k in NAMEABLE_KINDS]
+    if not raw:
+        raise CandidateError(
+            f"{publisher.name} is a new publisher; pass publisher_kind, one of {names}"
+        )
+    if raw.lower() not in names:
+        raise CandidateError(f"Unknown publisher_kind {raw!r}; pick from {names}")
+    return PublisherKind(raw.lower())
 
 
 def _kind(url: str, raw: str) -> ArticleKind:
@@ -546,17 +567,20 @@ def approve(
     score: int,
     reason: str,
     summary: str,
-    categories: list[str],
     kind: str,
     tags: list[str],
+    publisher_kind: str | None = None,
+    publisher_name: str | None = None,
 ) -> int:
     """Turn a candidate into a published Article. Returns the new article's id.
 
     The agent's `score` and `reason` are stored on the Article exactly as the
     scorer's used to be, so the feed's ranking and the audit trail do not change
-    shape. `summary` is what a reader sees under the title; `categories`,
-    `kind` and `tags` come from `vocabulary`. Labels are checked before anything
-    is written, so a bad one is a message and the candidate stays pending.
+    shape. `summary` is what a reader sees under the title; `kind` and `tags`
+    come from `vocabulary`. A publisher still `unknown` needs `publisher_kind`,
+    and may take a `publisher_name` in place of its host; both are ignored for
+    one that already has a kind. Labels are checked before anything is written,
+    so a bad one is a message and the candidate stays pending.
     """
     row = _pending(session, url)
     publisher = session.get(Publisher, row.publisher_id) if row.publisher_id else None
@@ -564,9 +588,9 @@ def approve(
         raise CandidateError(f"{url} has no publisher; cannot be published")
 
     vocab = load_vocabulary(session)
-    checked_categories = _categories(categories)
     checked_kind = _kind(url, kind)
     slugs = validate_tags(tags, vocab.slugs)
+    new_publisher_kind = _publisher_kind(publisher, publisher_kind)
 
     item: Summarized = {
         "url": url,
@@ -590,9 +614,16 @@ def approve(
     [persisted] = inserted
     article = session.get(Article, persisted["id"])
     if article:
-        article.categories = checked_categories
         article.kind = checked_kind
+        # The aggregator that found it; a feed's own item is its source.
+        if row.source and row.source != publisher.name:
+            article.found_via = row.source
         session.add(article)
+    if new_publisher_kind is not None:
+        publisher.kind = new_publisher_kind
+        if publisher_name and publisher_name.strip():
+            publisher.name = publisher_name.strip()
+        session.add(publisher)
     write_article_tags(session, persisted["id"], slugs, vocab)
     session.commit()
 
@@ -607,7 +638,6 @@ def approve(
                 "title": persisted["title"],
                 "score": score,
                 "snippet": persisted["content"][:SNIPPET_CAP],
-                "categories": checked_categories,
             }
         ],
     )

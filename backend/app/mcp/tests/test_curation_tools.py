@@ -54,7 +54,7 @@ def _call(name: str):
         "check_link": lambda: tools.check_link("https://github.com/a/b"),
         "vocabulary": lambda: tools.vocabulary(),
         "approve": lambda: tools.approve(
-            "https://example.com", 80, "r", "s", ["models"], "blog", []
+            "https://example.com", 80, "r", "s", "post", []
         ),
         "reject": lambda: tools.reject("https://example.com", 20, "r"),
         "reject_many": lambda: tools.reject_many(

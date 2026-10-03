@@ -19,7 +19,8 @@ before approving anything.**
 From the `agentique` MCP server, with the curation token:
 
 - `list_candidates(offset=0)` — one page of up to 50 candidates waiting on a
-  verdict: URL, title, source, publisher, `approved` (the publisher's
+  verdict: URL, title, source, publisher, `publisher_kind` (`unknown` for a
+  site the pipeline has not seen before), `approved` (the publisher's
   approvals / decisions over 90 days, or "new"), traction, dates, a
   200-character snippet. `next_offset` reads on; null means you have them all.
   Read every page before settling anything: a verdict shifts the pages after
@@ -35,10 +36,11 @@ From the `agentique` MCP server, with the curation token:
 - `check_link(url)` — stars, last push, license and README for a GitHub or
   GitLab repo; downloads, license and whether weights exist for a Hugging Face
   model. Refuses anything else.
-- `vocabulary()` — the categories, kinds and tags `approve` accepts. Once,
-  before the first approve.
-- `approve(url, score, reason, summary, categories, kind, tags)` — publishes
-  it with your labels, then embeds it.
+- `vocabulary()` — the kinds, publisher kinds and tags `approve` accepts.
+  Once, before the first approve.
+- `approve(url, score, reason, summary, kind, tags, publisher_kind,
+  publisher_name)` — publishes it with your labels, then embeds it. The last
+  two only for a publisher whose `publisher_kind` is `unknown`.
 - `reject(url, score, reason)` — turns one down, keeping both for the record.
 - `reject_many([{url, score, reason}, ...])` — the same for many at once, one
   result line each.
@@ -86,7 +88,7 @@ scores under 55 whatever the answer.
   publisher with no record (`approved` is "new"), or from an aggregator source
   with a maker you do not know, search for the maker. First-party or not, a lab or a solo developer, a
   product with users or a landing page: this decides the first-party rule and
-  REACH.
+  REACH, and for an `unknown` publisher its `publisher_kind`.
 - **Does the evidence exist?** When the score rests on something the article
   points at — weights, a repo, a paper, a benchmark table — and you would score
   it 75 or above, check that thing. For a repo or a model, `check_link` first:
@@ -293,14 +295,30 @@ shows, the numbers with their method, and what a reader would do with it. No
 marketing adjectives, no "this article discusses". If the page had nothing
 concrete in it, you should not be approving it.
 
-**`categories`, `kind`, `tags`** — from `vocabulary()`, chosen from the article
-you read, not the title. One or more categories (`models` for a model or its
-release, `dev` for building with AI, `research` for papers and findings). The
-kind is what the item is: a repo, a paper, a model, an announcement, a product
-page, a blog post; a github, huggingface or arxiv URL sets its own. Up to three
-tags, only where a tag's description fits the article's subject, not a passing
-mention. No tag is better than a wrong one. An unknown category or kind is
-refused, and the candidate stays pending until you approve it again.
+**`kind`, `tags`** — from `vocabulary()`, chosen from the article you read,
+not the title. The kind is what the item is: a `repo`, a `paper`, a `model`,
+or a `post` for everything else (a blog post, a launch, an announcement); a
+github, huggingface or arxiv URL sets its own. Up to three tags, only where a
+tag's description fits the article's subject, not a passing mention. No tag is
+better than a wrong one. An unknown kind is refused, and the candidate stays
+pending until you approve it again.
+
+**`publisher_kind`, `publisher_name`** — only when the candidate's
+`publisher_kind` is `unknown`: the pipeline has just made a publisher for a site
+it had not seen, named after its host or its GitHub or Hugging Face account.
+Say who it is, once; later articles from the site inherit it, and a kind
+already set cannot be changed from here. From the page you read and its site:
+
+- `lab` — trains and releases its own models, writing on its own site.
+- `company` — sells a product or service, and this is its blog or docs.
+- `individual` — one person writing under their own name, including a solo
+  developer's project.
+- `media` — covers other people's work: a newsletter, a news site, a
+  publication with several writers.
+
+`publisher_name` is how a reader should see it, when the host is not that:
+"Dan Luu" for `danluu.com`, "Goodfire" for `goodfire.ai`. Leave it out when the
+host already reads well. A rejected candidate needs neither.
 
 ## Before this runs unattended
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 
 export type Option = { value: string; label: string }
@@ -51,7 +52,10 @@ export function FilterOptions({
           key={o.value}
           label={o.label}
           active={o.value === value}
-          onClick={() => onChange(o.value)}
+          onClick={() => {
+            trackEvent("filter_click", { row: label, value: o.value })
+            onChange(o.value)
+          }}
         />
       ))}
       {children}

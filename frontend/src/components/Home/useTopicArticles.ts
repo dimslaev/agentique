@@ -6,7 +6,6 @@ import { BOX_LIMIT, BOX_SORT, BOX_WINDOW_DAYS, type TopicDef } from "./topics"
 type QueryPart = {
   tag?: string
   kind?: string
-  category?: string
 }
 
 /**
@@ -20,7 +19,7 @@ export function expandTopic(def: TopicDef): QueryPart[] {
   const parts: QueryPart[] = []
   for (const tag of tags) {
     for (const kind of kinds) {
-      parts.push({ tag, kind, category: def.category })
+      parts.push({ tag, kind })
     }
   }
   return parts

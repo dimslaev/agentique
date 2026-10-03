@@ -15,7 +15,7 @@ from sqlmodel import Session, col, select
 from app.audience import service
 from app.audience.tests.factories import authentication_token_from_email
 from app.catalog import semantic_search
-from app.catalog.models import Article
+from app.catalog.models import Article, ArticleKind, PublisherKind
 from app.catalog.tests.factories import (
     create_random_article,
     create_random_publisher,
@@ -123,12 +123,31 @@ def test_read_articles_default(auth_client: TestClient) -> None:
     assert "source_type" not in article
 
 
-def test_read_articles_filter_category(auth_client: TestClient) -> None:
-    r = auth_client.get(f"{ARTICLES_URL}/", params={"category": "dev", "limit": 50})
-    assert r.status_code == 200
-    data = r.json()
-    assert data["count"] > 0
-    assert all("dev" in a["categories"] for a in data["data"])
+def test_read_articles_filter_origin(auth_client: TestClient, db: Session) -> None:
+    """A post falls under its publisher's kind, a repo under repo whoever
+    published it, and a community aggregator's post under media."""
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    hn = create_random_publisher(db, kind=PublisherKind.community)
+    lab_post = create_random_article(db, publisher_id=lab.id)
+    lab_repo = create_random_article(db, publisher_id=lab.id, kind=ArticleKind.repo)
+    hn_post = create_random_article(db, publisher_id=hn.id)
+
+    def ids(origin: str, publisher: str) -> set[int]:
+        r = auth_client.get(
+            f"{ARTICLES_URL}/", params={"origin": origin, "publisher": publisher}
+        )
+        assert r.status_code == 200
+        return {a["id"] for a in r.json()["data"]}
+
+    assert ids("lab", lab.slug) == {lab_post.id}
+    assert ids("repo", lab.slug) == {lab_repo.id}
+    assert ids("media", hn.slug) == {hn_post.id}
+    assert ids("lab", hn.slug) == set()
+
+
+def test_read_articles_filter_origin_rejects_unknown(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/", params={"origin": "blog"})
+    assert r.status_code == 422
 
 
 def test_read_articles_filter_min_score(auth_client: TestClient) -> None:
