@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
-import type { ReactNode } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -27,19 +26,16 @@ interface EmailLinkFormProps {
   title: string
   submitLabel: string
   send: (email: string) => Promise<unknown>
-  footer: ReactNode
 }
 
 /**
  * One email field that asks the backend to email a sign-in link, then
- * swaps itself for a "check your inbox" note. Sign up and sign in differ
- * only in which endpoint `send` calls.
+ * swaps itself for a "check your inbox" note. `send` picks the endpoint.
  */
 export function EmailLinkForm({
   title,
   submitLabel,
   send,
-  footer,
 }: EmailLinkFormProps) {
   const { showErrorToast } = useCustomToast()
   const form = useForm<FormData>({
@@ -104,8 +100,6 @@ export function EmailLinkForm({
             {submitLabel}
           </LoadingButton>
         </div>
-
-        <div className="text-center text-sm">{footer}</div>
       </form>
     </Form>
   )
