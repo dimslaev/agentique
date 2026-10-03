@@ -71,7 +71,6 @@ jobs:
           ENVIRONMENT=development
           SECRET_KEY=ci-test-secret-key-not-for-production
           FIRST_SUPERUSER=admin@example.com
-          FIRST_SUPERUSER_PASSWORD=ci-test-password
           POSTGRES_SERVER=localhost
           POSTGRES_DB=app
           POSTGRES_USER=postgres

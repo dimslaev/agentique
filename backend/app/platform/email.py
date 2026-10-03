@@ -68,26 +68,21 @@ def send_email(
     logger.info(f"send email result: {response}")
 
 
-def generate_reset_password_email(email_to: str, email: str, token: str) -> EmailData:
-    project_name = settings.PROJECT_NAME
-    subject = f"{project_name} - Password recovery for user {email}"
-    link = f"{settings.FRONTEND_HOST}/reset-password?token={token}"
-    html_content = render_email_template(
-        template_name="reset_password.html",
-        context={
-            "project_name": settings.PROJECT_NAME,
-            "username": email,
-            "email": email_to,
-            "valid_hours": settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS,
-            "link": link,
-        },
-    )
-    return EmailData(html_content=html_content, subject=subject)
+def sign_in_link(login_token: str) -> str:
+    return f"{settings.FRONTEND_HOST}/auth?token={login_token}"
 
 
-def generate_newsletter_welcome_email() -> EmailData:
+def generate_welcome_email(login_token: str) -> EmailData:
     html_content = render_email_template(
-        template_name="newsletter_welcome.html",
-        context={"feed_link": f"{settings.FRONTEND_HOST}/feed"},
+        template_name="welcome.html",
+        context={"link": sign_in_link(login_token)},
     )
     return EmailData(html_content=html_content, subject="Welcome to Agentique")
+
+
+def generate_sign_in_email(login_token: str) -> EmailData:
+    html_content = render_email_template(
+        template_name="sign_in.html",
+        context={"link": sign_in_link(login_token)},
+    )
+    return EmailData(html_content=html_content, subject="Sign in to Agentique")

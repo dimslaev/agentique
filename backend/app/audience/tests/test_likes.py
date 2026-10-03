@@ -162,9 +162,7 @@ def test_liked_articles_have_correct_like_count_and_liked_by_me(
     client: TestClient, db: Session, normal_user_token_headers: dict[str, str]
 ) -> None:
     article = create_random_article(db)
-    other_headers = authentication_token_from_email(
-        client=client, email=random_email(), db=db
-    )
+    other_headers = authentication_token_from_email(email=random_email(), db=db)
     client.put(
         f"{settings.API_V1_STR}/articles/{article.id}/like", headers=other_headers
     )
@@ -193,9 +191,7 @@ def test_liked_articles_does_not_leak_other_users_likes(
         headers=normal_user_token_headers,
     )
 
-    other_headers = authentication_token_from_email(
-        client=client, email=random_email(), db=db
-    )
+    other_headers = authentication_token_from_email(email=random_email(), db=db)
     client.put(
         f"{settings.API_V1_STR}/articles/{other_article.id}/like",
         headers=other_headers,

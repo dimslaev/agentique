@@ -38,37 +38,16 @@ export type ArticlesPublic = {
     count: number;
 };
 
-export type Body_login_login_access_token = {
-    grant_type?: (string | null);
-    username: string;
-    password: string;
-    scope?: string;
-    client_id?: (string | null);
-    client_secret?: (string | null);
-};
-
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
+export type MagicLogin = {
+    token: string;
+};
+
 export type Message = {
     message: string;
-};
-
-export type NewPassword = {
-    token: string;
-    new_password: string;
-};
-
-export type NewsletterSubscribeRequest = {
-    email: string;
-    categories?: Array<(string)>;
-    customCategory?: string;
-    utm_source?: (string | null);
-};
-
-export type NewsletterSubscribeResponse = {
-    ok?: boolean;
 };
 
 /**
@@ -94,6 +73,10 @@ export type PublisherPublic = {
     image?: (string | null);
 };
 
+export type SignInRequest = {
+    email: string;
+};
+
 export type TagFacet = {
     slug: string;
     name: string;
@@ -110,11 +93,6 @@ export type Token = {
     token_type?: string;
 };
 
-export type UpdatePassword = {
-    current_password: string;
-    new_password: string;
-};
-
 export type UserPublic = {
     email: string;
     is_active?: boolean;
@@ -126,8 +104,7 @@ export type UserPublic = {
 
 export type UserRegister = {
     email: string;
-    password: string;
-    full_name?: (string | null);
+    utm_source?: (string | null);
 };
 
 export type UserUpdateMe = {
@@ -214,37 +191,19 @@ export type LikesUnlikeArticleResponse = ({
 
 export type LikesReadLikedArticlesResponse = (ArticlesPublic);
 
-export type LoginLoginAccessTokenData = {
-    formData: Body_login_login_access_token;
+export type LoginRequestSignInLinkData = {
+    requestBody: SignInRequest;
 };
 
-export type LoginLoginAccessTokenResponse = (Token);
+export type LoginRequestSignInLinkResponse = (Message);
+
+export type LoginLoginWithLinkData = {
+    requestBody: MagicLogin;
+};
+
+export type LoginLoginWithLinkResponse = (Token);
 
 export type LoginTestTokenResponse = (UserPublic);
-
-export type LoginRecoverPasswordData = {
-    email: string;
-};
-
-export type LoginRecoverPasswordResponse = (Message);
-
-export type LoginResetPasswordData = {
-    requestBody: NewPassword;
-};
-
-export type LoginResetPasswordResponse = (Message);
-
-export type LoginRecoverPasswordHtmlContentData = {
-    email: string;
-};
-
-export type LoginRecoverPasswordHtmlContentResponse = (string);
-
-export type NewsletterSubscribeData = {
-    requestBody: NewsletterSubscribeRequest;
-};
-
-export type NewsletterSubscribeResponse2 = (NewsletterSubscribeResponse);
 
 export type UsersReadUserMeResponse = (UserPublic);
 
@@ -256,16 +215,10 @@ export type UsersUpdateUserMeData = {
 
 export type UsersUpdateUserMeResponse = (UserPublic);
 
-export type UsersUpdatePasswordMeData = {
-    requestBody: UpdatePassword;
-};
-
-export type UsersUpdatePasswordMeResponse = (Message);
-
 export type UsersRegisterUserData = {
     requestBody: UserRegister;
 };
 
-export type UsersRegisterUserResponse = (UserPublic);
+export type UsersRegisterUserResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);

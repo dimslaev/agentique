@@ -21,14 +21,14 @@ tags and kinds, e.g. "Open weights" or "Harnesses"), and by time window
 query and finds the nearest articles in vector space, so "how do I run a model locally"
 surfaces relevant pieces even if none of them use that exact phrase.
 
-**Newsletter.** Visitors can subscribe with just an email from `/newsletter`;
-subscribers are synced to a Resend audience. Every Friday a Claude Code session finds
+**Accounts and newsletter.** Signing up takes only an email: it creates the account,
+adds the address to the newsletter (synced to a Resend audience), and emails a sign-in
+link that never expires. Signing in later emails the same link again. There are no
+passwords (docs/adr/0014). Every Friday a Claude Code session finds
 the week's most talked-about topics, reads what individual writers, repos and
 discussions say about each, and writes three short explainers, one per topic: what the
 thing is, how it works, how people are taking it, with links to the sources. They land
-as Resend drafts and a person sends one (docs/adr/0012). Separate from creating an
-account — subscribing doesn't create a login, and signing up for an account doesn't
-subscribe you.
+as Resend drafts and a person sends one (docs/adr/0012).
 
 **A developer API — public, paid tier not live yet.** The article endpoints (list,
 search, facets, publishers, tags, stats) are open and unauthenticated, with no date

@@ -190,63 +190,6 @@ export const ArticlesPublicSchema = {
     title: 'ArticlesPublic'
 } as const;
 
-export const Body_login_login_access_tokenSchema = {
-    properties: {
-        grant_type: {
-            anyOf: [
-                {
-                    type: 'string',
-                    pattern: '^password$'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Grant Type'
-        },
-        username: {
-            type: 'string',
-            title: 'Username'
-        },
-        password: {
-            type: 'string',
-            format: 'password',
-            title: 'Password'
-        },
-        scope: {
-            type: 'string',
-            title: 'Scope',
-            default: ''
-        },
-        client_id: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Client Id'
-        },
-        client_secret: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            format: 'password',
-            title: 'Client Secret'
-        }
-    },
-    type: 'object',
-    required: ['username', 'password'],
-    title: 'Body_login-login_access_token'
-} as const;
-
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -261,6 +204,19 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
+export const MagicLoginSchema = {
+    properties: {
+        token: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Token'
+        }
+    },
+    type: 'object',
+    required: ['token'],
+    title: 'MagicLogin'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -271,71 +227,6 @@ export const MessageSchema = {
     type: 'object',
     required: ['message'],
     title: 'Message'
-} as const;
-
-export const NewPasswordSchema = {
-    properties: {
-        token: {
-            type: 'string',
-            title: 'Token'
-        },
-        new_password: {
-            type: 'string',
-            maxLength: 128,
-            minLength: 8,
-            title: 'New Password'
-        }
-    },
-    type: 'object',
-    required: ['token', 'new_password'],
-    title: 'NewPassword'
-} as const;
-
-export const NewsletterSubscribeRequestSchema = {
-    properties: {
-        email: {
-            type: 'string',
-            title: 'Email'
-        },
-        categories: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Categories'
-        },
-        customCategory: {
-            type: 'string',
-            title: 'Customcategory',
-            default: ''
-        },
-        utm_source: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Utm Source'
-        }
-    },
-    type: 'object',
-    required: ['email'],
-    title: 'NewsletterSubscribeRequest'
-} as const;
-
-export const NewsletterSubscribeResponseSchema = {
-    properties: {
-        ok: {
-            type: 'boolean',
-            title: 'Ok',
-            default: true
-        }
-    },
-    type: 'object',
-    title: 'NewsletterSubscribeResponse'
 } as const;
 
 export const OriginSchema = {
@@ -407,6 +298,20 @@ export const PublisherPublicSchema = {
     title: 'PublisherPublic'
 } as const;
 
+export const SignInRequestSchema = {
+    properties: {
+        email: {
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
+            title: 'Email'
+        }
+    },
+    type: 'object',
+    required: ['email'],
+    title: 'SignInRequest'
+} as const;
+
 export const TagFacetSchema = {
     properties: {
         slug: {
@@ -458,26 +363,6 @@ export const TokenSchema = {
     type: 'object',
     required: ['access_token'],
     title: 'Token'
-} as const;
-
-export const UpdatePasswordSchema = {
-    properties: {
-        current_password: {
-            type: 'string',
-            maxLength: 128,
-            minLength: 8,
-            title: 'Current Password'
-        },
-        new_password: {
-            type: 'string',
-            maxLength: 128,
-            minLength: 8,
-            title: 'New Password'
-        }
-    },
-    type: 'object',
-    required: ['current_password', 'new_password'],
-    title: 'UpdatePassword'
 } as const;
 
 export const UserPublicSchema = {
@@ -541,13 +426,7 @@ export const UserRegisterSchema = {
             format: 'email',
             title: 'Email'
         },
-        password: {
-            type: 'string',
-            maxLength: 128,
-            minLength: 8,
-            title: 'Password'
-        },
-        full_name: {
+        utm_source: {
             anyOf: [
                 {
                     type: 'string',
@@ -557,11 +436,11 @@ export const UserRegisterSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Full Name'
+            title: 'Utm Source'
         }
     },
     type: 'object',
-    required: ['email', 'password'],
+    required: ['email'],
     title: 'UserRegister'
 } as const;
 

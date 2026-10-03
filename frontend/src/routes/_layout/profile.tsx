@@ -3,7 +3,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { LikesService } from "@/client"
 import { ArticleRow } from "@/components/Articles/ArticleRow"
-import ChangePassword from "@/components/UserSettings/ChangePassword"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -73,7 +72,6 @@ function Profile() {
         <TabsList>
           <TabsTrigger value="liked">Liked</TabsTrigger>
           <TabsTrigger value="my-profile">My profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
           <TabsTrigger value="danger-zone">Danger zone</TabsTrigger>
         </TabsList>
         <TabsContent value="liked">
@@ -81,9 +79,6 @@ function Profile() {
         </TabsContent>
         <TabsContent value="my-profile">
           <UserInformation />
-        </TabsContent>
-        <TabsContent value="password">
-          <ChangePassword />
         </TabsContent>
         <TabsContent value="danger-zone">
           <DeleteAccount />

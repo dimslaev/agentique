@@ -1,4 +1,4 @@
-"""Reader-facing endpoints: logging in, the signed-in account, and liking an article.
+"""Reader-facing endpoints: signing up and in by email link, the signed-in account, and liking an article.
 
 Three routers rather than one, because each carries its own OpenAPI tag and the
 generated client names its functions after that tag.
@@ -8,30 +8,33 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import HTMLResponse
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from app.audience import service
 from app.audience.models import (
+    MagicLogin,
     Message,
-    NewPassword,
+    SignInRequest,
     Token,
-    UpdatePassword,
     User,
     UserCreate,
     UserPublic,
     UserRegister,
-    UserUpdate,
     UserUpdateMe,
 )
 from app.catalog.articles import list_liked_articles
 from app.catalog.models import ArticlesPublic
-from app.deps import CurrentUser, SessionDep, get_current_active_superuser
+from app.deps import CurrentUser, SessionDep
+from app.newsletter.subscribers import subscribe
 from app.platform import security
-from app.platform.email import generate_reset_password_email, send_email
+from app.platform.email import (
+    EmailData,
+    generate_sign_in_email,
+    generate_welcome_email,
+    send_email,
+    sign_in_link,
+)
 from app.platform.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -41,21 +44,58 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 likes_router = APIRouter(tags=["likes"])
 
 
-# ─── Login and password recovery ────────────────────────────────────────────
+# ─── Sign-in links ──────────────────────────────────────────────────────────
+
+LINK_SENT = "Check your inbox for your sign-in link"
 
 
-@login_router.post("/login/access-token")
-def login_access_token(
-    session: SessionDep, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
-) -> Token:
+def _send_link_email(email_to: str, email_data: EmailData, login_token: str) -> None:
+    # Runs after the response: a failed send must not fail the request, and the
+    # caller's answer must not depend on whether the account exists.
+    if settings.ENVIRONMENT == "development":
+        logger.info(
+            "[dev] Sign-in link for %s: %s", email_to, sign_in_link(login_token)
+        )
+    if not settings.emails_enabled:
+        return
+    try:
+        send_email(
+            email_to=email_to,
+            subject=email_data.subject,
+            html_content=email_data.html_content,
+        )
+    except Exception as e:
+        logger.error(f"Sign-in email failed for {email_to}: {e}")
+
+
+@login_router.post("/login/link")
+def request_sign_in_link(
+    session: SessionDep, body: SignInRequest, background_tasks: BackgroundTasks
+) -> Message:
     """
-    OAuth2 compatible token login, get an access token for future requests
+    Email the sign-in link to an existing account
     """
-    user = service.authenticate(
-        session=session, email=form_data.username, password=form_data.password
-    )
+    user = service.get_user_by_email(session=session, email=body.email)
+    # Same answer whether or not the account exists, so the endpoint can't be
+    # used to find out who has one.
+    if user and user.is_active:
+        background_tasks.add_task(
+            _send_link_email,
+            user.email,
+            generate_sign_in_email(user.login_token),
+            user.login_token,
+        )
+    return Message(message=LINK_SENT)
+
+
+@login_router.post("/login/token")
+def login_with_link(session: SessionDep, body: MagicLogin) -> Token:
+    """
+    Swap the token from a sign-in link for an access token
+    """
+    user = service.get_user_by_login_token(session=session, token=body.token)
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(status_code=400, detail="Invalid sign-in link")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -72,86 +112,6 @@ def test_token(current_user: CurrentUser) -> User:
     Test access token
     """
     return current_user
-
-
-@login_router.post("/password-recovery/{email}")
-def recover_password(email: str, session: SessionDep) -> Message:
-    """
-    Password Recovery
-    """
-    user = service.get_user_by_email(session=session, email=email)
-
-    # Always return the same response to prevent email enumeration attacks
-    # Only send email if user actually exists
-    if user:
-        password_reset_token = security.generate_password_reset_token(email=email)
-        email_data = generate_reset_password_email(
-            email_to=user.email, email=email, token=password_reset_token
-        )
-        if settings.ENVIRONMENT == "development":
-            logger.info(
-                "[dev] Password reset link for %s: %s/reset-password?token=%s",
-                email,
-                settings.FRONTEND_HOST,
-                password_reset_token,
-            )
-        if settings.emails_enabled:
-            send_email(
-                email_to=user.email,
-                subject=email_data.subject,
-                html_content=email_data.html_content,
-            )
-    return Message(
-        message="If that email is registered, we sent a password recovery link"
-    )
-
-
-@login_router.post("/reset-password/")
-def reset_password(session: SessionDep, body: NewPassword) -> Message:
-    """
-    Reset password
-    """
-    email = security.verify_password_reset_token(token=body.token)
-    if not email:
-        raise HTTPException(status_code=400, detail="Invalid token")
-    user = service.get_user_by_email(session=session, email=email)
-    if not user:
-        # Don't reveal that the user doesn't exist - use same error as invalid token
-        raise HTTPException(status_code=400, detail="Invalid token")
-    elif not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    service.update_user(
-        session=session,
-        db_user=user,
-        user_in=UserUpdate(password=body.new_password),
-    )
-    return Message(message="Password updated successfully")
-
-
-@login_router.post(
-    "/password-recovery-html-content/{email}",
-    dependencies=[Depends(get_current_active_superuser)],
-    response_class=HTMLResponse,
-)
-def recover_password_html_content(email: str, session: SessionDep) -> HTMLResponse:
-    """
-    HTML Content for Password Recovery
-    """
-    user = service.get_user_by_email(session=session, email=email)
-
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this username does not exist in the system.",
-        )
-    password_reset_token = security.generate_password_reset_token(email=email)
-    email_data = generate_reset_password_email(
-        email_to=user.email, email=email, token=password_reset_token
-    )
-
-    return HTMLResponse(
-        content=email_data.html_content, headers={"subject:": email_data.subject}
-    )
 
 
 # ─── The signed-in account ──────────────────────────────────────────────────
@@ -175,25 +135,6 @@ def update_user_me(
     )
 
 
-@users_router.patch("/me/password", response_model=Message)
-def update_password_me(
-    *, session: SessionDep, body: UpdatePassword, current_user: CurrentUser
-) -> Message:
-    """
-    Update own password.
-    """
-    if not service.password_matches(current_user, body.current_password):
-        raise HTTPException(status_code=400, detail="Incorrect password")
-    if body.current_password == body.new_password:
-        raise HTTPException(
-            status_code=400, detail="New password cannot be the same as the current one"
-        )
-    service.set_password(
-        session=session, db_user=current_user, password=body.new_password
-    )
-    return Message(message="Password updated successfully")
-
-
 @users_router.get("/me", response_model=UserPublic)
 def read_user_me(current_user: CurrentUser) -> User:
     """
@@ -215,19 +156,35 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     return Message(message="User deleted successfully")
 
 
-@users_router.post("/signup", response_model=UserPublic)
-def register_user(session: SessionDep, user_in: UserRegister) -> User:
+@users_router.post("/signup")
+def register_user(
+    session: SessionDep, user_in: UserRegister, background_tasks: BackgroundTasks
+) -> Message:
     """
-    Create new user without the need to be logged in.
+    Create an account from an email alone, add it to the newsletter, and email
+    the sign-in link. An existing account just gets its link again.
     """
-    if service.get_user_by_email(session=session, email=user_in.email):
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists in the system",
-        )
-    return service.create_user(
-        session=session, user_create=UserCreate.model_validate(user_in)
+    user = service.get_user_by_email(session=session, email=user_in.email)
+    if user:
+        if user.is_active:
+            background_tasks.add_task(
+                _send_link_email,
+                user.email,
+                generate_sign_in_email(user.login_token),
+                user.login_token,
+            )
+        return Message(message=LINK_SENT)
+    user = service.create_user(
+        session=session, user_create=UserCreate(email=user_in.email)
     )
+    subscribe(session=session, email=user.email, utm_source=user_in.utm_source)
+    background_tasks.add_task(
+        _send_link_email,
+        user.email,
+        generate_welcome_email(user.login_token),
+        user.login_token,
+    )
+    return Message(message=LINK_SENT)
 
 
 # ─── Likes ──────────────────────────────────────────────────────────────────

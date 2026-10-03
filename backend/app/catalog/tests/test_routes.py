@@ -34,10 +34,10 @@ RECENT_SINCE = (datetime.now(UTC) - timedelta(days=1)).isoformat()
 
 
 @pytest.fixture(scope="module")
-def reader_token_headers(client: TestClient, db: Session) -> dict[str, str]:
+def reader_token_headers(db: Session) -> dict[str, str]:
     """Headers for an ordinary logged-in reader."""
     email = random_email()
-    headers = authentication_token_from_email(client=client, email=email, db=db)
+    headers = authentication_token_from_email(email=email, db=db)
     assert service.get_user_by_email(session=db, email=email) is not None
     return headers
 
@@ -497,8 +497,7 @@ def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
     tied_score_b = create_random_article(db, score=5, published_at=now)
 
     headers_list = [
-        authentication_token_from_email(client=client, email=random_email(), db=db)
-        for _ in range(2)
+        authentication_token_from_email(email=random_email(), db=db) for _ in range(2)
     ]
     for headers in headers_list:
         client.put(f"{ARTICLES_URL}/{low_score_more_likes.id}/like", headers=headers)

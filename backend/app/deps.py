@@ -1,4 +1,4 @@
-"""FastAPI dependency wiring: DB session, current-user, and auth guards shared by every route module."""
+"""FastAPI dependency wiring: DB session, current-user, and auth shared by every route module."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Annotated
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
@@ -17,9 +17,7 @@ from app.platform import security
 from app.platform.db import engine
 from app.platform.settings import settings
 
-reusable_oauth2 = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/login/access-token"
-)
+reusable_bearer = HTTPBearer()
 
 
 def get_db() -> Generator[Session]:
@@ -28,13 +26,13 @@ def get_db() -> Generator[Session]:
 
 
 SessionDep = Annotated[Session, Depends(get_db)]
-TokenDep = Annotated[str, Depends(reusable_oauth2)]
+TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(reusable_bearer)]
 
 
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+            token.credentials, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):
@@ -74,11 +72,3 @@ def get_current_user_optional(request: Request, session: SessionDep) -> User | N
 
 
 CurrentUserOptional = Annotated[User | None, Depends(get_current_user_optional)]
-
-
-def get_current_active_superuser(current_user: CurrentUser) -> User:
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
-    return current_user

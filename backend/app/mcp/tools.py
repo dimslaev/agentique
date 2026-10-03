@@ -35,7 +35,7 @@ WRITE_SCOPE = "curate"
 # add its own LIMIT. Anything larger is context an agent cannot read anyway.
 MAX_ROWS = 1000
 
-# `user` holds emails and password hashes, and no question worth asking this
+# `user` holds emails and sign-in link tokens, and no question worth asking this
 # tool needs either. The role's grants are the real boundary (see
 # deploy/sql-roles.sql); the plan check below holds even where the tool runs as
 # a role that has the grant anyway, which is every local database.

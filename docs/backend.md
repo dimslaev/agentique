@@ -7,7 +7,7 @@
 
 ## Running locally
 
-- Needs a root `.env` (gitignored): `PROJECT_NAME`, `SECRET_KEY`, `FIRST_SUPERUSER`, `FIRST_SUPERUSER_PASSWORD`, `POSTGRES_SERVER=localhost`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
+- Needs a root `.env` (gitignored): `PROJECT_NAME`, `SECRET_KEY`, `FIRST_SUPERUSER`, `POSTGRES_SERVER=localhost`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`
 - Backend loads it via pydantic-settings (`env_file="../.env"`)
 - Pipeline reads raw `os.environ` directly, hence `--env-file` below
 - `frontend/.env` is separate (Vite-only, `VITE_API_URL`) - keeps secrets out of the frontend build
@@ -99,7 +99,7 @@ uv run alembic upgrade head
 
 ## Email templates
 
-- One transactional email: password recovery
-- Template: `app/platform/email-templates/`, next to `app/platform/email.py`, which renders and sends it
+- Two transactional emails: `welcome.html` on signup and `sign_in.html` on a sign-in request, both carrying the permanent sign-in link
+- Templates: `app/platform/email-templates/`, next to `app/platform/email.py`, which renders and sends them
 - The weekly newsletter issue: `weekly_issue.html` in the same folder, the site's wordmark over plain prose, rendered (autoescaped) and drafted by `app/newsletter/broadcast.py`
 - No MJML source - edit the HTML directly

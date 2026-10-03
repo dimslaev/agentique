@@ -1,63 +1,41 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { handleError } from "@/apiError"
-import {
-  type Body_login_login_access_token as AccessToken,
-  LoginService,
-  type UserPublic,
-  type UserRegister,
-  UsersService,
-} from "@/client"
-import useCustomToast from "./useCustomToast"
+import { LoginService, type UserPublic, UsersService } from "@/client"
+
+const REDIRECT_KEY = "after_sign_in"
 
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
 }
 
+const signInWithLink = async (token: string) => {
+  const response = await LoginService.loginWithLink({
+    requestBody: { token },
+  })
+  localStorage.setItem("access_token", response.access_token)
+}
+
+// The sign-in link opens in a new tab from the email, so the page a reader was
+// on when asked to sign in has to outlive this one.
+const rememberRedirect = (path: string | undefined) => {
+  if (path) localStorage.setItem(REDIRECT_KEY, path)
+  else localStorage.removeItem(REDIRECT_KEY)
+}
+
+const takeRedirect = () => {
+  const path = localStorage.getItem(REDIRECT_KEY)
+  localStorage.removeItem(REDIRECT_KEY)
+  // Only a path on this site, never an absolute URL.
+  return path?.startsWith("/") && !path.startsWith("//") ? path : null
+}
+
 const useAuth = () => {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { showErrorToast } = useCustomToast()
 
   const { data: user } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
     queryFn: UsersService.readUserMe,
     enabled: isLoggedIn(),
-  })
-
-  const signUpMutation = useMutation({
-    mutationFn: (data: UserRegister) =>
-      UsersService.registerUser({ requestBody: data }),
-    onSuccess: () => {
-      navigate({ to: "/login" })
-    },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-  })
-
-  const login = async ({
-    redirectTo,
-    ...data
-  }: AccessToken & { redirectTo?: string }) => {
-    const response = await LoginService.loginAccessToken({
-      formData: data,
-    })
-    localStorage.setItem("access_token", response.access_token)
-    return redirectTo
-  }
-
-  const loginMutation = useMutation({
-    mutationFn: login,
-    onSuccess: (redirectTo) => {
-      if (redirectTo) {
-        navigate({ href: redirectTo })
-      } else {
-        navigate({ to: "/" })
-      }
-    },
-    onError: handleError.bind(showErrorToast),
   })
 
   const logout = () => {
@@ -66,12 +44,10 @@ const useAuth = () => {
   }
 
   return {
-    signUpMutation,
-    loginMutation,
     logout,
     user,
   }
 }
 
-export { isLoggedIn }
+export { isLoggedIn, rememberRedirect, signInWithLink, takeRedirect }
 export default useAuth

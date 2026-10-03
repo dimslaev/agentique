@@ -1,4 +1,4 @@
-"""Newsletter schema: the subscriber row and the subscribe request/response shapes."""
+"""Newsletter schema: the subscriber row."""
 
 from __future__ import annotations
 
@@ -20,14 +20,3 @@ class NewsletterSubscriber(SQLModel, table=True):
     utm_source: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=get_datetime_utc)
     updated_at: datetime = Field(default_factory=get_datetime_utc)
-
-
-class NewsletterSubscribeRequest(SQLModel):
-    email: str
-    categories: list[str] = Field(default_factory=lambda: ["all"])
-    customCategory: str = ""
-    utm_source: str | None = None
-
-
-class NewsletterSubscribeResponse(SQLModel):
-    ok: bool = True

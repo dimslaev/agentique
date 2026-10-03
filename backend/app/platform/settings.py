@@ -129,10 +129,8 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
 
-    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
-
     # The Resend audience newsletter subscribers are synced to, and the weekly
-    # issue is broadcast to. The signup route reads it from os.environ.
+    # issue is broadcast to. Signup reads it from os.environ.
     RESEND_AUDIENCE_ID: str | None = None
 
     @computed_field  # type: ignore[prop-decorator]
@@ -142,7 +140,6 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
 
     EMAIL_TEST_USER: EmailStr = "test@example.com"
     FIRST_SUPERUSER: EmailStr
-    FIRST_SUPERUSER_PASSWORD: str
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":
@@ -175,9 +172,6 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     def _enforce_non_default_secrets(self) -> Self:
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
-        self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
-        )
 
         return self
 

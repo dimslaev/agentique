@@ -24,22 +24,12 @@ class UserBase(SQLModel):
 
 # Properties to receive via API on creation
 class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=128)
+    pass
 
 
 class UserRegister(SQLModel):
     email: EmailStr = Field(max_length=255)
-    password: str = Field(min_length=8, max_length=128)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on update, all are optional
-class UserUpdate(SQLModel):
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = None
-    is_superuser: bool | None = None
-    full_name: str | None = Field(default=None, max_length=255)
-    password: str | None = Field(default=None, min_length=8, max_length=128)
+    utm_source: str | None = Field(default=None, max_length=255)
 
 
 class UserUpdateMe(SQLModel):
@@ -47,15 +37,12 @@ class UserUpdateMe(SQLModel):
     email: EmailStr | None = Field(default=None, max_length=255)
 
 
-class UpdatePassword(SQLModel):
-    current_password: str = Field(min_length=8, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
-
-
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str
+    # The secret in the sign-in link. It never expires, so every link ever
+    # emailed keeps working until this value is replaced.
+    login_token: str = Field(unique=True, index=True, max_length=64)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -92,9 +79,12 @@ class TokenPayload(SQLModel):
     sub: str | None = None
 
 
-class NewPassword(SQLModel):
-    token: str
-    new_password: str = Field(min_length=8, max_length=128)
+class SignInRequest(SQLModel):
+    email: EmailStr = Field(max_length=255)
+
+
+class MagicLogin(SQLModel):
+    token: str = Field(max_length=64)
 
 
 # ─── ArticleLike ─────────────────────────────────────────────────────────────

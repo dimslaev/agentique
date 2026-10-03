@@ -1,141 +1,70 @@
-import { expect, type Page, test } from "@playwright/test"
-import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
-import { randomPassword } from "./random.ts"
+import { expect, test } from "@playwright/test"
+import { firstSuperuser } from "./config.ts"
+import { logInUser, logOutUser, signInLinkFor } from "./user.ts"
 
 test.use({ storageState: { cookies: [], origins: [] } })
 
-const fillForm = async (page: Page, email: string, password: string) => {
-  await page.getByTestId("email-input").fill(email)
-  await page.getByTestId("password-input").fill(password)
-}
+test("Email input is visible, empty and editable", async ({ page }) => {
+  await page.goto("/login")
 
-const verifyInput = async (page: Page, testId: string) => {
-  const input = page.getByTestId(testId)
+  const input = page.getByTestId("email-input")
   await expect(input).toBeVisible()
   await expect(input).toHaveText("")
   await expect(input).toBeEditable()
-}
-
-test("Inputs are visible, empty and editable", async ({ page }) => {
-  await page.goto("/login")
-
-  await verifyInput(page, "email-input")
-  await verifyInput(page, "password-input")
 })
 
-test("Log In button is visible", async ({ page }) => {
+test("There is no password field", async ({ page }) => {
   await page.goto("/login")
 
-  await expect(page.getByRole("button", { name: "Log In" })).toBeVisible()
+  await expect(page.getByLabel("Password")).toHaveCount(0)
 })
 
-test("Forgot Password link is visible", async ({ page }) => {
-  await page.goto("/login")
-
-  await expect(
-    page.getByRole("link", { name: "Forgot your password?" }),
-  ).toBeVisible()
+test("Log in with the emailed link", async ({ page, request }) => {
+  await logInUser(page, request, firstSuperuser)
 })
 
-test("Log in with valid email and password ", async ({ page }) => {
-  await page.goto("/login")
+test("The same link works again after logging out", async ({
+  page,
+  request,
+}) => {
+  await logInUser(page, request, firstSuperuser)
+  const link = await signInLinkFor(request, firstSuperuser)
+  await logOutUser(page)
 
-  await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
-
+  await page.goto(link)
   await page.waitForURL("/")
-
   await expect(page.getByTestId("user-menu")).toBeVisible()
 })
 
 test("Log in with invalid email", async ({ page }) => {
   await page.goto("/login")
 
-  await fillForm(page, "invalidemail", firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
+  await page.getByTestId("email-input").fill("invalidemail")
+  await page.getByRole("button", { name: "Email me a sign-in link" }).click()
 
   await expect(page.getByText("Invalid email address")).toBeVisible()
 })
 
-test("Log in with invalid password", async ({ page }) => {
-  const password = randomPassword()
-
+test("Unknown email gets the same answer", async ({ page }) => {
   await page.goto("/login")
-  await fillForm(page, firstSuperuser, password)
-  await page.getByRole("button", { name: "Log In" }).click()
 
-  await expect(page.getByText("Incorrect email or password")).toBeVisible()
+  await page.getByTestId("email-input").fill("nobody@example.com")
+  await page.getByRole("button", { name: "Email me a sign-in link" }).click()
+
+  await expect(page.getByTestId("link-sent")).toBeVisible()
 })
 
-test("Successful log out", async ({ page }) => {
-  await page.goto("/login")
+test("A bad link says so", async ({ page }) => {
+  await page.goto("/auth?token=nope")
 
-  await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
-
-  await page.waitForURL("/")
-
-  await expect(page.getByTestId("user-menu")).toBeVisible()
-
-  await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
-  await page.waitForURL("/login")
-})
-
-test("Logged-out user cannot access protected routes", async ({ page }) => {
-  await page.goto("/login")
-
-  await fillForm(page, firstSuperuser, firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
-
-  await page.waitForURL("/")
-
-  await expect(page.getByTestId("user-menu")).toBeVisible()
-
-  await page.getByTestId("user-menu").click()
-  await page.getByRole("menuitem", { name: "Log out" }).click()
-  await page.waitForURL("/login")
-
-  // The feed is public…
-  await page.goto("/")
-  await expect(page.getByTestId("article-row").first()).toBeVisible()
-
-  // …but account pages bounce logged-out visitors to login.
-  await page.goto("/settings")
-  await page.waitForURL(/\/login/)
+  await expect(page.getByText("This link doesn't work")).toBeVisible()
 })
 
 test("Redirects to /login when token is wrong", async ({ page }) => {
-  await page.goto("/settings")
+  await page.goto("/profile")
   await page.evaluate(() => {
     localStorage.setItem("access_token", "invalid_token")
   })
-  await page.goto("/settings")
-  await page.waitForURL("/login")
-  await expect(page).toHaveURL("/login")
-})
-
-test("Clears token and redirects to /login when current user is 404 (deleted user)", async ({
-  page,
-}) => {
-  // A well-formed token whose user no longer exists (e.g. the DB was reset in local dev
-  await page.route("**/api/v1/users/me", (route) =>
-    route.fulfill({
-      status: 404,
-      contentType: "application/json",
-      body: JSON.stringify({ detail: "User not found" }),
-    }),
-  )
-
-  await page.goto("/")
-  await page.evaluate(() => {
-    localStorage.setItem("access_token", "stale-token-for-deleted-user")
-  })
-  await page.goto("/")
-
-  await page.waitForURL("/login")
-  await expect(page).toHaveURL("/login")
-
-  const token = await page.evaluate(() => localStorage.getItem("access_token"))
-  expect(token).toBeNull()
+  await page.goto("/profile")
+  await expect(page).toHaveURL(/\/login/)
 })

@@ -8,7 +8,6 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.mcp.server import mcp_app
-from app.newsletter.routes import router as newsletter_router
 from app.platform.settings import settings
 from app.router import api_router
 
@@ -40,9 +39,6 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
-# The newsletter lives outside /api/v1 because the public signup form has
-# posted to /api/newsletter/subscribe since before the API was versioned.
-app.include_router(newsletter_router, prefix="/api")
 # Outside the versioned API on purpose: it is an MCP endpoint, not a REST
 # resource, and it carries its own bearer-token auth rather than a user JWT.
 app.mount("/mcp", mcp_app)

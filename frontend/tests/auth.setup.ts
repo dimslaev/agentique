@@ -1,13 +1,10 @@
 import { test as setup } from "@playwright/test"
-import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
+import { firstSuperuser } from "./config.ts"
+import { logInUser } from "./user.ts"
 
 const authFile = "playwright/.auth/user.json"
 
-setup("authenticate", async ({ page }) => {
-  await page.goto("/login")
-  await page.getByTestId("email-input").fill(firstSuperuser)
-  await page.getByTestId("password-input").fill(firstSuperuserPassword)
-  await page.getByRole("button", { name: "Log In" }).click()
-  await page.waitForURL("/")
+setup("authenticate", async ({ page, request }) => {
+  await logInUser(page, request, firstSuperuser)
   await page.context().storageState({ path: authFile })
 })

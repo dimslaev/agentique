@@ -1,45 +1,108 @@
-"""Tests for login, password recovery, and password reset."""
+"""Tests for signing in by email link."""
 
 from __future__ import annotations
 
-from unittest.mock import patch
-
 import resend
 from fastapi.testclient import TestClient
-from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
-from app.audience.models import User, UserCreate
-from app.audience.service import create_user
-from app.audience.tests.factories import user_authentication_headers
-from app.platform.security import (
-    generate_password_reset_token,
-    get_password_hash,
-    verify_password,
-)
+from app.audience.tests.factories import create_random_user
 from app.platform.settings import settings
-from tests.random_data import random_email, random_lower_string
+from tests.random_data import random_email
+
+LINK_SENT = {"message": "Check your inbox for your sign-in link"}
 
 
-def test_get_access_token(client: TestClient) -> None:
-    login_data = {
-        "username": settings.FIRST_SUPERUSER,
-        "password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    tokens = r.json()
+def enable_resend_email(monkeypatch) -> list[dict]:
+    monkeypatch.setattr(
+        "app.platform.settings.settings.RESEND_API_KEY", "test-key", raising=False
+    )
+    monkeypatch.setattr(
+        "app.platform.settings.settings.EMAILS_FROM_EMAIL", "hello@example.com"
+    )
+    monkeypatch.setattr(resend.Contacts, "create", lambda *args, **kwargs: None)
+    sent: list[dict] = []
+    monkeypatch.setattr(resend.Emails, "send", lambda payload: sent.append(payload))
+    return sent
+
+
+def test_link_request_emails_existing_user(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    sent = enable_resend_email(monkeypatch)
+    user = create_random_user(db)
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": user.email})
     assert r.status_code == 200
-    assert "access_token" in tokens
-    assert tokens["access_token"]
+    assert r.json() == LINK_SENT
+    assert [m["to"] for m in sent] == [user.email]
+    assert sent[0]["subject"] == "Sign in to Agentique"
+    assert f"{settings.FRONTEND_HOST}/auth?token={user.login_token}" in sent[0]["html"]
 
 
-def test_get_access_token_incorrect_password(client: TestClient) -> None:
-    login_data = {
-        "username": settings.FIRST_SUPERUSER,
-        "password": "incorrect",
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+def test_link_request_unknown_email_sends_nothing(
+    client: TestClient, monkeypatch
+) -> None:
+    sent = enable_resend_email(monkeypatch)
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": random_email()})
+    assert r.status_code == 200
+    assert r.json() == LINK_SENT
+    assert sent == []
+
+
+def test_link_request_succeeds_when_send_fails(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    enable_resend_email(monkeypatch)
+
+    def fail(_payload: dict) -> None:
+        raise RuntimeError("resend down")
+
+    monkeypatch.setattr(resend.Emails, "send", fail)
+    user = create_random_user(db)
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": user.email})
+    assert r.status_code == 200
+
+
+def test_login_with_link(client: TestClient, db: Session) -> None:
+    user = create_random_user(db)
+
+    r = client.post(
+        f"{settings.API_V1_STR}/login/token", json={"token": user.login_token}
+    )
+    assert r.status_code == 200
+    headers = {"Authorization": f"Bearer {r.json()['access_token']}"}
+    r = client.get(f"{settings.API_V1_STR}/users/me", headers=headers)
+    assert r.json()["email"] == user.email
+
+
+def test_login_with_link_works_twice(client: TestClient, db: Session) -> None:
+    user = create_random_user(db)
+    url = f"{settings.API_V1_STR}/login/token"
+
+    assert client.post(url, json={"token": user.login_token}).status_code == 200
+    assert client.post(url, json={"token": user.login_token}).status_code == 200
+
+
+def test_login_with_invalid_link(client: TestClient) -> None:
+    r = client.post(f"{settings.API_V1_STR}/login/token", json={"token": "nope"})
     assert r.status_code == 400
+    assert r.json()["detail"] == "Invalid sign-in link"
+
+
+def test_login_with_link_inactive_user(client: TestClient, db: Session) -> None:
+    user = create_random_user(db)
+    user.is_active = False
+    db.add(user)
+    db.commit()
+
+    r = client.post(
+        f"{settings.API_V1_STR}/login/token", json={"token": user.login_token}
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Inactive user"
 
 
 def test_use_access_token(
@@ -49,178 +112,5 @@ def test_use_access_token(
         f"{settings.API_V1_STR}/login/test-token",
         headers=superuser_token_headers,
     )
-    result = r.json()
     assert r.status_code == 200
-    assert "email" in result
-
-
-def test_recovery_password(
-    client: TestClient, normal_user_token_headers: dict[str, str], monkeypatch
-) -> None:
-    monkeypatch.setattr(
-        "app.platform.settings.settings.RESEND_API_KEY", "test-key", raising=False
-    )
-    monkeypatch.setattr(
-        "app.platform.settings.settings.EMAILS_FROM_EMAIL", "admin@example.com"
-    )
-    calls = []
-    monkeypatch.setattr(resend.Emails, "send", lambda payload: calls.append(payload))
-
-    email = "test@example.com"
-    r = client.post(
-        f"{settings.API_V1_STR}/password-recovery/{email}",
-        headers=normal_user_token_headers,
-    )
-    assert r.status_code == 200
-    assert r.json() == {
-        "message": "If that email is registered, we sent a password recovery link"
-    }
-    assert len(calls) == 1
-    assert calls[0]["to"] == email
-
-
-def test_recovery_password_smtp_fallback(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    with (
-        patch("app.platform.settings.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.platform.settings.settings.SMTP_USER", "admin@example.com"),
-        patch("app.platform.settings.settings.EMAILS_FROM_EMAIL", "admin@example.com"),
-        patch("app.platform.settings.settings.RESEND_API_KEY", None),
-    ):
-        email = "test@example.com"
-        r = client.post(
-            f"{settings.API_V1_STR}/password-recovery/{email}",
-            headers=normal_user_token_headers,
-        )
-        assert r.status_code == 200
-        assert r.json() == {
-            "message": "If that email is registered, we sent a password recovery link"
-        }
-
-
-def test_recovery_password_user_not_exits(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    email = "jVgQr@example.com"
-    r = client.post(
-        f"{settings.API_V1_STR}/password-recovery/{email}",
-        headers=normal_user_token_headers,
-    )
-    # Should return 200 with generic message to prevent email enumeration attacks
-    assert r.status_code == 200
-    assert r.json() == {
-        "message": "If that email is registered, we sent a password recovery link"
-    }
-
-
-def test_reset_password(client: TestClient, db: Session) -> None:
-    email = random_email()
-    password = random_lower_string()
-    new_password = random_lower_string()
-
-    user_create = UserCreate(
-        email=email,
-        full_name="Test User",
-        password=password,
-        is_active=True,
-        is_superuser=False,
-    )
-    user = create_user(session=db, user_create=user_create)
-    token = generate_password_reset_token(email=email)
-    headers = user_authentication_headers(client=client, email=email, password=password)
-    data = {"new_password": new_password, "token": token}
-
-    r = client.post(
-        f"{settings.API_V1_STR}/reset-password/",
-        headers=headers,
-        json=data,
-    )
-
-    assert r.status_code == 200
-    assert r.json() == {"message": "Password updated successfully"}
-
-    db.refresh(user)
-    verified, _ = verify_password(new_password, user.hashed_password)
-    assert verified
-
-
-def test_reset_password_invalid_token(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    data = {"new_password": "changethis", "token": "invalid"}
-    r = client.post(
-        f"{settings.API_V1_STR}/reset-password/",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    response = r.json()
-
-    assert "detail" in response
-    assert r.status_code == 400
-    assert response["detail"] == "Invalid token"
-
-
-def test_login_with_bcrypt_password_upgrades_to_argon2(
-    client: TestClient, db: Session
-) -> None:
-    """Test that logging in with a bcrypt password hash upgrades it to argon2."""
-    email = random_email()
-    password = random_lower_string()
-
-    # Create a bcrypt hash directly (simulating legacy password)
-    bcrypt_hasher = BcryptHasher()
-    bcrypt_hash = bcrypt_hasher.hash(password)
-    assert bcrypt_hash.startswith("$2")  # bcrypt hashes start with $2
-
-    user = User(email=email, hashed_password=bcrypt_hash, is_active=True)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    assert user.hashed_password.startswith("$2")
-
-    login_data = {"username": email, "password": password}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    assert r.status_code == 200
-    tokens = r.json()
-    assert "access_token" in tokens
-
-    db.refresh(user)
-
-    # Verify the hash was upgraded to argon2
-    assert user.hashed_password.startswith("$argon2")
-
-    verified, updated_hash = verify_password(password, user.hashed_password)
-    assert verified
-    # Should not need another update since it's already argon2
-    assert updated_hash is None
-
-
-def test_login_with_argon2_password_keeps_hash(client: TestClient, db: Session) -> None:
-    """Test that logging in with an argon2 password hash does not update it."""
-    email = random_email()
-    password = random_lower_string()
-
-    # Create an argon2 hash (current default)
-    argon2_hash = get_password_hash(password)
-    assert argon2_hash.startswith("$argon2")
-
-    # Create user with argon2 hash
-    user = User(email=email, hashed_password=argon2_hash, is_active=True)
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    original_hash = user.hashed_password
-
-    login_data = {"username": email, "password": password}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    assert r.status_code == 200
-    tokens = r.json()
-    assert "access_token" in tokens
-
-    db.refresh(user)
-
-    assert user.hashed_password == original_hash
-    assert user.hashed_password.startswith("$argon2")
+    assert "email" in r.json()

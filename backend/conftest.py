@@ -41,12 +41,10 @@ def client() -> Generator[TestClient]:
 
 
 @pytest.fixture(scope="module")
-def superuser_token_headers(client: TestClient) -> dict[str, str]:
-    return get_superuser_token_headers(client)
+def superuser_token_headers(db: Session) -> dict[str, str]:
+    return get_superuser_token_headers(db)
 
 
 @pytest.fixture(scope="module")
-def normal_user_token_headers(client: TestClient, db: Session) -> dict[str, str]:
-    return authentication_token_from_email(
-        client=client, email=settings.EMAIL_TEST_USER, db=db
-    )
+def normal_user_token_headers(db: Session) -> dict[str, str]:
+    return authentication_token_from_email(email=settings.EMAIL_TEST_USER, db=db)

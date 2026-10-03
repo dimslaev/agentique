@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test"
 import { createUser } from "./api.ts"
-import { randomEmail, randomPassword } from "./random"
-import { logInUser, logOutUser } from "./user"
+import { randomEmail } from "./random"
+import { logInUser } from "./user"
 
-const tabs = ["My profile", "Password", "Danger zone"]
+const tabs = ["Liked", "My profile", "Danger zone"]
 
 test("My profile tab can be selected", async ({ page }) => {
   await page.goto("/profile")
@@ -24,16 +24,14 @@ test("All tabs are visible", async ({ page }) => {
 test.describe("Edit user profile", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
   let email: string
-  let password: string
 
   test.beforeAll(async () => {
     email = randomEmail()
-    password = randomPassword()
-    await createUser({ email, password })
+    await createUser({ email })
   })
 
-  test.beforeEach(async ({ page }) => {
-    await logInUser(page, email, password)
+  test.beforeEach(async ({ page, request }) => {
+    await logInUser(page, request, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
   })
@@ -65,13 +63,12 @@ test.describe("Edit user profile", () => {
 test.describe("Edit user email", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Edit user email with a valid email", async ({ page }) => {
+  test("Edit user email with a valid email", async ({ page, request }) => {
     const email = randomEmail()
-    const password = randomPassword()
     const updatedEmail = randomEmail()
 
-    await createUser({ email, password })
-    await logInUser(page, email, password)
+    await createUser({ email })
+    await logInUser(page, request, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
 
@@ -89,12 +86,14 @@ test.describe("Edit user email", () => {
 test.describe("Cancel edit actions", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Cancel edit action restores original name", async ({ page }) => {
+  test("Cancel edit action restores original name", async ({
+    page,
+    request,
+  }) => {
     const email = randomEmail()
-    const password = randomPassword()
-    const user = await createUser({ email, password })
+    await createUser({ email })
 
-    await logInUser(page, email, password)
+    await logInUser(page, request, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()
@@ -102,16 +101,18 @@ test.describe("Cancel edit actions", () => {
     await page.getByRole("button", { name: "Cancel" }).first().click()
 
     await expect(
-      page.locator("form").getByText(user.full_name as string, { exact: true }),
-    ).toBeVisible()
+      page.locator("form").getByText("Test User", { exact: true }),
+    ).toHaveCount(0)
   })
 
-  test("Cancel edit action restores original email", async ({ page }) => {
+  test("Cancel edit action restores original email", async ({
+    page,
+    request,
+  }) => {
     const email = randomEmail()
-    const password = randomPassword()
-    await createUser({ email, password })
+    await createUser({ email })
 
-    await logInUser(page, email, password)
+    await logInUser(page, request, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()
@@ -120,84 +121,6 @@ test.describe("Cancel edit actions", () => {
 
     await expect(
       page.locator("form").getByText(email, { exact: true }),
-    ).toBeVisible()
-  })
-})
-
-test.describe("Change password", () => {
-  test.use({ storageState: { cookies: [], origins: [] } })
-
-  test("Update password successfully", async ({ page }) => {
-    const email = randomEmail()
-    const password = randomPassword()
-    const newPassword = randomPassword()
-
-    await createUser({ email, password })
-    await logInUser(page, email, password)
-
-    await page.goto("/profile")
-    await page.getByRole("tab", { name: "Password" }).click()
-    await page.getByTestId("current-password-input").fill(password)
-    await page.getByTestId("new-password-input").fill(newPassword)
-    await page.getByTestId("confirm-password-input").fill(newPassword)
-    await page.getByRole("button", { name: "Update Password" }).click()
-
-    await expect(page.getByText("Password updated successfully")).toBeVisible()
-
-    await logOutUser(page)
-    await logInUser(page, email, newPassword)
-  })
-})
-
-test.describe("Change password validation", () => {
-  test.use({ storageState: { cookies: [], origins: [] } })
-  let email: string
-  let password: string
-
-  test.beforeAll(async () => {
-    email = randomEmail()
-    password = randomPassword()
-    await createUser({ email, password })
-  })
-
-  test.beforeEach(async ({ page }) => {
-    await logInUser(page, email, password)
-    await page.goto("/profile")
-    await page.getByRole("tab", { name: "Password" }).click()
-  })
-
-  test("Update password with weak passwords", async ({ page }) => {
-    const weakPassword = "weak"
-
-    await page.getByTestId("current-password-input").fill(password)
-    await page.getByTestId("new-password-input").fill(weakPassword)
-    await page.getByTestId("confirm-password-input").fill(weakPassword)
-    await page.getByRole("button", { name: "Update Password" }).click()
-
-    await expect(
-      page.getByText("Password must be at least 8 characters"),
-    ).toBeVisible()
-  })
-
-  test("New password and confirmation password do not match", async ({
-    page,
-  }) => {
-    await page.getByTestId("current-password-input").fill(password)
-    await page.getByTestId("new-password-input").fill(randomPassword())
-    await page.getByTestId("confirm-password-input").fill(randomPassword())
-    await page.getByRole("button", { name: "Update Password" }).click()
-
-    await expect(page.getByText("The passwords don't match")).toBeVisible()
-  })
-
-  test("Current password and new password are the same", async ({ page }) => {
-    await page.getByTestId("current-password-input").fill(password)
-    await page.getByTestId("new-password-input").fill(password)
-    await page.getByTestId("confirm-password-input").fill(password)
-    await page.getByRole("button", { name: "Update Password" }).click()
-
-    await expect(
-      page.getByText("New password cannot be the same as the current one"),
     ).toBeVisible()
   })
 })

@@ -28,9 +28,11 @@ export function UserMenu() {
       <RouterLink
         to="/login"
         data-testid="login-link"
-        className="font-wire text-[11px] uppercase tracking-[0.12em] text-dim transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+        aria-label="Sign in"
+        title="Sign in"
+        className="flex size-8 items-center justify-center text-dim transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
       >
-        Sign in
+        <UserIcon className="size-[18px]" />
       </RouterLink>
     )
   }
