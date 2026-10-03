@@ -68,28 +68,23 @@
      utilities actually read, so every card/input/dialog/popover/table/tabs
      squares off without touching those component files. */
   --radius: 0rem;
-  --destructive: oklch(0.577 0.245 27.325);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --destructive: oklch(0.704 0.191 22.216);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
 
-  /* Landing palette, light. Warm paper rather than the neutral app grey. */
-  --ink: #f6f4ec;
-  --paper: #16180f;
-  --wire: #d5d3c2;
-  --dim: #6d6f5c;
-  /* Darker than the dark-theme signal so the cream button label clears 4.5:1
-     against it. */
-  --signal: #b8410f;
+  /* Landing palette. Ink is warm/olive-tinted, not neutral black. */
+  --ink: #14160e;
+  --paper: #edeade;
+  --wire: #33362a;
+  --dim: #8a8c77;
+  --signal: #ff7a3d;
 
   /* Shadcn tokens re-pointed at the landing palette above, so every
      component built on them (Button, Card, Input, Dialog, Tabs, Sidebar,
-     …) picks up the homepage's look app-wide. These reference --ink/
-     --paper/--wire/--dim/--signal rather than duplicating values, so the
-     .dark block below only needs to redeclare those five — the derived
-     tokens here resolve against whichever value is cascaded at use time. */
+     …) picks up the homepage's look app-wide. */
   --background: var(--ink);
   --foreground: var(--paper);
   --card: var(--ink);
@@ -115,25 +110,6 @@
   --sidebar-accent-foreground: var(--paper);
   --sidebar-border: var(--wire);
   --sidebar-ring: var(--signal);
-}
-
-.dark {
-  --destructive: oklch(0.704 0.191 22.216);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-
-  /* Landing palette, dark. Ink is warm/olive-tinted, not neutral black.
-     Redeclaring only these five is enough — every shadcn token in :root
-     that reads var(--ink)/var(--paper)/etc. re-resolves against these dark
-     values wherever an element under .dark uses it. */
-  --ink: #14160e;
-  --paper: #edeade;
-  --wire: #33362a;
-  --dim: #8a8c77;
-  --signal: #ff7a3d;
 }
 
 @layer base {
@@ -174,7 +150,7 @@
 /* Typography plugin ships its own --tw-prose-* defaults in the utilities
    layer. A same override in @layer base always loses that layer battle, so
    this one must also live in @layer utilities (last-in-source wins the tie)
-   to actually repaint blog posts with the theme palette in dark mode. */
+   to actually repaint blog posts with the theme palette. */
 @layer utilities {
   .prose {
     --tw-prose-body: var(--color-foreground);

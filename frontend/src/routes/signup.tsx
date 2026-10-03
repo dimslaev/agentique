@@ -20,22 +20,14 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
-const formSchema = z
-  .object({
-    email: z.email(),
-    full_name: z.string().min(1, { message: "Full Name is required" }),
-    password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    confirm_password: z
-      .string()
-      .min(1, { message: "Password confirmation is required" }),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "The passwords don't match",
-    path: ["confirm_password"],
-  })
+const formSchema = z.object({
+  email: z.email(),
+  full_name: z.string().min(1, { message: "Full Name is required" }),
+  password: z
+    .string()
+    .min(1, { message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters" }),
+})
 
 type FormData = z.infer<typeof formSchema>
 
@@ -67,16 +59,12 @@ function SignUp() {
       email: "",
       full_name: "",
       password: "",
-      confirm_password: "",
     },
   })
 
   const onSubmit = (data: FormData) => {
     if (signUpMutation.isPending) return
-
-    // exclude confirm_password from submission data
-    const { confirm_password: _confirm_password, ...submitData } = data
-    signUpMutation.mutate(submitData)
+    signUpMutation.mutate(data)
   }
 
   return (
@@ -141,24 +129,6 @@ function SignUp() {
                     <PasswordInput
                       data-testid="password-input"
                       placeholder="Password"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirm_password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <PasswordInput
-                      data-testid="confirm-password-input"
-                      placeholder="Confirm Password"
                       {...field}
                     />
                   </FormControl>

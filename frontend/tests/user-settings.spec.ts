@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test"
-import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
-import { createUser } from "./privateApi.ts"
+import { createUser } from "./api.ts"
 import { randomEmail, randomPassword } from "./random"
 import { logInUser, logOutUser } from "./user"
 
@@ -201,59 +200,4 @@ test.describe("Change password validation", () => {
       page.getByText("New password cannot be the same as the current one"),
     ).toBeVisible()
   })
-})
-
-test("Appearance button is visible in header", async ({ page }) => {
-  await page.goto("/profile")
-  await expect(page.getByTestId("theme-button")).toBeVisible()
-})
-
-test("User can switch between theme modes", async ({ page }) => {
-  await page.goto("/profile")
-
-  // Theme is applied in a useEffect after mount, so wait for it to settle
-  // before reading the starting class (otherwise we can race the initial
-  // "neither class yet" paint).
-  await expect(page.locator("html")).toHaveClass(/dark|light/)
-  const startedDark = await page.evaluate(() =>
-    document.documentElement.classList.contains("dark"),
-  )
-
-  await page.getByTestId("theme-button").click()
-  await expect(page.locator("html")).toHaveClass(startedDark ? /light/ : /dark/)
-
-  await page.getByTestId("theme-button").click()
-  await expect(page.locator("html")).toHaveClass(startedDark ? /dark/ : /light/)
-})
-
-test("Selected mode is preserved across sessions", async ({ page }) => {
-  await page.goto("/profile")
-  await expect(page.locator("html")).toHaveClass(/dark|light/)
-
-  if (
-    await page.evaluate(() =>
-      document.documentElement.classList.contains("dark"),
-    )
-  ) {
-    await page.getByTestId("theme-button").click()
-  }
-
-  const isLightMode = await page.evaluate(() =>
-    document.documentElement.classList.contains("light"),
-  )
-  expect(isLightMode).toBe(true)
-
-  await page.getByTestId("theme-button").click()
-  let isDarkMode = await page.evaluate(() =>
-    document.documentElement.classList.contains("dark"),
-  )
-  expect(isDarkMode).toBe(true)
-
-  await logOutUser(page)
-  await logInUser(page, firstSuperuser, firstSuperuserPassword)
-
-  isDarkMode = await page.evaluate(() =>
-    document.documentElement.classList.contains("dark"),
-  )
-  expect(isDarkMode).toBe(true)
 })

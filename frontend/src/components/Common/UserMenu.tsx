@@ -1,8 +1,7 @@
 import { Link as RouterLink } from "@tanstack/react-router"
-import { LogIn, LogOut, User as UserIcon } from "lucide-react"
+import { LogOut, User as UserIcon } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,12 +25,13 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      // Same outline icon button as the theme toggle beside it.
-      <Button variant="outline" size="icon" asChild>
-        <RouterLink to="/login" data-testid="login-link" aria-label="Sign in">
-          <LogIn className="h-[1.2rem] w-[1.2rem]" />
-        </RouterLink>
-      </Button>
+      <RouterLink
+        to="/login"
+        data-testid="login-link"
+        className="font-wire text-[11px] uppercase tracking-[0.12em] text-dim transition-colors hover:text-signal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal"
+      >
+        Sign in
+      </RouterLink>
     )
   }
 

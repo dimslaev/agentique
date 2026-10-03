@@ -8,7 +8,6 @@ import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { ApiError, OpenAPI } from "./client"
-import { ThemeProvider } from "./components/theme-provider"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
 import { trackPageview } from "./lib/analytics"
@@ -68,11 +67,9 @@ router.subscribe("onResolved", ({ toLocation }) => {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster richColors closeButton />
-      </QueryClientProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+      <Toaster richColors closeButton />
+    </QueryClientProvider>
   </StrictMode>,
 )
