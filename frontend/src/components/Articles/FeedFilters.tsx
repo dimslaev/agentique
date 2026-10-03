@@ -53,7 +53,11 @@ export function FeedFilters() {
         className="flex flex-col gap-3.5 border-b pb-5 max-sm:hidden"
       >
         <SearchInput />
-        <div className="flex flex-col gap-2">
+        {/* A search ranks by meaning alone; these don't apply to it. */}
+        <div
+          inert={!!filters.search}
+          className={cn("flex flex-col gap-2", filters.search && "opacity-40")}
+        >
           <FilterRow label="Category">
             <FilterOptions
               label="Category"
@@ -88,12 +92,14 @@ function MobileActiveFilters() {
   const { filters, setFilter, setTag } = useFilters()
   const { search, category, kind, tag, tagName } = filters
 
-  const applied = [
-    search && `"${search}"`,
-    CATEGORY_OPTIONS.find((o) => o.value === category && category)?.label,
-    KIND_OPTIONS.find((o) => o.value === kind && kind)?.label,
-    tag && `#${tagName || tag}`,
-  ].filter(Boolean)
+  // A search ignores the other filters, so name only the search.
+  const applied = search
+    ? [`"${search}"`]
+    : [
+        CATEGORY_OPTIONS.find((o) => o.value === category && category)?.label,
+        KIND_OPTIONS.find((o) => o.value === kind && kind)?.label,
+        tag && `#${tagName || tag}`,
+      ].filter(Boolean)
 
   if (applied.length === 0) return null
 

@@ -32,18 +32,23 @@ export function ArticlesList() {
 
   const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
+  // A search ranks by meaning across all time, so the date, sort and filters
+  // don't apply to it; they are greyed out while it is active.
   const { data, isLoading, isFetching, isError } = useQuery({
-    queryKey: ["articles", search, dateRange, sort, category, kind, tag],
+    queryKey: search
+      ? ["articles", "search", search]
+      : ["articles", dateRange, sort, category, kind, tag],
     queryFn: () =>
-      ArticlesService.readArticles({
-        limit: 50,
-        since,
-        q: search || undefined,
-        sort,
-        category: category || undefined,
-        kind: kind || undefined,
-        tag: tag || undefined,
-      }),
+      search
+        ? ArticlesService.searchArticles({ q: search, limit: 50 })
+        : ArticlesService.readArticles({
+            limit: 50,
+            since,
+            sort,
+            category: category || undefined,
+            kind: kind || undefined,
+            tag: tag || undefined,
+          }),
     placeholderData: keepPreviousData,
   })
 
@@ -57,7 +62,13 @@ export function ArticlesList() {
         <h1 className="font-display text-sm font-bold uppercase tracking-[0.1em] max-sm:w-full">
           The wire
         </h1>
-        <div className="flex flex-wrap gap-x-5 max-sm:-ml-2">
+        <div
+          inert={!!search}
+          className={cn(
+            "flex flex-wrap gap-x-5 max-sm:-ml-2",
+            search && "opacity-40",
+          )}
+        >
           <FilterOptions
             label="Published"
             options={DATE_OPTIONS}
@@ -97,6 +108,8 @@ export function ArticlesList() {
               key={article.id}
               article={article}
               onTagClick={(t) => {
+                // A tag filter does nothing during a search, so leave it.
+                setFilter("search", "")
                 setTag(t.slug, t.name)
                 window.scrollTo({ top: 0 })
               }}
