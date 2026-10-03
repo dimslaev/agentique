@@ -9,7 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as LayoutRouteImport } from './routes/_layout'
@@ -19,11 +18,6 @@ import { Route as LayoutProfileRouteImport } from './routes/_layout/profile'
 import { Route as LayoutFeedRouteImport } from './routes/_layout/feed'
 import { Route as LayoutDevelopersRouteImport } from './routes/_layout/developers'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -68,7 +62,6 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -77,7 +70,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -89,7 +81,6 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
-  '/signup': typeof SignupRoute
   '/_layout/developers': typeof LayoutDevelopersRoute
   '/_layout/feed': typeof LayoutFeedRoute
   '/_layout/profile': typeof LayoutProfileRoute
@@ -102,7 +93,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/login'
-    | '/signup'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -111,7 +101,6 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/login'
-    | '/signup'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -122,7 +111,6 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/auth'
     | '/login'
-    | '/signup'
     | '/_layout/developers'
     | '/_layout/feed'
     | '/_layout/profile'
@@ -134,18 +122,10 @@ export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   AuthRoute: typeof AuthRoute
   LoginRoute: typeof LoginRoute
-  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -228,7 +208,6 @@ const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   AuthRoute: AuthRoute,
   LoginRoute: LoginRoute,
-  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

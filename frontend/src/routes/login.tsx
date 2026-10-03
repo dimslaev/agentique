@@ -1,8 +1,4 @@
-import {
-  createFileRoute,
-  Link as RouterLink,
-  redirect,
-} from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
 
 import { LoginService } from "@/client"
@@ -45,14 +41,6 @@ function Login() {
           rememberRedirect(redirectTo)
           return LoginService.requestSignInLink({ requestBody: { email } })
         }}
-        footer={
-          <>
-            Don't have an account yet?{" "}
-            <RouterLink to="/signup" className="underline underline-offset-4">
-              Sign up
-            </RouterLink>
-          </>
-        }
       />
     </AuthLayout>
   )
