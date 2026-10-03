@@ -9,6 +9,7 @@ from sqlmodel import Session
 
 from app.platform.logging import log
 from pipeline.fetching.extract_content import fetch_full_content
+from pipeline.fetching.tweets import unwrap_tweets
 from pipeline.publishers import (
     PublisherResolver,
     feed_sources_from_db,
@@ -20,6 +21,7 @@ from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import Candidate, RawItem
+from pipeline.urls import hostname
 
 # Below this, content is a teaser/blurb rather than an article, and the
 # categorizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide
@@ -31,6 +33,10 @@ MIN_CONTENT_CHARS = 500
 # inventing, and an article is never inserted without a summary. Dropped here
 # so it does not cost a scoring call first.
 MIN_SUMMARIZABLE_CHARS = 300
+
+# Event sign-up pages. Aligned News lists meetups and hackathons beside its
+# news, and the agent rejected every one it saw (scores 10-25, Sept 2026).
+EVENT_HOSTS = {"luma.com", "lu.ma", "partiful.com", "eventbrite.com"}
 
 
 @dataclass(frozen=True)
@@ -103,7 +109,20 @@ def fetch_source(source: Source) -> tuple[list[RawItem], dict[str, str]]:
     if not articles:
         log(f"No articles from {source.label}")
         return articles, errors
+    articles = _without_events(unwrap_tweets(articles), source.label)
     return _with_content(articles, source.label), errors
+
+
+def _without_events(articles: list[RawItem], label: str) -> list[RawItem]:
+    kept = [a for a in articles if not _is_event_page(a["url"])]
+    if dropped := len(articles) - len(kept):
+        log(f"  {label}: dropped {dropped} event page(s)")
+    return kept
+
+
+def _is_event_page(url: str) -> bool:
+    host = hostname(url)
+    return any(host == d or host.endswith(f".{d}") for d in EVENT_HOSTS)
 
 
 def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:
