@@ -71,7 +71,7 @@ export function SignupPanel() {
             data-lpignore="true"
             data-bwignore="true"
             data-form-type="other"
-            className="min-w-0 flex-1 bg-transparent px-3 font-wire text-sm text-paper outline-none placeholder:text-dim md:border-l md:border-wire"
+            className="min-w-0 flex-1 bg-transparent px-3 font-wire text-base text-paper outline-none placeholder:text-dim md:border-l md:border-wire md:text-sm"
           />
           <button
             type="submit"
