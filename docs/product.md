@@ -38,6 +38,12 @@ article and the profile page are the only things that need an account. The
 upgrade button fires an analytics event and shows a "coming soon" dialog; no real
 Stripe integration exists yet.
 
+**Admin analytics (`/admin`, superusers only).** The site logs its own pageviews and
+clicks, with no third party. The page reports visitors, pageviews, returning visitors,
+article clicks, top pages, referrers, clicked articles, events and devices over 7, 30
+or 90 days, or all time. It counts outside readers only. Any device a superuser has
+signed in on is left out, and so are bot user agents; each shows as one count.
+
 ## How the pipeline works
 
 The pipeline collects and the agent judges (docs/adr/0011). Once a day, a

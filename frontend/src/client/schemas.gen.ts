@@ -50,6 +50,70 @@ export const AnalyticsEventCreateSchema = {
     title: 'AnalyticsEventCreate'
 } as const;
 
+export const AnalyticsReportSchema = {
+    properties: {
+        days: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Days'
+        },
+        totals: {
+            '$ref': '#/components/schemas/ReportTotals'
+        },
+        daily: {
+            items: {
+                '$ref': '#/components/schemas/ReportDay'
+            },
+            type: 'array',
+            title: 'Daily'
+        },
+        pages: {
+            items: {
+                '$ref': '#/components/schemas/ReportRow'
+            },
+            type: 'array',
+            title: 'Pages'
+        },
+        referrers: {
+            items: {
+                '$ref': '#/components/schemas/ReportRow'
+            },
+            type: 'array',
+            title: 'Referrers'
+        },
+        events: {
+            items: {
+                '$ref': '#/components/schemas/ReportRow'
+            },
+            type: 'array',
+            title: 'Events'
+        },
+        articles: {
+            items: {
+                '$ref': '#/components/schemas/ReportArticle'
+            },
+            type: 'array',
+            title: 'Articles'
+        },
+        devices: {
+            items: {
+                '$ref': '#/components/schemas/ReportRow'
+            },
+            type: 'array',
+            title: 'Devices'
+        }
+    },
+    type: 'object',
+    required: ['days', 'totals', 'daily', 'pages', 'referrers', 'events', 'articles', 'devices'],
+    title: 'AnalyticsReport'
+} as const;
+
 export const ArticleFacetsSchema = {
     properties: {
         publishers: {
@@ -296,6 +360,110 @@ export const PublisherPublicSchema = {
     type: 'object',
     required: ['id', 'slug', 'name', 'kind'],
     title: 'PublisherPublic'
+} as const;
+
+export const ReportArticleSchema = {
+    properties: {
+        article_id: {
+            type: 'string',
+            title: 'Article Id'
+        },
+        title: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title'
+        },
+        clicks: {
+            type: 'integer',
+            title: 'Clicks'
+        },
+        visitors: {
+            type: 'integer',
+            title: 'Visitors'
+        }
+    },
+    type: 'object',
+    required: ['article_id', 'title', 'clicks', 'visitors'],
+    title: 'ReportArticle'
+} as const;
+
+export const ReportDaySchema = {
+    properties: {
+        day: {
+            type: 'string',
+            format: 'date',
+            title: 'Day'
+        },
+        visitors: {
+            type: 'integer',
+            title: 'Visitors'
+        },
+        pageviews: {
+            type: 'integer',
+            title: 'Pageviews'
+        }
+    },
+    type: 'object',
+    required: ['day', 'visitors', 'pageviews'],
+    title: 'ReportDay'
+} as const;
+
+export const ReportRowSchema = {
+    properties: {
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        visitors: {
+            type: 'integer',
+            title: 'Visitors'
+        }
+    },
+    type: 'object',
+    required: ['label', 'count', 'visitors'],
+    title: 'ReportRow'
+} as const;
+
+export const ReportTotalsSchema = {
+    properties: {
+        visitors: {
+            type: 'integer',
+            title: 'Visitors'
+        },
+        pageviews: {
+            type: 'integer',
+            title: 'Pageviews'
+        },
+        returning_visitors: {
+            type: 'integer',
+            title: 'Returning Visitors'
+        },
+        article_clicks: {
+            type: 'integer',
+            title: 'Article Clicks'
+        },
+        admin_pageviews: {
+            type: 'integer',
+            title: 'Admin Pageviews'
+        },
+        bot_pageviews: {
+            type: 'integer',
+            title: 'Bot Pageviews'
+        }
+    },
+    type: 'object',
+    required: ['visitors', 'pageviews', 'returning_visitors', 'article_clicks', 'admin_pageviews', 'bot_pageviews'],
+    title: 'ReportTotals'
 } as const;
 
 export const SignInRequestSchema = {
