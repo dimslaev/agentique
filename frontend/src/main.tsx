@@ -53,6 +53,19 @@ const queryClient = new QueryClient({
   }),
 })
 
+// A deploy deletes the previous build's chunks, so a tab opened before it
+// can't load the next route it visits. The router reloads on that itself, but
+// only for the error messages it recognises, and Safari words it differently.
+// Reload to pick up the new build, at most once every 10s so a chunk that is
+// broken for good can't loop.
+const RELOAD_KEY = "chunk_reload_at"
+window.addEventListener("vite:preloadError", () => {
+  const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0)
+  if (Date.now() - last < 10_000) return
+  sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
+  window.location.reload()
+})
+
 const router = createRouter({ routeTree })
 declare module "@tanstack/react-router" {
   interface Register {
