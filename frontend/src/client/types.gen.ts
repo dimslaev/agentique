@@ -10,6 +10,17 @@ export type AnalyticsEventCreate = {
     };
 };
 
+export type AnalyticsReport = {
+    days: (number | null);
+    totals: ReportTotals;
+    daily: Array<ReportDay>;
+    pages: Array<ReportRow>;
+    referrers: Array<ReportRow>;
+    events: Array<ReportRow>;
+    articles: Array<ReportArticle>;
+    devices: Array<ReportRow>;
+};
+
 export type ArticleFacets = {
     publishers: Array<PublisherFacet>;
     tags: Array<TagFacet>;
@@ -73,6 +84,34 @@ export type PublisherPublic = {
     image?: (string | null);
 };
 
+export type ReportArticle = {
+    article_id: string;
+    title: (string | null);
+    clicks: number;
+    visitors: number;
+};
+
+export type ReportDay = {
+    day: string;
+    visitors: number;
+    pageviews: number;
+};
+
+export type ReportRow = {
+    label: string;
+    count: number;
+    visitors: number;
+};
+
+export type ReportTotals = {
+    visitors: number;
+    pageviews: number;
+    returning_visitors: number;
+    article_clicks: number;
+    admin_pageviews: number;
+    bot_pageviews: number;
+};
+
 export type SignInRequest = {
     email: string;
 };
@@ -127,6 +166,12 @@ export type AnalyticsCollectEventData = {
 };
 
 export type AnalyticsCollectEventResponse = (void);
+
+export type AnalyticsReadReportData = {
+    days?: (number | null);
+};
+
+export type AnalyticsReadReportResponse = (AnalyticsReport);
 
 export type ArticlesReadArticlesData = {
     kind?: (Array<(string)> | null);

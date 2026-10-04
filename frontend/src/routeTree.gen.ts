@@ -17,6 +17,7 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutProfileRouteImport } from './routes/_layout/profile'
 import { Route as LayoutFeedRouteImport } from './routes/_layout/feed'
 import { Route as LayoutDevelopersRouteImport } from './routes/_layout/developers'
+import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -57,11 +58,17 @@ const LayoutDevelopersRoute = LayoutDevelopersRouteImport.update({
   path: '/developers',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminRoute = LayoutAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
+  '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
+  '/admin': typeof LayoutAdminRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -81,6 +89,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/auth': typeof AuthRoute
   '/login': typeof LoginRoute
+  '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/developers': typeof LayoutDevelopersRoute
   '/_layout/feed': typeof LayoutFeedRoute
   '/_layout/profile': typeof LayoutProfileRoute
@@ -93,6 +102,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/login'
+    | '/admin'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -101,6 +111,7 @@ export interface FileRouteTypes {
   to:
     | '/auth'
     | '/login'
+    | '/admin'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -111,6 +122,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/auth'
     | '/login'
+    | '/_layout/admin'
     | '/_layout/developers'
     | '/_layout/feed'
     | '/_layout/profile'
@@ -182,10 +194,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDevelopersRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin': {
+      id: '/_layout/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof LayoutAdminRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutDevelopersRoute: typeof LayoutDevelopersRoute
   LayoutFeedRoute: typeof LayoutFeedRoute
   LayoutProfileRoute: typeof LayoutProfileRoute
@@ -194,6 +214,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutAdminRoute: LayoutAdminRoute,
   LayoutDevelopersRoute: LayoutDevelopersRoute,
   LayoutFeedRoute: LayoutFeedRoute,
   LayoutProfileRoute: LayoutProfileRoute,

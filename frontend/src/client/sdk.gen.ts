@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -11,7 +11,7 @@ export class AnalyticsService {
      * Record one analytics event. Public and fire-and-forget (returns 204).
      *
      * Attaches the user id when the request carries a valid bearer token;
-     * otherwise the event is anonymous. No dashboard — query the table in SQL.
+     * otherwise the event is anonymous.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns void Successful Response
@@ -23,6 +23,27 @@ export class AnalyticsService {
             url: '/api/v1/analytics/collect',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Report
+     * Superusers only. Outside readers over the last `days` days, all time when omitted.
+     * @param data The data for the request.
+     * @param data.days
+     * @returns AnalyticsReport Successful Response
+     * @throws ApiError
+     */
+    public static readReport(data: AnalyticsReadReportData = {}): CancelablePromise<AnalyticsReadReportResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/analytics/report',
+            query: {
+                days: data.days
+            },
             errors: {
                 422: 'Validation Error'
             }

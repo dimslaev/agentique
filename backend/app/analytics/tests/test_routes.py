@@ -46,6 +46,22 @@ def test_collect_ignores_referer_header(client: TestClient, db: Session) -> None
     assert event.referrer is None
 
 
+def test_collect_drops_query_strings(client: TestClient, db: Session) -> None:
+    r = client.post(
+        f"{settings.API_V1_STR}/analytics/collect",
+        json={
+            "path": "/auth?token=secret",
+            "referrer": "https://agentique.ch/reset-password?token=secret#top",
+            "visitor_id": "anon-6",
+        },
+    )
+    assert r.status_code == 204
+    event = _latest_event(db, "anon-6")
+    assert event is not None
+    assert event.path == "/auth"
+    assert event.referrer == "https://agentique.ch/reset-password"
+
+
 def test_collect_defaults_event_to_pageview(client: TestClient, db: Session) -> None:
     r = client.post(
         f"{settings.API_V1_STR}/analytics/collect",

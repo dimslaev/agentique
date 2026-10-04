@@ -1,5 +1,5 @@
 import { Link as RouterLink } from "@tanstack/react-router"
-import { LogOut, User as UserIcon } from "lucide-react"
+import { ChartColumn, LogOut, User as UserIcon } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -67,6 +67,14 @@ export function UserMenu() {
             Profile
           </RouterLink>
         </DropdownMenuItem>
+        {user.is_superuser && (
+          <DropdownMenuItem asChild>
+            <RouterLink to="/admin">
+              <ChartColumn />
+              Analytics
+            </RouterLink>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={logout}>
           <LogOut />
           Log Out
