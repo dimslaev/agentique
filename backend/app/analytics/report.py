@@ -120,9 +120,6 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
         day_visitors, day_pageviews = by_day.get(day, (0, 0))
         daily.append(ReportDay(day=day, visitors=day_visitors, pageviews=day_pageviews))
 
-    # The query string is dropped: it is noise for grouping, and a sign-in link
-    # carries its token there.
-    page = func.split_part(h.path, "?", 1)
     referrer_host = func.coalesce(
         func.substring(h.referrer, r"^https?://([^/]+)"), h.referrer
     )
@@ -134,7 +131,7 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
         days=days,
         totals=totals,
         daily=daily,
-        pages=_ranked(session, human, page, is_pageview & h.path.is_not(None)),
+        pages=_ranked(session, human, h.path, is_pageview & h.path.is_not(None)),
         referrers=_ranked(
             session, human, referrer_host, is_pageview & h.referrer.is_not(None)
         ),

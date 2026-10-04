@@ -73,9 +73,10 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// First-party analytics: log a pageview on every SPA navigation.
+// First-party analytics: log a pageview on every SPA navigation. The path
+// only: a sign-in link carries its token in the query string.
 router.subscribe("onResolved", ({ toLocation }) => {
-  trackPageview(toLocation.pathname + toLocation.searchStr)
+  trackPageview(toLocation.pathname)
 })
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

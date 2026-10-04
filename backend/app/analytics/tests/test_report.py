@@ -79,16 +79,6 @@ def test_report_counts_outside_readers_only(
     assert devices == {"desktop": 2, "mobile": 1}
 
 
-def test_report_drops_the_query_string_from_paths(
-    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
-) -> None:
-    _event(db, path="/auth?token=secret-a", visitor_id="reader-1")
-    _event(db, path="/auth?token=secret-b", visitor_id="reader-2")
-
-    report = client.get(REPORT, headers=superuser_token_headers).json()
-    assert report["pages"] == [{"label": "/auth", "count": 2, "visitors": 2}]
-
-
 def test_report_window_and_returning_visitors(
     client: TestClient, db: Session, superuser_token_headers: dict[str, str]
 ) -> None:

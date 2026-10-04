@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.analytics.models import AnalyticsEvent, AnalyticsEventCreate, AnalyticsReport
@@ -18,6 +20,12 @@ def _truncate(value: str | None) -> str | None:
     return value[:_MAX_LEN] if value else None
 
 
+def _without_query(value: str | None) -> str | None:
+    # A sign-in link carries its never-expiring token in the query string, and
+    # nothing reads the query back, so none is kept.
+    return re.split(r"[?#]", value, maxsplit=1)[0] if value else None
+
+
 @router.post("/collect", status_code=204)
 def collect_event(
     session: SessionDep,
@@ -32,11 +40,11 @@ def collect_event(
     """
     event = AnalyticsEvent(
         event=_truncate(payload.event) or "pageview",
-        path=_truncate(payload.path),
+        path=_truncate(_without_query(payload.path)),
         # Only the client's `document.referrer` is meaningful. The request's own
         # Referer header is always our site, so a fallback to it would file every
         # direct visit under agentique.ch.
-        referrer=_truncate(payload.referrer),
+        referrer=_truncate(_without_query(payload.referrer)),
         visitor_id=_truncate(payload.visitor_id),
         user_id=current_user.id if current_user else None,
         user_agent=_truncate(request.headers.get("user-agent")),
