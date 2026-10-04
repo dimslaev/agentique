@@ -90,7 +90,7 @@ function SearchInput() {
         placeholder="Search by meaning, e.g. run a model locally"
         value={localSearch}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-full min-w-0 bg-transparent py-2 text-[13px] outline-none placeholder:text-muted-foreground"
+        className="w-full min-w-0 bg-transparent py-2 text-base outline-none md:text-[13px] placeholder:text-muted-foreground"
       />
       {localSearch && (
         <button
