@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginRefreshTokenResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -283,6 +283,19 @@ export class LoginService {
     }
     
     /**
+     * Refresh Token
+     * Renew the access token
+     * @returns Token Successful Response
+     * @throws ApiError
+     */
+    public static refreshToken(): CancelablePromise<LoginRefreshTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/login/refresh'
+        });
+    }
+    
+    /**
      * Test Token
      * Test access token
      * @returns UserPublic Successful Response
@@ -346,7 +359,7 @@ export class UsersService {
     /**
      * Register User
      * Create an account from an email alone, add it to the newsletter, and email
-     * the sign-in link. An existing account just gets its link again.
+     * a sign-in link. An existing account just gets a new link.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns Message Successful Response

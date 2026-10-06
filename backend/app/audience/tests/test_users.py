@@ -121,6 +121,7 @@ def test_signup_with_email_only(client: TestClient, db: Session, monkeypatch) ->
     assert [m["to"] for m in sent] == [email]
     assert sent[0]["subject"] == "Welcome to Agentique"
     assert f"{settings.FRONTEND_HOST}/auth?token={user.login_token}" in sent[0]["html"]
+    assert "expire" not in sent[0]["html"]
 
     db.delete(db.get(NewsletterSubscriber, email))
     db.commit()

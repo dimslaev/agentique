@@ -21,8 +21,8 @@ def _truncate(value: str | None) -> str | None:
 
 
 def _without_query(value: str | None) -> str | None:
-    # A sign-in link carries its never-expiring token in the query string, and
-    # nothing reads the query back, so none is kept.
+    # A sign-in link carries its token in the query string, and nothing reads
+    # the query back, so none is kept.
     return re.split(r"[?#]", value, maxsplit=1)[0] if value else None
 
 

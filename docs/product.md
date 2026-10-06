@@ -23,8 +23,8 @@ surfaces relevant pieces even if none of them use that exact phrase.
 
 **Accounts and newsletter.** Signing up takes only an email: it creates the account,
 adds the address to the newsletter (synced to a Resend audience), and emails a sign-in
-link that never expires. Signing in later emails the same link again. There are no
-passwords (docs/adr/0014). Every Friday a Claude Code session finds
+link that expires after an hour. Signing in later emails a new link. A reader stays signed
+in as long as they visit at least once every 30 days. There are no passwords. Every Friday a Claude Code session finds
 the week's most talked-about topics, reads what individual writers, repos and
 discussions say about each, and writes three short explainers, one per topic: what the
 thing is, how it works, how people are taking it, with links to the sources. They land

@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 import uuid
+from datetime import timedelta
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.audience.models import ArticleLike, User, UserCreate, UserUpdateMe
 from app.catalog.models import Article
+from app.platform.dates import get_datetime_utc
 from app.platform.security import generate_login_token
 from app.platform.settings import settings
 
+LOGIN_LINK_EXPIRE_MINUTES = 60
+
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
-    db_obj = User.model_validate(
-        user_create, update={"login_token": generate_login_token()}
-    )
+    db_obj = User.model_validate(user_create)
     session.add(db_obj)
     session.commit()
     session.refresh(db_obj)
@@ -28,8 +30,25 @@ def get_user_by_email(*, session: Session, email: str) -> User | None:
     return session_user
 
 
+def issue_login_token(*, session: Session, db_user: User) -> str:
+    """A fresh token for a sign-in link. Any link sent before stops working."""
+    token = generate_login_token()
+    db_user.login_token = token
+    db_user.login_token_expires_at = get_datetime_utc() + timedelta(
+        minutes=LOGIN_LINK_EXPIRE_MINUTES
+    )
+    session.add(db_user)
+    session.commit()
+    return token
+
+
 def get_user_by_login_token(*, session: Session, token: str) -> User | None:
-    return session.exec(select(User).where(User.login_token == token)).first()
+    """The account a sign-in link belongs to, while the link still works."""
+    statement = select(User).where(
+        User.login_token == token,
+        col(User.login_token_expires_at) > get_datetime_utc(),
+    )
+    return session.exec(statement).first()
 
 
 def update_profile(*, session: Session, db_user: User, changes: UserUpdateMe) -> User:

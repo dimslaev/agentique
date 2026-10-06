@@ -7,7 +7,7 @@ import {
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
-import { ApiError, OpenAPI } from "./client"
+import { ApiError, LoginService, OpenAPI } from "./client"
 import { Toaster } from "./components/ui/sonner"
 import "./index.css"
 import { trackPageview } from "./lib/analytics"
@@ -27,6 +27,15 @@ const handleApiError = (error: Error) => {
   if (error instanceof ApiError && [401, 403].includes(error.status)) {
     clearSession()
   }
+}
+
+// Renew the session on every visit, so returning readers stay signed in.
+if (localStorage.getItem("access_token")) {
+  LoginService.refreshToken()
+    .then(({ access_token }) =>
+      localStorage.setItem("access_token", access_token),
+    )
+    .catch(handleApiError)
 }
 
 const AUTH_FAILURE_STATUSES = [400, 401, 403, 404]

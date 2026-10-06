@@ -1,12 +1,20 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test"
-import { findLastEmail } from "./mailcatcher"
+import { findEmail, findLastEmail } from "./mailcatcher"
+
+const sentTo = (email: string) => (e: { recipients: string[] }) =>
+  e.recipients.includes(`<${email}>`)
 
 // Read the newest email to `email` from mailcatcher and pull out the sign-in
-// link the backend put in it.
-export async function signInLinkFor(request: APIRequestContext, email: string) {
+// link the backend put in it. `after` skips emails up to that id: each new
+// link replaces the one before, so an older email's link no longer works.
+export async function signInLinkFor(
+  request: APIRequestContext,
+  email: string,
+  after = 0,
+) {
   const message = await findLastEmail({
     request,
-    filter: (e) => e.recipients.includes(`<${email}>`),
+    filter: (e) => sentTo(email)(e) && e.id > after,
   })
   const response = await request.get(
     `${process.env.MAILCATCHER_HOST}/messages/${message.id}.html`,
@@ -22,12 +30,13 @@ export async function logInUser(
   request: APIRequestContext,
   email: string,
 ) {
+  const previous = await findEmail({ request, filter: sentTo(email) })
   await page.goto("/login")
   await page.getByTestId("email-input").fill(email)
   await page.getByRole("button", { name: "Email me a sign-in link" }).click()
   await expect(page.getByTestId("link-sent")).toBeVisible()
 
-  await page.goto(await signInLinkFor(request, email))
+  await page.goto(await signInLinkFor(request, email, previous?.id))
   await page.waitForURL("/")
   await expect(page.getByTestId("user-menu")).toBeVisible()
 }

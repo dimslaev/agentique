@@ -58,7 +58,7 @@ function Auth() {
           This link doesn't work
         </h1>
         <p className="text-sm text-muted-foreground">
-          It may be incomplete, or the account was deleted.{" "}
+          It's invalid or has expired.{" "}
           <RouterLink to="/login" className="underline underline-offset-4">
             Get a new link
           </RouterLink>

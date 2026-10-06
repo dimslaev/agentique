@@ -6,7 +6,7 @@ type Email = {
   subject: string
 }
 
-async function findEmail({
+export async function findEmail({
   request,
   filter,
 }: {

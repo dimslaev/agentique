@@ -56,8 +56,7 @@ export function EmailLinkForm({
           Check your inbox
         </h1>
         <p className="text-sm text-muted-foreground" data-testid="link-sent">
-          We sent a sign-in link to {mutation.variables?.email}. It doesn't
-          expire, so keep the email to sign in again later.
+          We sent a sign-in link to {mutation.variables?.email}.
         </p>
       </div>
     )

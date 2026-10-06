@@ -99,7 +99,7 @@ uv run alembic upgrade head
 
 ## Email templates
 
-- Two transactional emails: `welcome.html` on signup and `sign_in.html` on a sign-in request, both carrying the permanent sign-in link
+- Two transactional emails: `welcome.html` on signup and `sign_in.html` on a sign-in request, both carrying a fresh sign-in link
 - Templates: `app/platform/email-templates/`, next to `app/platform/email.py`, which renders and sends them
 - The weekly newsletter issue: `weekly_issue.html` in the same folder, the site's wordmark over plain prose, rendered (autoescaped) and drafted by `app/newsletter/broadcast.py`
 - No MJML source - edit the HTML directly

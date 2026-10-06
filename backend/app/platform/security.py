@@ -1,4 +1,4 @@
-"""JWT access tokens and the permanent sign-in link token."""
+"""JWT access tokens and the sign-in link token."""
 
 from __future__ import annotations
 

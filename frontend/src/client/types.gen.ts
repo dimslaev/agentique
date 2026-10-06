@@ -248,6 +248,8 @@ export type LoginLoginWithLinkData = {
 
 export type LoginLoginWithLinkResponse = (Token);
 
+export type LoginRefreshTokenResponse = (Token);
+
 export type LoginTestTokenResponse = (UserPublic);
 
 export type UsersReadUserMeResponse = (UserPublic);

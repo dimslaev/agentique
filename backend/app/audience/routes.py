@@ -79,11 +79,9 @@ def request_sign_in_link(
     # Same answer whether or not the account exists, so the endpoint can't be
     # used to find out who has one.
     if user and user.is_active:
+        token = service.issue_login_token(session=session, db_user=user)
         background_tasks.add_task(
-            _send_link_email,
-            user.email,
-            generate_sign_in_email(user.login_token),
-            user.login_token,
+            _send_link_email, user.email, generate_sign_in_email(token), token
         )
     return Message(message=LINK_SENT)
 
@@ -98,10 +96,22 @@ def login_with_link(session: SessionDep, body: MagicLogin) -> Token:
         raise HTTPException(status_code=400, detail="Invalid sign-in link")
     elif not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    return _access_token(user)
+
+
+@login_router.post("/login/refresh")
+def refresh_token(current_user: CurrentUser) -> Token:
+    """
+    Renew the access token
+    """
+    return _access_token(current_user)
+
+
+def _access_token(user: User) -> Token:
     return Token(
         access_token=security.create_access_token(
-            user.id, expires_delta=access_token_expires
+            user.id,
+            expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
         )
     )
 
@@ -162,27 +172,23 @@ def register_user(
 ) -> Message:
     """
     Create an account from an email alone, add it to the newsletter, and email
-    the sign-in link. An existing account just gets its link again.
+    a sign-in link. An existing account just gets a new link.
     """
     user = service.get_user_by_email(session=session, email=user_in.email)
     if user:
         if user.is_active:
+            token = service.issue_login_token(session=session, db_user=user)
             background_tasks.add_task(
-                _send_link_email,
-                user.email,
-                generate_sign_in_email(user.login_token),
-                user.login_token,
+                _send_link_email, user.email, generate_sign_in_email(token), token
             )
         return Message(message=LINK_SENT)
     user = service.create_user(
         session=session, user_create=UserCreate(email=user_in.email)
     )
     subscribe(session=session, email=user.email, utm_source=user_in.utm_source)
+    token = service.issue_login_token(session=session, db_user=user)
     background_tasks.add_task(
-        _send_link_email,
-        user.email,
-        generate_welcome_email(user.login_token),
-        user.login_token,
+        _send_link_email, user.email, generate_welcome_email(token), token
     )
     return Message(message=LINK_SENT)
 
