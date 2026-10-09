@@ -300,7 +300,11 @@ not the title. The kind is what the item is: a `repo`, a `paper`, a `model`,
 or a `post` for everything else (a blog post, a launch, an announcement); a
 github, huggingface or arxiv URL sets its own. Up to three tags, only where a
 tag's description fits the article's subject, not a passing mention. No tag is
-better than a wrong one. An unknown kind is refused, and the candidate stays
+better than a wrong one. Lab tags (`anthropic`, `openai`, `google`, `meta`,
+`microsoft`, `nvidia`, `xai`, `qwen`, `deepseek`, `kimi`, `glm`, `mistral`) are
+on top of those three: add one whenever the article's subject is that lab's
+model or product, and leave it off when the lab is only mentioned in passing or
+compared against. An unknown kind is refused, and the candidate stays
 pending until you approve it again.
 
 **`publisher_kind`, `publisher_name`** — only when the candidate's

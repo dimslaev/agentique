@@ -19,6 +19,26 @@ from pipeline.llm_text import enum_value
 
 MAX_TAGS_PER_ARTICLE = 3
 
+# Lab tags say whose model or product the article is about. They sit beside the
+# subject tags rather than competing with them, so they don't count toward the
+# cap.
+LAB_TAGS = frozenset(
+    {
+        "anthropic",
+        "deepseek",
+        "glm",
+        "google",
+        "kimi",
+        "meta",
+        "microsoft",
+        "mistral",
+        "nvidia",
+        "openai",
+        "qwen",
+        "xai",
+    }
+)
+
 
 @dataclass(frozen=True)
 class Vocabulary:
@@ -62,13 +82,15 @@ def normalize_tag(raw: Any, valid: frozenset[str]) -> str | None:
 
 
 def validate_tags(raw_tags: list[Any], valid: frozenset[str]) -> list[str]:
-    """Normalize, drop off-list, dedupe (order-preserving), cap at 3."""
+    """Normalize, drop off-list, dedupe (order-preserving), cap subject tags
+    at 3. Lab tags are kept uncapped."""
     seen: dict[str, None] = {}
     for raw in raw_tags:
         slug = normalize_tag(raw, valid)
         if slug and slug not in seen:
             seen[slug] = None
-    return list(seen)[:MAX_TAGS_PER_ARTICLE]
+    subject = [s for s in seen if s not in LAB_TAGS][:MAX_TAGS_PER_ARTICLE]
+    return [s for s in seen if s in LAB_TAGS or s in subject]
 
 
 def write_article_tags(

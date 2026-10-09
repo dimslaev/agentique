@@ -6,19 +6,29 @@
       "description": "Persistent or dynamic memory for agents: vector stores, knowledge bases, long-term context recall."
     },
     {
-      "slug": "agents",
-      "name": "Agents",
-      "description": "Autonomous AI agents: reasoning loops, planning, multi-step and long-running autonomous task execution."
+      "slug": "agent-skills",
+      "name": "Agent Skills",
+      "description": "Extending or configuring an agent harness: skills, plugins, hooks, subagents, slash commands, AGENTS.md and CLAUDE.md."
     },
     {
-      "slug": "auditing",
-      "name": "Auditing",
-      "description": "Monitoring, logging, debugging, and validating agent behavior in production."
+      "slug": "ai-for-science",
+      "name": "AI for Science",
+      "description": "AI applied to scientific research: biology, chemistry, physics, math, weather and climate."
+    },
+    {
+      "slug": "anthropic",
+      "name": "Anthropic",
+      "description": "Anthropic's Claude models (Opus, Sonnet, Fable), Claude Code, plus company research and announcements."
     },
     {
       "slug": "coding-assistants",
       "name": "Coding Assistants",
       "description": "AI tools for software development: code generation, completion, debugging, review."
+    },
+    {
+      "slug": "computer-use",
+      "name": "Computer Use",
+      "description": "Agents that operate a browser, desktop or phone UI: browser automation, GUI control, screen-based navigation."
     },
     {
       "slug": "context-optimization",
@@ -31,14 +41,9 @@
       "description": "Cutting operational AI cost: token/compute reduction, cheaper routing and caching."
     },
     {
-      "slug": "distributed-training",
-      "name": "Distributed Training",
-      "description": "Scaling training across nodes/hardware: sharding, parallelism, large-scale runs."
-    },
-    {
-      "slug": "enterprise-ai",
-      "name": "Enterprise AI",
-      "description": "AI for business: workflow automation, internal tooling, enterprise deployments."
+      "slug": "deepseek",
+      "name": "DeepSeek",
+      "description": "DeepSeek's models: the DeepSeek-V and DeepSeek-R series, DeepSeek-OCR, and related open-weight releases."
     },
     {
       "slug": "evaluation",
@@ -48,7 +53,17 @@
     {
       "slug": "fine-tuning",
       "name": "Fine-tuning",
-      "description": "Adapting pretrained models to tasks or domains: LoRA, instruction tuning, RLHF."
+      "description": "Adapting pretrained models to tasks or domains: LoRA, instruction tuning, RL post-training (RLHF, GRPO)."
+    },
+    {
+      "slug": "glm",
+      "name": "GLM",
+      "description": "Zhipu AI's GLM model family (GLM-4/5, ChatGLM), released via Z.ai, and related open-weight models."
+    },
+    {
+      "slug": "google",
+      "name": "Google",
+      "description": "Google's AI models and products: Gemini, Gemma open models, DeepMind research, and related APIs and launches."
     },
     {
       "slug": "hardware",
@@ -58,12 +73,37 @@
     {
       "slug": "inference-optimization",
       "name": "Inference Optimization",
-      "description": "Faster or cheaper inference: latency, throughput, memory, and serving optimizations."
+      "description": "Faster or cheaper inference: latency, throughput, memory, speculative decoding, and serving optimizations."
+    },
+    {
+      "slug": "kimi",
+      "name": "Kimi",
+      "description": "Moonshot AI's Kimi models (e.g. Kimi K2/K3) and related releases."
     },
     {
       "slug": "local-ai",
       "name": "Local AI",
       "description": "On-device or offline AI: edge inference, local models, private local agents."
+    },
+    {
+      "slug": "media-generation",
+      "name": "Media Generation",
+      "description": "Generative image and video models: text-to-image, text-to-video, and diffusion (e.g. Qwen-Image, Nano Banana, Sora, Veo)."
+    },
+    {
+      "slug": "meta",
+      "name": "Meta",
+      "description": "Meta's AI models and products: Llama, Muse, SAM, Meta AI, plus FAIR research and related releases."
+    },
+    {
+      "slug": "microsoft",
+      "name": "Microsoft",
+      "description": "Microsoft's AI models and products: Phi models, MAI models, and Copilot."
+    },
+    {
+      "slug": "mistral",
+      "name": "Mistral",
+      "description": "Mistral AI's models: Mistral/Mixtral, Magistral, Voxtral, and related open and commercial releases."
     },
     {
       "slug": "model-distillation",
@@ -81,6 +121,21 @@
       "description": "Models and systems spanning multiple modalities (text, image, audio, video) and their applications."
     },
     {
+      "slug": "nvidia",
+      "name": "NVIDIA",
+      "description": "NVIDIA's models, software and hardware: Nemotron, NeMo, TensorRT, Dynamo, Cosmos, Isaac, and NVIDIA GPUs and systems."
+    },
+    {
+      "slug": "observability",
+      "name": "Observability",
+      "description": "Monitoring, tracing, logging, debugging and validating agent and LLM behavior in production."
+    },
+    {
+      "slug": "openai",
+      "name": "OpenAI",
+      "description": "OpenAI's GPT and ChatGPT models, Codex, and related products, APIs, and announcements."
+    },
+    {
       "slug": "open-weights",
       "name": "Open Weights",
       "description": "Openly released model weights and open-source models or platforms."
@@ -96,11 +151,6 @@
       "description": "Protecting data and model secrecy: differential privacy, PII handling, confidential inference."
     },
     {
-      "slug": "product-launches",
-      "name": "Product Launches",
-      "description": "New AI-powered products, platforms, and commercial services."
-    },
-    {
       "slug": "prompt-engineering",
       "name": "Prompt Engineering",
       "description": "Prompting techniques: system prompts, few-shot, structured prompting, prompt optimization."
@@ -111,9 +161,14 @@
       "description": "Reducing precision or size for cheaper compute (INT8/4, GGUF, and similar)."
     },
     {
+      "slug": "qwen",
+      "name": "Qwen",
+      "description": "Alibaba's Qwen model family (Qwen3, Qwen-VL, Qwen-Image) and related releases."
+    },
+    {
       "slug": "rag",
-      "name": "RAG",
-      "description": "Retrieval-augmented generation and semantic/vector search over external knowledge."
+      "name": "Retrieval & Embeddings",
+      "description": "Retrieval-augmented generation, semantic and vector search, and embedding models."
     },
     {
       "slug": "robotics",
@@ -136,14 +191,19 @@
       "description": "Securing agents and systems: prompt injection, adversarial attacks, misuse prevention."
     },
     {
-      "slug": "speculative-decoding",
-      "name": "Speculative Decoding",
-      "description": "Accelerating generation by predicting tokens ahead (draft models, speculative sampling)."
-    },
-    {
       "slug": "tool-calling",
       "name": "Tool Calling",
       "description": "Agents or LLMs invoking external tools, APIs, functions, or environments (incl. MCP)."
+    },
+    {
+      "slug": "voice-speech",
+      "name": "Voice & Speech",
+      "description": "Speech AI: text-to-speech (TTS), speech-to-text (ASR), voice agents, and real-time voice models."
+    },
+    {
+      "slug": "xai",
+      "name": "xAI",
+      "description": "xAI's models and products: Grok and related releases and APIs."
     }
   ]
 }

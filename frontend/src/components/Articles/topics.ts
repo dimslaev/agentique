@@ -20,7 +20,7 @@ export const TOPICS: TopicDef[] = [
   {
     slug: "open-weights",
     label: "Open weights",
-    tags: ["kimi", "deepseek", "qwen", "glm", "mistral", "llama"],
+    tags: ["kimi", "deepseek", "qwen", "glm", "mistral", "meta", "nvidia"],
   },
   {
     slug: "small-models",
@@ -35,7 +35,12 @@ export const TOPICS: TopicDef[] = [
   {
     slug: "harness",
     label: "Harnesses",
-    tags: ["orchestration", "tool-calling", "coding-assistants"],
+    tags: [
+      "orchestration",
+      "tool-calling",
+      "coding-assistants",
+      "agent-skills",
+    ],
   },
   {
     slug: "make-it-fast",

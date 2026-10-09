@@ -27,6 +27,17 @@ def test_caps_at_three_even_if_more_are_valid():
     assert len(validate_tags(["a", "b", "c", "d"], valid)) == 3
 
 
+def test_lab_tags_do_not_count_toward_the_cap():
+    valid = frozenset({"a", "b", "c", "d", "openai", "google"})
+    assert validate_tags(["openai", "a", "b", "google", "c", "d"], valid) == [
+        "openai",
+        "a",
+        "b",
+        "google",
+        "c",
+    ]
+
+
 def test_normalizes_casing_and_underscores_before_validating():
     assert validate_tags(["LLM", "open_source"], VALID) == ["llm", "open-source"]
 
