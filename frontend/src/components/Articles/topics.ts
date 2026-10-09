@@ -40,6 +40,7 @@ export const TOPICS: TopicDef[] = [
       "tool-calling",
       "coding-assistants",
       "agent-skills",
+      "personal-agents",
     ],
   },
   {

@@ -146,6 +146,11 @@
       "description": "Coordinating agents and workflows: multi-agent systems, agent frameworks/SDKs, deployment pipelines."
     },
     {
+      "slug": "personal-agents",
+      "name": "Personal Agents",
+      "description": "General-purpose agents you run for yourself: always-on assistants with memory, tools and chat-app front ends (Hermes, OpenClaw, Muse)."
+    },
+    {
       "slug": "privacy",
       "name": "Privacy",
       "description": "Protecting data and model secrecy: differential privacy, PII handling, confidential inference."
