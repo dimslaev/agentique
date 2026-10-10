@@ -6,6 +6,6 @@ export const Route = createFileRoute("/_layout/")({
   // The feed sets its own width: the column plus side rails.
   staticData: { wide: true },
   head: () => ({
-    meta: [{ title: "Agentique - AI news for developers" }],
+    meta: [{ title: "agentique — AI news for builders" }],
   }),
 })
