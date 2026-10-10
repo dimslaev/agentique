@@ -30,7 +30,7 @@ export const LEFT: RailPanelDef[] = [
   {
     id: "reader-picks",
     title: "Reader picks",
-    meta: "last 30 days",
+    meta: "",
     Component: ReaderPicks,
   },
 ]
@@ -38,7 +38,7 @@ export const RIGHT: RailPanelDef[] = [
   {
     id: STORIES_PANEL_ID,
     title: "Stories",
-    meta: "named by the agent",
+    meta: "",
     Component: Stories,
   },
 ]

@@ -138,7 +138,7 @@ function StoryBody({ story }: { story: StoryPublic }) {
   const rest = story.articles.length - TIMELINE
 
   return (
-    <div className="mb-4 border-l-2 border-paper pl-3">
+    <div className="mb-4">
       <p className="text-[13px] leading-relaxed [overflow-wrap:anywhere]">
         {story.blurb}
       </p>

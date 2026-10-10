@@ -5,8 +5,6 @@ import { ORIGIN_OPTIONS } from "@/components/Articles/FeedFilters"
 import { useFilters } from "@/context/filters"
 import { cn } from "@/lib/utils"
 
-const HACKER_NEWS = "Hacker News"
-
 const LABELS = Object.fromEntries(ORIGIN_OPTIONS.map((o) => [o.value, o.label]))
 
 function shortDate(d: Date): string {
@@ -65,51 +63,36 @@ function Counts({
   const rows = [...data.origins].sort((a, b) => b.count - a.count)
   const max = Math.max(1, data.unlabelled, ...rows.map((r) => r.count))
 
-  let own = 0
-  let hn = 0
-  let newsletters = 0
-  for (const f of data.found_via) {
-    if (f.name === null || f.name === undefined) own += f.count
-    else if (f.name === HACKER_NEWS) hn += f.count
-    else newsletters += f.count
-  }
-
   return (
-    <>
-      <ul className="flex flex-col">
-        {rows.map((r) => (
-          <li key={r.origin}>
-            <button
-              type="button"
-              aria-pressed={r.origin === active}
-              onClick={() => onPick(r.origin)}
-              className="group w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-            >
-              <Row
-                label={LABELS[r.origin] ?? r.origin}
-                count={r.count}
-                max={max}
-                active={r.origin === active}
-              />
-            </button>
-          </li>
-        ))}
-        {data.unlabelled > 0 && (
-          <li>
+    <ul className="flex flex-col">
+      {rows.map((r) => (
+        <li key={r.origin}>
+          <button
+            type="button"
+            aria-pressed={r.origin === active}
+            onClick={() => onPick(r.origin)}
+            className="group w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
             <Row
-              label="Unlabelled"
-              count={data.unlabelled}
+              label={LABELS[r.origin] ?? r.origin}
+              count={r.count}
               max={max}
-              active={false}
+              active={r.origin === active}
             />
-          </li>
-        )}
-      </ul>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Of {data.total}: {own} from publishers' own feeds, {hn} found on Hacker
-        News, {newsletters} via newsletters.
-      </p>
-    </>
+          </button>
+        </li>
+      ))}
+      {data.unlabelled > 0 && (
+        <li>
+          <Row
+            label="Unlabelled"
+            count={data.unlabelled}
+            max={max}
+            active={false}
+          />
+        </li>
+      )}
+    </ul>
   )
 }
 
