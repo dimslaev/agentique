@@ -67,10 +67,11 @@ function RailSide({ side }: { side: Side }) {
             : "pl-2",
       )}
     >
-      {mode === "wide" && open ? (
+      {mode === "wide" ? (
         <Rail
           side={side}
           panels={sidePanels}
+          hideable={false}
           className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
         />
       ) : (

@@ -12,6 +12,7 @@ export function Rail({
   panels,
   focusOnMount = false,
   inSheet = false,
+  hideable = true,
   className,
 }: {
   side: Side
@@ -20,6 +21,8 @@ export function Rail({
   focusOnMount?: boolean
   /** A sheet's heading doubles as its dialog title. */
   inSheet?: boolean
+  /** Inline rails on a wide screen are always open, so have no hide button. */
+  hideable?: boolean
   className?: string
 }) {
   const { toggle } = useRails()
@@ -45,14 +48,16 @@ export function Rail({
     <aside aria-label={title} data-rail={side} className={className}>
       <div className="flex items-center justify-between gap-2 border-b py-[9px]">
         {inSheet ? <SheetTitle asChild>{heading}</SheetTitle> : heading}
-        <button
-          type="button"
-          aria-label={`Hide the ${title.toLowerCase()} rail`}
-          onClick={() => toggle(side, "button")}
-          className="flex size-8 items-center justify-center text-dim transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <Hide className="size-3.5" aria-hidden />
-        </button>
+        {hideable && (
+          <button
+            type="button"
+            aria-label={`Hide the ${title.toLowerCase()} rail`}
+            onClick={() => toggle(side, "button")}
+            className="flex size-8 items-center justify-center text-dim transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          >
+            <Hide className="size-3.5" aria-hidden />
+          </button>
+        )}
       </div>
       {panels.map((panel) => (
         <RailPanel key={panel.id} panel={panel} />

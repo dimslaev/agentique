@@ -5,11 +5,12 @@ import { useRails } from "./RailsProvider"
 const SIDES: Side[] = ["left", "right"]
 const KEYS: Record<Side, string> = { left: "[", right: "]" }
 
-/** Header buttons for the page's rails. Nothing on a page without rails, and
- *  nothing for a side with no panels. */
+/** Header buttons for the page's rails, below the wide breakpoint only: on a
+ *  wide screen the rails are always open. Nothing on a page without rails,
+ *  and nothing for a side with no panels. */
 export function RailToggles() {
-  const { present, hasPanels, isOpen, toggle } = useRails()
-  if (!present) return null
+  const { mode, present, hasPanels, isOpen, toggle } = useRails()
+  if (!present || mode === "wide") return null
   return (
     <>
       {SIDES.filter(hasPanels).map((side) => {

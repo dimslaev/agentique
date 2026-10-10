@@ -13,7 +13,7 @@ import { trackEvent } from "@/lib/analytics"
 import { LEFT, type RailPanels, RIGHT, type Side } from "./panels"
 
 /**
- * wide: rails sit inline in the gutters beside the feed.
+ * wide: rails sit inline in the gutters beside the feed, always open.
  * mid: rails fold to edge strips and open over the feed's edge.
  * narrow: no strips; header buttons open a rail as a full-screen sheet.
  */
@@ -42,13 +42,10 @@ function subscribeMode(onChange: () => void) {
 const STORAGE_KEY = "agentique.rails.v1"
 
 type Stored = {
-  left: boolean
-  right: boolean
   collapsed: Record<string, true>
 }
 
-// First visit: both rails open on a wide screen.
-const DEFAULTS: Stored = { left: true, right: true, collapsed: {} }
+const DEFAULTS: Stored = { collapsed: {} }
 
 // Storage can throw (private mode, blocked site data) or hold anything; the
 // rails fall back to defaults rather than break the feed.
@@ -63,11 +60,7 @@ function load(): Stored {
         if (v === true) collapsed[id] = true
       }
     }
-    return {
-      left: typeof parsed?.left === "boolean" ? parsed.left : DEFAULTS.left,
-      right: typeof parsed?.right === "boolean" ? parsed.right : DEFAULTS.right,
-      collapsed,
-    }
+    return { collapsed }
   } catch {
     return DEFAULTS
   }
@@ -118,7 +111,8 @@ export function RailsProvider({
   )
   const [stored, setStored] = useState<Stored>(load)
   // Below the wide breakpoint a rail is a temporary layer over the feed, so
-  // its open state is not remembered and starts closed on every load.
+  // its open state is not remembered and starts closed on every load. On a
+  // wide screen there is room for both, so they are always open.
   const [overlay, setOverlay] = useState<Overlay>(CLOSED)
   const [present, setPresent] = useState(false)
   const returnFocus = useRef<HTMLElement | null>(null)
@@ -140,22 +134,15 @@ export function RailsProvider({
   )
 
   const isOpen = useCallback(
-    (side: Side) => (mode === "wide" ? stored[side] : overlay[side]),
-    [mode, stored, overlay],
+    (side: Side) => mode === "wide" || overlay[side],
+    [mode, overlay],
   )
 
-  const setOpen = useCallback(
-    (side: Side, open: boolean) => {
-      if (mode === "wide") {
-        setStored((s) => ({ ...s, [side]: open }))
-      } else {
-        // One layer at a time: two overlays would cover most of a mid-size
-        // screen, and a sheet is full-screen anyway.
-        setOverlay(open ? { ...CLOSED, [side]: true } : CLOSED)
-      }
-    },
-    [mode],
-  )
+  const setOpen = useCallback((side: Side, open: boolean) => {
+    // One layer at a time: two overlays would cover most of a mid-size
+    // screen, and a sheet is full-screen anyway.
+    setOverlay(open ? { ...CLOSED, [side]: true } : CLOSED)
+  }, [])
 
   // Focus moves back once the rail has unmounted; until then it would land
   // on an element about to disappear.
@@ -167,14 +154,16 @@ export function RailsProvider({
 
   const toggle = useCallback(
     (side: Side, via: ToggleVia) => {
+      if (mode === "wide") return
       const open = !isOpen(side)
-      if (open && mode !== "wide") {
+      if (open) {
         returnFocus.current =
           document.activeElement instanceof HTMLElement
             ? document.activeElement
             : null
+      } else {
+        restore()
       }
-      if (!open && mode !== "wide") restore()
       setOpen(side, open)
       trackEvent("rail_toggle", { side, open, via })
     },
@@ -183,12 +172,12 @@ export function RailsProvider({
 
   const close = useCallback(
     (side: Side, restoreFocus: boolean, via?: ToggleVia) => {
-      if (!isOpen(side)) return
+      if (mode === "wide" || !isOpen(side)) return
       if (restoreFocus) restore()
       setOpen(side, false)
       if (via) trackEvent("rail_toggle", { side, open: false, via })
     },
-    [isOpen, setOpen, restore],
+    [mode, isOpen, setOpen, restore],
   )
 
   const togglePanel = useCallback(
@@ -226,7 +215,7 @@ export function RailsProvider({
       if (isTyping(e.target)) return
       const side: Side | null =
         e.key === "[" ? "left" : e.key === "]" ? "right" : null
-      if (side && hasPanels(side)) {
+      if (side && hasPanels(side) && mode !== "wide") {
         e.preventDefault()
         toggle(side, "key")
       } else if (e.key === "Escape" && mode !== "wide") {
