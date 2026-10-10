@@ -1,16 +1,7 @@
 ---
 title: "What I'd actually try from this week's coding tools"
 description: "A wiki that writes itself, a 49% cut in prompts per task, and a code reviewer you can actually self-host."
-slug: whats-shipping-in-ai-coding-assistants
 topic: coding-assistants
-date: 2026-07-13
-articles:
-  - https://factory.ai/news/wiki
-  - https://www.humanlayer.dev
-  - https://sigmap.io/
-  - https://simonw.substack.com/p/have-your-agent-record-video-demos
-  - https://github.com/miracodeai/mira
-  - https://stacker.news/items/1510428
 ---
 
 Most of what I read about coding assistants this week wasn't about writing

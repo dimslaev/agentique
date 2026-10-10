@@ -1,16 +1,7 @@
 ---
 title: "Open weights stopped being the compromise option"
 description: "Claude Sonnet 5, GPT-5.6, and an open-weight model with a 1M-token context that runs on any Nvidia GPU."
-slug: model-releases-worth-knowing-about
 topic: model-releases
-date: 2026-07-13
-articles:
-  - https://kaitchup.substack.com/p/dspark-and-nvidias-qwen36-nvfp4-models
-  - https://openai.com/index/gpt-5-6/
-  - https://www.anthropic.com/news/claude-sonnet-5
-  - https://sub.thursdai.news/p/open-source-ai-just-had-its-2nd-deepseek
-  - https://developer.nvidia.com/topics/ai/nemotron
-  - https://notegpt.io/nano-banana-2-lite
 ---
 
 What struck me about this week's model releases wasn't any single one of

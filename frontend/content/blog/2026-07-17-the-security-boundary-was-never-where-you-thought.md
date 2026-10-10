@@ -1,13 +1,7 @@
 ---
 title: "The security boundary was never where you thought"
 description: "A CLI privacy toggle that doesn't touch its own upload path, a kill switch inside the process it's meant to stop, and a sandbox that misses one path."
-slug: the-security-boundary-was-never-where-you-thought
 topic: security
-date: 2026-07-17
-articles:
-  - https://aidisruption.ai/p/grok-build-exposed-over-forced-full
-  - https://www.toxsec.com/p/the-ai-agent-kill-switch-most-teams
-  - https://shmulc.substack.com/p/secure-by-design-broken-by-a-filename
 ---
 
 Three security stories this week share the same shape: a control exists,

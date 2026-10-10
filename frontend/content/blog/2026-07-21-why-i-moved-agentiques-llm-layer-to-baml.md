@@ -1,13 +1,7 @@
 ---
 title: "Why I moved agentique's LLM layer to BAML"
 description: "Structured output, prompt tests in VSCode, and provider fallbacks: how BAML replaced ad-hoc LLM code in agentique's news pipeline."
-slug: why-i-moved-agentiques-llm-layer-to-baml
 topic: prompt-engineering
-date: 2026-07-21
-articles:
-  - https://docs.boundaryml.com/home
-  - https://boundaryml.com/blog/schema-aligned-parsing
-  - https://github.com/BoundaryML/baml
 ---
 
 When I started building https://agentique.ch, I thought the only hard part would be ranking AI articles. It turned out there was another problem - keeping the LLM layer maintainable while constantly experimenting with different models and providers.

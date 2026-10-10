@@ -1,16 +1,7 @@
 ---
 title: "The RAG problem nobody likes to admit"
 description: "A 0.6B model doing 100k searches a second at LinkedIn, and why throwing away 68% of your retrieved context is the fix."
-slug: whats-new-in-rag
 topic: rag
-date: 2026-07-13
-articles:
-  - https://machinelearningatscale.substack.com/p/linkedin-architecture-for-production
-  - https://www.kapa.ai/blog/how-we-prune-rag-context
-  - https://blitzgraph.com
-  - https://machinelearningatscale.substack.com/p/analysis-of-splare-sparse-autoencoders
-  - https://blog.bytebytego.com/p/ep220-rag-vs-graph-rag-vs-agentic
-  - https://machinelearningatscale.substack.com/p/the-32400-search-model-that-silently
 ---
 
 I've noticed a pattern in the RAG writing I read this week: nobody's excited
