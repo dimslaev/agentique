@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { RAIL_TITLES, type RailPanelDef, type Side } from "./panels"
+import type { RailPanelDef, Side } from "./panels"
 import { useRails } from "./RailsProvider"
 
 /** A closed rail: a 36px strip with one vertical label per panel. A label
@@ -17,7 +17,7 @@ export function RailStrip({
   const { openPanel } = useRails()
   return (
     <nav
-      aria-label={`${RAIL_TITLES[side]} rail, collapsed`}
+      aria-label={`${side === "left" ? "Left" : "Right"} rail, collapsed`}
       className="sticky top-[76px] flex w-9 flex-col items-center gap-0.5 border py-1"
     >
       {panels.map((panel) => {

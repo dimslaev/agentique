@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
 
-const RAIL = "People and topics"
+const RAIL = "Left rail"
 
 function leftRail(page: Page) {
   return page.getByRole("complementary", { name: RAIL })
@@ -107,8 +107,8 @@ test.describe("phone", () => {
 
     const toggles = page.locator("[data-rail-trigger]")
     await expect(toggles).toHaveCount(1)
-    await page.getByRole("button", { name: "Toggle the explore rail" }).click()
-    await expect(page.getByRole("dialog", { name: "Explore" })).toBeVisible()
+    await page.getByRole("button", { name: "Toggle the rails" }).click()
+    await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
     await expect(whoWrote(page)).toBeVisible()
   })
 })

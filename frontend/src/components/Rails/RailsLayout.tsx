@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useRef } from "react"
 import { PageColumn } from "@/components/Common/PageColumn"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import type { Side } from "./panels"
 import { Rail } from "./Rail"
@@ -71,7 +71,6 @@ function RailSide({ side }: { side: Side }) {
         <Rail
           side={side}
           panels={sidePanels}
-          hideable={false}
           className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
         />
       ) : (
@@ -138,11 +137,12 @@ function RailSheet({ side }: { side: Side }) {
           const target = e.detail.originalEvent.target as Element | null
           if (target?.closest?.("[data-rail-trigger]")) e.preventDefault()
         }}
-        // The rail's own heading row has the hide button; the sheet's X
-        // would be a second one.
+        // No X: the header button that opened the sheet closes it.
         className="scrollbar-thin top-12! bottom-0 h-auto w-full gap-0 overflow-y-auto border-0 px-4 pb-4 shadow-none sm:max-w-none [&>button:last-child]:hidden"
       >
-        <Rail side={side} panels={panels[side]} focusOnMount inSheet />
+        {/* Radix needs a dialog title; there is no visible one. */}
+        <SheetTitle className="sr-only">Rails</SheetTitle>
+        <Rail side={side} panels={panels[side]} focusOnMount />
       </SheetContent>
     </Sheet>
   )

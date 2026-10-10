@@ -1,5 +1,5 @@
 import { PanelLeft, PanelRight } from "lucide-react"
-import { PHONE_RAIL_TITLE, RAIL_TITLES, type Side } from "./panels"
+import type { Side } from "./panels"
 import { useRails } from "./RailsProvider"
 
 const SIDES: Side[] = ["left", "right"]
@@ -16,15 +16,20 @@ export function RailToggles() {
     <>
       {SIDES.filter(hasPanels).map((side) => {
         const Icon = side === "left" ? PanelLeft : PanelRight
-        const title = mode === "narrow" ? PHONE_RAIL_TITLE : RAIL_TITLES[side]
+        const label =
+          mode === "narrow"
+            ? "Rails"
+            : side === "left"
+              ? "Left rail"
+              : "Right rail"
         return (
           <button
             key={side}
             type="button"
             data-rail-trigger
             aria-pressed={isOpen(side)}
-            aria-label={`Toggle the ${title.toLowerCase()} rail`}
-            title={`${title} (${KEYS[side]})`}
+            aria-label={`Toggle the ${label.toLowerCase()}`}
+            title={`${label} (${KEYS[side]})`}
             onClick={() => toggle(side, "button")}
             className="flex size-8 items-center justify-center text-dim transition-colors hover:text-foreground aria-pressed:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >

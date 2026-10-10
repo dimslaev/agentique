@@ -42,11 +42,3 @@ export const RIGHT: RailPanelDef[] = [
     Component: TopicMap,
   },
 ]
-
-export const RAIL_TITLES: Record<Side, string> = {
-  left: "People and topics",
-  right: "Stories",
-}
-
-/** Phones merge both rails into one sheet. */
-export const PHONE_RAIL_TITLE = "Explore"
