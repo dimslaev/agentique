@@ -7,8 +7,8 @@ const KEYS: Record<Side, string> = { left: "[", right: "]" }
 
 /** Header buttons for the page's rails, below the wide breakpoint only: on a
  *  wide screen the rails are always open. Nothing on a page without rails,
- *  and nothing for a side with no panels. Phones get one button, as their
- *  rails are merged into one sheet. */
+ *  and nothing for a side with no panels. Below wide the rails are merged
+ *  into one sheet, so there is one button. */
 export function RailToggles() {
   const { mode, present, hasPanels, isOpen, toggle } = useRails()
   if (!present || mode === "wide") return null
@@ -16,12 +16,7 @@ export function RailToggles() {
     <>
       {SIDES.filter(hasPanels).map((side) => {
         const Icon = side === "left" ? PanelLeft : PanelRight
-        const label =
-          mode === "narrow"
-            ? "Rails"
-            : side === "left"
-              ? "Left rail"
-              : "Right rail"
+        const label = "Rails"
         return (
           <button
             key={side}

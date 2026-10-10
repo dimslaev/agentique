@@ -77,38 +77,26 @@ test.describe("wide screen", () => {
   })
 })
 
-test.describe("mid screen", () => {
-  test.use({ viewport: { width: 1000, height: 800 } })
+for (const [name, width, height] of [
+  ["mid screen", 1000, 800],
+  ["phone", 390, 844],
+] as const) {
+  test.describe(name, () => {
+    test.use({ viewport: { width, height } })
 
-  test("the edge strip opens an overlay and Esc closes it", async ({
-    page,
-  }) => {
-    await page.goto("/")
-    await expect(leftRail(page)).toHaveCount(0)
+    test("one header button opens both rails as one sheet", async ({
+      page,
+    }) => {
+      await page.goto("/")
+      await expect(leftRail(page)).toHaveCount(0)
 
-    await page
-      .getByRole("navigation", { name: `${RAIL} rail, collapsed` })
-      .getByRole("button", { name: "Who wrote the wire" })
-      .click()
-    await expect(leftRail(page)).toBeVisible()
-    await expect(whoWrote(page).getByText(/^Of \d+:/)).toBeVisible()
+      await expect(page.locator("[data-rail-trigger]")).toHaveCount(1)
+      await page.getByRole("button", { name: "Toggle the rails" }).click()
+      await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
+      await expect(whoWrote(page)).toBeVisible()
 
-    await page.keyboard.press("Escape")
-    await expect(leftRail(page)).toHaveCount(0)
+      await page.keyboard.press("Escape")
+      await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)
+    })
   })
-})
-
-test.describe("phone", () => {
-  test.use({ viewport: { width: 390, height: 844 } })
-
-  test("one header button opens both rails as one sheet", async ({ page }) => {
-    await page.goto("/")
-    await expect(leftRail(page)).toHaveCount(0)
-
-    const toggles = page.locator("[data-rail-trigger]")
-    await expect(toggles).toHaveCount(1)
-    await page.getByRole("button", { name: "Toggle the rails" }).click()
-    await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
-    await expect(whoWrote(page)).toBeVisible()
-  })
-})
+}

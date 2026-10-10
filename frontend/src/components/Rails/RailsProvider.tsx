@@ -15,29 +15,23 @@ import { STORIES_PANEL_ID, useHasStories } from "./panels/Stories"
 
 /**
  * wide: rails sit inline in the gutters beside the feed, always open.
- * mid: rails fold to edge strips and open over the feed's edge.
- * narrow: no strips; header buttons open a rail as a full-screen sheet.
+ * narrow: both rails merge into one sheet behind one header button.
  */
-export type RailMode = "wide" | "mid" | "narrow"
-export type ToggleVia = "key" | "button" | "strip"
+export type RailMode = "wide" | "narrow"
+export type ToggleVia = "key" | "button"
 
 const WIDE_QUERY = "(min-width: 1360px)"
-const MID_QUERY = "(min-width: 760px)"
 
 function readMode(): RailMode {
   if (typeof window === "undefined" || !window.matchMedia) return "wide"
-  if (window.matchMedia(WIDE_QUERY).matches) return "wide"
-  if (window.matchMedia(MID_QUERY).matches) return "mid"
-  return "narrow"
+  return window.matchMedia(WIDE_QUERY).matches ? "wide" : "narrow"
 }
 
 function subscribeMode(onChange: () => void) {
   if (typeof window === "undefined" || !window.matchMedia) return () => {}
-  const queries = [WIDE_QUERY, MID_QUERY].map((q) => window.matchMedia(q))
-  for (const q of queries) q.addEventListener("change", onChange)
-  return () => {
-    for (const q of queries) q.removeEventListener("change", onChange)
-  }
+  const query = window.matchMedia(WIDE_QUERY)
+  query.addEventListener("change", onChange)
+  return () => query.removeEventListener("change", onChange)
 }
 
 const STORAGE_KEY = "agentique.rails.v1"
@@ -90,8 +84,6 @@ type RailsContextType = {
   /** Close an overlay or sheet. `restoreFocus` sends focus back to whatever
    *  opened it; a click elsewhere on the page keeps focus where it landed. */
   close: (side: Side, restoreFocus: boolean, via?: ToggleVia) => void
-  /** A strip label: open the rail with that panel expanded. */
-  openPanel: (side: Side, panelId: string) => void
   isCollapsed: (panelId: string) => boolean
   togglePanel: (panelId: string) => void
 }
@@ -115,7 +107,7 @@ export function RailsProvider({
     readMode,
     () => "wide",
   )
-  // On a phone both rails are one sheet behind one button: the right rail's
+  // Below wide, both rails are one sheet behind one button: the right rail's
   // panels follow the left's.
   const panels = useMemo(() => {
     const right = hasStories
@@ -215,14 +207,6 @@ export function RailsProvider({
     [stored],
   )
 
-  const openPanel = useCallback(
-    (side: Side, panelId: string) => {
-      if (isCollapsed(panelId)) togglePanel(panelId)
-      if (!isOpen(side)) toggle(side, "strip")
-    },
-    [isCollapsed, isOpen, toggle, togglePanel],
-  )
-
   useEffect(() => {
     if (!present) return
     function onKey(e: KeyboardEvent) {
@@ -252,7 +236,6 @@ export function RailsProvider({
       hasPanels,
       toggle,
       close,
-      openPanel,
       isCollapsed,
       togglePanel,
     }),
@@ -264,7 +247,6 @@ export function RailsProvider({
       hasPanels,
       toggle,
       close,
-      openPanel,
       isCollapsed,
       togglePanel,
     ],
