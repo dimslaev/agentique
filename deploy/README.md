@@ -165,7 +165,7 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | `pipeline/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
 | `PIPELINE_ALERT_EMAIL` | `pipeline/report.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
-| `TOPIC_MAP_PATH` | `pipeline/topic_map.py` | Where the topic map's JSON is written. Must be `/var/lib/agentique/public/topic-map.json`, the folder Caddy serves at `/data/`. Unset writes to `frontend/public/data/` in the repo, the dev default, which no one serves in production. |
+| `TOPIC_MAP_PATH` | `pipeline/topic_map.py` | Where the topic map's JSON is written. Must be `/srv/agentique/public/topic-map.json`, the folder Caddy serves at `/data/`. Unset writes to `frontend/public/data/` in the repo, the dev default, which no one serves in production. |
 
 ## Topic map
 
@@ -177,8 +177,8 @@ hides itself once the file is more than 3 days old.
 
 One-time setup on the box:
 
-1. `sudo install -d -o agentique -g agentique -m 755 /var/lib/agentique/public`
-2. Add `TOPIC_MAP_PATH=/var/lib/agentique/public/topic-map.json` to `/opt/agentique/.env`.
+1. `sudo install -d -o agentique -g agentique -m 755 /srv/agentique /srv/agentique/public` (outside `/var/lib/agentique`, which is `750` and closed to the `caddy` user)
+2. Add `TOPIC_MAP_PATH=/srv/agentique/public/topic-map.json` to `/opt/agentique/.env`.
 3. `sudo cp /opt/agentique/deploy/agentique-topicmap.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now agentique-topicmap.timer`
 4. `sudo cp /opt/agentique/deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy`
 5. First run: `sudo systemctl start agentique-topicmap`, then `journalctl -u agentique-topicmap -n 5` and `curl -sI https://agentique.ch/data/topic-map.json`.

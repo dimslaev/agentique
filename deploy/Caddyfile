@@ -25,7 +25,7 @@ agentique.ch {
 	# live outside frontend/dist because the deploy's rsync --delete replaces
 	# that folder wholesale.
 	handle_path /data/* {
-		root * /var/lib/agentique/public
+		root * /srv/agentique/public
 		header Cache-Control "public, max-age=900"
 		file_server
 	}
