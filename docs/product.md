@@ -31,6 +31,14 @@ discussions say about each, and writes three short explainers, one per topic: wh
 thing is, how it works, how people are taking it, with links to the sources. They land
 as Resend drafts and a person sends one (docs/adr/0012).
 
+**Stories in the right rail.** Beside the feed, on wide screens, a rail lists
+up to five stories: named threads that run over days or weeks, like "Codemode",
+each with a two-sentence blurb and its articles in order. A Claude Code session
+names and keeps them every morning after curation: it adds new articles to open
+stories, starts a story when three articles from two publishers share a theme,
+and closes one after 21 quiet days (docs/adr/0016). With no stories the rail
+does not show.
+
 **A developer API — public, paid tier not live yet.** The article endpoints (list,
 search, facets, publishers, tags, stats) are open and unauthenticated, with no date
 window or rate limit; a token is optional and only fills in `liked_by_me`. Liking an

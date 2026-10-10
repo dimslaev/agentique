@@ -11,6 +11,7 @@ import {
 } from "react"
 import { trackEvent } from "@/lib/analytics"
 import { LEFT, type RailPanels, RIGHT, type Side } from "./panels"
+import { STORIES_PANEL_ID, useHasStories } from "./panels/Stories"
 
 /**
  * wide: rails sit inline in the gutters beside the feed, always open.
@@ -97,13 +98,28 @@ type RailsContextType = {
 
 const RailsContext = createContext<RailsContextType | null>(null)
 
+const REGISTERED: RailPanels = { left: LEFT, right: RIGHT }
+
 export function RailsProvider({
   children,
-  panels = { left: LEFT, right: RIGHT },
+  panels: registered = REGISTERED,
 }: {
   children: ReactNode
   panels?: RailPanels
 }) {
+  // A panel with nothing to show is left out, so a side whose panels are all
+  // empty renders no rail, strip or button. Stories is the one that can be.
+  const hasStories = useHasStories()
+  const panels = useMemo(
+    () =>
+      hasStories
+        ? registered
+        : {
+            ...registered,
+            right: registered.right.filter((p) => p.id !== STORIES_PANEL_ID),
+          },
+    [registered, hasStories],
+  )
   const mode = useSyncExternalStore<RailMode>(
     subscribeMode,
     readMode,

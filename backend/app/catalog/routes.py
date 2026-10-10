@@ -1,4 +1,4 @@
-"""Article listing, semantic search, and facet endpoints for the public feed."""
+"""Article listing, semantic search, facet and story endpoints for the public feed."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.catalog import facets, semantic_search
+from app.catalog import facets, semantic_search, stories
 from app.catalog.articles import list_articles, stats
 from app.catalog.models import (
     ArticleFacets,
@@ -14,11 +14,13 @@ from app.catalog.models import (
     Origin,
     OriginCounts,
     PublisherFacet,
+    StoryPublic,
     TagFacet,
 )
 from app.deps import CurrentUserOptional, SessionDep
 
 router = APIRouter(prefix="/articles", tags=["articles"])
+stories_router = APIRouter(prefix="/stories", tags=["stories"])
 
 # Reads are public and unbounded. A caller may still send a token — it only
 # decides whether `liked_by_me` is filled in.
@@ -112,3 +114,10 @@ def search_tags(
 @router.get("/stats")
 def article_stats(session: SessionDep) -> dict[str, int | str | None]:
     return stats(session)
+
+
+@stories_router.get("/", response_model=list[StoryPublic])
+def read_stories(
+    session: SessionDep, limit: int = Query(default=5, ge=1, le=20)
+) -> list[StoryPublic]:
+    return stories.list_stories(session, limit)

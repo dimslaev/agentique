@@ -1,4 +1,5 @@
 import type { ComponentType } from "react"
+import { STORIES_PANEL_ID, Stories } from "./panels/Stories"
 import { WhoWrote } from "./panels/WhoWrote"
 
 export type Side = "left" | "right"
@@ -19,7 +20,14 @@ export type RailPanels = Record<Side, RailPanelDef[]>
 export const LEFT: RailPanelDef[] = [
   { id: "who-wrote", title: "Who wrote the wire", Component: WhoWrote },
 ]
-export const RIGHT: RailPanelDef[] = []
+export const RIGHT: RailPanelDef[] = [
+  {
+    id: STORIES_PANEL_ID,
+    title: "Stories",
+    meta: "named by the agent",
+    Component: Stories,
+  },
+]
 
 export const RAIL_TITLES: Record<Side, string> = {
   left: "People and topics",
