@@ -158,6 +158,9 @@ export function TopicMap() {
                 target="_blank"
                 rel="noopener noreferrer"
                 tabIndex={-1}
+                // A label, not <title>: the browser shows <title> as a second
+                // tooltip beside the custom one.
+                aria-label={`${p.title} — ${p.publisher}`}
                 data-testid="topic-map-dot"
                 {...articleClickHandlers(p, { surface: "topic_map" })}
                 onMouseEnter={() => setHover(p)}
@@ -166,7 +169,6 @@ export function TopicMap() {
                   dim ? "opacity-15" : "opacity-100",
                 )}
               >
-                <title>{`${p.title} — ${p.publisher}`}</title>
                 <rect
                   x={px(p.x) - HIT / 2}
                   y={py(p.y) - HIT / 2}
