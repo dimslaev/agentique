@@ -75,7 +75,8 @@ mcp: FastMCP = FastMCP(
         "and `approve`, `reject` and `reject_many` settle them. Weekly "
         "newsletter, with the write token only: `week` ranks the week's "
         "topics, `related` finds what else covers one, and `draft_issue` "
-        "drafts an issue for a person to send."
+        "drafts an issue for a person to send and says where to save it as a "
+        "blog post."
     ),
     auth=SharedSecret(),
     tools=[

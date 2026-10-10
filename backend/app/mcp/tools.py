@@ -413,25 +413,30 @@ def related(
             raise ToolError(str(exc))
 
 
-def draft_issue(label: str, subject: str, preheader: str, body: str) -> str:
+def draft_issue(post: str) -> str:
     """Draft one weekly issue as a Resend broadcast.
 
-    `label` names the draft in Resend (the topic, up to 60 characters);
-    `subject` up to 90 characters; `preheader` the one line an inbox shows
-    after it. `body` is the essay in plain text, 150-600 words: a blank line
-    between paragraphs, `- ` to start a list line, `[text](url)` for a link
-    (at least 3 distinct sources), backticks for code. The server renders it
-    into the site's template. Returns the broadcast id. Nothing is sent: a
+    `post` is the whole blog post file: a frontmatter block, then the body.
+
+        ---
+        title: What does Ollama's MLX backend actually do?
+        description: One line that makes someone open it.
+        topic: local-ai
+        ---
+        The essay...
+
+    `title` (1-55 characters) is the subject and the post's headline,
+    `description` (1-160) the line an inbox shows after it, `topic` a kebab
+    slug that names the draft in Resend. Quote a value in double quotes if it
+    holds ": " or starts with a quote or a symbol. The body is plain text,
+    150-600 words: a blank line between paragraphs, `- ` to start a list line,
+    `[text](url)` for a link (at least 3 distinct sources), backticks for code.
+    The server renders it into the site's template. Returns the broadcast id
+    and the path to save the post at, exactly as passed. Nothing is sent: a
     person reads the drafts and sends one from the Resend dashboard.
     """
     _require_write()
-    issue: broadcast.Issue = {
-        "label": label,
-        "subject": subject,
-        "preheader": preheader,
-        "body": body,
-    }
     try:
-        return broadcast.draft(issue)
+        return broadcast.draft(post)
     except broadcast.IssueError as exc:
         raise ToolError(str(exc))

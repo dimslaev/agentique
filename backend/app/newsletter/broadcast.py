@@ -1,20 +1,26 @@
 """The weekly issue: one short essay, rendered into one template and drafted as
-a Resend broadcast.
+a Resend broadcast, and saved by the agent as a blog post.
 
-The newsletter agent writes prose, never HTML. The body is plain text with
-three marks: a blank line between paragraphs, `- ` at the start of a list line,
-and `[text](url)` for a link (plus backticks for code). This module escapes
+The newsletter agent writes prose, never HTML. An issue is the text of a blog
+post file (`frontend/content/blog/<date>-<slug>.md`): a frontmatter block with
+`title`, `description` and `topic`, then a body in plain text with three marks:
+a blank line between paragraphs, `- ` at the start of a list line, and
+`[text](url)` for a link (plus backticks for code). This module escapes
 everything else, so nothing the agent writes can break the layout, and renders
 it into `weekly_issue.html` and a plain-text twin.
 
-The agent drafts three a week, one per topic, and a person reads them and sends
-one from the Resend dashboard. Nothing here sends, and nothing is stored:
-Resend keeps every broadcast, drafted and sent.
+The content rules for an issue live here and nowhere else; the blog build only
+checks what a page needs to render. The agent drafts three a week, one per
+topic, and a person reads them and sends one from the Resend dashboard. Nothing
+here sends, and nothing is stored: the posts live in git, the broadcasts in
+Resend.
 """
 
 from __future__ import annotations
 
+import json
 import re
+import unicodedata
 from datetime import date
 from typing import TypedDict
 
@@ -29,8 +35,11 @@ from app.platform.settings import settings
 # Resend swaps this for each recipient's own unsubscribe link.
 UNSUBSCRIBE_PLACEHOLDER = "{{{RESEND_UNSUBSCRIBE_URL}}}"
 
-MAX_SUBJECT = 90
-MAX_LABEL = 60
+# The page's <title> appends " · agentique"; this keeps it within the ~65
+# characters a search result shows, and fits an inbox subject line.
+MAX_TITLE = 55
+MAX_DESCRIPTION = 160
+MAX_SLUG = 60
 # One to two minutes of reading.
 MIN_WORDS = 150
 MAX_WORDS = 600
@@ -48,6 +57,12 @@ CODE_STYLE = (
 
 _INLINE = re.compile(r"\[([^\]\n]+)\]\(([^)\s]+)\)|`([^`\n]+)`")
 _WORD = re.compile(r"\S+")
+_TOPIC = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+_FIELD = re.compile(r"^([a-z]+):(?:\s+(.*))?$")
+# Plain YAML scalars that YAML would read as something else, or fail on. The
+# blog build parses the same frontmatter with a YAML parser.
+_UNSAFE_PLAIN = re.compile(r"^[-?:,\[\]{}#&*!|>'\"%@`]|: | #|:$")
+FIELDS = ("title", "description", "topic")
 
 _templates = Environment(
     loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"])
@@ -59,12 +74,79 @@ class IssueError(ValueError):
 
 
 class Issue(TypedDict):
-    # Which draft this is, for telling three apart in Resend: the topic.
-    label: str
-    subject: str
-    # The line an inbox shows after the subject.
-    preheader: str
+    # The email's subject and the post's headline.
+    title: str
+    # The line an inbox shows after the subject, and the post's lede.
+    description: str
+    # A kebab slug; names the draft in Resend, for telling three apart.
+    topic: str
     body: str
+
+
+def _scalar(key: str, raw: str) -> str:
+    """One frontmatter value: plain, "double" or 'single' quoted, as YAML
+    reads it."""
+    if raw.startswith('"'):
+        try:
+            value = json.loads(raw)
+        except json.JSONDecodeError:
+            raise IssueError(f"The {key} is not a valid double-quoted string.")
+        if not isinstance(value, str):
+            raise IssueError(f"The {key} is not a valid double-quoted string.")
+        return value
+    if raw.startswith("'"):
+        if len(raw) < 2 or not raw.endswith("'") or "'" in raw[1:-1].replace("''", ""):
+            raise IssueError(f"The {key} is not a valid single-quoted string.")
+        return raw[1:-1].replace("''", "'")
+    if _UNSAFE_PLAIN.search(raw):
+        raise IssueError(f'Quote the {key} in double quotes: {key}: "..."')
+    return raw
+
+
+def parse(post: str) -> Issue:
+    """Read a post file's text: `---`, one `key: value` line for each of
+    title, description and topic, `---`, then the body. Pure."""
+    text = post.replace("\r\n", "\n").lstrip("\ufeff")
+    if not text.startswith("---\n"):
+        raise IssueError("The post must start with a --- frontmatter line.")
+    end = text.find("\n---\n", 3)
+    if end == -1:
+        raise IssueError("The frontmatter is not closed with a --- line.")
+    fields: dict[str, str] = {}
+    for line in text[4:end].splitlines():
+        if not line.strip():
+            continue
+        m = _FIELD.match(line)
+        if not m:
+            raise IssueError(f"Frontmatter line is not `key: value`: {line!r}")
+        key, raw = m.group(1), (m.group(2) or "").strip()
+        if key not in FIELDS:
+            raise IssueError(
+                f"Unknown frontmatter key {key!r}; a post has only "
+                f"{', '.join(FIELDS)}. Date and slug come from the filename."
+            )
+        if key in fields:
+            raise IssueError(f"The frontmatter sets {key} twice.")
+        fields[key] = _scalar(key, raw).strip()
+    return {
+        "title": fields.get("title", ""),
+        "description": fields.get("description", ""),
+        "topic": fields.get("topic", ""),
+        "body": text[end + 5 :].strip(),
+    }
+
+
+def slugify(title: str) -> str:
+    """The post's slug: lowercase ascii, every run of anything else one "-",
+    cut on a word boundary. Pure."""
+    ascii_title = (
+        unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode()
+    )
+    slug = re.sub(r"[^a-z0-9]+", "-", ascii_title.lower()).strip("-")
+    if len(slug) > MAX_SLUG:
+        cut = slug[: MAX_SLUG + 1]
+        slug = cut[: cut.rfind("-")] if "-" in cut else slug[:MAX_SLUG]
+    return slug
 
 
 class Block(TypedDict):
@@ -126,12 +208,23 @@ def word_count(body: str) -> int:
 
 def validate(issue: Issue) -> None:
     """Refuse an issue a reader should not get. Pure."""
-    subject = issue["subject"].strip()
-    if not subject or len(subject) > MAX_SUBJECT:
-        raise IssueError(f"The subject must be 1-{MAX_SUBJECT} characters.")
-    label = issue["label"].strip()
-    if not label or len(label) > MAX_LABEL:
-        raise IssueError(f"The label must be 1-{MAX_LABEL} characters.")
+    title = issue["title"].strip()
+    if not title or len(title) > MAX_TITLE:
+        raise IssueError(
+            f"The title is {len(title)} characters; it must be 1-{MAX_TITLE}."
+        )
+    if not slugify(title):
+        raise IssueError("The title has no letters or digits to make a slug from.")
+    description = issue["description"].strip()
+    if not description or len(description) > MAX_DESCRIPTION:
+        raise IssueError(
+            f"The description is {len(description)} characters; it must be "
+            f"1-{MAX_DESCRIPTION}."
+        )
+    if not _TOPIC.match(issue["topic"]):
+        raise IssueError(
+            f"The topic {issue['topic']!r} must be a kebab slug, like local-ai."
+        )
     words = word_count(issue["body"])
     if not MIN_WORDS <= words <= MAX_WORDS:
         raise IssueError(
@@ -151,8 +244,8 @@ def validate(issue: Issue) -> None:
 
 def render_html(issue: Issue) -> str:
     return _templates.get_template("weekly_issue.html").render(
-        subject=issue["subject"],
-        preheader=issue["preheader"],
+        subject=issue["title"].strip(),
+        preheader=issue["description"].strip(),
         blocks=[
             {"kind": b["kind"], "lines": [inline_html(line) for line in b["lines"]]}
             for b in blocks(issue["body"])
@@ -191,23 +284,34 @@ def _sender() -> str:
     return f"{settings.EMAILS_FROM_NAME} <{settings.EMAILS_FROM_EMAIL}>"
 
 
-def draft(issue: Issue, issue_date: date | None = None) -> str:
-    """Create the issue as a draft broadcast. Returns the line the agent
-    reports, the broadcast id first. Sending is a person's, from the Resend
-    dashboard."""
+def post_path(issue: Issue, issue_date: date) -> str:
+    """Where the agent saves the post, relative to the repo root. Pure."""
+    return (
+        f"frontend/content/blog/{issue_date.isoformat()}-{slugify(issue['title'])}.md"
+    )
+
+
+def draft(post: str, issue_date: date | None = None) -> str:
+    """Create the post as a draft broadcast. Returns the line the agent
+    reports, the broadcast id first, and the path to save the post at.
+    Sending is a person's, from the Resend dashboard."""
+    issue = parse(post)
     validate(issue)
     sender = _sender()
     issue_date = issue_date or date.today()
-    label = issue["label"].strip()
+    topic = issue["topic"]
     created = resend.Broadcasts.create(
         {
             "audience_id": settings.RESEND_AUDIENCE_ID or "",
             "from": sender,
-            "subject": issue["subject"].strip(),
+            "subject": issue["title"].strip(),
             "html": render_html(issue),
             "text": render_text(issue),
-            "name": f"Weekly {issue_date.isoformat()} · {label}",
+            "name": f"Weekly {issue_date.isoformat()} · {topic}",
         }
     )
-    log(f"  Drafted weekly issue {label!r} as broadcast {created['id']}")
-    return f"Drafted broadcast {created['id']} ({label})."
+    log(f"  Drafted weekly issue {topic!r} as broadcast {created['id']}")
+    return (
+        f"Drafted broadcast {created['id']} ({topic}). "
+        f"Save the post, exactly as passed, at {post_path(issue, issue_date)}"
+    )
