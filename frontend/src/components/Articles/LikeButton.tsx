@@ -18,7 +18,9 @@ function patchArticle(
   liked: boolean,
   delta: number,
 ): ArticlesPublic | undefined {
-  if (!data) return data
+  // Not every ["articles", …] query holds a list: the rail's origin counts
+  // live there too, so they refresh with the feed.
+  if (!data?.data) return data
   return {
     ...data,
     data: data.data.map((a) =>
