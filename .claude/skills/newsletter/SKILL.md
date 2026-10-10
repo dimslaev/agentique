@@ -6,7 +6,8 @@ description: Draft three candidate weekly agentique newsletters, one per topic -
 # Draft the weekly issue
 
 Each week you write three drafts, one per topic, and a person picks the one
-that goes out. Each draft is one short essay: what this new thing actually is,
+that goes out. Each draft is also a blog post: the same file is the email and
+the page. Each draft is one short essay: what this new thing actually is,
 how it works, how people are using it and what they make of it, with links to
 the sources you read. It takes one to two minutes to read and sounds like a
 person wrote it, because a person will put their name to it.
@@ -26,20 +27,26 @@ From the `agentique` MCP server, with the curation token:
 - `check_link(url)` - stars, last push, README for a repo; downloads and
   weights for a model.
 - `sql_query(sql)` - read-only, for anything the tools above do not answer.
-- `draft_issue(label, subject, preheader, body)` - renders one draft into the
-  site's template and creates it in Resend. Nothing is sent: a person reads the
-  three drafts there and sends one.
+- `draft_issue(post)` - takes the whole post file (see **Format**), checks it,
+  renders it into the site's template and creates it in Resend. Returns the
+  broadcast line and the path to save the post at. Nothing is sent: a person
+  reads the three drafts there and sends one. If it refuses, the message says
+  why: fix the post and call it again.
 
 ## Rounds
 
 1. **`week()` once.** Read every topic before choosing.
 2. **Choose three topics.** See **Choosing**.
 3. **For each topic, research it.** See **Reading**.
-4. **For each topic, write the essay** and call `draft_issue`. See **Writing**.
-5. **Report.** See **Finish**.
+4. **For each topic, write the post** and call `draft_issue(post)`. See
+   **Writing** and **Format**. On a refusal, fix what it names and call again.
+5. **Save the post** at the path `draft_issue` returned, with exactly the text
+   you passed it.
+6. **After three topics, open one PR** with the three posts. See **Finish**.
+7. **Report.** See **Finish**.
 
-Work one topic to its draft before starting the next, so a long session still
-leaves drafts behind.
+Work one topic to its saved post before starting the next, so a long session
+still leaves drafts behind.
 
 ## Choosing
 
@@ -107,26 +114,50 @@ Never: "delve", "landscape", "game-changer", "revolutionize", "it's worth
 noting", "in conclusion", "in today's fast-paced world", em dashes, lists of
 three adjectives, a closing paragraph that restates the essay.
 
-**Format.** `body` is plain text: a blank line between paragraphs, `- ` at the
-start of each list line, `[link text](url)` for links, backticks for a command
-or a name in code. Nothing else renders; no headings, no bold.
+**Format.** A post is one file, `frontend/content/blog/<date>-<slug>.md`,
+which `draft_issue` names for you. It is the email and the blog page:
 
+```
+---
+title: What does Ollama's MLX backend actually do?
+description: One line that makes someone open it.
+topic: local-ai
+---
+The essay.
+```
+
+- **`title`:** the email subject and the page headline. A question or a plain
+  statement a person would write, 55 characters at most. "What does Ollama's
+  MLX backend actually do?", not "This week in AI". The slug is made from it.
+- **`description`:** the line an inbox shows after the subject and the page's
+  lede: one line that makes someone open it, 160 characters at most.
+- **`topic`:** a kebab slug for the subject, like `local-ai`. It names the
+  draft in Resend.
+- Only these three keys. Date and slug come from the filename. Put a value in
+  double quotes if it holds ": " or starts with a quote or a symbol.
+- **Body:** plain text: a blank line between paragraphs, `- ` at the start of
+  each list line, `[link text](url)` for links, backticks for a command or a
+  name in code. Nothing else renders; no headings, no bold.
 - **Length:** 250-450 words. The tool refuses under 150 or over 600.
 - **Links:** 4-8, inline, on the words they support ("[Simon Willison ran
   it](...) on..."), never "here" or "this link". The first-party page once.
-  Every URL is one you fetched or one a tool returned, never from memory.
-- **`subject`:** a question or a plain statement a person would write, under
-  70 characters. "What does Ollama's MLX backend actually do?", not "This week
-  in AI".
-- **`preheader`:** one line that makes someone open it.
-- **`label`:** the topic in a few words, for telling the drafts apart.
+  Every URL is one you fetched or one a tool returned, never from memory. The
+  page lists them as its sources, in order.
 
 Before each `draft_issue`, reread the body once as the reader: does every
 sentence say something a builder did not know? Cut the ones that do not.
 
 ## Finish
 
-Three `draft_issue` calls, then report:
+Three `draft_issue` calls and three saved posts. Then:
+
+- Commit the three posts on a new branch, `feat/weekly-issues-<YYYY-MM-DD>`,
+  one commit, subject `feat: weekly issues <YYYY-MM-DD>` (today's date).
+  Commit nothing else.
+- Push it and open one PR titled `feat: weekly issues <YYYY-MM-DD>`. The PR
+  is the blog's review: a person sends one draft in Resend and merges the PR.
+
+Then report:
 
 - the three topics, in draft order, and why each was chosen over the next one
   in `week()`
@@ -134,6 +165,7 @@ Three `draft_issue` calls, then report:
   (`week`, `related`, search)
 - how many searches, fetches and `check_link` calls you made
 - the three lines `draft_issue` returned
+- the PR link
 
 If a tool answers "This tool needs the curation
 token", stop and say so: the session has the read token, not the write token.

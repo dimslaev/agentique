@@ -1,16 +1,7 @@
 ---
 title: "Agents got cheaper. Someone wants to break them."
 description: "Cheaper multi-step browsing, a 60% token cut for agent workloads, and a CTF built to compromise an agent in a microVM."
-slug: whats-new-with-ai-agents
 topic: agents
-date: 2026-07-13
-articles:
-  - https://exa.ai/pricing
-  - https://aidisruption.ai/p/superpowers-60-ai-optimizes-itself
-  - https://declaw.ai/arena
-  - https://www.firecrawl.dev/blog/research-index-launch
-  - https://github.com/gi-dellav/speck/tree/main
-  - https://thoughts.jock.pl/p/fable-5-efficiency-high-not-max-2026
 ---
 
 Two things kept showing up in agent news this week: people trying to make

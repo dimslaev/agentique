@@ -1,13 +1,7 @@
 ---
 title: "Inference got faster without new hardware"
 description: "4-bit diffusion models on GPUs from 2018, a router that fills your idle machines before the cloud, and a voice agent that cut latency 44% by going local."
-slug: inference-got-faster-without-new-hardware
 topic: inference-optimization
-date: 2026-07-27
-articles:
-  - https://huggingface.co/blog/nunchaku-diffusers
-  - https://github.com/Gysho/LLMrPro
-  - https://deepmind.google/models/gemma/gemmaverse/cue-ai/
 ---
 
 A 4-bit image model that runs on a GPU from 2018. A router that treats

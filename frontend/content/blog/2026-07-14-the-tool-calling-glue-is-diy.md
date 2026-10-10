@@ -1,13 +1,7 @@
 ---
 title: "The tool-calling glue is coming from GitHub, not labs"
 description: "A cost-cutting Claude Code orchestrator, a geospatial SQL skill, and a Claude-Codex review loop, all built by individuals, not a model vendor's product team."
-slug: the-tool-calling-glue-is-diy
 topic: tool-calling
-date: 2026-07-14
-articles:
-  - https://github.com/Nanako0129/pilotfish
-  - https://github.com/dekart-xyz/geosql
-  - https://aimaker.substack.com/p/claude-code-workflow-setup
 ---
 
 None of this week's three most interesting tool-calling projects came out of

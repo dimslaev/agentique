@@ -1,16 +1,7 @@
 ---
 title: "Your GPU budget is behind, not the models"
 description: "A 7MB embedding model running in the browser, a 1-petaflop desktop chip, and a GPT-2 built from scratch in pure C."
-slug: local-ai-is-getting-genuinely-usable
 topic: local-ai
-date: 2026-07-13
-articles:
-  - https://teodoracoach.substack.com/p/the-30-minute-ai-agent-that-never
-  - https://ternlight-demo.vercel.app/
-  - https://github.com/JustVugg/nanoeuler
-  - https://www.iroh.computer/blog/mesh-llm
-  - https://nvidianews.nvidia.com/news/nvidia-microsoft-windows-pcs-agents-rtx-spark
-  - https://huggingface.co/spaces/webml-community/gemma-4-webgpu-kernels
 ---
 
 For a long time, "local AI" meant a smaller model that did noticeably worse.
