@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -15,7 +16,7 @@ from sqlmodel import Session, col, select
 from app.audience import service
 from app.audience.tests.factories import authentication_token_from_email
 from app.catalog import semantic_search
-from app.catalog.models import Article, ArticleKind, PublisherKind
+from app.catalog.models import Article, ArticleKind, Origin, PublisherKind
 from app.catalog.tests.factories import (
     create_random_article,
     create_random_publisher,
@@ -64,6 +65,7 @@ READ_ENDPOINTS = [
     "/publishers",
     "/tags",
     "/stats",
+    "/origins?since=2026-01-01",
 ]
 
 
@@ -529,3 +531,89 @@ def test_search_articles_has_like_count_and_liked_by_me(
     for article in r.json()["data"]:
         assert "like_count" in article
         assert "liked_by_me" in article
+
+
+# --- origin counts -----------------------------------------------------------
+
+
+@dataclass
+class _Origins:
+    total: int
+    unlabelled: int
+    by_origin: dict[str, int]
+    by_found_via: dict[str | None, int]
+
+
+def _origins(client: TestClient, since: str) -> _Origins:
+    r = client.get(f"{ARTICLES_URL}/origins", params={"since": since})
+    assert r.status_code == 200
+    body = r.json()
+    return _Origins(
+        total=body["total"],
+        unlabelled=body["unlabelled"],
+        by_origin={o["origin"]: o["count"] for o in body["origins"]},
+        by_found_via={f["name"]: f["count"] for f in body["found_via"]},
+    )
+
+
+def _grew[K](after: dict[K, int], before: dict[K, int]) -> dict[K, int]:
+    """The keys whose count changed, and by how much."""
+    return {
+        k: after.get(k, 0) - before.get(k, 0)
+        for k in after.keys() | before.keys()
+        if after.get(k, 0) != before.get(k, 0)
+    }
+
+
+def test_origin_counts_lists_every_origin(client: TestClient) -> None:
+    assert set(_origins(client, RECENT_SINCE).by_origin) == {o.value for o in Origin}
+
+
+def test_origin_counts_follow_the_from_filter(client: TestClient, db: Session) -> None:
+    """A company's repo is a repo, a community post is media, and an unknown
+    publisher's post falls under no origin."""
+    now = datetime.now(UTC)
+    company = create_random_publisher(db, kind=PublisherKind.company)
+    community = create_random_publisher(db, kind=PublisherKind.community)
+    unknown = create_random_publisher(db, kind=PublisherKind.unknown)
+
+    before = _origins(client, RECENT_SINCE)
+    create_random_article(
+        db, publisher_id=company.id, kind=ArticleKind.repo, published_at=now
+    )
+    create_random_article(db, publisher_id=community.id, published_at=now)
+    create_random_article(db, publisher_id=unknown.id, published_at=now)
+    after = _origins(client, RECENT_SINCE)
+
+    assert _grew(after.by_origin, before.by_origin) == {"repo": 1, "media": 1}
+    assert after.unlabelled == before.unlabelled + 1
+    assert after.total == before.total + 3
+
+
+def test_origin_counts_are_bounded_by_since(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    before = _origins(client, RECENT_SINCE)
+    create_random_article(
+        db, publisher_id=lab.id, published_at=datetime.now(UTC) - timedelta(days=10)
+    )
+    assert _origins(client, RECENT_SINCE) == before
+
+
+def test_origin_counts_group_found_via(client: TestClient, db: Session) -> None:
+    now = datetime.now(UTC)
+    before = _origins(client, RECENT_SINCE)
+    create_random_article(db, published_at=now)
+    create_random_article(db, published_at=now, found_via="Hacker News")
+    create_random_article(db, published_at=now, found_via="Hacker News")
+    create_random_article(db, published_at=now, found_via="AINews")
+    after = _origins(client, RECENT_SINCE)
+    assert _grew(after.by_found_via, before.by_found_via) == {
+        None: 1,
+        "Hacker News": 2,
+        "AINews": 1,
+    }
+
+
+def test_origin_counts_malformed_since_returns_422(client: TestClient) -> None:
+    r = client.get(f"{ARTICLES_URL}/origins", params={"since": "not-a-date"})
+    assert r.status_code == 422

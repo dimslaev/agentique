@@ -254,6 +254,29 @@ export const ArticlesPublicSchema = {
     title: 'ArticlesPublic'
 } as const;
 
+export const FoundViaCountSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['name', 'count'],
+    title: 'FoundViaCount'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -300,6 +323,56 @@ export const OriginSchema = {
     description: `The feed's "From" filter: what the article is when that is settled (a
 repo, a paper, a model), otherwise who published it. Not stored; each
 article falls under exactly one, see \`catalog.articles.origin_condition\`.`
+} as const;
+
+export const OriginCountSchema = {
+    properties: {
+        origin: {
+            '$ref': '#/components/schemas/Origin'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['origin', 'count'],
+    title: 'OriginCount'
+} as const;
+
+export const OriginCountsSchema = {
+    properties: {
+        since: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Since'
+        },
+        total: {
+            type: 'integer',
+            title: 'Total'
+        },
+        origins: {
+            items: {
+                '$ref': '#/components/schemas/OriginCount'
+            },
+            type: 'array',
+            title: 'Origins'
+        },
+        unlabelled: {
+            type: 'integer',
+            title: 'Unlabelled'
+        },
+        found_via: {
+            items: {
+                '$ref': '#/components/schemas/FoundViaCount'
+            },
+            type: 'array',
+            title: 'Found Via'
+        }
+    },
+    type: 'object',
+    required: ['since', 'total', 'origins', 'unlabelled', 'found_via'],
+    title: 'OriginCounts'
 } as const;
 
 export const PublisherFacetSchema = {

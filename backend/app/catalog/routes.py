@@ -12,6 +12,7 @@ from app.catalog.models import (
     ArticleFacets,
     ArticlesPublic,
     Origin,
+    OriginCounts,
     PublisherFacet,
     TagFacet,
 )
@@ -79,6 +80,15 @@ def article_facets(
     session: SessionDep, limit: int = Query(default=8, ge=1, le=20)
 ) -> ArticleFacets:
     return facets.all_facets(session, limit)
+
+
+@router.get("/origins", response_model=OriginCounts)
+def article_origins(session: SessionDep, since: str) -> OriginCounts:
+    try:
+        since_dt = datetime.fromisoformat(since)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
+    return facets.origin_counts(session, since_dt)
 
 
 @router.get("/publishers", response_model=list[PublisherFacet])
