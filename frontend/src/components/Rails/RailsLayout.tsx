@@ -71,7 +71,7 @@ function RailSide({ side }: { side: Side }) {
         <Rail
           side={side}
           panels={sidePanels}
-          className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
+          className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10 opacity-60 transition-opacity hover:opacity-100 focus-within:opacity-100 motion-reduce:transition-none"
         />
       ) : (
         <RailStrip side={side} panels={sidePanels} />

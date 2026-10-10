@@ -3,7 +3,6 @@ import { useState } from "react"
 import { SCORE_STANDOUT } from "@/components/Articles/ScoreRail"
 import { articleClickHandlers } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
-import { RailMeta } from "../RailMeta"
 
 // Built nightly on the box by `python -m pipeline.topic_map` and served as a
 // static file, so this is a plain fetch and not the generated API client.
@@ -130,7 +129,6 @@ export function TopicMap() {
 
   if (!usable(data)) return null
 
-  const span = data.window_days <= 7 ? "this week" : "this month"
   const summary = `${data.count} articles in ${data.clusters.length} clusters: ${data.clusters
     .map((c) => `${c.label} (${c.size})`)
     .join(", ")}`
@@ -139,9 +137,6 @@ export function TopicMap() {
 
   return (
     <div data-testid="topic-map">
-      <RailMeta className="mb-2">
-        {span} · {data.count}
-      </RailMeta>
       <div className="relative" style={{ aspectRatio: `${W} / ${H}` }}>
         <svg
           role="img"

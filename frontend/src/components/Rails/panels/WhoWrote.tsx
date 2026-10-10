@@ -4,13 +4,8 @@ import { cutoffIso, PUBLISHED_DAYS } from "@/components/Articles/ArticlesList"
 import { ORIGIN_OPTIONS } from "@/components/Articles/FeedFilters"
 import { useFilters } from "@/context/filters"
 import { cn } from "@/lib/utils"
-import { RailMeta } from "../RailMeta"
 
 const LABELS = Object.fromEntries(ORIGIN_OPTIONS.map((o) => [o.value, o.label]))
-
-function shortDate(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
 
 /** How the wire's current window splits by origin, and how it was found.
  *  Follows the feed's Published filter; a row sets the From filter. */
@@ -35,9 +30,6 @@ export function WhoWrote() {
       inert={!!search}
       className={cn("flex flex-col gap-3", search && "opacity-40")}
     >
-      <RailMeta>
-        {shortDate(start)} – {shortDate(new Date())}
-      </RailMeta>
       {isError ? (
         <p className="text-xs text-destructive">Failed to load.</p>
       ) : data ? (

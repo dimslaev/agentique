@@ -3,7 +3,6 @@ import { useId, useState } from "react"
 import { StoriesService, type StoryPublic } from "@/client"
 import { articleClickHandlers, trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
-import { RailMeta } from "../RailMeta"
 import { RailRow } from "../RailRow"
 import { ScoreBars } from "../ScoreMarks"
 
@@ -36,12 +35,6 @@ function day(iso: string | null | undefined): string {
     month: "short",
     day: "numeric",
   })
-}
-
-function span(story: StoryPublic): string {
-  const first = day(story.first_at)
-  const last = day(story.last_at)
-  return first === last ? last : `${first} – ${last}`
 }
 
 export function Stories() {
@@ -110,9 +103,6 @@ function StoryRow({
               />
             )}
           </span>
-          <RailMeta className="mt-1">
-            {span(story)} · {story.article_count}
-          </RailMeta>
         </span>
         <ScoreBars scores={bars} className="mt-0.5" />
       </button>
