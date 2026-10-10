@@ -286,9 +286,11 @@ def layout(x: np.ndarray, labels: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 
 def cluster_labels(tags: list[list[str]], labels: np.ndarray) -> list[str]:
-    """One label per cluster: its tags by lift (share in the cluster over share
-    overall), so a tag on every article never names one. A tag already naming
-    a larger cluster is skipped."""
+    """One label per cluster: its tags by count times log lift (lift is share
+    in the cluster over share overall). Lift alone lets a rare tag that
+    happens to land in one cluster name it over the tag most of it carries;
+    the log keeps a tag on every article from naming any. A tag already
+    naming a larger cluster is skipped."""
     n = len(tags)
     overall = Counter(t for ts in tags for t in set(ts))
     used: set[str] = set()
@@ -301,9 +303,10 @@ def cluster_labels(tags: list[list[str]], labels: np.ndarray) -> list[str]:
             for t, c in inside.items()
             if c >= MIN_TAG_COUNT
         }
+        weight = {t: inside[t] * math.log(lift[t]) for t in lift}
         ranked = [
             t
-            for t in sorted(lift, key=lambda t: (-lift[t], -inside[t], t))
+            for t in sorted(lift, key=lambda t: (-weight[t], -inside[t], t))
             if lift[t] > 1 and t not in used
         ]
         if not ranked:

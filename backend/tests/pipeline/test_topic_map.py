@@ -34,6 +34,7 @@ from pipeline.topic_map import (
     Point,
     TopicMap,
     build,
+    cluster_labels,
     fold_small,
     window_days,
     write_atomic,
@@ -139,6 +140,20 @@ def test_labels_name_the_distinctive_tag_not_the_common_one():
     data = _build(_world())
     labels = {c["label"] for c in data["clusters"]}
     assert labels == {"retrieval", "open weights", "evals", "inference"}
+
+
+def test_a_rare_tag_does_not_outrank_the_one_most_of_the_cluster_carries():
+    # NVIDIA sits only in cluster 0, so its lift (2) beats Evaluation's (1.5),
+    # but 6 of 10 articles there are Evaluation and 2 are NVIDIA.
+    tags = (
+        [["Evaluation"]] * 6
+        + [["NVIDIA"]] * 2
+        + [["Coding"]] * 2
+        + [["Evaluation"]] * 2
+        + [["Coding"]] * 8
+    )
+    labels = np.array([0] * 10 + [1] * 10)
+    assert cluster_labels(tags, labels)[0] == "Evaluation"
 
 
 def test_a_cluster_with_no_distinctive_tag_is_other():
