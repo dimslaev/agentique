@@ -139,10 +139,7 @@ function StoryBody({ story }: { story: StoryPublic }) {
 
   return (
     <div className="mb-4">
-      <p className="text-[13px] leading-relaxed [overflow-wrap:anywhere]">
-        {story.blurb}
-      </p>
-      <ol className="mt-3 flex flex-col gap-3">
+      <ol className="flex flex-col gap-3">
         {shown.map((article) => (
           <li key={article.id} className="flex gap-2.5">
             <span className="w-11 shrink-0 pt-px font-wire text-[10px] uppercase tracking-[0.06em] text-dim tabular-nums">

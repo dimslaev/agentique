@@ -30,16 +30,11 @@ export function RailPanel({ panel }: { panel: RailPanelDef }) {
         <span className="font-wire text-[10px] font-semibold uppercase tracking-[0.1em]">
           {panel.title}
         </span>
-        {panel.meta && (
-          <span className="ml-auto font-wire text-[10px] tracking-[0.06em] text-dim">
-            {panel.meta}
-          </span>
-        )}
+
         <ChevronDown
           aria-hidden
           className={cn(
-            "size-3 shrink-0 text-dim transition-transform",
-            !panel.meta && "ml-auto",
+            "size-3 shrink-0 text-dim transition-transform ml-auto",
             collapsed && "-rotate-90",
           )}
         />
