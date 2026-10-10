@@ -1,0 +1,18 @@
+# Install target: /etc/systemd/system/agentique-topicmap.service
+# The topic map's data file (see agentique-topicmap.timer for the schedule).
+# Manual run: sudo systemctl start agentique-topicmap
+[Unit]
+Description=agentique topic map (one build)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=agentique
+Group=agentique
+WorkingDirectory=/opt/agentique/backend
+# pipeline/topic_map.py reads raw os.environ and loads no dotenv, same as
+# pipeline/run.py -- EnvironmentFile is what feeds it, TOPIC_MAP_PATH included.
+EnvironmentFile=/opt/agentique/.env
+Environment=HOME=/var/lib/agentique
+ExecStart=/opt/agentique/.venv/bin/python -m pipeline.topic_map

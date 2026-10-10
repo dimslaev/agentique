@@ -8,3 +8,6 @@ node_modules/
 .ignored/
 .DS_Store
 .env
+
+# Written by `python -m pipeline.topic_map` in dev; built on the box in prod.
+/frontend/public/data/topic-map.json

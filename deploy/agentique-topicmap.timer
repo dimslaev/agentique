@@ -1,0 +1,13 @@
+# Install target: /etc/systemd/system/agentique-topicmap.timer
+# After the curation session (05:00) and the report (06:00), so the map holds
+# the night's articles. Its own timer, not chained to either: a failed build
+# leaves the last good file in place and touches nothing else.
+[Unit]
+Description=Daily agentique topic map
+
+[Timer]
+OnCalendar=*-*-* 06:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

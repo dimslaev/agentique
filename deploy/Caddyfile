@@ -21,6 +21,15 @@ agentique.ch {
 		reverse_proxy 127.0.0.1:8000
 	}
 
+	# Static data files the pipeline writes on the box (the topic map). They
+	# live outside frontend/dist because the deploy's rsync --delete replaces
+	# that folder wholesale.
+	handle_path /data/* {
+		root * /var/lib/agentique/public
+		header Cache-Control "public, max-age=900"
+		file_server
+	}
+
 	# SPA fallback for everything else.
 	handle {
 		try_files {path} /index.html
