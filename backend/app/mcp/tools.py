@@ -1,10 +1,10 @@
-"""What an agent can do against agentique: read the db and the web, curate, and
-draft the weekly newsletter.
+"""What an agent can do against agentique: read the db and the web, curate,
+draft the weekly newsletter, and keep the rail's stories.
 
 Two groups, two tokens. `sql_query`, `web_fetch` and `web_search` read and are
 reachable with `MCP_TOKEN`. The curation tools publish and reject articles, and
-the newsletter tools at the bottom draft emails addressed to every subscriber;
-both need `MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
+the newsletter tools draft emails addressed to every subscriber, and the story
+tools at the bottom name what the right rail shows; all three need `MCP_WRITE_TOKEN` — see `WRITE_SCOPE` below.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_access_token
 from sqlmodel import Session
 
+from app.catalog import stories as story_domain
 from app.newsletter import broadcast, digest
 from app.platform.db import engine
 from app.platform.settings import settings
@@ -440,3 +441,62 @@ def draft_issue(post: str) -> str:
         return broadcast.draft(post)
     except broadcast.IssueError as exc:
         raise ToolError(str(exc))
+
+
+# ─── Stories ─────────────────────────────────────────────────────────────────
+# The right rail's named threads, kept by their own daily routine (ADR 16).
+# Behind the write scope: a saved story is on the public site at once.
+
+
+def story_candidates(days: int = 14) -> story_domain.Candidates:
+    """What the stories routine decides from.
+
+    `open`: every open story, the most recently active first, with `slug`,
+    `name`, `blurb`, `article_count`, `quiet_days` (since its newest article
+    was published) and its newest 5 `articles`. `clusters`: the last `days`
+    of published articles that sit in no open story, grouped by embedding at
+    a looser cut than coverage, the most publishers first. Each cluster has
+    `articles` (`url`, `title`, `publisher`, `published_at`, `score`,
+    `summary`), its `publishers`, and `near`: the open stories one of its
+    articles is close to. A single article close to a story comes back as a
+    cluster of one with that story in `near`.
+    """
+    _require_write()
+    with _curation_session() as session:
+        return story_domain.story_candidates(session, days)
+
+
+def save_story(slug: str, name: str, blurb: str, urls: list[str]) -> str:
+    """Create a story, or update an open one: set its `name` and `blurb` and
+    add `urls` to it (ones already in it are skipped).
+
+    `slug` is lowercase words joined by hyphens and never changes. `name` is
+    at most 4 words, `blurb` at most 2 sentences and 280 characters. Every URL
+    must be a published article and in no other open story. Any problem
+    refuses the whole call, saying which, and nothing is written. A closed
+    story cannot be saved to. The rail shows a story once it has 3 articles
+    from 2 publishers.
+    """
+    _require_write()
+    with _curation_session() as session:
+        try:
+            saved = story_domain.save_story(session, slug, name, blurb, urls)
+        except story_domain.StoryError as exc:
+            raise ToolError(str(exc))
+    verb = "Created" if saved["created"] else "Updated"
+    return (
+        f"{verb} {saved['slug']}: added {saved['added']}, "
+        f"{saved['article_count']} articles in all"
+    )
+
+
+def close_story(slug: str) -> str:
+    """Close an open story: it leaves the rail, and its articles are free to
+    join another."""
+    _require_write()
+    with _curation_session() as session:
+        try:
+            story_domain.close_story(session, slug)
+        except story_domain.StoryError as exc:
+            raise ToolError(str(exc))
+    return f"Closed {slug}"

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react"
 import { ReaderPicks } from "./panels/ReaderPicks"
+import { STORIES_PANEL_ID, Stories } from "./panels/Stories"
 import { TopicMap } from "./panels/TopicMap"
 import { WhoWrote } from "./panels/WhoWrote"
 
@@ -33,7 +34,14 @@ export const LEFT: RailPanelDef[] = [
     Component: ReaderPicks,
   },
 ]
-export const RIGHT: RailPanelDef[] = []
+export const RIGHT: RailPanelDef[] = [
+  {
+    id: STORIES_PANEL_ID,
+    title: "Stories",
+    meta: "named by the agent",
+    Component: Stories,
+  },
+]
 
 export const RAIL_TITLES: Record<Side, string> = {
   left: "People and topics",

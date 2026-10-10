@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.analytics.routes import router as analytics_router
 from app.audience.routes import likes_router, login_router, users_router
 from app.catalog.routes import router as catalog_router
+from app.catalog.routes import stories_router
 
 # Registration order is the order the endpoints appear in the OpenAPI document,
 # and the generated client follows that document. Reordering churns the client
@@ -17,3 +18,4 @@ api_router.include_router(users_router)
 api_router.include_router(catalog_router)
 api_router.include_router(likes_router)
 api_router.include_router(analytics_router)
+api_router.include_router(stories_router)

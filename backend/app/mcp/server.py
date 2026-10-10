@@ -11,15 +11,18 @@ from app.mcp.tools import (
     WRITE_SCOPE,
     approve,
     check_link,
+    close_story,
     draft_issue,
     get_content,
     list_candidates,
     reject,
     reject_many,
     related,
+    save_story,
     similar,
     sql_query,
     stories,
+    story_candidates,
     vocabulary,
     web_fetch,
     web_search,
@@ -76,7 +79,9 @@ mcp: FastMCP = FastMCP(
         "newsletter, with the write token only: `week` ranks the week's "
         "topics, `related` finds what else covers one, and `draft_issue` "
         "drafts an issue for a person to send and says where to save it as a "
-        "blog post."
+        "blog post. Stories, with the write token only: `story_candidates` "
+        "lists open stories and unassigned clusters, `save_story` creates or "
+        "extends one, `close_story` closes one."
     ),
     auth=SharedSecret(),
     tools=[
@@ -95,6 +100,9 @@ mcp: FastMCP = FastMCP(
         week,
         related,
         draft_issue,
+        story_candidates,
+        save_story,
+        close_story,
     ],
 )
 

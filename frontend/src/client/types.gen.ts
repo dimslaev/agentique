@@ -134,6 +134,27 @@ export type SignInRequest = {
     email: string;
 };
 
+export type StoryArticlePublic = {
+    id: number;
+    title: string;
+    url: string;
+    publisher: string;
+    published_at?: (string | null);
+    score: number;
+};
+
+export type StoryPublic = {
+    slug: string;
+    name: string;
+    blurb: string;
+    article_count: number;
+    publisher_count: number;
+    first_at?: (string | null);
+    last_at?: (string | null);
+    grew_today: boolean;
+    articles: Array<StoryArticlePublic>;
+};
+
 export type TagFacet = {
     slug: string;
     name: string;
@@ -275,6 +296,12 @@ export type LoginLoginWithLinkResponse = (Token);
 export type LoginRefreshTokenResponse = (Token);
 
 export type LoginTestTokenResponse = (UserPublic);
+
+export type StoriesReadStoriesData = {
+    limit?: number;
+};
+
+export type StoriesReadStoriesResponse = (Array<StoryPublic>);
 
 export type UsersReadUserMeResponse = (UserPublic);
 

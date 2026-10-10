@@ -111,6 +111,41 @@ The routine's prompt, to paste there when it changes:
 Run the `newsletter` skill (`.claude/skills/newsletter/SKILL.md`).
 ```
 
+## Stories
+
+The right rail's stories are kept by a third off-box routine, the same way as
+curation and the newsletter: a scheduled task on claude.ai/code against this
+repo, with the same write token, invoking `/stories`
+(`.claude/skills/stories/SKILL.md`, ADR 16). It runs daily at 06:17
+Europe/Zurich (`CRON_TZ=Europe/Zurich 17 6 * * *`), after that morning's
+curation and report.
+
+- It reads `story_candidates`, extends open stories, starts new ones and
+  closes the ones quiet for 21 days, through `save_story` and `close_story`.
+- It writes nothing else and commits nothing. A saved story is public at once
+  once it has 3 articles from 2 publishers.
+- A night it does not run, the rail stays as it was; the next run catches up
+  over its 14-day window.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the agentique stories session.
+
+Invoke the `stories` skill (`.claude/skills/stories/SKILL.md` in this repo) and follow it end to end:
+
+1. `story_candidates()` on the agentique MCP server, once. Read every open story and every cluster before saving anything.
+2. Add articles that belong to an open story with `save_story`, keeping its slug, name and blurb unless the skill gives a cause to change them.
+3. Start a story with `save_story` only for 3+ articles from 2+ publishers on one theme a builder can act on: not a single launch, not one vendor's product line.
+4. `close_story` every open story with `quiet_days` of 21 or more.
+
+Do not edit files or commit anything; this session reads and writes stories, nothing else.
+
+If a tool comes back with "This tool needs the curation token", the environment's AGENTIQUE_MCP_TOKEN is the read token rather than MCP_WRITE_TOKEN. Stop and say so plainly - do not try to work around it.
+
+Finish with a short report: stories created, extended and closed, and anything a tool refused.
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/platform/settings.py`.
