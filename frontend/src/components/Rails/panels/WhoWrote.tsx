@@ -4,6 +4,7 @@ import { cutoffIso, PUBLISHED_DAYS } from "@/components/Articles/ArticlesList"
 import { ORIGIN_OPTIONS } from "@/components/Articles/FeedFilters"
 import { useFilters } from "@/context/filters"
 import { cn } from "@/lib/utils"
+import { RailMeta } from "../RailMeta"
 
 const LABELS = Object.fromEntries(ORIGIN_OPTIONS.map((o) => [o.value, o.label]))
 
@@ -34,9 +35,9 @@ export function WhoWrote() {
       inert={!!search}
       className={cn("flex flex-col gap-3", search && "opacity-40")}
     >
-      <p className="font-wire text-[10px] tracking-[0.06em] text-dim">
+      <RailMeta>
         {shortDate(start)} – {shortDate(new Date())}
-      </p>
+      </RailMeta>
       {isError ? (
         <p className="text-xs text-destructive">Failed to load.</p>
       ) : data ? (

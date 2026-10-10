@@ -3,7 +3,9 @@ import { useId, useState } from "react"
 import { StoriesService, type StoryPublic } from "@/client"
 import { articleClickHandlers, trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
-import { MiniRail, ScoreBars } from "../ScoreMarks"
+import { RailMeta } from "../RailMeta"
+import { RailRow } from "../RailRow"
+import { ScoreBars } from "../ScoreMarks"
 
 export const STORIES_PANEL_ID = "stories"
 
@@ -108,9 +110,9 @@ function StoryRow({
               />
             )}
           </span>
-          <span className="mt-1 block font-wire text-[10px] uppercase tracking-[0.08em] text-dim tabular-nums">
-            {story.article_count} · {span(story)}
-          </span>
+          <RailMeta className="mt-1">
+            {span(story)} · {story.article_count}
+          </RailMeta>
         </span>
         <ScoreBars scores={bars} className="mt-0.5" />
       </button>
@@ -141,29 +143,18 @@ function StoryBody({ story }: { story: StoryPublic }) {
     <div className="mb-4">
       <ol className="flex flex-col gap-3">
         {shown.map((article) => (
-          <li key={article.id} className="flex gap-2.5">
-            <span className="w-11 shrink-0 pt-px font-wire text-[10px] uppercase tracking-[0.06em] text-dim tabular-nums">
-              {day(article.published_at)}
-            </span>
-            <MiniRail score={article.score} />
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="truncate font-wire text-[10px] uppercase tracking-[0.08em] text-dim">
-                {article.publisher}
-              </span>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noreferrer"
-                {...articleClickHandlers(article, {
-                  via: "story",
-                  story: story.slug,
-                })}
-                className="text-[13px] leading-snug no-underline [overflow-wrap:anywhere] decoration-muted-foreground underline-offset-[3px] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              >
-                {article.title}
-              </a>
-            </span>
-          </li>
+          <RailRow
+            key={article.id}
+            score={article.score}
+            source={article.publisher}
+            date={day(article.published_at)}
+            title={article.title}
+            href={article.url}
+            linkProps={articleClickHandlers(article, {
+              via: "story",
+              story: story.slug,
+            })}
+          />
         ))}
       </ol>
       {rest > 0 && !all && (

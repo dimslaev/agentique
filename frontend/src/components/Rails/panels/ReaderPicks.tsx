@@ -3,7 +3,7 @@ import { type ArticlePublic, ArticlesService } from "@/client"
 import { cutoffIso } from "@/components/Articles/ArticlesList"
 import { LikeButton } from "@/components/Articles/LikeButton"
 import { articleClickHandlers } from "@/lib/analytics"
-import { MiniRail } from "../ScoreMarks"
+import { RailRow } from "../RailRow"
 
 // Likes are sparse (most liked articles have one or two), so a week would
 // often be empty.
@@ -48,26 +48,15 @@ export function ReaderPicks() {
 
 function Row({ article }: { article: ArticlePublic }) {
   return (
-    <li data-testid="reader-pick" className="flex gap-2.5">
-      <MiniRail score={article.score} />
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate font-wire text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
-          {article.publisher.name}
-          {article.published_at && ` · ${shortDate(article.published_at)}`}
-        </span>
-        <a
-          href={article.url}
-          target="_blank"
-          rel="noreferrer"
-          {...articleClickHandlers(article, { surface: "reader_picks" })}
-          className="text-[13px] leading-snug no-underline decoration-muted-foreground underline-offset-[3px] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          {article.title}
-        </a>
-      </div>
-      <div className="shrink-0 self-start pt-0.5">
-        <LikeButton article={article} />
-      </div>
-    </li>
+    <RailRow
+      testId="reader-pick"
+      score={article.score}
+      source={article.publisher.name}
+      date={article.published_at ? shortDate(article.published_at) : undefined}
+      title={article.title}
+      href={article.url}
+      linkProps={articleClickHandlers(article, { surface: "reader_picks" })}
+      trailing={<LikeButton article={article} />}
+    />
   )
 }

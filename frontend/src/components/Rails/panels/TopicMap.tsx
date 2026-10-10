@@ -3,6 +3,7 @@ import { useState } from "react"
 import { SCORE_STANDOUT } from "@/components/Articles/ScoreRail"
 import { articleClickHandlers } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
+import { RailMeta } from "../RailMeta"
 
 // Built nightly on the box by `python -m pipeline.topic_map` and served as a
 // static file, so this is a plain fetch and not the generated API client.
@@ -138,9 +139,9 @@ export function TopicMap() {
 
   return (
     <div data-testid="topic-map">
-      <p className="mb-2 font-wire text-[10px] tracking-[0.06em] text-dim">
+      <RailMeta className="mb-2">
         {span} · {data.count}
-      </p>
+      </RailMeta>
       <div className="relative" style={{ aspectRatio: `${W} / ${H}` }}>
         <svg
           role="img"
