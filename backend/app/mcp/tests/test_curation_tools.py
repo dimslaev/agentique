@@ -28,6 +28,9 @@ WRITE_TOOLS = (
     "week",
     "related",
     "draft_issue",
+    "story_candidates",
+    "save_story",
+    "close_story",
 )
 
 
@@ -63,6 +66,9 @@ def _call(name: str):
         "week": lambda: tools.week(),
         "related": lambda: tools.related("https://example.com"),
         "draft_issue": lambda: tools.draft_issue("---\ntitle: t\n---\nb"),
+        "story_candidates": lambda: tools.story_candidates(),
+        "save_story": lambda: tools.save_story("s", "n", "b", []),
+        "close_story": lambda: tools.close_story("s"),
     }[name]()
 
 

@@ -553,6 +553,109 @@ export const SignInRequestSchema = {
     title: 'SignInRequest'
 } as const;
 
+export const StoryArticlePublicSchema = {
+    properties: {
+        id: {
+            type: 'integer',
+            title: 'Id'
+        },
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        publisher: {
+            type: 'string',
+            title: 'Publisher'
+        },
+        published_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Published At'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        }
+    },
+    type: 'object',
+    required: ['id', 'title', 'url', 'publisher', 'score'],
+    title: 'StoryArticlePublic'
+} as const;
+
+export const StoryPublicSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        blurb: {
+            type: 'string',
+            title: 'Blurb'
+        },
+        article_count: {
+            type: 'integer',
+            title: 'Article Count'
+        },
+        publisher_count: {
+            type: 'integer',
+            title: 'Publisher Count'
+        },
+        first_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'First At'
+        },
+        last_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Last At'
+        },
+        grew_today: {
+            type: 'boolean',
+            title: 'Grew Today'
+        },
+        articles: {
+            items: {
+                '$ref': '#/components/schemas/StoryArticlePublic'
+            },
+            type: 'array',
+            title: 'Articles'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name', 'blurb', 'article_count', 'publisher_count', 'grew_today', 'articles'],
+    title: 'StoryPublic'
+} as const;
+
 export const TagFacetSchema = {
     properties: {
         slug: {
