@@ -110,21 +110,21 @@ export function RailsProvider({
   // A panel with nothing to show is left out, so a side whose panels are all
   // empty renders no rail, strip or button. Stories is the one that can be.
   const hasStories = useHasStories()
-  const panels = useMemo(
-    () =>
-      hasStories
-        ? registered
-        : {
-            ...registered,
-            right: registered.right.filter((p) => p.id !== STORIES_PANEL_ID),
-          },
-    [registered, hasStories],
-  )
   const mode = useSyncExternalStore<RailMode>(
     subscribeMode,
     readMode,
     () => "wide",
   )
+  // On a phone both rails are one sheet behind one button: the right rail's
+  // panels follow the left's.
+  const panels = useMemo(() => {
+    const right = hasStories
+      ? registered.right
+      : registered.right.filter((p) => p.id !== STORIES_PANEL_ID)
+    return mode === "narrow"
+      ? { left: [...registered.left, ...right], right: [] }
+      : { left: registered.left, right }
+  }, [registered, hasStories, mode])
   const [stored, setStored] = useState<Stored>(load)
   // Below the wide breakpoint a rail is a temporary layer over the feed, so
   // its open state is not remembered and starts closed on every load. On a

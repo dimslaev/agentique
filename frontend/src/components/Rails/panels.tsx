@@ -22,12 +22,6 @@ export type RailPanels = Record<Side, RailPanelDef[]>
 export const LEFT: RailPanelDef[] = [
   { id: "who-wrote", title: "Who wrote the wire", Component: WhoWrote },
   {
-    id: "topic-map",
-    title: "Topic map",
-    meta: "by meaning",
-    Component: TopicMap,
-  },
-  {
     id: "reader-picks",
     title: "Reader picks",
     meta: "",
@@ -41,9 +35,18 @@ export const RIGHT: RailPanelDef[] = [
     meta: "",
     Component: Stories,
   },
+  {
+    id: "topic-map",
+    title: "Topic map",
+    meta: "by meaning",
+    Component: TopicMap,
+  },
 ]
 
 export const RAIL_TITLES: Record<Side, string> = {
   left: "People and topics",
   right: "Stories",
 }
+
+/** Phones merge both rails into one sheet. */
+export const PHONE_RAIL_TITLE = "Explore"

@@ -80,7 +80,9 @@ test.describe("wide screen", () => {
 test.describe("mid screen", () => {
   test.use({ viewport: { width: 1000, height: 800 } })
 
-  test("the edge strip opens an overlay and Esc closes it", async ({ page }) => {
+  test("the edge strip opens an overlay and Esc closes it", async ({
+    page,
+  }) => {
     await page.goto("/")
     await expect(leftRail(page)).toHaveCount(0)
 
@@ -99,14 +101,14 @@ test.describe("mid screen", () => {
 test.describe("phone", () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  test("the header button opens the rail as a sheet", async ({ page }) => {
+  test("one header button opens both rails as one sheet", async ({ page }) => {
     await page.goto("/")
     await expect(leftRail(page)).toHaveCount(0)
 
-    await page
-      .getByRole("button", { name: "Toggle the people and topics rail" })
-      .click()
-    await expect(page.getByRole("dialog", { name: RAIL })).toBeVisible()
+    const toggles = page.locator("[data-rail-trigger]")
+    await expect(toggles).toHaveCount(1)
+    await page.getByRole("button", { name: "Toggle the explore rail" }).click()
+    await expect(page.getByRole("dialog", { name: "Explore" })).toBeVisible()
     await expect(whoWrote(page)).toBeVisible()
   })
 })

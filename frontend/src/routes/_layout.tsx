@@ -3,7 +3,7 @@ import { Footer } from "@/components/Common/Footer"
 import { Header } from "@/components/Common/Header"
 import { PageColumn } from "@/components/Common/PageColumn"
 import { UserMenu } from "@/components/Common/UserMenu"
-import { RailsProvider } from "@/components/Rails/RailsProvider"
+import { RailsProvider, useRails } from "@/components/Rails/RailsProvider"
 import { RailToggles } from "@/components/Rails/RailToggles"
 import { FiltersProvider } from "@/context/filters"
 
@@ -29,14 +29,7 @@ function Layout() {
     <FiltersProvider>
       <RailsProvider>
         <div className="flex min-h-screen flex-col">
-          <Header
-            nav={
-              <>
-                <RailToggles />
-                <UserMenu />
-              </>
-            }
-          />
+          <SiteHeader />
           <main className="w-full flex-1 pt-7 pb-12">
             {wide ? (
               <Outlet />
@@ -50,5 +43,23 @@ function Layout() {
         </div>
       </RailsProvider>
     </FiltersProvider>
+  )
+}
+
+/** On wide screens with inline rails, the header spans them too. */
+function SiteHeader() {
+  const { mode, present, hasPanels } = useRails()
+  const wide =
+    present && mode === "wide" && (hasPanels("left") || hasPanels("right"))
+  return (
+    <Header
+      wide={wide}
+      nav={
+        <>
+          <RailToggles />
+          <UserMenu />
+        </>
+      }
+    />
   )
 }

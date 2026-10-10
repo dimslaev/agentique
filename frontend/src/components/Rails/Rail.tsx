@@ -1,7 +1,12 @@
 import { ChevronsLeft, ChevronsRight } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { SheetTitle } from "@/components/ui/sheet"
-import { RAIL_TITLES, type RailPanelDef, type Side } from "./panels"
+import {
+  PHONE_RAIL_TITLE,
+  RAIL_TITLES,
+  type RailPanelDef,
+  type Side,
+} from "./panels"
 import { RailPanel } from "./RailPanel"
 import { useRails } from "./RailsProvider"
 
@@ -27,7 +32,7 @@ export function Rail({
 }) {
   const { toggle } = useRails()
   const headingRef = useRef<HTMLHeadingElement>(null)
-  const title = RAIL_TITLES[side]
+  const title = inSheet ? PHONE_RAIL_TITLE : RAIL_TITLES[side]
   const Hide = side === "left" ? ChevronsLeft : ChevronsRight
 
   useEffect(() => {
