@@ -49,6 +49,11 @@ export type ArticlesPublic = {
     count: number;
 };
 
+export type FoundViaCount = {
+    name: (string | null);
+    count: number;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -67,6 +72,19 @@ export type Message = {
  * article falls under exactly one, see `catalog.articles.origin_condition`.
  */
 export type Origin = 'lab' | 'company' | 'individual' | 'media' | 'repo' | 'paper' | 'model';
+
+export type OriginCount = {
+    origin: Origin;
+    count: number;
+};
+
+export type OriginCounts = {
+    since: string;
+    total: number;
+    origins: Array<OriginCount>;
+    unlabelled: number;
+    found_via: Array<FoundViaCount>;
+};
 
 export type PublisherFacet = {
     slug: string;
@@ -199,6 +217,12 @@ export type ArticlesArticleFacetsData = {
 };
 
 export type ArticlesArticleFacetsResponse = (ArticleFacets);
+
+export type ArticlesArticleOriginsData = {
+    since: string;
+};
+
+export type ArticlesArticleOriginsResponse = (OriginCounts);
 
 export type ArticlesSearchPublishersData = {
     limit?: number;

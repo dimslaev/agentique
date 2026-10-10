@@ -1,4 +1,5 @@
 import type { ComponentType } from "react"
+import { WhoWrote } from "./panels/WhoWrote"
 
 export type Side = "left" | "right"
 
@@ -15,7 +16,9 @@ export type RailPanels = Record<Side, RailPanelDef[]>
 
 // Planned: left = "Who wrote this week", "Topic map"; right = "Stories".
 // A side with no panels renders nothing at all: no rail, strip or button.
-export const LEFT: RailPanelDef[] = []
+export const LEFT: RailPanelDef[] = [
+  { id: "who-wrote", title: "Who wrote the wire", Component: WhoWrote },
+]
 export const RIGHT: RailPanelDef[] = []
 
 export const RAIL_TITLES: Record<Side, string> = {

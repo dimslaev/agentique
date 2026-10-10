@@ -1,16 +1,25 @@
-"""Facet counts for the feed's filter sidebar: how many articles each publisher and tag has."""
+"""Facet counts for the feed's filters and rails: how many articles each publisher, tag and origin has."""
 
 from __future__ import annotations
 
-from sqlalchemy import func
+from datetime import datetime
+
+from sqlalchemy import ColumnElement, func
 from sqlmodel import Session, col, select
 
+from app.catalog.articles import origin_condition
 from app.catalog.models import (
     Article,
     ArticleFacets,
+    ArticleKind,
     ArticleTag,
+    FoundViaCount,
+    Origin,
+    OriginCount,
+    OriginCounts,
     Publisher,
     PublisherFacet,
+    PublisherKind,
     Tag,
     TagFacet,
 )
@@ -57,4 +66,38 @@ def all_facets(session: Session, limit: int = 8) -> ArticleFacets:
     return ArticleFacets(
         publishers=publisher_facets(session, None, limit),
         tags=tag_facets(session, None, limit),
+    )
+
+
+def origin_counts(session: Session, since: datetime) -> OriginCounts:
+    """How the articles published since `since` split by origin and by how
+    they were found. Each origin is counted with the From filter's own
+    condition, so a row's number is what that filter shows for the window."""
+    in_window = col(Article.published_at) >= since
+
+    def count(*conditions: ColumnElement[bool]) -> int:
+        return session.exec(
+            select(func.count()).select_from(Article).where(in_window, *conditions)
+        ).one()
+
+    unlabelled = count(
+        col(Article.kind) == ArticleKind.post,
+        col(Article.publisher_id).in_(
+            select(Publisher.id).where(Publisher.kind == PublisherKind.unknown)
+        ),
+    )
+    found_via_rows = session.exec(
+        select(Article.found_via, func.count())
+        .where(in_window)
+        .group_by(col(Article.found_via))
+        .order_by(func.count().desc())
+    ).all()
+    return OriginCounts(
+        since=since,
+        total=count(),
+        origins=[
+            OriginCount(origin=o, count=count(origin_condition(o))) for o in Origin
+        ],
+        unlabelled=unlabelled,
+        found_via=[FoundViaCount(name=n, count=c) for n, c in found_via_rows],
     )

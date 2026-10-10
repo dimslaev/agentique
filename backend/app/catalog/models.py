@@ -279,3 +279,27 @@ class TagFacet(SQLModel):
 class ArticleFacets(SQLModel):
     publishers: list[PublisherFacet]
     tags: list[TagFacet]
+
+
+# ─── Origin counts (the left rail's "Who wrote this week") ─────────────────
+
+
+class OriginCount(SQLModel):
+    origin: Origin
+    count: int
+
+
+class FoundViaCount(SQLModel):
+    # Null: the publisher's own feed.
+    name: str | None
+    count: int
+
+
+class OriginCounts(SQLModel):
+    since: datetime
+    total: int
+    origins: list[OriginCount]
+    # Posts by a publisher still `unknown`: under no origin until curation
+    # names its kind.
+    unlabelled: int
+    found_via: list[FoundViaCount]

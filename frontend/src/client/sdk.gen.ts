@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginRefreshTokenResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesArticleOriginsData, ArticlesArticleOriginsResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginRefreshTokenResponse, LoginTestTokenResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -123,6 +123,26 @@ export class ArticlesService {
             url: '/api/v1/articles/facets',
             query: {
                 limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Article Origins
+     * @param data The data for the request.
+     * @param data.since
+     * @returns OriginCounts Successful Response
+     * @throws ApiError
+     */
+    public static articleOrigins(data: ArticlesArticleOriginsData): CancelablePromise<ArticlesArticleOriginsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/articles/origins',
+            query: {
+                since: data.since
             },
             errors: {
                 422: 'Validation Error'

@@ -16,6 +16,7 @@ Each entry shows its publisher, and its kind when it is a repo, paper or model. 
 Companies, Writers, Media, Repos, Papers, Models), by topic (a hand-curated set of
 tags and kinds, e.g. "Open weights" or "Harnesses"), and by time window
 (last 3 days / week / month).
+A left rail beside the feed shows how that window splits by origin and how its articles were found (publisher feeds, Hacker News, newsletters); a row sets the From filter.
 
 **Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
 query and finds the nearest articles in vector space, so "how do I run a model locally"
