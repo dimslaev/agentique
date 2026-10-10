@@ -18,6 +18,10 @@ tags and kinds, e.g. "Open weights" or "Harnesses"), and by time window
 (last 3 days / week / month).
 A left rail beside the feed shows how that window splits by origin and how its articles were found (publisher feeds, Hacker News, newsletters); a row sets the From filter.
 
+**A topic map beside the feed.** A panel in the left rail draws the week's articles
+(the month's, when the week is thin) as dots grouped by meaning into labelled
+clusters. A nightly job builds it from the stored embeddings into a static file.
+
 **Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
 query and finds the nearest articles in vector space, so "how do I run a model locally"
 surfaces relevant pieces even if none of them use that exact phrase.

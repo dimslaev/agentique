@@ -55,6 +55,7 @@
   --font-wire: "IBM Plex Mono", ui-monospace, monospace;
   --font-body: "IBM Plex Sans Variable", ui-sans-serif, system-ui, sans-serif;
   --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
   --color-paper: var(--paper);
   --color-wire: var(--wire);
   --color-dim: var(--dim);
@@ -77,6 +78,8 @@
 
   /* Landing palette. Ink is warm/olive-tinted, not neutral black. */
   --ink: #14160e;
+  /* A step up from ink: the ground of a chart drawn inside a panel. */
+  --ink-2: #1b1d14;
   --paper: #edeade;
   --wire: #33362a;
   --dim: #8a8c77;

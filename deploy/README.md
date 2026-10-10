@@ -11,6 +11,7 @@ How agentique runs in production. Docker runs only the database
 | `agentique-backend.service` | FastAPI under systemd, 2 workers, bound to `127.0.0.1:8000` |
 | `agentique-pipeline.service` + `.timer` | the article pipeline, one run daily at 04:00 |
 | `agentique-report.service` + `.timer` | the night's one report email at 06:00 |
+| `agentique-topicmap.service` + `.timer` | the topic map's static data file at 06:10, served by Caddy at `/data/topic-map.json` |
 | `agentique-backup.service` + `.timer` | nightly DB dump to off-box storage at 03:30 |
 | `agentique-sql` | run SQL against the prod DB from stdin, inside the `db` container |
 | `sql-roles.sql` | one-time: creates the read-only and read/write login roles `agentique-sql` uses |
@@ -23,7 +24,8 @@ How agentique runs in production. Docker runs only the database
   the backend. Additive migrations only; rollback is `git revert` + push.
 - The pipeline needs no restart — the timer starts a fresh process each run.
 - The night runs in three steps an hour apart: 04:00 the pipeline queues
-  candidates, 05:00 the agent judges them, 06:00 the report goes out. The box
+  candidates, 05:00 the agent judges them, 06:00 the report goes out. At
+  06:10 the topic map is rebuilt from what landed. The box
   owns the first and the last as separate timers; the agent runs off-box (see
   Curation). A failure in one does not silence the others — a night the agent
   never ran still gets a report, and that report says nothing landed.
@@ -128,3 +130,20 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | `pipeline/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
 | `PIPELINE_ALERT_EMAIL` | `pipeline/report.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
+| `TOPIC_MAP_PATH` | `pipeline/topic_map.py` | Where the topic map's JSON is written. Must be `/var/lib/agentique/public/topic-map.json`, the folder Caddy serves at `/data/`. Unset writes to `frontend/public/data/` in the repo, the dev default, which no one serves in production. |
+
+## Topic map
+
+A static file, not an API route: `pipeline/topic_map.py` writes it nightly and
+Caddy serves it at `/data/topic-map.json`. It lives outside `frontend/dist`
+because the deploy's `rsync --delete` replaces that folder on every push. A
+failed build keeps the last good file (the write is a rename), and the panel
+hides itself once the file is more than 3 days old.
+
+One-time setup on the box:
+
+1. `sudo install -d -o agentique -g agentique -m 755 /var/lib/agentique/public`
+2. Add `TOPIC_MAP_PATH=/var/lib/agentique/public/topic-map.json` to `/opt/agentique/.env`.
+3. `sudo cp /opt/agentique/deploy/agentique-topicmap.{service,timer} /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now agentique-topicmap.timer`
+4. `sudo cp /opt/agentique/deploy/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy`
+5. First run: `sudo systemctl start agentique-topicmap`, then `journalctl -u agentique-topicmap -n 5` and `curl -sI https://agentique.ch/data/topic-map.json`.
