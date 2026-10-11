@@ -55,6 +55,7 @@ def test_report_counts_outside_readers_only(
     _event(db, path="/blog/x/", visitor_id="reader-1")
     _event(db, path="/", visitor_id="reader-2", user_agent=PHONE)
     _event(db, path="/", visitor_id="crawler", user_agent="Googlebot/2.1")
+    _event(db, path="/", visitor_id="scanner", user_agent="Scanory/1.0")
     _event(db, path="/", visitor_id="no-agent", user_agent=None)
     # the admin's device stays the admin's after signing out
     _event(db, path="/", visitor_id="admin-laptop", user_id=_superuser(db).id)
@@ -69,7 +70,7 @@ def test_report_counts_outside_readers_only(
         "returning_visitors": 0,
         "article_clicks": 0,
         "admin_pageviews": 2,
-        "bot_pageviews": 2,
+        "bot_pageviews": 3,
     }
     assert report["pages"][0] == {"label": "/", "count": 2, "visitors": 2}
     assert report["referrers"] == [

@@ -27,7 +27,7 @@ from app.platform.dates import get_datetime_utc
 
 # Loose on purpose: a human caught here costs one visitor, a bot let through
 # inflates every number.
-BOT_AGENT = r"bot|crawl|spider|slurp|headless|python|curl|wget|preview|lighthouse"
+BOT_AGENT = r"bot|crawl|spider|slurp|scan|headless|python|curl|wget|preview|lighthouse"
 MOBILE_AGENT = r"iphone|ipad|android|mobile"
 TOP = 10
 
