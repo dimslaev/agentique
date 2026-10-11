@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { openAllPanels } from "./rails"
 
 const RAIL = "Left rail"
 
@@ -13,7 +14,7 @@ function whoWrote(page: Page) {
 test.describe("wide screen", () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
-  test("the left rail sits inline and a folded panel stays folded after a reload", async ({
+  test("the left rail sits inline and a panel's open state survives a reload", async ({
     page,
   }) => {
     await page.goto("/")
@@ -27,19 +28,22 @@ test.describe("wide screen", () => {
     const header = whoWrote(page).getByRole("button", {
       name: "Who wrote the wire",
     })
-    await header.click()
-    await expect(header).toHaveAttribute("aria-expanded", "false")
-    await page.reload()
+    // Only Stories starts open.
     await expect(header).toHaveAttribute("aria-expanded", "false")
     await header.click()
     await expect(header).toHaveAttribute("aria-expanded", "true")
     await page.reload()
     await expect(header).toHaveAttribute("aria-expanded", "true")
+    await header.click()
+    await expect(header).toHaveAttribute("aria-expanded", "false")
+    await page.reload()
+    await expect(header).toHaveAttribute("aria-expanded", "false")
   })
 
   test("clicking Writers sets the From filter and the feed shows only writers", async ({
     page,
   }) => {
+    await openAllPanels(page)
     await page.goto("/")
     const writers = whoWrote(page).getByRole("button", { name: /^Writers/ })
     await expect(writers).toBeVisible()
@@ -94,6 +98,10 @@ for (const [name, width, height] of [
       await page.getByRole("button", { name: "Toggle the rails" }).click()
       await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
       await expect(whoWrote(page)).toBeVisible()
+      await expect(whoWrote(page).getByRole("button").first()).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      )
 
       await page.keyboard.press("Escape")
       await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)

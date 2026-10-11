@@ -34,13 +34,19 @@ function subscribeMode(onChange: () => void) {
   return () => query.removeEventListener("change", onChange)
 }
 
-const STORAGE_KEY = "agentique.rails.v1"
+// v2: panels start folded unless listed in OPEN_BY_DEFAULT, so v1's
+// "collapsed" list no longer says enough.
+const STORAGE_KEY = "agentique.rails.v2"
+
+// Every other panel starts folded until the reader opens it.
+const OPEN_BY_DEFAULT = new Set([STORIES_PANEL_ID])
 
 type Stored = {
-  collapsed: Record<string, true>
+  /** The reader's own open/fold choices, by panel id. */
+  open: Record<string, boolean>
 }
 
-const DEFAULTS: Stored = { collapsed: {} }
+const DEFAULTS: Stored = { open: {} }
 
 // Storage can throw (private mode, blocked site data) or hold anything; the
 // rails fall back to defaults rather than break the feed.
@@ -49,13 +55,13 @@ function load(): Stored {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULTS
     const parsed = JSON.parse(raw)
-    const collapsed: Record<string, true> = {}
-    if (parsed?.collapsed && typeof parsed.collapsed === "object") {
-      for (const [id, v] of Object.entries(parsed.collapsed)) {
-        if (v === true) collapsed[id] = true
+    const open: Record<string, boolean> = {}
+    if (parsed?.open && typeof parsed.open === "object") {
+      for (const [id, v] of Object.entries(parsed.open)) {
+        if (typeof v === "boolean") open[id] = v
       }
     }
-    return { collapsed }
+    return { open }
   } catch {
     return DEFAULTS
   }
@@ -188,23 +194,19 @@ export function RailsProvider({
     [mode, isOpen, setOpen, restore],
   )
 
-  const togglePanel = useCallback(
-    (panelId: string) => {
-      const open = stored.collapsed[panelId] === true
-      setStored((s) => {
-        const collapsed = { ...s.collapsed }
-        if (open) delete collapsed[panelId]
-        else collapsed[panelId] = true
-        return { ...s, collapsed }
-      })
-      trackEvent("rail_panel_toggle", { panel: panelId, open })
-    },
+  const isCollapsed = useCallback(
+    (panelId: string) =>
+      !(stored.open[panelId] ?? OPEN_BY_DEFAULT.has(panelId)),
     [stored],
   )
 
-  const isCollapsed = useCallback(
-    (panelId: string) => stored.collapsed[panelId] === true,
-    [stored],
+  const togglePanel = useCallback(
+    (panelId: string) => {
+      const open = isCollapsed(panelId)
+      setStored((s) => ({ ...s, open: { ...s.open, [panelId]: open } }))
+      trackEvent("rail_panel_toggle", { panel: panelId, open })
+    },
+    [isCollapsed],
   )
 
   useEffect(() => {

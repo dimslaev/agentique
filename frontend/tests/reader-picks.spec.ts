@@ -1,7 +1,10 @@
 import { expect, type Page, test } from "@playwright/test"
+import { openAllPanels } from "./rails"
 
 // Wide enough that the rails sit inline beside the feed, always open.
 test.use({ viewport: { width: 1440, height: 900 } })
+
+test.beforeEach(({ page }) => openAllPanels(page))
 
 function article(id: number, likeCount: number) {
   return {

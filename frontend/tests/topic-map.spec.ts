@@ -1,7 +1,10 @@
 import { expect, type Page, test } from "@playwright/test"
+import { openAllPanels } from "./rails"
 
 // Wide enough that the rails sit inline beside the feed, always open.
 test.use({ viewport: { width: 1440, height: 900 } })
+
+test.beforeEach(({ page }) => openAllPanels(page))
 
 const CLUSTERS = [
   { id: 0, label: "Coding agents", x: 0.3, y: 0.3, size: 4 },
