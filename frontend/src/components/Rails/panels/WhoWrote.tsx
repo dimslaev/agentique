@@ -3,6 +3,7 @@ import { ArticlesService, type OriginCounts } from "@/client"
 import { cutoffIso, PUBLISHED_DAYS } from "@/components/Articles/ArticlesList"
 import { ORIGIN_OPTIONS } from "@/components/Articles/FeedFilters"
 import { useFilters } from "@/context/filters"
+import { trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 
 const LABELS = Object.fromEntries(ORIGIN_OPTIONS.map((o) => [o.value, o.label]))
@@ -36,7 +37,11 @@ export function WhoWrote() {
         <Counts
           data={data}
           active={origin}
-          onPick={(value) => setFilter("origin", value === origin ? "" : value)}
+          onPick={(value) => {
+            if (value !== origin)
+              trackEvent("who_wrote_pick", { origin: value })
+            setFilter("origin", value === origin ? "" : value)
+          }}
         />
       ) : null}
     </div>

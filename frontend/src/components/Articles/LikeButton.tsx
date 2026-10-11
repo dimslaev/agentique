@@ -10,6 +10,7 @@ import {
 } from "@/client"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+import { trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 
 function patchArticle(
@@ -98,12 +99,14 @@ export function LikeButton({ article }: { article: ArticlePublic }) {
       onClick={() => {
         // liking is the one thing on the feed that needs an account
         if (!isLoggedIn()) {
+          trackEvent("like_signin_prompt", { article_id: article.id })
           navigate({
             to: "/login",
             search: { redirect: window.location.pathname },
           })
           return
         }
+        trackEvent(liked ? "unlike" : "like", { article_id: article.id })
         mutation.mutate()
       }}
       className={cn(

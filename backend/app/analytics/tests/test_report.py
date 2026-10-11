@@ -145,9 +145,9 @@ def test_report_counts_registered_readers(
 ) -> None:
     def totals(days: int | None) -> dict[str, int]:
         params = {"days": days} if days else {}
-        return client.get(REPORT, headers=superuser_token_headers, params=params).json()[
-            "totals"
-        ]
+        return client.get(
+            REPORT, headers=superuser_token_headers, params=params
+        ).json()["totals"]
 
     before, before_all = totals(7), totals(None)
     create_random_user(db)

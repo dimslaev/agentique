@@ -146,7 +146,8 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
         referrers=_ranked(
             session, human, referrer_host, is_pageview & h.referrer.is_not(None)
         ),
-        events=_ranked(session, human, h.event, ~is_pageview),
+        # every event, not a top ten: there are few kinds and each is worth seeing
+        events=_ranked(session, human, h.event, ~is_pageview, limit=None),
         articles=_articles(session, human),
         devices=_ranked(session, human, device, is_pageview),
     )
@@ -161,6 +162,7 @@ def _ranked(
     human: CTE,
     label: ColumnElement[str],
     where: ColumnElement[bool],
+    limit: int | None = TOP,
 ) -> list[ReportRow]:
     """Rows grouped by `label`, most frequent first, each with its event count and distinct visitors."""
     count = func.count()
@@ -170,7 +172,7 @@ def _ranked(
         .where(where)
         .group_by(label)
         .order_by(count.desc(), label)
-        .limit(TOP)
+        .limit(limit)
     ).all()
     return [ReportRow(label=lb, count=c, visitors=v) for lb, c, v in rows]
 

@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import useAuth from "@/hooks/useAuth"
+import { trackEvent } from "@/lib/analytics"
 
 const getInitials = (name: string): string =>
   name
@@ -83,7 +84,13 @@ export function UserMenu() {
             </RouterLink>
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={logout}>
+        <DropdownMenuItem
+          onClick={() => {
+            // before the token goes, so the event carries the user
+            trackEvent("logout")
+            logout()
+          }}
+        >
           <LogOut />
           Log Out
         </DropdownMenuItem>

@@ -1,6 +1,7 @@
 import { Search, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useFilters } from "@/context/filters"
+import { trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 import { FilterOptions, FilterRow } from "./FilterOption"
 import { TOPICS } from "./topics"
@@ -66,7 +67,11 @@ function SearchInput() {
   function handleChange(v: string) {
     setLocalSearch(v)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setFilter("search", v), 300)
+    debounceRef.current = setTimeout(() => {
+      setFilter("search", v)
+      // the same debounce as the query, so a pause in typing is one search
+      if (v.trim().length >= 3) trackEvent("search", { query: v.trim() })
+    }, 300)
   }
 
   function handleClear() {

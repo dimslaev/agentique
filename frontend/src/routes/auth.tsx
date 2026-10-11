@@ -9,6 +9,7 @@ import { z } from "zod"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import { signInWithLink, takeRedirect } from "@/hooks/useAuth"
+import { trackEvent } from "@/lib/analytics"
 
 const searchSchema = z.object({
   token: z.string().catch(""),
@@ -33,7 +34,12 @@ function Auth() {
   const navigate = useNavigate()
   const mutation = useMutation({
     mutationFn: signInWithLink,
-    onSuccess: () => navigate({ href: takeRedirect() ?? "/", replace: true }),
+    onSuccess: () => {
+      // after the token is stored, so the event carries the user
+      trackEvent("sign_in")
+      navigate({ href: takeRedirect() ?? "/", replace: true })
+    },
+    onError: () => trackEvent("sign_in_failed"),
   })
   const { mutate } = mutation
 

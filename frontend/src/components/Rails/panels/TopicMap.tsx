@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { SCORE_STANDOUT } from "@/components/Articles/ScoreRail"
-import { articleClickHandlers } from "@/lib/analytics"
+import { articleClickHandlers, trackEvent } from "@/lib/analytics"
 import { cn } from "@/lib/utils"
 
 // Built nightly on the box by `python -m pipeline.topic_map` and served as a
@@ -196,7 +196,10 @@ export function TopicMap() {
               type="button"
               aria-pressed={on}
               aria-label={`Highlight ${c.label}, ${c.size} articles`}
-              onClick={() => setFocus(on ? null : c.id)}
+              onClick={() => {
+                if (!on) trackEvent("topic_focus", { topic: c.label })
+                setFocus(on ? null : c.id)
+              }}
               className={cn(
                 "absolute -translate-x-1/2 whitespace-nowrap bg-ink px-1 font-wire text-[9px] uppercase leading-[14px] tracking-[0.08em] transition-opacity focus-visible:outline-2 focus-visible:outline-primary",
                 on ? "text-primary" : "text-paper",

@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { trackEvent } from "@/lib/analytics"
 
 const formSchema = z.object({
   email: z.email({ message: "Invalid email address" }),
@@ -46,6 +47,7 @@ export function EmailLinkForm({
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => send(data.email),
+    onSuccess: () => trackEvent("signin_link_sent"),
     onError: handleError.bind(showErrorToast),
   })
 
