@@ -16,6 +16,8 @@ from app.catalog.models import (
     PublisherFacet,
     StoryPublic,
     TagFacet,
+    Voice,
+    VoiceKind,
 )
 from app.deps import CurrentUserOptional, SessionDep
 
@@ -91,6 +93,20 @@ def article_origins(session: SessionDep, since: str) -> OriginCounts:
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
     return facets.origin_counts(session, since_dt)
+
+
+@router.get("/voices", response_model=list[Voice])
+def article_voices(
+    session: SessionDep,
+    kind: VoiceKind,
+    since: str,
+    limit: int = Query(default=8, ge=1, le=20),
+) -> list[Voice]:
+    try:
+        since_dt = datetime.fromisoformat(since)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
+    return facets.voices(session, kind, since_dt, limit)
 
 
 @router.get("/publishers", response_model=list[PublisherFacet])

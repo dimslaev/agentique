@@ -17,6 +17,7 @@ Companies, Writers, Media, Repos, Papers, Models), by topic (a hand-curated set 
 tags and kinds, e.g. "Open weights" or "Harnesses"), and by time window
 (last 3 days / week / month).
 A left rail beside the feed shows how that window splits by origin and how its articles were found (publisher feeds, Hacker News, newsletters); a row sets the From filter.
+A Voices panel there lists the writers, labs and companies with the most articles in the last 30 days, each with a bar per article and its best one; a name filters the feed to that publisher.
 
 **A topic map beside the feed.** A panel in the left rail draws the week's articles
 (the month's, when the week is thin) as dots grouped by meaning into labelled

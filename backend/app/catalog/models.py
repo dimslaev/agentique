@@ -353,6 +353,33 @@ class OriginCounts(SQLModel):
     found_via: list[FoundViaCount]
 
 
+# ─── Voices (the left rail's "Voices") ─────────────────────────────────────
+
+
+class VoiceKind(StrEnum):
+    """The Voices panel's tabs: Writers, Labs, Companies."""
+
+    individual = "individual"
+    lab = "lab"
+    company = "company"
+
+
+class VoiceArticle(SQLModel):
+    title: str
+    url: str
+    score: int
+    published_at: datetime | None = None
+
+
+class Voice(SQLModel):
+    slug: str
+    name: str
+    count: int
+    # Oldest first, the last `facets.VOICE_SCORES` of `count`.
+    scores: list[int]
+    best: VoiceArticle
+
+
 # ─── Stories (right rail) ──────────────────────────────────────────────────
 
 

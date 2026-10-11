@@ -7,7 +7,12 @@ export async function openAllPanels(page: Page) {
     localStorage.setItem(
       "agentique.rails.v2",
       JSON.stringify({
-        open: { "who-wrote": true, "topic-map": true, "reader-picks": true },
+        open: {
+          "who-wrote": true,
+          voices: true,
+          "topic-map": true,
+          "reader-picks": true,
+        },
       }),
     )
   })

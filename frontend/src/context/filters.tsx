@@ -8,6 +8,10 @@ export type Filters = {
   origin: string
   /** A slug from `TOPICS`. */
   topic: string
+  /** A publisher slug, set from the Voices panel. */
+  publisher: string
+  /** That publisher's name, for the chip that clears it. */
+  publisherName: string
 }
 
 type FiltersContextType = {
@@ -24,6 +28,8 @@ export function FiltersProvider({ children }: { children: ReactNode }) {
     sort: "published_at-desc",
     origin: "",
     topic: "",
+    publisher: "",
+    publisherName: "",
   })
 
   const setFilter = (key: keyof Filters, value: string) => {

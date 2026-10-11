@@ -864,3 +864,72 @@ export const ValidationErrorSchema = {
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
 } as const;
+
+export const VoiceSchema = {
+    properties: {
+        slug: {
+            type: 'string',
+            title: 'Slug'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        scores: {
+            items: {
+                type: 'integer'
+            },
+            type: 'array',
+            title: 'Scores'
+        },
+        best: {
+            '$ref': '#/components/schemas/VoiceArticle'
+        }
+    },
+    type: 'object',
+    required: ['slug', 'name', 'count', 'scores', 'best'],
+    title: 'Voice'
+} as const;
+
+export const VoiceArticleSchema = {
+    properties: {
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        },
+        published_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Published At'
+        }
+    },
+    type: 'object',
+    required: ['title', 'url', 'score'],
+    title: 'VoiceArticle'
+} as const;
+
+export const VoiceKindSchema = {
+    type: 'string',
+    enum: ['individual', 'lab', 'company'],
+    title: 'VoiceKind',
+    description: "The Voices panel's tabs: Writers, Labs, Companies."
+} as const;

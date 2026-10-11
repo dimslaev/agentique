@@ -44,7 +44,9 @@ export function FeedFilters() {
             options={ORIGIN_OPTIONS}
             value={filters.origin}
             onChange={(v) => setFilter("origin", v)}
-          />
+          >
+            {filters.publisher && <PublisherChip />}
+          </FilterOptions>
         </FilterRow>
         <FilterRow label="Topics">
           <FilterOptions
@@ -56,6 +58,29 @@ export function FeedFilters() {
         </FilterRow>
       </div>
     </section>
+  )
+}
+
+/** The publisher picked in the Voices panel, and the way to drop it. */
+function PublisherChip() {
+  const { filters, setFilter } = useFilters()
+  const name = filters.publisherName || filters.publisher
+
+  return (
+    <button
+      type="button"
+      aria-label={`Clear publisher ${name}`}
+      data-testid="publisher-chip"
+      onClick={() => {
+        setFilter("publisher", "")
+        setFilter("publisherName", "")
+      }}
+      className="ml-1.5 flex items-center gap-1 border px-1.5 py-0.5 text-[13px] leading-4 transition-colors hover:border-foreground max-sm:py-1.5"
+    >
+      <span className="text-muted-foreground">Publisher:</span>
+      <span className="font-medium">{name}</span>
+      <X aria-hidden className="size-3 text-muted-foreground" />
+    </button>
   )
 }
 

@@ -2,6 +2,7 @@ import type { ComponentType } from "react"
 import { ReaderPicks } from "./panels/ReaderPicks"
 import { STORIES_PANEL_ID, Stories } from "./panels/Stories"
 import { TopicMap } from "./panels/TopicMap"
+import { Voices } from "./panels/Voices"
 import { WhoWrote } from "./panels/WhoWrote"
 
 export type Side = "left" | "right"
@@ -24,6 +25,7 @@ export const LEFT: RailPanelDef[] = [
     Component: Stories,
   },
   { id: "who-wrote", title: "Who wrote the wire", Component: WhoWrote },
+  { id: "voices", title: "Voices", Component: Voices },
 ]
 export const RIGHT: RailPanelDef[] = [
   {

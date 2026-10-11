@@ -202,6 +202,26 @@ export type ValidationError = {
     };
 };
 
+export type Voice = {
+    slug: string;
+    name: string;
+    count: number;
+    scores: Array<(number)>;
+    best: VoiceArticle;
+};
+
+export type VoiceArticle = {
+    title: string;
+    url: string;
+    score: number;
+    published_at?: (string | null);
+};
+
+/**
+ * The Voices panel's tabs: Writers, Labs, Companies.
+ */
+export type VoiceKind = 'individual' | 'lab' | 'company';
+
 export type AnalyticsCollectEventData = {
     requestBody: AnalyticsEventCreate;
 };
@@ -246,6 +266,14 @@ export type ArticlesArticleOriginsData = {
 };
 
 export type ArticlesArticleOriginsResponse = (OriginCounts);
+
+export type ArticlesArticleVoicesData = {
+    kind: VoiceKind;
+    limit?: number;
+    since: string;
+};
+
+export type ArticlesArticleVoicesResponse = (Array<Voice>);
 
 export type ArticlesSearchPublishersData = {
     limit?: number;

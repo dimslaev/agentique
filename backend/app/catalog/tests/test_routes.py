@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -66,6 +67,7 @@ READ_ENDPOINTS = [
     "/tags",
     "/stats",
     "/origins?since=2026-01-01",
+    "/voices?kind=individual&since=2026-01-01",
 ]
 
 
@@ -616,4 +618,121 @@ def test_origin_counts_group_found_via(client: TestClient, db: Session) -> None:
 
 def test_origin_counts_malformed_since_returns_422(client: TestClient) -> None:
     r = client.get(f"{ARTICLES_URL}/origins", params={"since": "not-a-date"})
+    assert r.status_code == 422
+
+
+# --- voices ------------------------------------------------------------------
+
+VOICES_URL = f"{ARTICLES_URL}/voices"
+
+
+def _voices(
+    client: TestClient, kind: str, slugs: set[str], since: str = RECENT_SINCE
+) -> list[dict[str, Any]]:
+    """The voices of `kind`, narrowed to the publishers a test made: other
+    tests' articles share the window."""
+    r = client.get(VOICES_URL, params={"kind": kind, "since": since, "limit": 20})
+    assert r.status_code == 200
+    return [v for v in r.json() if v["slug"] in slugs]
+
+
+def _ago(hours: float) -> datetime:
+    return datetime.now(UTC) - timedelta(hours=hours)
+
+
+def test_voices_filter_by_kind(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    company = create_random_publisher(db, kind=PublisherKind.company)
+    for p in (lab, company):
+        create_random_article(db, publisher_id=p.id, published_at=_ago(1))
+    slugs = {lab.slug, company.slug}
+
+    assert [v["slug"] for v in _voices(client, "lab", slugs)] == [lab.slug]
+    assert [v["slug"] for v in _voices(client, "company", slugs)] == [company.slug]
+    assert _voices(client, "individual", slugs) == []
+
+
+def test_voices_writers_count_posts_only(client: TestClient, db: Session) -> None:
+    writer = create_random_publisher(db, kind=PublisherKind.individual)
+    owner = create_random_publisher(db, kind=PublisherKind.individual)
+    create_random_article(db, publisher_id=writer.id, published_at=_ago(1))
+    create_random_article(
+        db, publisher_id=writer.id, kind=ArticleKind.repo, published_at=_ago(1)
+    )
+    create_random_article(
+        db, publisher_id=owner.id, kind=ArticleKind.model, published_at=_ago(1)
+    )
+
+    voices = _voices(client, "individual", {writer.slug, owner.slug})
+    assert [(v["slug"], v["count"]) for v in voices] == [(writer.slug, 1)]
+
+
+def test_voices_labs_count_every_kind(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    for kind in (ArticleKind.post, ArticleKind.model, ArticleKind.paper):
+        create_random_article(db, publisher_id=lab.id, kind=kind, published_at=_ago(1))
+    assert _voices(client, "lab", {lab.slug})[0]["count"] == 3
+
+
+def test_voices_are_bounded_by_since(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    create_random_article(db, publisher_id=lab.id, published_at=_ago(1))
+    create_random_article(db, publisher_id=lab.id, published_at=_ago(24 * 10))
+    assert _voices(client, "lab", {lab.slug})[0]["count"] == 1
+
+
+def test_voices_scores_oldest_first_capped(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    # 17 articles, oldest first; scores cycle 1..10 so order is visible.
+    scores = [i % 10 + 1 for i in range(17)]
+    for i, score in enumerate(scores):
+        create_random_article(
+            db, publisher_id=lab.id, score=score, published_at=_ago(20 - i)
+        )
+    voice = _voices(client, "lab", {lab.slug})[0]
+    assert voice["count"] == 17
+    assert voice["scores"] == scores[-15:]
+
+
+def test_voices_best_is_highest_score(client: TestClient, db: Session) -> None:
+    lab = create_random_publisher(db, kind=PublisherKind.lab)
+    create_random_article(db, publisher_id=lab.id, score=4, published_at=_ago(3))
+    best = create_random_article(db, publisher_id=lab.id, score=9, published_at=_ago(2))
+    create_random_article(db, publisher_id=lab.id, score=6, published_at=_ago(1))
+
+    voice = _voices(client, "lab", {lab.slug})[0]
+    assert voice["best"]["title"] == best.title
+    assert voice["best"]["url"] == best.url
+    assert voice["best"]["score"] == 9
+
+
+def test_voices_order_by_count_then_best(client: TestClient, db: Session) -> None:
+    busy = create_random_publisher(db, kind=PublisherKind.company)
+    strong = create_random_publisher(db, kind=PublisherKind.company)
+    weak = create_random_publisher(db, kind=PublisherKind.company)
+    for score in (2, 3, 2):
+        create_random_article(
+            db, publisher_id=busy.id, score=score, published_at=_ago(1)
+        )
+    for score in (9, 1):
+        create_random_article(
+            db, publisher_id=strong.id, score=score, published_at=_ago(1)
+        )
+    for score in (5, 5):
+        create_random_article(
+            db, publisher_id=weak.id, score=score, published_at=_ago(1)
+        )
+
+    voices = _voices(client, "company", {busy.slug, strong.slug, weak.slug})
+    assert [v["slug"] for v in voices] == [busy.slug, strong.slug, weak.slug]
+
+
+def test_voices_unknown_kind_returns_422(client: TestClient) -> None:
+    for kind in ("media", "nope"):
+        r = client.get(VOICES_URL, params={"kind": kind, "since": RECENT_SINCE})
+        assert r.status_code == 422
+
+
+def test_voices_malformed_since_returns_422(client: TestClient) -> None:
+    r = client.get(VOICES_URL, params={"kind": "lab", "since": "not-a-date"})
     assert r.status_code == 422

@@ -1,4 +1,4 @@
-"""Facet counts for the feed's filters and rails: how many articles each publisher, tag and origin has."""
+"""Facet counts for the feed's filters and rails: how many articles each publisher, tag and origin has, and who wrote them."""
 
 from __future__ import annotations
 
@@ -22,6 +22,9 @@ from app.catalog.models import (
     PublisherKind,
     Tag,
     TagFacet,
+    Voice,
+    VoiceArticle,
+    VoiceKind,
 )
 
 
@@ -101,3 +104,67 @@ def origin_counts(session: Session, since: datetime) -> OriginCounts:
         unlabelled=unlabelled,
         found_via=[FoundViaCount(name=n, count=c) for n, c in found_via_rows],
     )
+
+
+# A bar per article; past this many the row would outgrow the rail.
+VOICE_SCORES = 15
+
+
+def voices(
+    session: Session, kind: VoiceKind, since: datetime, limit: int = 8
+) -> list[Voice]:
+    """The publishers of one kind with the most articles since `since`, busiest
+    first and then by their best score: each with its scores oldest first and
+    its best article."""
+    conditions: list[ColumnElement[bool]] = [
+        col(Article.published_at) >= since,
+        col(Publisher.kind) == PublisherKind(kind.value),
+    ]
+    # On GitHub and Hugging Face the account is the publisher (ADR 13), so a
+    # writer's repos and models would fill the tab with repo owners.
+    if kind == VoiceKind.individual:
+        conditions.append(col(Article.kind) == ArticleKind.post)
+
+    count_expr = func.count(col(Article.id))
+    best_expr = func.max(col(Article.score))
+    top = session.exec(
+        select(Publisher.id, Publisher.slug, Publisher.name, count_expr)
+        .join(Article, col(Article.publisher_id) == col(Publisher.id))
+        .where(*conditions)
+        .group_by(col(Publisher.id))
+        .order_by(count_expr.desc(), best_expr.desc(), col(Publisher.name))
+        .limit(limit)
+    ).all()
+    if not top:
+        return []
+
+    articles = session.exec(
+        select(Article)
+        .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
+        .where(*conditions, col(Article.publisher_id).in_([t[0] for t in top]))
+        .order_by(col(Article.published_at), col(Article.id))
+    ).all()
+    by_publisher: dict[int | None, list[Article]] = {}
+    for a in articles:
+        by_publisher.setdefault(a.publisher_id, []).append(a)
+
+    result = []
+    for publisher_id, slug, name, count in top:
+        rows = by_publisher[publisher_id]
+        # Ties go to the newest: rows are oldest first and max keeps the first.
+        best = max(reversed(rows), key=lambda a: a.score)
+        result.append(
+            Voice(
+                slug=slug,
+                name=name,
+                count=count,
+                scores=[a.score for a in rows[-VOICE_SCORES:]],
+                best=VoiceArticle(
+                    title=best.title,
+                    url=best.url,
+                    score=best.score,
+                    published_at=best.published_at,
+                ),
+            )
+        )
+    return result
