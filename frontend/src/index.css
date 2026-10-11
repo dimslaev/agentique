@@ -174,19 +174,3 @@
     --tw-prose-td-borders: var(--color-border);
   }
 }
-
-/* Wide screens: the inline rails sit dimmed; while one is hovered or
-   keyboard-focused it comes up and the feed dims instead. Keyboard focus
-   only, so a click on a rail filter doesn't leave the feed dimmed. */
-[data-rail-dim] {
-  transition: opacity 150ms ease-out;
-}
-body:has([data-rail-inline] > aside:hover, [data-rail-inline] :focus-visible)
-  [data-rail-dim] {
-  opacity: 0.6;
-}
-@media (prefers-reduced-motion: reduce) {
-  [data-rail-dim] {
-    transition: none;
-  }
-}

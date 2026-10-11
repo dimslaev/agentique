@@ -36,9 +36,7 @@ export function RailsLayout({ children }: { children: ReactNode }) {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,768px)_minmax(0,1fr)]">
       <RailSide side="left" />
-      <div className="min-w-0 px-4" data-rail-dim>
-        {children}
-      </div>
+      <div className="min-w-0 px-4">{children}</div>
       <RailSide side="right" />
     </div>
   )
@@ -49,7 +47,6 @@ function RailSide({ side }: { side: Side }) {
   if (panels[side].length === 0) return <div />
   return (
     <div
-      data-rail-inline
       className={cn(
         "flex min-w-0 items-start",
         side === "left" ? "justify-end pr-7" : "justify-start pl-7",
@@ -58,7 +55,7 @@ function RailSide({ side }: { side: Side }) {
       <Rail
         side={side}
         panels={panels[side]}
-        className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10 opacity-60 transition-opacity hover:opacity-100 has-[:focus-visible]:opacity-100 motion-reduce:transition-none"
+        className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
       />
     </div>
   )
