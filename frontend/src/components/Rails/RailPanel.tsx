@@ -5,9 +5,9 @@ import type { RailPanelDef } from "./panels"
 import { useRails } from "./RailsProvider"
 
 /** One collapsible section of a rail. Each folds on its own and is
- *  remembered across visits. */
+ *  remembered across visits. On a phone all are open and none folds. */
 export function RailPanel({ panel }: { panel: RailPanelDef }) {
-  const { isCollapsed, togglePanel } = useRails()
+  const { foldable, isCollapsed, togglePanel } = useRails()
   const bodyId = useId()
   const collapsed = isCollapsed(panel.id)
   const { Component } = panel
@@ -20,28 +20,39 @@ export function RailPanel({ panel }: { panel: RailPanelDef }) {
       className="border-b [&:has(>div:not([hidden]):empty)]:hidden"
       data-panel={panel.id}
     >
-      <button
-        type="button"
-        aria-expanded={!collapsed}
-        aria-controls={bodyId}
-        onClick={() => togglePanel(panel.id)}
-        className="flex min-h-10 w-full items-center gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-      >
-        <span className="font-wire text-[10px] font-semibold uppercase tracking-[0.1em]">
-          {panel.title}
-        </span>
-
-        <ChevronDown
-          aria-hidden
-          className={cn(
-            "size-3 shrink-0 text-dim transition-transform ml-auto",
-            collapsed && "-rotate-90",
-          )}
-        />
-      </button>
+      {foldable ? (
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+          onClick={() => togglePanel(panel.id)}
+          className="flex min-h-10 w-full items-center gap-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
+          <PanelTitle title={panel.title} />
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              "size-3 shrink-0 text-dim transition-transform ml-auto",
+              collapsed && "-rotate-90",
+            )}
+          />
+        </button>
+      ) : (
+        <h2 className="flex min-h-10 items-center">
+          <PanelTitle title={panel.title} />
+        </h2>
+      )}
       <div id={bodyId} hidden={collapsed} className="pb-[18px]">
         {!collapsed && <Component />}
       </div>
     </section>
+  )
+}
+
+function PanelTitle({ title }: { title: string }) {
+  return (
+    <span className="font-wire text-[10px] font-semibold uppercase tracking-[0.1em]">
+      {title}
+    </span>
   )
 }

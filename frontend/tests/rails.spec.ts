@@ -98,10 +98,18 @@ for (const [name, width, height] of [
       await page.getByRole("button", { name: "Toggle the rails" }).click()
       await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
       await expect(whoWrote(page)).toBeVisible()
-      await expect(whoWrote(page).getByRole("button").first()).toHaveAttribute(
-        "aria-expanded",
-        "false",
-      )
+      if (name === "phone") {
+        // On a phone panels are open and don't fold.
+        await expect(whoWrote(page).locator("[aria-expanded]")).toHaveCount(0)
+        await expect(whoWrote(page).locator("> div")).toBeVisible()
+      } else {
+        await expect(
+          whoWrote(page).getByRole("button").first(),
+        ).toHaveAttribute("aria-expanded", "false")
+      }
+
+      // The feed behind the open sheet doesn't scroll.
+      await expect(page.locator("html")).toHaveCSS("overflow", "hidden")
 
       await page.keyboard.press("Escape")
       await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)

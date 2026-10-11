@@ -65,9 +65,23 @@ function RailSide({ side }: { side: Side }) {
  *  phones and a side panel on bigger screens. */
 function RailSheet({ side }: { side: Side }) {
   const { panels, isOpen, close } = useRails()
+  const open = isOpen(side)
+
+  // The sheet is non-modal, so Radix leaves the page scrollable; lock it here
+  // so a swipe on the sheet doesn't scroll the feed behind it.
+  useEffect(() => {
+    if (!open) return
+    const html = document.documentElement
+    const prev = html.style.overflow
+    html.style.overflow = "hidden"
+    return () => {
+      html.style.overflow = prev
+    }
+  }, [open])
+
   return (
     <Sheet
-      open={isOpen(side)}
+      open={open}
       onOpenChange={(open) => {
         if (!open) close(side, false)
       }}

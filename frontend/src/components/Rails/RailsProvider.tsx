@@ -21,18 +21,31 @@ export type RailMode = "wide" | "narrow"
 export type ToggleVia = "key" | "button"
 
 const WIDE_QUERY = "(min-width: 1360px)"
+// Matches useIsMobile's breakpoint.
+const PHONE_QUERY = "(max-width: 767px)"
+
+function matches(query: string) {
+  if (typeof window === "undefined" || !window.matchMedia) return false
+  return window.matchMedia(query).matches
+}
+
+function subscribeTo(query: string) {
+  return (onChange: () => void) => {
+    if (typeof window === "undefined" || !window.matchMedia) return () => {}
+    const mql = window.matchMedia(query)
+    mql.addEventListener("change", onChange)
+    return () => mql.removeEventListener("change", onChange)
+  }
+}
 
 function readMode(): RailMode {
   if (typeof window === "undefined" || !window.matchMedia) return "wide"
-  return window.matchMedia(WIDE_QUERY).matches ? "wide" : "narrow"
+  return matches(WIDE_QUERY) ? "wide" : "narrow"
 }
 
-function subscribeMode(onChange: () => void) {
-  if (typeof window === "undefined" || !window.matchMedia) return () => {}
-  const query = window.matchMedia(WIDE_QUERY)
-  query.addEventListener("change", onChange)
-  return () => query.removeEventListener("change", onChange)
-}
+const subscribeMode = subscribeTo(WIDE_QUERY)
+const subscribePhone = subscribeTo(PHONE_QUERY)
+const readPhone = () => matches(PHONE_QUERY)
 
 // v2: panels start folded unless listed in OPEN_BY_DEFAULT, so v1's
 // "collapsed" list no longer says enough.
@@ -90,6 +103,8 @@ type RailsContextType = {
   /** Close an overlay or sheet. `restoreFocus` sends focus back to whatever
    *  opened it; a click elsewhere on the page keeps focus where it landed. */
   close: (side: Side, restoreFocus: boolean, via?: ToggleVia) => void
+  /** On a phone every panel is open and none folds. */
+  foldable: boolean
   isCollapsed: (panelId: string) => boolean
   togglePanel: (panelId: string) => void
 }
@@ -113,6 +128,7 @@ export function RailsProvider({
     readMode,
     () => "wide",
   )
+  const phone = useSyncExternalStore(subscribePhone, readPhone, () => false)
   // Below wide, both rails are one sheet behind one button: the right rail's
   // panels follow the left's.
   const panels = useMemo(() => {
@@ -196,17 +212,18 @@ export function RailsProvider({
 
   const isCollapsed = useCallback(
     (panelId: string) =>
-      !(stored.open[panelId] ?? OPEN_BY_DEFAULT.has(panelId)),
-    [stored],
+      !phone && !(stored.open[panelId] ?? OPEN_BY_DEFAULT.has(panelId)),
+    [phone, stored],
   )
 
   const togglePanel = useCallback(
     (panelId: string) => {
+      if (phone) return
       const open = isCollapsed(panelId)
       setStored((s) => ({ ...s, open: { ...s.open, [panelId]: open } }))
       trackEvent("rail_panel_toggle", { panel: panelId, open })
     },
-    [isCollapsed],
+    [phone, isCollapsed],
   )
 
   useEffect(() => {
@@ -238,6 +255,7 @@ export function RailsProvider({
       hasPanels,
       toggle,
       close,
+      foldable: !phone,
       isCollapsed,
       togglePanel,
     }),
@@ -249,6 +267,7 @@ export function RailsProvider({
       hasPanels,
       toggle,
       close,
+      phone,
       isCollapsed,
       togglePanel,
     ],
