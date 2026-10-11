@@ -48,14 +48,22 @@ export function UserMenu() {
         >
           <Avatar className="size-8">
             <AvatarFallback className="bg-muted font-wire text-xs text-foreground">
-              {getInitials(user.full_name || "User")}
+              {user.full_name ? (
+                getInitials(user.full_name)
+              ) : (
+                <UserIcon className="size-[18px]" />
+              )}
             </AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="min-w-56" align="end" sideOffset={6}>
         <DropdownMenuLabel className="flex flex-col font-normal">
-          <span className="truncate text-sm font-medium">{user.full_name}</span>
+          {user.full_name && (
+            <span className="truncate text-sm font-medium">
+              {user.full_name}
+            </span>
+          )}
           <span className="truncate text-xs text-muted-foreground">
             {user.email}
           </span>
