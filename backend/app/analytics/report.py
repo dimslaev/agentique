@@ -93,6 +93,15 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
             .group_by(audience)
         ).all()
     )
+    readers = ~col(User.is_superuser)
+    users, signups = session.exec(
+        select(
+            func.count(),
+            func.count().filter(col(User.created_at) >= since)
+            if since is not None
+            else func.count(),
+        ).where(readers)
+    ).one()
     totals = ReportTotals(
         visitors=visitors,
         pageviews=pageviews,
@@ -100,6 +109,8 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
             select(func.count()).select_from(returning_visitors)
         ).one(),
         article_clicks=article_clicks,
+        users=users,
+        signups=signups,
         admin_pageviews=excluded.get("admin", 0),
         bot_pageviews=excluded.get("bot", 0),
     )

@@ -126,6 +126,8 @@ export type ReportTotals = {
     pageviews: number;
     returning_visitors: number;
     article_clicks: number;
+    users: number;
+    signups: number;
     admin_pageviews: number;
     bot_pageviews: number;
 };

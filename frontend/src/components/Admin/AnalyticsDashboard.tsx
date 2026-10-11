@@ -82,7 +82,7 @@ function Report() {
             isPlaceholderData && "opacity-60",
           )}
         >
-          <dl className="grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-4">
+          <dl className="grid grid-cols-2 gap-px border border-border bg-border sm:grid-cols-5">
             <StatTile label="Visitors" value={data.totals.visitors} />
             <StatTile label="Pageviews" value={data.totals.pageviews} />
             <StatTile
@@ -93,6 +93,12 @@ function Report() {
             <StatTile
               label="Article clicks"
               value={data.totals.article_clicks}
+            />
+            <StatTile
+              label="Signups"
+              value={data.totals.signups}
+              note={`${formatCount(data.totals.users)} registered`}
+              className="col-span-2 sm:col-span-1"
             />
           </dl>
 
@@ -149,13 +155,15 @@ function StatTile({
   label,
   value,
   note,
+  className,
 }: {
   label: string
   value: number
   note?: string
+  className?: string
 }) {
   return (
-    <div className="flex flex-col gap-1 bg-background p-4">
+    <div className={cn("flex flex-col gap-1 bg-background p-4", className)}>
       <dt className="font-wire text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
         {label}
       </dt>

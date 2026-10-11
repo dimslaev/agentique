@@ -50,6 +50,9 @@ class ReportTotals(SQLModel):
     # seen on more than one day inside the window
     returning_visitors: int
     article_clicks: int
+    # registered readers, superusers left out: all time, and new inside the window
+    users: int
+    signups: int
     # left out of every other number in the report
     admin_pageviews: int
     bot_pageviews: int

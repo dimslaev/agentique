@@ -11,6 +11,7 @@ from sqlmodel import Session, delete, select
 
 from app.analytics.models import AnalyticsEvent
 from app.audience.models import User
+from app.audience.tests.factories import create_random_user
 from app.catalog.tests.factories import create_random_article
 from app.platform.dates import get_datetime_utc
 from app.platform.settings import settings
@@ -64,6 +65,8 @@ def test_report_counts_outside_readers_only(
     r = client.get(REPORT, headers=superuser_token_headers)
     assert r.status_code == 200
     report = r.json()
+    # other tests leave users behind; they're covered on their own below
+    del report["totals"]["users"], report["totals"]["signups"]
     assert report["totals"] == {
         "visitors": 2,
         "pageviews": 3,
@@ -135,3 +138,26 @@ def test_report_ranks_clicked_articles(
     ]
     events = {row["label"]: row["count"] for row in report["events"]}
     assert events == {"article_click": 3, "filter_click": 1}
+
+
+def test_report_counts_registered_readers(
+    client: TestClient, db: Session, superuser_token_headers: dict[str, str]
+) -> None:
+    def totals(days: int | None) -> dict[str, int]:
+        params = {"days": days} if days else {}
+        return client.get(REPORT, headers=superuser_token_headers, params=params).json()[
+            "totals"
+        ]
+
+    before, before_all = totals(7), totals(None)
+    create_random_user(db)
+    old = create_random_user(db)
+    old.created_at = get_datetime_utc() - timedelta(days=30)
+    db.add(old)
+    db.commit()
+
+    after, after_all = totals(7), totals(None)
+    assert after["signups"] - before["signups"] == 1
+    assert after["users"] - before["users"] == 2
+    assert after_all["signups"] - before_all["signups"] == 2
+    assert after_all["users"] == after_all["signups"]

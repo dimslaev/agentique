@@ -525,6 +525,14 @@ export const ReportTotalsSchema = {
             type: 'integer',
             title: 'Article Clicks'
         },
+        users: {
+            type: 'integer',
+            title: 'Users'
+        },
+        signups: {
+            type: 'integer',
+            title: 'Signups'
+        },
         admin_pageviews: {
             type: 'integer',
             title: 'Admin Pageviews'
@@ -535,7 +543,7 @@ export const ReportTotalsSchema = {
         }
     },
     type: 'object',
-    required: ['visitors', 'pageviews', 'returning_visitors', 'article_clicks', 'admin_pageviews', 'bot_pageviews'],
+    required: ['visitors', 'pageviews', 'returning_visitors', 'article_clicks', 'users', 'signups', 'admin_pageviews', 'bot_pageviews'],
     title: 'ReportTotals'
 } as const;
 
