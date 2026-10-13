@@ -10,7 +10,13 @@ import {
   useSyncExternalStore,
 } from "react"
 import { trackEvent } from "@/lib/analytics"
-import { LEFT, type RailPanels, RIGHT, type Side } from "./panels"
+import {
+  LEFT,
+  type RailPanelDef,
+  type RailPanels,
+  RIGHT,
+  type Side,
+} from "./panels"
 import { STORIES_PANEL_ID, useHasStories } from "./panels/Stories"
 
 /**
@@ -132,12 +138,15 @@ export function RailsProvider({
   // Below wide, both rails are one sheet behind one button: the right rail's
   // panels follow the left's.
   const panels = useMemo(() => {
-    const right = hasStories
-      ? registered.right
-      : registered.right.filter((p) => p.id !== STORIES_PANEL_ID)
+    // Stories can be registered on either side; with nothing to show it is
+    // left out so its side can go empty and lose its rail and button.
+    const keep = (side: RailPanelDef[]) =>
+      hasStories ? side : side.filter((p) => p.id !== STORIES_PANEL_ID)
+    const left = keep(registered.left)
+    const right = keep(registered.right)
     return mode === "narrow"
-      ? { left: [...registered.left, ...right], right: [] }
-      : { left: registered.left, right }
+      ? { left: [...left, ...right], right: [] }
+      : { left, right }
   }, [registered, hasStories, mode])
   const [stored, setStored] = useState<Stored>(load)
   // Below the wide breakpoint a rail is a temporary layer over the feed, so

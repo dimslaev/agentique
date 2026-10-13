@@ -91,17 +91,8 @@ function StoryRow({
         className="flex w-full items-start gap-3 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
-            <span className="font-display text-[15px] font-bold leading-tight [overflow-wrap:anywhere]">
-              {story.name}
-            </span>
-            {story.grew_today && (
-              <span
-                role="img"
-                aria-label="Grew today"
-                className="size-1.5 shrink-0 bg-signal"
-              />
-            )}
+          <span className="font-display text-[15px] font-bold leading-tight [overflow-wrap:anywhere]">
+            {story.name}
           </span>
         </span>
         <ScoreBars scores={bars} className="mt-0.5" />
