@@ -56,6 +56,13 @@ function SiteHeader() {
       wide={wide}
       nav={
         <>
+          {/* /blog/ is prerendered outside the router, so a plain anchor. */}
+          <a
+            href="/blog/"
+            className="inline-flex h-11 items-center font-wire text-[11px] uppercase tracking-[0.08em] text-dim transition-colors hover:text-foreground"
+          >
+            Blog
+          </a>
           <RailToggles />
           <UserMenu />
         </>

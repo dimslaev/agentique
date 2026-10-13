@@ -499,21 +499,20 @@ ${g.posts
       <section aria-labelledby="archive" class="mt-[72px]">
         <div class="${SECTION_HEAD}">
           <h2 id="archive" class="text-paper">Archive</h2>
-          <span>${posts.length} issues</span>
+          <span>${posts.length} posts</span>
         </div>
 ${groups}
       </section>`
     : ""
 
   const main = `    <main class="mx-auto box-border w-full max-w-[768px] flex-1 px-4 pt-16 pb-[88px]">
-      <p class="flex items-center gap-2.5 ${META} tracking-[0.12em]"><span aria-hidden="true" class="inline-block h-2 w-2 bg-signal"></span>The weekly issue</p>
-      <h1 class="mt-[18px] max-w-[15ch] font-display text-[clamp(38px,6vw,60px)] font-extrabold leading-[1.02] tracking-[-0.03em] text-paper">One AI topic a week, explained plainly.</h1>
-      <p class="mt-[22px] max-w-[54ch] text-[17px] leading-[1.6] text-[#a9ab95]">Each issue takes the most talked-about topic in the ${SITE_NAME} feed and explains what it is, how it works, and what the people who tried it found.</p>${latestBlock}${archive}
+      <h1 class="max-w-[15ch] font-display text-[clamp(38px,6vw,60px)] font-extrabold leading-[1.02] tracking-[-0.03em] text-paper">AI news for builders.</h1>
+      <p class="mt-[22px] max-w-[54ch] text-[17px] leading-[1.6] text-[#a9ab95]">Connecting the pieces together.</p>${latestBlock}${archive}
     </main>`
 
   return shell({
-    title: "Blog",
-    description: `One AI topic a week, explained plainly, from the ${SITE_NAME} feed.`,
+    title: "AI news for builders, connecting the pieces",
+    description: "AI news for builders. Connecting the pieces together.",
     canonicalPath: "/blog/",
     cssHrefs,
     ogType: "website",
