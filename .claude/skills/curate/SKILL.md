@@ -197,6 +197,22 @@ Absolute, never relative to tonight's batch. One real example each.
   like any other write-up — an incident report counts, and the Baseten token
   leak belongs in. One that only reports that an incident happened is news: 55
   at most.
+- A **paywalled post** — the stored text sets up a result and stops short of
+  it, usually under 1000 characters from a publisher whose posts normally run
+  long — is judged on the readable part alone. The wall leaves no notice in
+  the extracted text, so recognising it is yours to do: an article that states
+  a method and never reports its numbers is behind one. The hidden part is not
+  evidence against the author and not evidence for them: **a reader who clicks
+  through hits the same wall**, so what they cannot read is worth nothing to
+  the feed however rigorous it is. If the readable part stands on its own —
+  the method stated, the finding given, the steps shown — score it like any
+  other post. If the claim rests on what is behind the wall, **cap it at 55**
+  and say so: `"Paywalled: the method is stated but the benchmark table is not
+  readable."` Do not `web_fetch` it — the wall is the same for us, and the
+  fetch returns the same teaser. A publisher who paywalls some posts and not
+  others is judged per post; this is never a mark against the publisher, whose
+  free posts the feed wants. The Kaitchup drew 11 rejects and 15 approvals in
+  the ledger's first month on exactly this split.
 - An **availability or pricing notice** — an existing model or tool now on
   another platform, a price cut, a new region or quota — caps at 55. The release
   it points at was the news; this is a changelog line. A thing launching is a
