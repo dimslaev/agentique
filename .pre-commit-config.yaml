@@ -33,6 +33,7 @@ repos:
         name: biome check
         entry: npm run lint
         language: system
+        pass_filenames: false
         types: [text]
         files: ^frontend/
 
