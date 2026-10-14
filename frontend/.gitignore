@@ -28,3 +28,8 @@ openapi.json
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# tsc output: tsconfig.node.json is composite, so building emits these
+vite.config.js
+vite.config.d.ts
+*.tsbuildinfo
