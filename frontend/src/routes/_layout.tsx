@@ -1,4 +1,10 @@
-import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router"
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useMatches,
+  useRouterState,
+} from "@tanstack/react-router"
 import { Footer } from "@/components/Common/Footer"
 import { Header } from "@/components/Common/Header"
 import { PageColumn } from "@/components/Common/PageColumn"
@@ -6,6 +12,7 @@ import { UserMenu } from "@/components/Common/UserMenu"
 import { RailsProvider, useRails } from "@/components/Rails/RailsProvider"
 import { RailToggles } from "@/components/Rails/RailToggles"
 import { FiltersProvider } from "@/context/filters"
+import { cn } from "@/lib/utils"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -14,6 +21,13 @@ declare module "@tanstack/react-router" {
     wide?: boolean
   }
 }
+
+// The site nav, the same pair the blog's static header shows (see
+// frontend/scripts/prerender-blog.ts), so moving between the two feels like
+// one site.
+const NAV_LINK =
+  "inline-flex h-11 items-center font-wire text-[11px] uppercase tracking-[0.08em] transition-colors hover:text-foreground"
+const NAV_CURRENT = "text-paper shadow-[inset_0_-2px_0_var(--signal)]"
 
 // Public shell: every page under it is readable logged out. Pages that need a
 // user (profile, admin) guard themselves.
@@ -49,6 +63,9 @@ function Layout() {
 /** On wide screens with inline rails, the header spans them too. */
 function SiteHeader() {
   const { mode, present, hasPanels } = useRails()
+  const onFeed = useRouterState({
+    select: (s) => s.location.pathname === "/",
+  })
   const wide =
     present && mode === "wide" && (hasPanels("left") || hasPanels("right"))
   return (
@@ -56,13 +73,20 @@ function SiteHeader() {
       wide={wide}
       nav={
         <>
-          {/* /blog/ is prerendered outside the router, so a plain anchor. */}
-          <a
-            href="/blog/"
-            className="inline-flex h-11 items-center font-wire text-[11px] uppercase tracking-[0.08em] text-dim transition-colors hover:text-foreground"
-          >
-            Blog
-          </a>
+          <nav aria-label="Site" className="flex items-center gap-5">
+            <Link
+              to="/"
+              className={cn(NAV_LINK, onFeed ? NAV_CURRENT : "text-dim")}
+              aria-current={onFeed ? "page" : undefined}
+            >
+              Feed
+            </Link>
+            {/* /blog/ is prerendered outside the router: a plain anchor, and
+             *  never the current page while the router is mounted. */}
+            <a href="/blog/" className={cn(NAV_LINK, "text-dim")}>
+              Blog
+            </a>
+          </nav>
           <RailToggles />
           <UserMenu />
         </>
