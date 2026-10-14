@@ -10,7 +10,6 @@ from __future__ import annotations
 import pytest
 
 from pipeline.fetching import tweets
-from pipeline.steps import fetch as fetch_step
 
 _TWEET_URL = "https://x.com/cantinasecurity/status/2078158487759290614"
 
@@ -75,21 +74,3 @@ def test_items_that_are_not_tweets_are_never_looked_up(monkeypatch):
     asked = _stub(monkeypatch, None)
     tweets.unwrap_tweets([_item("https://example.com/post")])
     assert asked == []
-
-
-@pytest.mark.parametrize(
-    "url",
-    [
-        "https://luma.com/horizonagentshack",
-        "https://lu.ma/abc",
-        "https://partiful.com/e/xyz",
-        "https://www.eventbrite.com/e/123",
-    ],
-)
-def test_event_pages_are_dropped(url):
-    assert fetch_step._without_events([_item(url)], "Feeds") == []
-
-
-def test_articles_are_not_event_pages():
-    item = _item("https://cantina.review/post")
-    assert fetch_step._without_events([item], "Feeds") == [item]

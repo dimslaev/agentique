@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -37,6 +38,13 @@ MIN_SUMMARIZABLE_CHARS = 300
 # Event sign-up pages. Aligned News lists meetups and hackathons beside its
 # news, and the agent rejected every one it saw (scores 10-25, Sept 2026).
 EVENT_HOSTS = {"luma.com", "lu.ma", "partiful.com", "eventbrite.com"}
+
+# A glossary a feed emits one entry at a time. Every entry is a definition with
+# nothing to run or measure, and the feed emits a fresh one whenever a term is
+# added, so the agent pays to read and reject the same shape forever. AI Hero's
+# AI coding dictionary cost 71 identical rejects in a month - 15% of every
+# reject the feed's individual writers drew - before this gate existed.
+NOISE_URL_PATTERNS = (re.compile(r"/[a-z0-9-]*(glossary|dictionary)(/|$)"),)
 
 
 @dataclass(frozen=True)
@@ -109,20 +117,31 @@ def fetch_source(source: Source) -> tuple[list[RawItem], dict[str, str]]:
     if not articles:
         log(f"No articles from {source.label}")
         return articles, errors
-    articles = _without_events(unwrap_tweets(articles), source.label)
+    articles = _without_noise(unwrap_tweets(articles), source.label)
     return _with_content(articles, source.label), errors
 
 
-def _without_events(articles: list[RawItem], label: str) -> list[RawItem]:
-    kept = [a for a in articles if not _is_event_page(a["url"])]
+def _without_noise(articles: list[RawItem], label: str) -> list[RawItem]:
+    """Drop the two shapes the agent has never once approved: event sign-up
+    pages and reference-section pages. Both are judged on the URL alone, before
+    anything is spent fetching their text."""
+    kept = [
+        a
+        for a in articles
+        if not _is_event_page(a["url"]) and not _is_reference_page(a["url"])
+    ]
     if dropped := len(articles) - len(kept):
-        log(f"  {label}: dropped {dropped} event page(s)")
+        log(f"  {label}: dropped {dropped} event/reference page(s)")
     return kept
 
 
 def _is_event_page(url: str) -> bool:
     host = hostname(url)
     return any(host == d or host.endswith(f".{d}") for d in EVENT_HOSTS)
+
+
+def _is_reference_page(url: str) -> bool:
+    return any(p.search(url) for p in NOISE_URL_PATTERNS)
 
 
 def _with_content(articles: list[RawItem], label: str) -> list[RawItem]:

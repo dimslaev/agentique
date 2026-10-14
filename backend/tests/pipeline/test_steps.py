@@ -7,6 +7,8 @@ the I/O steps and pinned here.
 
 from __future__ import annotations
 
+import pytest
+
 from pipeline.steps import fetch as fetch_step
 from pipeline.steps.persist import best_per_url
 
@@ -93,6 +95,46 @@ def test_credits_the_author_over_the_aggregator_that_found_it():
 
     assert c["publisher_id"] == 7
     assert c["source"] == "Hacker News"
+
+
+# ─── _without_noise ──────────────────────────────────────────────────────────
+# A URL-only gate: what it drops is never fetched, so a wrong pattern silently
+# costs the feed articles nobody ever sees queued.
+
+
+def _urls(urls: list[str]) -> list[str]:
+    kept = fetch_step._without_noise([_raw(u, "Feeds") for u in urls], "Feeds")
+    return [a["url"] for a in kept]
+
+
+def test_a_glossary_entry_is_dropped_before_it_is_fetched():
+    """AI Hero's dictionary emits one entry per term; the agent rejected 71 of
+    them with the same sentence before this gate existed."""
+    assert _urls(["https://www.aihero.dev/ai-coding-dictionary/sycophancy"]) == []
+    assert _urls(["https://www.aihero.dev/ai-coding-dictionary"]) == []
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://luma.com/horizonagentshack",
+        "https://lu.ma/abc",
+        "https://partiful.com/e/xyz",
+        "https://www.eventbrite.com/e/123",
+    ],
+)
+def test_an_event_page_is_dropped(url):
+    assert _urls([url]) == []
+
+
+def test_an_article_that_only_mentions_a_glossary_survives():
+    kept = "https://example.com/blog/a-glossary-of-agent-terms-explained"
+    assert _urls([kept]) == [kept]
+
+
+def test_ordinary_articles_are_untouched():
+    urls = ["https://example.com/a", "https://example.com/b"]
+    assert _urls(urls) == urls
 
 
 # ─── build_sources ───────────────────────────────────────────────────────────
