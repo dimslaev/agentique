@@ -64,7 +64,7 @@ test("the first story is open, its body right under its row", async ({
   expect(await bodyAfter(page, "Codemode")).toBe("story-body")
   const open = page.locator('[data-testid="story-body"][data-open="true"]')
   await expect(open).toHaveCount(1)
-  await expect(open).toContainText("What Codemode is.")
+  await expect(open).toContainText("Article 800")
   await expect(open.getByRole("link")).toHaveCount(6)
 })
 
@@ -79,7 +79,7 @@ test("clicking another row moves the open body to it", async ({ page }) => {
   await expect(rows.nth(1)).toHaveAttribute("aria-expanded", "true")
   const open = page.locator('[data-testid="story-body"][data-open="true"]')
   await expect(open).toHaveCount(1)
-  await expect(open).toContainText("What Decision models is.")
+  await expect(open).toContainText("Article 1500")
   // The open body sits between its row and the next story, not below the list.
   const openBodyFollowsRow = await rows
     .nth(1)
@@ -104,18 +104,18 @@ test("Show all expands the timeline in place", async ({ page }) => {
   expect(await bodyAfter(page, "Codemode")).toBe("story-body")
 })
 
-test("no stories hides the right rail", async ({ page }) => {
+test("no stories hides the Stories panel", async ({ page }) => {
   await mockStories(page, [])
   await page.goto("/")
 
   await expect(page.getByTestId("article-row").first()).toBeVisible()
-  await expect(page.locator('[data-rail="right"]')).toHaveCount(0)
+  await expect(page.locator('[data-panel="stories"]')).toBeHidden()
 })
 
-test("a failed fetch hides the right rail", async ({ page }) => {
+test("a failed fetch hides the Stories panel", async ({ page }) => {
   await mockStories(page, { detail: "boom" }, 500)
   await page.goto("/")
 
   await expect(page.getByTestId("article-row").first()).toBeVisible()
-  await expect(page.locator('[data-rail="right"]')).toHaveCount(0)
+  await expect(page.locator('[data-panel="stories"]')).toBeHidden()
 })

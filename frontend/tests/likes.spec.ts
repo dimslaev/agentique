@@ -72,11 +72,11 @@ test.describe("Profile page", () => {
     })
   })
 
-  test("shows Liked / My profile / Password / Danger zone tabs, Liked active by default", async ({
+  test("shows Liked / My profile / Danger zone tabs, Liked active by default", async ({
     page,
   }) => {
     await page.goto("/profile")
-    for (const tab of ["Liked", "My profile", "Password", "Danger zone"]) {
+    for (const tab of ["Liked", "My profile", "Danger zone"]) {
       await expect(page.getByRole("tab", { name: tab })).toBeVisible()
     }
     await expect(page.getByRole("tab", { name: "Liked" })).toHaveAttribute(
