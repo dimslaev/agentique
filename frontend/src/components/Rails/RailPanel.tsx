@@ -12,9 +12,6 @@ export function RailPanel({ panel }: { panel: RailPanelDef }) {
   const collapsed = isCollapsed(panel.id)
   const { Component } = panel
 
-  // A panel with nothing to show renders null, and an open panel with an
-  // empty body hides whole, header included. A folded one stays, since its
-  // body is empty only because it is folded.
   return (
     <section
       className="border-b [&:has(>div:not([hidden]):empty)]:hidden"

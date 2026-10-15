@@ -15,7 +15,6 @@ export type RailPanelDef = {
 
 export type RailPanels = Record<Side, RailPanelDef[]>
 
-// Planned: left = "Who wrote this week", "Topic map"; right = "Stories".
 // A side with no panels renders nothing at all: no rail, strip or button.
 export const LEFT: RailPanelDef[] = [
   {

@@ -10,7 +10,6 @@ export async function openAllPanels(page: Page) {
         open: {
           "who-wrote": true,
           voices: true,
-          "topic-map": true,
           "reader-picks": true,
         },
       }),
