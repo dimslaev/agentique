@@ -20,7 +20,6 @@ from app.audience.models import (
     User,
     UserCreate,
     UserPublic,
-    UserRegister,
     UserUpdateMe,
 )
 from app.catalog.articles import list_liked_articles
@@ -73,16 +72,21 @@ def request_sign_in_link(
     session: SessionDep, body: SignInRequest, background_tasks: BackgroundTasks
 ) -> Message:
     """
-    Email the sign-in link to an existing account
+    Email a sign-in link. An unknown email first gets an account and a
+    newsletter subscription, and the link comes in a welcome email.
     """
     user = service.get_user_by_email(session=session, email=body.email)
-    # Same answer whether or not the account exists, so the endpoint can't be
-    # used to find out who has one.
-    if user and user.is_active:
-        token = service.issue_login_token(session=session, db_user=user)
-        background_tasks.add_task(
-            _send_link_email, user.email, generate_sign_in_email(token), token
+    is_new = user is None
+    if user is None:
+        user = service.create_user(
+            session=session, user_create=UserCreate(email=body.email)
         )
+        subscribe(session=session, email=user.email, utm_source=body.utm_source)
+    elif not user.is_active:
+        return Message(message=LINK_SENT)
+    token = service.issue_login_token(session=session, db_user=user)
+    email = generate_welcome_email(token) if is_new else generate_sign_in_email(token)
+    background_tasks.add_task(_send_link_email, user.email, email, token)
     return Message(message=LINK_SENT)
 
 
@@ -164,33 +168,6 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
         )
     service.delete_account(session=session, db_user=current_user)
     return Message(message="User deleted successfully")
-
-
-@users_router.post("/signup")
-def register_user(
-    session: SessionDep, user_in: UserRegister, background_tasks: BackgroundTasks
-) -> Message:
-    """
-    Create an account from an email alone, add it to the newsletter, and email
-    a sign-in link. An existing account just gets a new link.
-    """
-    user = service.get_user_by_email(session=session, email=user_in.email)
-    if user:
-        if user.is_active:
-            token = service.issue_login_token(session=session, db_user=user)
-            background_tasks.add_task(
-                _send_link_email, user.email, generate_sign_in_email(token), token
-            )
-        return Message(message=LINK_SENT)
-    user = service.create_user(
-        session=session, user_create=UserCreate(email=user_in.email)
-    )
-    subscribe(session=session, email=user.email, utm_source=user_in.utm_source)
-    token = service.issue_login_token(session=session, db_user=user)
-    background_tasks.add_task(
-        _send_link_email, user.email, generate_welcome_email(token), token
-    )
-    return Message(message=LINK_SENT)
 
 
 # ─── Likes ──────────────────────────────────────────────────────────────────

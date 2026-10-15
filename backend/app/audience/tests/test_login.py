@@ -1,4 +1,4 @@
-"""Tests for signing in by email link."""
+"""Tests for signing in, and signing up, by email link."""
 
 from __future__ import annotations
 
@@ -6,13 +6,15 @@ from datetime import timedelta
 
 import resend
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.audience import service
+from app.audience.models import User
 from app.audience.tests.factories import (
     create_random_user,
     user_authentication_headers,
 )
+from app.newsletter.models import NewsletterSubscriber
 from app.platform.dates import get_datetime_utc
 from app.platform.settings import settings
 from tests.random_data import random_email
@@ -59,17 +61,6 @@ def test_new_link_replaces_the_old_one(client: TestClient, db: Session) -> None:
     url = f"{settings.API_V1_STR}/login/token"
     assert client.post(url, json={"token": old}).status_code == 400
     assert client.post(url, json={"token": user.login_token}).status_code == 200
-
-
-def test_link_request_unknown_email_sends_nothing(
-    client: TestClient, monkeypatch
-) -> None:
-    sent = enable_resend_email(monkeypatch)
-
-    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": random_email()})
-    assert r.status_code == 200
-    assert r.json() == LINK_SENT
-    assert sent == []
 
 
 def test_link_request_succeeds_when_send_fails(
@@ -155,3 +146,69 @@ def test_use_access_token(
     )
     assert r.status_code == 200
     assert "email" in r.json()
+
+
+def test_link_request_unknown_email_creates_account(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    sent = enable_resend_email(monkeypatch)
+    email = random_email()
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": email})
+    assert r.status_code == 200
+    assert r.json() == LINK_SENT
+
+    user = db.exec(select(User).where(User.email == email)).first()
+    assert user
+    assert user.full_name is None
+    assert db.get(NewsletterSubscriber, email) is not None
+    assert [m["to"] for m in sent] == [email]
+    assert sent[0]["subject"] == "Welcome to Agentique"
+    assert f"{settings.FRONTEND_HOST}/auth?token={user.login_token}" in sent[0]["html"]
+    assert "expire" not in sent[0]["html"]
+
+    db.delete(db.get(NewsletterSubscriber, email))
+    db.commit()
+
+
+def test_new_account_syncs_resend_contact(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    monkeypatch.setenv("RESEND_API_KEY", "test-key")
+    monkeypatch.setenv("RESEND_AUDIENCE_ID", "test-audience")
+    calls: list[dict] = []
+    monkeypatch.setattr(
+        resend.Contacts, "create", lambda payload: calls.append(payload)
+    )
+    email = random_email()
+
+    r = client.post(
+        f"{settings.API_V1_STR}/login/link",
+        json={"email": email, "utm_source": "hn"},
+    )
+    assert r.status_code == 200
+    assert calls == [{"email": email, "audience_id": "test-audience"}]
+    subscriber = db.get(NewsletterSubscriber, email)
+    assert subscriber is not None
+    assert subscriber.utm_source == "hn"
+
+    db.delete(subscriber)
+    db.commit()
+
+
+def test_link_request_never_duplicates_an_account(
+    client: TestClient, db: Session, monkeypatch
+) -> None:
+    sent = enable_resend_email(monkeypatch)
+    user = create_random_user(db)
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": user.email})
+    assert r.status_code == 200
+    assert r.json() == LINK_SENT
+    assert [m["subject"] for m in sent] == ["Sign in to Agentique"]
+    assert len(db.exec(select(User).where(User.email == user.email)).all()) == 1
+
+
+def test_link_request_invalid_email(client: TestClient) -> None:
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": "nope"})
+    assert r.status_code == 422

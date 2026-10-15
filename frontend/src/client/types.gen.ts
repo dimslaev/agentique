@@ -134,6 +134,7 @@ export type ReportTotals = {
 
 export type SignInRequest = {
     email: string;
+    utm_source?: (string | null);
 };
 
 export type StoryArticlePublic = {
@@ -180,11 +181,6 @@ export type UserPublic = {
     full_name?: (string | null);
     id: string;
     created_at?: (string | null);
-};
-
-export type UserRegister = {
-    email: string;
-    utm_source?: (string | null);
 };
 
 export type UserUpdateMe = {
@@ -342,11 +338,5 @@ export type UsersUpdateUserMeData = {
 };
 
 export type UsersUpdateUserMeResponse = (UserPublic);
-
-export type UsersRegisterUserData = {
-    requestBody: UserRegister;
-};
-
-export type UsersRegisterUserResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);

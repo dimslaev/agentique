@@ -554,6 +554,18 @@ export const SignInRequestSchema = {
             maxLength: 255,
             format: 'email',
             title: 'Email'
+        },
+        utm_source: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Utm Source'
         }
     },
     type: 'object',
@@ -768,32 +780,6 @@ export const UserPublicSchema = {
     type: 'object',
     required: ['email', 'id'],
     title: 'UserPublic'
-} as const;
-
-export const UserRegisterSchema = {
-    properties: {
-        email: {
-            type: 'string',
-            maxLength: 255,
-            format: 'email',
-            title: 'Email'
-        },
-        utm_source: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Utm Source'
-        }
-    },
-    type: 'object',
-    required: ['email'],
-    title: 'UserRegister'
 } as const;
 
 export const UserUpdateMeSchema = {

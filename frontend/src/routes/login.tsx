@@ -5,6 +5,7 @@ import { LoginService } from "@/client"
 import { EmailLinkForm } from "@/components/Auth/EmailLinkForm"
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import { isLoggedIn, rememberRedirect } from "@/hooks/useAuth"
+import { utmSource } from "@/lib/utm"
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -39,7 +40,9 @@ function Login() {
         submitLabel="Email me a sign-in link"
         send={(email) => {
           rememberRedirect(redirectTo)
-          return LoginService.requestSignInLink({ requestBody: { email } })
+          return LoginService.requestSignInLink({
+            requestBody: { email, utm_source: utmSource() },
+          })
         }}
       />
     </AuthLayout>

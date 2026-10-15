@@ -27,11 +27,6 @@ class UserCreate(UserBase):
     pass
 
 
-class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
-    utm_source: str | None = Field(default=None, max_length=255)
-
-
 class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
     email: EmailStr | None = Field(default=None, max_length=255)
@@ -86,6 +81,7 @@ class TokenPayload(SQLModel):
 
 class SignInRequest(SQLModel):
     email: EmailStr = Field(max_length=255)
+    utm_source: str | None = Field(default=None, max_length=255)
 
 
 class MagicLogin(SQLModel):

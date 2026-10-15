@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { handleError } from "@/apiError"
-import { UsersService } from "@/client"
+import { LoginService } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 import { trackEvent } from "@/lib/analytics"
 import { utmSource } from "@/lib/utm"
@@ -19,7 +19,7 @@ export function SignupPanel() {
 
   const mutation = useMutation({
     mutationFn: () =>
-      UsersService.registerUser({
+      LoginService.requestSignInLink({
         requestBody: { email, utm_source: utmSource() },
       }),
     onError: handleError.bind(showErrorToast),
