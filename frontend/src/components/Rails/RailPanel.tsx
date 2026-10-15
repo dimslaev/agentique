@@ -1,5 +1,5 @@
 import { ChevronDown } from "lucide-react"
-import { useId } from "react"
+import { useId, useLayoutEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import type { RailPanelDef } from "./panels"
 import { useRails } from "./RailsProvider"
@@ -11,12 +11,28 @@ export function RailPanel({ panel }: { panel: RailPanelDef }) {
   const bodyId = useId()
   const collapsed = isCollapsed(panel.id)
   const { Component } = panel
+  const body = useRef<HTMLDivElement>(null)
+  const [empty, setEmpty] = useState(false)
+
+  // A panel with nothing to show renders null, and an open panel with an
+  // empty body hides whole, header included. A folded one stays, since its
+  // body is empty only because it is folded. Watched in JS rather than with
+  // CSS :has(:empty), which Safari doesn't re-check when content arrives.
+  useLayoutEffect(() => {
+    const el = body.current
+    if (!el || collapsed) {
+      setEmpty(false)
+      return
+    }
+    const check = () => setEmpty(el.childElementCount === 0)
+    check()
+    const observer = new MutationObserver(check)
+    observer.observe(el, { childList: true })
+    return () => observer.disconnect()
+  }, [collapsed])
 
   return (
-    <section
-      className="border-b [&:has(>div:not([hidden]):empty)]:hidden"
-      data-panel={panel.id}
-    >
+    <section className="border-b" data-panel={panel.id} hidden={empty}>
       {foldable ? (
         <button
           type="button"
@@ -39,7 +55,7 @@ export function RailPanel({ panel }: { panel: RailPanelDef }) {
           <PanelTitle title={panel.title} />
         </h2>
       )}
-      <div id={bodyId} hidden={collapsed} className="pb-[18px]">
+      <div ref={body} id={bodyId} hidden={collapsed} className="pb-[18px]">
         {!collapsed && <Component />}
       </div>
     </section>
