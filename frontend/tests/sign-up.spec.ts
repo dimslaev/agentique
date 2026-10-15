@@ -20,13 +20,12 @@ test("There is no sign up page", async ({ page }) => {
 
 test("Sign up from the feed, then sign in from the welcome email", async ({
   page,
-  request,
 }) => {
   const email = randomEmail()
 
   await signUpFromFeed(page, email)
 
-  await page.goto(await signInLinkFor(request, email))
+  await page.goto(signInLinkFor(email))
   await page.waitForURL("/")
   await expect(page.getByTestId("user-menu")).toBeVisible()
 })

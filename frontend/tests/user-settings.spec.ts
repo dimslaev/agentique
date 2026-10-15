@@ -30,8 +30,8 @@ test.describe("Edit user profile", () => {
     await createUser({ email })
   })
 
-  test.beforeEach(async ({ page, request }) => {
-    await logInUser(page, request, email)
+  test.beforeEach(async ({ page }) => {
+    await logInUser(page, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
   })
@@ -63,12 +63,12 @@ test.describe("Edit user profile", () => {
 test.describe("Edit user email", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Edit user email with a valid email", async ({ page, request }) => {
+  test("Edit user email with a valid email", async ({ page }) => {
     const email = randomEmail()
     const updatedEmail = randomEmail()
 
     await createUser({ email })
-    await logInUser(page, request, email)
+    await logInUser(page, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
 
@@ -86,14 +86,11 @@ test.describe("Edit user email", () => {
 test.describe("Cancel edit actions", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Cancel edit action restores original name", async ({
-    page,
-    request,
-  }) => {
+  test("Cancel edit action restores original name", async ({ page }) => {
     const email = randomEmail()
     await createUser({ email })
 
-    await logInUser(page, request, email)
+    await logInUser(page, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()
@@ -105,14 +102,11 @@ test.describe("Cancel edit actions", () => {
     ).toHaveCount(0)
   })
 
-  test("Cancel edit action restores original email", async ({
-    page,
-    request,
-  }) => {
+  test("Cancel edit action restores original email", async ({ page }) => {
     const email = randomEmail()
     await createUser({ email })
 
-    await logInUser(page, request, email)
+    await logInUser(page, email)
     await page.goto("/profile")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()

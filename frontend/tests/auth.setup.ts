@@ -4,7 +4,7 @@ import { logInUser } from "./user.ts"
 
 const authFile = "playwright/.auth/user.json"
 
-setup("authenticate", async ({ page, request }) => {
-  await logInUser(page, request, firstSuperuser)
+setup("authenticate", async ({ page }) => {
+  await logInUser(page, firstSuperuser)
   await page.context().storageState({ path: authFile })
 })

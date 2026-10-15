@@ -1,42 +1,35 @@
-import { type APIRequestContext, expect, type Page } from "@playwright/test"
-import { findEmail, findLastEmail } from "./mailcatcher"
+import { execFileSync } from "node:child_process"
+import { expect, type Page } from "@playwright/test"
 
-const sentTo = (email: string) => (e: { recipients: string[] }) =>
-  e.recipients.includes(`<${email}>`)
+const DB_CONTAINER = process.env.DB_CONTAINER ?? "agentique-db-1"
 
-// Read the newest email to `email` from mailcatcher and pull out the sign-in
-// link the backend put in it. `after` skips emails up to that id: each new
-// link replaces the one before, so an older email's link no longer works.
-export async function signInLinkFor(
-  request: APIRequestContext,
-  email: string,
-  after = 0,
-) {
-  const message = await findLastEmail({
-    request,
-    filter: (e) => sentTo(email)(e) && e.id > after,
-  })
-  const response = await request.get(
-    `${process.env.MAILCATCHER_HOST}/messages/${message.id}.html`,
-  )
-  const html = await response.text()
-  const match = html.match(/href="([^"]*\/auth\?token=[^"]+)"/)
-  if (!match) throw new Error(`No sign-in link in the email to ${email}`)
-  return match[1]
+// The sign-in link for `email`, built from the token the backend stored for
+// it. Each request replaces the token, so this is always the newest link.
+// Reads the local db container rather than an inbox: no mail server needed.
+export function signInLinkFor(email: string) {
+  const query = `select login_token from "user" where email = '${email.replace(/'/g, "''")}'`
+  const token = execFileSync("docker", [
+    "exec",
+    DB_CONTAINER,
+    "sh",
+    "-c",
+    `psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"`,
+    "sh",
+    query,
+  ])
+    .toString()
+    .trim()
+  if (!token) throw new Error(`No sign-in link for ${email}`)
+  return `/auth?token=${token}`
 }
 
-export async function logInUser(
-  page: Page,
-  request: APIRequestContext,
-  email: string,
-) {
-  const previous = await findEmail({ request, filter: sentTo(email) })
+export async function logInUser(page: Page, email: string) {
   await page.goto("/login")
   await page.getByTestId("email-input").fill(email)
   await page.getByRole("button", { name: "Email me a sign-in link" }).click()
   await expect(page.getByTestId("link-sent")).toBeVisible()
 
-  await page.goto(await signInLinkFor(request, email, previous?.id))
+  await page.goto(signInLinkFor(email))
   await page.waitForURL("/")
   await expect(page.getByTestId("user-menu")).toBeVisible()
 }
