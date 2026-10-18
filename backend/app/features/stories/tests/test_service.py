@@ -391,16 +391,18 @@ def test_save_story_tool_reports_what_it_did(
 ) -> None:
     from fastmcp.server.auth import AccessToken
 
-    from app.mcp import tools
+    from app.entry.mcp import auth
+    from app.entry.mcp.close_story import close_story
+    from app.entry.mcp.save_story import save_story
 
     monkeypatch.setattr(
-        tools,
+        auth,
         "get_access_token",
-        lambda: AccessToken(token="t", client_id="c", scopes=[tools.WRITE_SCOPE]),
+        lambda: AccessToken(token="t", client_id="c", scopes=[auth.WRITE_SCOPE]),
     )
     url = _article(db, made, _publisher(db, made)).url
     slug = S("tool-made")
-    assert tools.save_story(slug, "Tool made", "It works.", [url]) == (
+    assert save_story(slug, "Tool made", "It works.", [url]) == (
         f"Created {slug}: added 1, 1 articles in all"
     )
-    assert tools.close_story(slug) == f"Closed {slug}"
+    assert close_story(slug) == f"Closed {slug}"

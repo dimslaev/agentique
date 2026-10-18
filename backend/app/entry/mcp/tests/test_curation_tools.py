@@ -12,8 +12,22 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.auth import AccessToken
 
 from app.core.settings import settings
-from app.mcp import tools
-from app.mcp.server import SharedSecret
+from app.entry.mcp import auth
+from app.entry.mcp.approve import approve
+from app.entry.mcp.check_link import check_link
+from app.entry.mcp.close_story import close_story
+from app.entry.mcp.draft_issue import draft_issue
+from app.entry.mcp.get_content import get_content
+from app.entry.mcp.list_candidates import list_candidates
+from app.entry.mcp.reject import reject
+from app.entry.mcp.reject_many import reject_many
+from app.entry.mcp.related import related
+from app.entry.mcp.save_story import save_story
+from app.entry.mcp.similar import similar
+from app.entry.mcp.stories import stories
+from app.entry.mcp.story_candidates import story_candidates
+from app.entry.mcp.vocabulary import vocabulary
+from app.entry.mcp.week import week
 
 WRITE_TOOLS = (
     "list_candidates",
@@ -37,7 +51,7 @@ WRITE_TOOLS = (
 def _as(monkeypatch: pytest.MonkeyPatch, *scopes: str) -> None:
     """Answer the tools' scope check as a caller holding ``scopes``."""
     monkeypatch.setattr(
-        tools,
+        auth,
         "get_access_token",
         lambda: AccessToken(token="t", client_id="c", scopes=list(scopes)),
     )
@@ -50,25 +64,23 @@ def _call(name: str):
     a caller without the scope is refused before any of them is read.
     """
     return {
-        "list_candidates": lambda: tools.list_candidates(),
-        "get_content": lambda: tools.get_content("https://example.com"),
-        "similar": lambda: tools.similar("https://example.com"),
-        "stories": lambda: tools.stories(),
-        "check_link": lambda: tools.check_link("https://github.com/a/b"),
-        "vocabulary": lambda: tools.vocabulary(),
-        "approve": lambda: tools.approve(
-            "https://example.com", 80, "r", "s", "post", []
-        ),
-        "reject": lambda: tools.reject("https://example.com", 20, "r"),
-        "reject_many": lambda: tools.reject_many(
+        "list_candidates": lambda: list_candidates(),
+        "get_content": lambda: get_content("https://example.com"),
+        "similar": lambda: similar("https://example.com"),
+        "stories": lambda: stories(),
+        "check_link": lambda: check_link("https://github.com/a/b"),
+        "vocabulary": lambda: vocabulary(),
+        "approve": lambda: approve("https://example.com", 80, "r", "s", "post", []),
+        "reject": lambda: reject("https://example.com", 20, "r"),
+        "reject_many": lambda: reject_many(
             [{"url": "https://example.com", "score": 20, "reason": "r"}]
         ),
-        "week": lambda: tools.week(),
-        "related": lambda: tools.related("https://example.com"),
-        "draft_issue": lambda: tools.draft_issue("---\ntitle: t\n---\nb"),
-        "story_candidates": lambda: tools.story_candidates(),
-        "save_story": lambda: tools.save_story("s", "n", "b", []),
-        "close_story": lambda: tools.close_story("s"),
+        "week": lambda: week(),
+        "related": lambda: related("https://example.com"),
+        "draft_issue": lambda: draft_issue("---\ntitle: t\n---\nb"),
+        "story_candidates": lambda: story_candidates(),
+        "save_story": lambda: save_story("s", "n", "b", []),
+        "close_story": lambda: close_story("s"),
     }[name]()
 
 
@@ -83,7 +95,7 @@ def test_the_read_token_cannot_curate(monkeypatch: pytest.MonkeyPatch, name: str
 def test_an_unauthenticated_call_cannot_curate(
     monkeypatch: pytest.MonkeyPatch, name: str
 ):
-    monkeypatch.setattr(tools, "get_access_token", lambda: None)
+    monkeypatch.setattr(auth, "get_access_token", lambda: None)
     with pytest.raises(ToolError, match="curation token"):
         _call(name)
 
@@ -91,21 +103,21 @@ def test_an_unauthenticated_call_cannot_curate(
 def test_the_write_scope_gets_past_the_gate(monkeypatch: pytest.MonkeyPatch):
     """Past the gate it is an ordinary lookup, and a URL nobody queued is a
     message rather than a traceback."""
-    _as(monkeypatch, tools.WRITE_SCOPE)
+    _as(monkeypatch, auth.WRITE_SCOPE)
     with pytest.raises(ToolError, match="No candidate for"):
-        tools.get_content("https://never-queued.example")
+        get_content("https://never-queued.example")
 
 
 @pytest.mark.anyio
 async def test_only_the_write_token_carries_the_scope(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(settings, "MCP_TOKEN", "read-token")
     monkeypatch.setattr(settings, "MCP_WRITE_TOKEN", "write-token")
-    verifier = SharedSecret()
+    verifier = auth.SharedSecret()
 
     write = await verifier.verify_token("write-token")
     read = await verifier.verify_token("read-token")
 
-    assert write is not None and write.scopes == [tools.WRITE_SCOPE]
+    assert write is not None and write.scopes == [auth.WRITE_SCOPE]
     assert read is not None and read.scopes == []
     assert await verifier.verify_token("neither") is None
 
@@ -116,7 +128,7 @@ async def test_an_unset_write_token_matches_nothing(monkeypatch: pytest.MonkeyPa
     token publish — and an empty header must not match an empty setting."""
     monkeypatch.setattr(settings, "MCP_TOKEN", "read-token")
     monkeypatch.setattr(settings, "MCP_WRITE_TOKEN", None)
-    verifier = SharedSecret()
+    verifier = auth.SharedSecret()
 
     assert await verifier.verify_token("") is None
     read = await verifier.verify_token("read-token")
@@ -143,14 +155,14 @@ def anyio_backend() -> str:
 
 
 def test_check_link_refuses_what_it_does_not_read(monkeypatch: pytest.MonkeyPatch):
-    _as(monkeypatch, tools.WRITE_SCOPE)
+    _as(monkeypatch, auth.WRITE_SCOPE)
     with pytest.raises(ToolError, match="web_fetch"):
-        tools.check_link("https://arxiv.org/abs/2609.01234")
+        check_link("https://arxiv.org/abs/2609.01234")
 
 
 def test_reject_many_reports_one_line_per_verdict(monkeypatch: pytest.MonkeyPatch):
-    _as(monkeypatch, tools.WRITE_SCOPE)
-    result = tools.reject_many(
+    _as(monkeypatch, auth.WRITE_SCOPE)
+    result = reject_many(
         [
             {"url": "https://never-queued.example/1", "score": 20, "reason": "r"},
             {"url": "https://never-queued.example/2", "score": 20, "reason": "r"},
