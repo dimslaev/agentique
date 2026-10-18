@@ -591,8 +591,11 @@ def _resolve_product(product: Item) -> RawItem | None:
         log(f'    Link selection failed for "{name}": {e}')
         return None
 
-    # index is 1-based; 0 means "no candidate is a clean first-party source".
-    picked = candidates[choice.index - 1] if choice.index >= 1 else None
+    # index is 1-based; 0 means "no candidate is a clean first-party source",
+    # and one past the list is a model mistake read the same way.
+    picked = (
+        candidates[choice.index - 1] if 1 <= choice.index <= len(candidates) else None
+    )
     if not picked:
         log(f'    Dropped "{name}": no first-party result among candidates')
         return None

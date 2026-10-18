@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import pytest
 
+from app.features.collect import newsletters
 from app.features.collect.newsletters import (
+    Item,
     _canonical_url,
     _match_sender,
     _unwrap_tracking_url,
 )
+from baml_client.types import NewsletterItemKind, ProductLinkChoice, SearchCandidate
 
 SOURCES = [
     ("@substack.com", "Some Substack"),
@@ -148,3 +151,70 @@ def test_the_host_is_lowercased_but_the_path_is_not() -> None:
 
 def test_a_bare_root_url_keeps_its_slash() -> None:
     assert _canonical_url("https://example.com/") == "https://example.com/"
+
+
+# ─── resolving a product by search ───────────────────────────────────────────
+
+
+def _product() -> Item:
+    return {
+        "kind": NewsletterItemKind.Product,
+        "name": "Acme SDK",
+        "description": "An SDK for agents.",
+        "url": "https://www.example-writeup.com/acme",
+        "first_party": False,
+        "email_date": "2026-09-23T07:00:00+00:00",
+        "newsletter_name": "TLDR AI",
+    }
+
+
+class _Picks:
+    """Stands in for the BAML client: picks ``index`` from what it is shown."""
+
+    def __init__(self, index: int) -> None:
+        self.index = index
+
+    def SelectProductLink(
+        self, name: str, description: str, candidates: list[SearchCandidate]
+    ) -> ProductLinkChoice:
+        return ProductLinkChoice(index=self.index, confidence=0.9)
+
+
+def _stub_search(monkeypatch: pytest.MonkeyPatch, index: int) -> None:
+    results: list[dict[str, str | None]] = [
+        {
+            "title": "Acme SDK",
+            "url": "https://acme.dev/sdk/",
+            "description": "Acme's agent SDK.",
+            "published_date": None,
+        },
+        {
+            "title": "Acme on X",
+            "url": "https://x.com/acme/status/1",
+            "description": "denied",
+            "published_date": None,
+        },
+    ]
+    monkeypatch.setattr(newsletters, "tavily_search", lambda query: results)
+    monkeypatch.setattr(newsletters, "b", _Picks(index))
+
+
+def test_a_product_resolves_to_the_result_picked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_search(monkeypatch, 1)
+    item = newsletters._resolve_product(_product())
+    assert item is not None
+    assert item["url"] == "https://acme.dev/sdk"
+    assert item["source"] == "TLDR AI"
+
+
+@pytest.mark.parametrize("index", [0, 2, 9])
+def test_no_pick_or_a_pick_past_the_list_drops_the_product(
+    monkeypatch: pytest.MonkeyPatch, index: int
+) -> None:
+    """The denied x.com result never reaches the model, so the list it picks
+    from has one entry: anything else is no pick, not an IndexError that would
+    end the whole night's newsletter source."""
+    _stub_search(monkeypatch, index)
+    assert newsletters._resolve_product(_product()) is None
