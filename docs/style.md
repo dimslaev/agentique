@@ -28,12 +28,12 @@ express, enforced by review.
   `app/core/embedding.py`, read by curation and by the newsletter, for the
   two-reader case). See the constants-vs-config discussion in the refactor plan for
   the reasoning.
-- **`app/` holds the running service; `backend/scripts/` holds ops
-  entrypoints.** A module that exists to be run by hand or by `prestart.sh` —
-  waiting for the DB, creating the superuser, seeding — is an entrypoint, not
-  part of the service, and lives in `backend/scripts/`. They are still
-  type-checked (mypy and ty run over `backend/scripts` too); they are
-  deliberately outside coverage's `source`, because pytest never runs them.
+- **Command-line entrypoints live in `app/entry/cli/`.** A module run by
+  systemd, by `prestart.sh` or by hand (the nightly collect, the daily mail,
+  waiting for the DB, seeding) calls feature verbs and sets the exit code,
+  the way a route handler does for HTTP. Run it with
+  `python -m app.entry.cli.<name>` from `backend/`. It is type-checked and
+  counted in coverage like the rest of `app/`.
 - **Config is different from constants.** Deployment-varying, env-provided
   values (database URL, API keys) live in one settings object
   (`app/core/settings.py`). Tuning knobs compiled into the code
