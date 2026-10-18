@@ -74,10 +74,10 @@ uv run bash ../scripts/tests-start.sh
 - Domain tests live in that domain's `tests/` folder (`app/catalog/tests/`, `app/audience/tests/`, ...)
 - `backend/tests/` holds what belongs to no single domain: pipeline, schema-wide enum guard, ops scripts
 - Shared fixtures: `backend/conftest.py`
-- `tests-start.sh` waits for the db, then runs `scripts/test.sh` beside it (pytest + coverage). Extra args forward to pytest:
+- `tests-start.sh` waits for the db, then runs `scripts/test.sh` beside it (pytest + coverage). An argument becomes the coverage report's title, not a pytest flag:
 
 ```bash
-uv run bash ../scripts/tests-start.sh -x
+uv run bash ../scripts/tests-start.sh "my branch"
 ```
 
 - Coverage report: `htmlcov/index.html`
