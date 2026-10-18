@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 
+import jwt
+import pytest
 import resend
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -15,6 +18,7 @@ from app.audience.tests.factories import (
     user_authentication_headers,
 )
 from app.core.dates import get_datetime_utc
+from app.core.security import ALGORITHM, create_access_token
 from app.core.settings import settings
 from app.newsletter.models import NewsletterSubscriber
 from tests.random_data import random_email
@@ -146,6 +150,31 @@ def test_use_access_token(
     )
     assert r.status_code == 200
     assert "email" in r.json()
+
+
+def _signed(user_id: uuid.UUID, key: str, expires_in: timedelta) -> str:
+    payload = {"sub": str(user_id), "exp": get_datetime_utc() + expires_in}
+    return jwt.encode(payload, key, algorithm=ALGORITHM)
+
+
+@pytest.mark.parametrize(
+    "make_token",
+    [
+        lambda user_id: create_access_token(user_id, timedelta(minutes=-1)),
+        lambda user_id: _signed(user_id, "x" * 32, timedelta(minutes=5)),
+        lambda user_id: _signed(user_id, settings.SECRET_KEY, timedelta(minutes=5))[
+            :-2
+        ],
+    ],
+    ids=["expired", "wrong-key", "tampered"],
+)
+def test_access_token_is_rejected(client: TestClient, db: Session, make_token) -> None:
+    user = create_random_user(db)
+    r = client.post(
+        f"{settings.API_V1_STR}/login/test-token",
+        headers={"Authorization": f"Bearer {make_token(user.id)}"},
+    )
+    assert r.status_code == 403
 
 
 def test_link_request_unknown_email_creates_account(
