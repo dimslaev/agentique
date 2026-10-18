@@ -15,6 +15,10 @@
 - Keep all technical substance, cut filler.
 - Active every response, no drift back to verbose over time.
 - Stays active even if unsure.
+- No AI tells: no em dashes, filler, hedging, chatbot phrases, fancy words where plain ones work.
+
+## After changes
+- After a round of changes, run the `deslop` skill on the code and `unslop` on any prose written.
 
 ## Git
 - Commit straight to master. Don't create a branch or open a PR unless asked or you're running in cloud.
