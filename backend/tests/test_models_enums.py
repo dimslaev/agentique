@@ -14,23 +14,12 @@ import re
 from enum import StrEnum
 from pathlib import Path
 
-from app.analytics import models as analytics_models
-from app.audience import models as audience_models
-from app.catalog import models as catalog_models
-from app.newsletter import models as newsletter_models
-from pipeline import models as pipeline_models
+from app.core import db
 
-# Every module that declares schema. A domain missing here is a domain whose
-# enums nobody guards.
-MODEL_MODULES = (
-    analytics_models,
-    audience_models,
-    catalog_models,
-    newsletter_models,
-    pipeline_models,
-)
+# Every table module, so a new one is guarded without a line here.
+MODEL_MODULES = [getattr(db, name) for name in db.__all__]
 
-VERSIONS = Path(__file__).parent.parent / "app" / "alembic" / "versions"
+VERSIONS = Path(__file__).parent.parent / "migrations" / "versions"
 
 # SQLModel names a Postgres enum type after the lowercased class name.
 ENUM_MODELS = {

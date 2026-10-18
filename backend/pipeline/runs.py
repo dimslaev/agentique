@@ -20,9 +20,9 @@ from datetime import UTC, datetime
 
 from sqlmodel import Session, col, select
 
-from app.catalog.models import Publisher
+from app.core.db.publisher import Publisher
+from app.core.db.run import PipelineRun
 from app.core.logging import log
-from pipeline.models import PipelineRun
 
 
 @dataclass

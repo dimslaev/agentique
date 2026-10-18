@@ -5,7 +5,7 @@ from __future__ import annotations
 import resend
 from sqlmodel import Session
 
-from app.newsletter.models import NewsletterSubscriber
+from app.core.db.subscriber import NewsletterSubscriber
 from app.newsletter.subscribers import subscribe
 from tests.random_data import random_email
 

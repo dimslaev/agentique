@@ -30,7 +30,9 @@ from typing import NotRequired, TypedDict
 import numpy as np
 from sqlmodel import Session, col, func, select
 
-from app.catalog.models import Article, ArticleKind, Publisher, PublisherKind
+from app.core.db.article import Article, ArticleKind, kind_from_url
+from app.core.db.ledger import CANDIDATE_CAP, CONTENT_CAP, Reject, RejectStage
+from app.core.db.publisher import Publisher, PublisherKind
 from app.core.embedding import (
     SNIPPET_CAP,
     cosine_distances,
@@ -40,13 +42,10 @@ from app.core.embedding import (
     to_embedding_text,
 )
 from app.core.logging import log
-from pipeline.models import Reject, RejectStage
-from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP
 from pipeline.steps.enrich import embed_articles
 from pipeline.steps.persist import insert_articles
 from pipeline.tags import load_vocabulary, validate_tags, write_article_tags
 from pipeline.types import Summarized
-from pipeline.url_kind import kind_from_url
 
 # What the agent triages on. Deliberately not the stored text: a list of 80
 # candidates at full content is more than a reading pass can hold, and the
@@ -225,7 +224,7 @@ def get_content(
 ) -> ContentPage:
     """One page of the article text the pipeline extracted for a candidate.
 
-    The stored text is up to `rejects.CANDIDATE_CAP` characters, the same text
+    The stored text is up to `ledger.CANDIDATE_CAP` characters, the same text
     a page fetch would return, so the agent reads from here and fetches only
     when it is missing or cut short.
     """

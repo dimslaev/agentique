@@ -6,15 +6,9 @@ import random
 
 from sqlmodel import Session
 
-from app.catalog.models import (
-    Article,
-    ArticleKind,
-    ArticleTag,
-    Publisher,
-    PublisherKind,
-    Tag,
-    slugify,
-)
+from app.core.db.article import Article, ArticleKind
+from app.core.db.publisher import Publisher, PublisherKind, slugify
+from app.core.db.tag import ArticleTag, Tag
 from tests.random_data import random_lower_string
 
 

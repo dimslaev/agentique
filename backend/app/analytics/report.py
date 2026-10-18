@@ -14,16 +14,16 @@ from sqlalchemy import CTE, ColumnElement, String, case, cast, distinct, func, o
 from sqlmodel import Session, col, select
 
 from app.analytics.models import (
-    AnalyticsEvent,
     AnalyticsReport,
     ReportArticle,
     ReportDay,
     ReportRow,
     ReportTotals,
 )
-from app.audience.models import User
-from app.catalog.models import Article
 from app.core.dates import get_datetime_utc
+from app.core.db.article import Article
+from app.core.db.event import AnalyticsEvent
+from app.core.db.user import User
 
 # Loose on purpose: a human caught here costs one visitor, a bot let through
 # inflates every number.

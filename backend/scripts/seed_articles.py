@@ -10,17 +10,10 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.catalog.models import (
-    Article,
-    ArticleKind,
-    ArticleTag,
-    Category,
-    Publisher,
-    PublisherKind,
-    Tag,
-    TrustLevel,
-)
-from app.core.db import engine
+from app.core.db.article import Article, ArticleKind, Category
+from app.core.db.engine import engine
+from app.core.db.publisher import Publisher, PublisherKind, TrustLevel
+from app.core.db.tag import ArticleTag, Tag
 from app.core.settings import settings
 
 logging.basicConfig(level=logging.INFO)

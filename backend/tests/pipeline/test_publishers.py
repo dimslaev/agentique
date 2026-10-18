@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.catalog.models import PublisherKind
+from app.core.db.publisher import PublisherKind
 from pipeline.publishers import (
     host_kind,
     hosts_to_publishers,

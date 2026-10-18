@@ -11,8 +11,8 @@ Type=oneshot
 User=agentique
 Group=agentique
 WorkingDirectory=/opt/agentique/backend
-# pipeline/run.py reads raw os.environ and loads no dotenv — EnvironmentFile
-# is what feeds it.
+# The database settings come through app.core.settings, the per-source knobs
+# straight from os.environ (ADR 7). EnvironmentFile feeds both.
 EnvironmentFile=/opt/agentique/.env
 # agentique is a system user (adduser --system) with home=/nonexistent.
 # Anything that embeds via model2vec lazy-downloads through huggingface_hub and

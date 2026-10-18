@@ -17,8 +17,8 @@ import sys
 
 from sqlmodel import Session
 
+from app.core.db.engine import engine
 from app.core.logging import log, short_error
-from pipeline.db import get_engine
 from pipeline.publishers import PublisherResolver
 from pipeline.runs import RunStats, record_new, record_polled, record_run
 from pipeline.steps.fetch import build_sources, fetch_source, resolve_publishers
@@ -30,7 +30,7 @@ from pipeline.types import Candidate
 def run_pipeline(stats: RunStats) -> None:
     log("=== Pipeline start ===")
 
-    with Session(get_engine()) as session:
+    with Session(engine) as session:
         resolver = PublisherResolver(session=session)
 
         for source in build_sources(session):
@@ -115,7 +115,7 @@ if __name__ == "__main__":
     # this row after the curation session: a crashed run, or no run at all, is
     # the first thing it says. Best-effort: never flips the exit code.
     try:
-        with Session(get_engine()) as session:
+        with Session(engine) as session:
             record_run(session, stats)
     except Exception as e:
         print(f"Recording the run failed: {e}", file=sys.stderr)

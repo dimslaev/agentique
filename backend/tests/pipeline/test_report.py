@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from pipeline.models import PipelineRun
+from app.core.db.run import PipelineRun
 from pipeline.report import (
     STALE_RUN_HOURS,
     Landed,

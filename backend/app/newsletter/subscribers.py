@@ -8,7 +8,7 @@ import os
 import resend
 from sqlmodel import Session
 
-from app.newsletter.models import NewsletterSubscriber
+from app.core.db.subscriber import NewsletterSubscriber
 
 logger = logging.getLogger(__name__)
 

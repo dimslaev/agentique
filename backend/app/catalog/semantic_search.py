@@ -14,8 +14,11 @@ from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
 from sqlalchemy import cast, func
 from sqlmodel import Session, col, select
 
-from app.catalog.articles import build_rows, like_counts_subquery, liked_article_ids
-from app.catalog.models import Article, ArticlesPublic, Publisher
+from app.catalog.articles import build_rows, liked_article_ids
+from app.catalog.models import ArticlesPublic
+from app.core.db.article import Article
+from app.core.db.like import like_counts_subquery
+from app.core.db.publisher import Publisher
 
 # model2vec is CPU-only and small (~30 MB), so one process-wide instance loaded
 # on first use costs less than a model server.

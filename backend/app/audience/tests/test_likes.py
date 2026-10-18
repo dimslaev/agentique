@@ -9,12 +9,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
-from app.audience.models import ArticleLike
 from app.audience.tests.factories import (
     authentication_token_from_email,
     create_random_user,
 )
 from app.catalog.tests.factories import create_random_article
+from app.core.db.like import ArticleLike
 from app.core.settings import settings
 from tests.random_data import random_email
 

@@ -8,7 +8,7 @@ must not lose the candidates this one found.
 
 from __future__ import annotations
 
-from pipeline.models import RejectStage
+from app.core.db.ledger import RejectStage
 from pipeline.steps.queue import queue_candidates
 from pipeline.types import Candidate
 

@@ -9,11 +9,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, delete, select
 
-from app.analytics.models import AnalyticsEvent
-from app.audience.models import User
 from app.audience.tests.factories import create_random_user
 from app.catalog.tests.factories import create_random_article
 from app.core.dates import get_datetime_utc
+from app.core.db.event import AnalyticsEvent
+from app.core.db.user import User
 from app.core.settings import settings
 
 REPORT = f"{settings.API_V1_STR}/analytics/report"

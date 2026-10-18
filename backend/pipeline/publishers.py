@@ -26,7 +26,7 @@ from urllib.parse import urlparse
 
 from sqlmodel import Session, select
 
-from app.catalog.models import (
+from app.core.db.publisher import (
     LinkPlatform,
     Publisher,
     PublisherKind,

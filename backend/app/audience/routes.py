@@ -17,7 +17,6 @@ from app.audience.models import (
     Message,
     SignInRequest,
     Token,
-    User,
     UserCreate,
     UserPublic,
     UserUpdateMe,
@@ -25,6 +24,7 @@ from app.audience.models import (
 from app.catalog.articles import list_liked_articles
 from app.catalog.models import ArticlesPublic
 from app.core import security
+from app.core.db.user import User
 from app.core.email import (
     EmailData,
     generate_sign_in_email,

@@ -1,10 +1,14 @@
-"""What a reject row keeps, and what it must strip to be insertable at all."""
+"""What a ledger row keeps, and what it must strip to be insertable at all."""
 
 from __future__ import annotations
 
-from pipeline.models import RejectStage
-from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP, record_reject
-from pipeline.types import Candidate
+from app.core.db.ledger import (
+    CANDIDATE_CAP,
+    CONTENT_CAP,
+    LedgerItem,
+    RejectStage,
+    record_reject,
+)
 
 
 class _FakeSession:
@@ -15,8 +19,8 @@ class _FakeSession:
         self.rows.append(obj)
 
 
-def _candidate(**overrides) -> Candidate:
-    a: Candidate = {
+def _candidate(**overrides) -> LedgerItem:
+    a: LedgerItem = {
         "title": "A repo",
         "url": "https://github.com/someone/thing",
         "content": "body",

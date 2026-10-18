@@ -36,9 +36,10 @@ from typing import TypedDict
 import numpy as np
 from sqlmodel import Session, select
 
-from app.catalog.models import Article, ArticleTag, Tag
+from app.core.db.article import Article
+from app.core.db.engine import engine
+from app.core.db.tag import ArticleTag, Tag
 from app.core.embedding import embed_batch
-from pipeline.db import get_engine
 
 
 @dataclass
@@ -177,7 +178,7 @@ def main() -> None:
 
     since = datetime.fromisoformat(args.since) if args.since else None
 
-    with Session(get_engine()) as session:
+    with Session(engine) as session:
         slugs, names, tag_vecs = load_tags(session)
         articles = load_articles(session, since, args.limit)
 

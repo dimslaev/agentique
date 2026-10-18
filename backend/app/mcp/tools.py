@@ -19,7 +19,7 @@ from fastmcp.server.dependencies import get_access_token
 from sqlmodel import Session
 
 from app.catalog import stories as story_domain
-from app.core.db import engine
+from app.core.db.engine import engine
 from app.core.extract import fetch_and_extract
 from app.core.settings import settings
 from app.core.web_search import tavily_search

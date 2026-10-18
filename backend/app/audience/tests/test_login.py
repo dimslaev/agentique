@@ -12,15 +12,15 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.audience import service
-from app.audience.models import User
 from app.audience.tests.factories import (
     create_random_user,
     user_authentication_headers,
 )
 from app.core.dates import get_datetime_utc
+from app.core.db.subscriber import NewsletterSubscriber
+from app.core.db.user import User
 from app.core.security import ALGORITHM, create_access_token
 from app.core.settings import settings
-from app.newsletter.models import NewsletterSubscriber
 from tests.random_data import random_email
 
 LINK_SENT = {"message": "Check your inbox for your sign-in link"}

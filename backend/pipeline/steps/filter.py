@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from app.catalog.models import Article
+from app.core.db.article import Article
+from app.core.db.ledger import Reject
 from app.core.logging import log
-from pipeline.models import Reject
 from pipeline.types import RawItem
 
 

@@ -16,17 +16,12 @@ import numpy as np
 import pytest
 from sqlmodel import Session, col, delete
 
-from app.audience.models import ArticleLike
 from app.audience.tests.factories import create_random_user
-from app.catalog.models import (
-    Article,
-    ArticleKind,
-    Publisher,
-    PublisherKind,
-    PublisherType,
-)
+from app.core.db.article import Article, ArticleKind
+from app.core.db.ledger import Reject, RejectStage
+from app.core.db.like import ArticleLike
+from app.core.db.publisher import Publisher, PublisherKind, PublisherType
 from app.newsletter import digest
-from pipeline.models import Reject, RejectStage
 from tests.random_data import random_lower_string
 
 DIM = 256

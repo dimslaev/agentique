@@ -21,14 +21,10 @@ from typing import TypedDict
 import numpy as np
 from sqlmodel import Session, col, func, select
 
-from app.catalog.models import (
-    Article,
-    Publisher,
-    Story,
-    StoryArticle,
-    StoryArticlePublic,
-    StoryPublic,
-)
+from app.catalog.models import StoryArticlePublic, StoryPublic
+from app.core.db.article import Article
+from app.core.db.publisher import Publisher
+from app.core.db.story import Story, StoryArticle
 from app.core.embedding import cosine_distances, story_groups
 
 # What the rail shows: a story carried by fewer is coverage, or not yet a story.

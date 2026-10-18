@@ -26,10 +26,12 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import Session, col, func, select
 
-from app.catalog.models import Article, Publisher
+from app.core.db.article import Article
+from app.core.db.engine import engine
+from app.core.db.ledger import Reject, RejectStage
+from app.core.db.publisher import Publisher
+from app.core.db.run import PipelineRun
 from app.core.email import send_mail
-from pipeline.db import get_engine
-from pipeline.models import PipelineRun, Reject, RejectStage
 
 # Older than this with no successful run: "pipeline may be down".
 STALE_RUN_HOURS = 26
@@ -192,7 +194,7 @@ def format_night(night: Night) -> str:
 
 if __name__ == "__main__":
     try:
-        with Session(get_engine()) as session:
+        with Session(engine) as session:
             night = read_night(session)
         send_mail(subject(night), format_night(night))
     except Exception as e:

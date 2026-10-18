@@ -47,7 +47,7 @@ def _stub_run(monkeypatch, sources, **overrides):
     """Run the pipeline over ``sources`` with every step a no-op passthrough.
     Returns the stats and what the publisher bookkeeping was handed."""
     seen: dict[str, list] = {"polled": [], "new": []}
-    monkeypatch.setattr(run_module, "get_engine", lambda: None)
+    monkeypatch.setattr(run_module, "engine", None)
     monkeypatch.setattr(run_module, "Session", lambda engine: _FakeSession())
     monkeypatch.setattr(run_module, "PublisherResolver", _FakeResolver)
     monkeypatch.setattr(run_module, "build_sources", lambda session: sources)

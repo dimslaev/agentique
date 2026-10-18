@@ -13,9 +13,11 @@ from sqlalchemy import inspect
 from sqlmodel import Session, col, delete, func, select
 
 from app.catalog import stories
-from app.catalog.models import Article, Publisher, Story, StoryArticle
 from app.catalog.tests.factories import create_random_article, create_random_publisher
-from app.core.db import engine
+from app.core.db.article import Article
+from app.core.db.engine import engine
+from app.core.db.publisher import Publisher
+from app.core.db.story import Story, StoryArticle
 from app.core.settings import settings
 from tests.random_data import random_lower_string
 

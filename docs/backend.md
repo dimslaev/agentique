@@ -58,7 +58,7 @@ source .venv/bin/activate
 ```
 
 - Point your editor's Python interpreter at `backend/.venv/bin/python`
-- SQLModel models live with their domain: `app/catalog/models.py`, `app/audience/models.py`, `app/newsletter/models.py`, `app/analytics/models.py`, `pipeline/models.py` for the run record
+- Tables live in `app/core/db/`, one module per table. API shapes stay in each domain's `models.py`
 - Each domain folder holds its own `routes.py` and service module
 
 VS Code: debugger and Python-tests-tab configs are already set up.
@@ -85,13 +85,14 @@ uv run bash scripts/tests-start.sh -x
 ## Migrations
 
 - After changing a model, create a revision and apply it, or the schema and the app disagree
-- Alembic imports every model module in `app/alembic/env.py` - a new domain needs a line there or its tables are invisible to autogenerate
+- `app/core/db/__init__.py` imports every table module. A new table module needs a line there or autogenerate can't see it
+- Alembic's config is `[tool.alembic]` in `backend/pyproject.toml`
 
 ```bash
 uv run alembic revision --autogenerate -m "Add column last_name to User model"
 ```
 
-Commit the generated file under `app/alembic/versions/`, then:
+Commit the generated file under `migrations/versions/`, then:
 
 ```bash
 uv run alembic upgrade head

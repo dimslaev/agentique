@@ -5,8 +5,8 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 from sqlmodel import Session, col, select
 
-from app.analytics.models import AnalyticsEvent
-from app.audience.models import User
+from app.core.db.event import AnalyticsEvent
+from app.core.db.user import User
 from app.core.settings import settings
 
 

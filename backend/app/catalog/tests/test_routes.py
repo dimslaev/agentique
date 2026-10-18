@@ -17,13 +17,15 @@ from sqlmodel import Session, col, select
 from app.audience import service
 from app.audience.tests.factories import authentication_token_from_email
 from app.catalog import semantic_search
-from app.catalog.models import Article, ArticleKind, Origin, PublisherKind
+from app.catalog.models import Origin
 from app.catalog.tests.factories import (
     create_random_article,
     create_random_publisher,
     create_random_tag,
     tag_article,
 )
+from app.core.db.article import Article, ArticleKind
+from app.core.db.publisher import PublisherKind
 from app.core.security import create_access_token
 from app.core.settings import settings
 from app.main import app

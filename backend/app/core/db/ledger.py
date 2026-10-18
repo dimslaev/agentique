@@ -1,15 +1,34 @@
-"""Pipeline schema: the run record and the reject ledger the funnel writes."""
+"""The reject ledger: URLs the funnel turned down, and candidates waiting on the curation agent.
+
+Two jobs. ``filter_known_urls`` reads it so a rejected URL is never fetched and
+judged again. And it keeps the evidence - the text the judge saw, the links, the
+score, the judge's reason - so a reject can be audited, re-judged under a new
+rubric, or used as a training negative instead of vanishing.
+
+The embedding is deliberately not stored: it is a pure function of the stored
+title and ``content[:SNIPPET_CAP]``, so it can be rebuilt offline in seconds.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import NotRequired, TypedDict
 
-from sqlalchemy import JSON, Column, DateTime, String, Text, text
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, SQLModel
+from sqlalchemy import JSON, Column, DateTime, String, Text
+from sqlmodel import Field, Session, SQLModel
 
-from app.core.dates import get_datetime_utc
+from app.core.dates import get_datetime_utc, parse_date
+
+# What a settled reject keeps: enough to re-score with a longer input or
+# re-embed with a better model later; the full body would make the ledger most
+# of the database.
+CONTENT_CAP = 2000
+# What a pending candidate keeps, so the curation agent reads the article from
+# the db instead of fetching the page again. Trimmed to `CONTENT_CAP` once the
+# agent rejects it (`curation.reject`), so only the night's queue is ever this
+# large.
+CANDIDATE_CAP = 12000
 
 
 class RejectStage(StrEnum):
@@ -77,31 +96,51 @@ class Reject(SQLModel, table=True):
     )
 
 
-class PipelineRun(SQLModel, table=True):
-    """One row per nightly pipeline run: did it finish, how long it took, and
-    what each source fetched and queued."""
+class LedgerItem(TypedDict):
+    """What `record_reject` reads from an item. The pipeline's ``Candidate``
+    has these keys and more."""
 
-    __tablename__ = "pipeline_run"
-    id: int | None = Field(default=None, primary_key=True)
-    started_at: datetime = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    finished_at: datetime | None = Field(
-        default=None,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
-    duration_ms: int | None = None
-    ok: bool = Field(default=False)
-    # [{source, fetched, queued, error}]. Rows from before 2026-09-23 carry
-    # the older, longer funnel shape.
-    sources: list[dict] = Field(
-        default_factory=list, sa_column=Column(JSONB, nullable=False)
-    )
-    # Per-publisher counts from before the Publisher row kept its own
-    # (last_fetched_at, last_new_at, last_error). No longer read; new rows get
-    # an empty list.
-    publishers: list[dict] = Field(
-        default_factory=list,
-        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    title: str
+    url: str
+    content: str
+    published_date: str | None
+    source: str
+    publisher_id: int
+    traction: NotRequired[str]
+    links: NotRequired[dict[str, list[str]]]
+
+
+def _pg_text(text: str) -> str:
+    # Postgres text columns reject NUL bytes, and fetched pages occasionally
+    # carry one. The failed commit would take the whole source down with it.
+    return text.replace("\x00", "")
+
+
+def record_reject(
+    session: Session,
+    a: LedgerItem,
+    stage: RejectStage,
+    *,
+    score: int | None = None,
+    reason: str | None = None,
+    detail: dict[str, object] | None = None,
+) -> None:
+    """Stage a reject row. The caller commits, as it did for the bare URL."""
+    cap = CANDIDATE_CAP if stage == RejectStage.pending else CONTENT_CAP
+    content = _pg_text(a["content"][:cap])
+    session.merge(
+        Reject(
+            url=a["url"],
+            stage=stage,
+            title=_pg_text(a["title"]),
+            source=a["source"],
+            publisher_id=a["publisher_id"],
+            published_at=parse_date(a["published_date"]),
+            content=content or None,
+            traction=a.get("traction"),
+            links=a.get("links") or None,
+            score=score,
+            reason=reason,
+            detail=detail,
+        )
     )

@@ -6,8 +6,9 @@ import re
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.analytics.models import AnalyticsEvent, AnalyticsEventCreate, AnalyticsReport
+from app.analytics.models import AnalyticsEventCreate, AnalyticsReport
 from app.analytics.report import build_report
+from app.core.db.event import AnalyticsEvent
 from app.deps import CurrentUserOptional, SessionDep, get_current_active_superuser
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])

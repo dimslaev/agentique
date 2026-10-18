@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
 from typing import Annotated
 
 import jwt
@@ -12,20 +11,16 @@ from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from app.audience.models import TokenPayload, User
+from app.audience.models import TokenPayload
 from app.core import security
-from app.core.db import engine
+from app.core.db.engine import get_session
+from app.core.db.user import User
 from app.core.settings import settings
 
 reusable_bearer = HTTPBearer()
 
 
-def get_db() -> Generator[Session]:
-    with Session(engine) as session:
-        yield session
-
-
-SessionDep = Annotated[Session, Depends(get_db)]
+SessionDep = Annotated[Session, Depends(get_session)]
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(reusable_bearer)]
 
 

@@ -7,9 +7,11 @@ from datetime import timedelta
 
 from sqlmodel import Session, col, select
 
-from app.audience.models import ArticleLike, User, UserCreate, UserUpdateMe
-from app.catalog.models import Article
+from app.audience.models import UserCreate, UserUpdateMe
 from app.core.dates import get_datetime_utc
+from app.core.db.article import Article
+from app.core.db.like import ArticleLike
+from app.core.db.user import User
 from app.core.security import generate_login_token
 from app.core.settings import settings
 

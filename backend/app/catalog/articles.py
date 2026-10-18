@@ -12,31 +12,20 @@ import uuid
 from collections import defaultdict
 from datetime import datetime
 
-from sqlalchemy import ColumnElement, Subquery, func
+from sqlalchemy import ColumnElement, func
 from sqlmodel import Session, col, select
 
-from app.audience.models import ArticleLike
 from app.catalog.models import (
-    Article,
-    ArticleKind,
     ArticlePublic,
     ArticlesPublic,
-    ArticleTag,
     Origin,
-    Publisher,
-    PublisherKind,
     PublisherPublic,
-    Tag,
     TagPublic,
 )
-
-
-def like_counts_subquery() -> Subquery:
-    return (
-        select(ArticleLike.article_id, func.count().label("like_count"))
-        .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-        .subquery()
-    )
+from app.core.db.article import Article, ArticleKind
+from app.core.db.like import ArticleLike, like_counts_subquery
+from app.core.db.publisher import Publisher, PublisherKind
+from app.core.db.tag import ArticleTag, Tag
 
 
 def liked_article_ids(session: Session, user_id: uuid.UUID) -> set[int]:

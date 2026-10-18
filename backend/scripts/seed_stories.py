@@ -18,8 +18,8 @@ from typing import TypedDict
 from sqlmodel import Session, col, select
 
 from app.catalog import stories
-from app.catalog.models import Article
-from app.core.db import engine
+from app.core.db.article import Article
+from app.core.db.engine import engine
 from app.core.settings import settings
 
 logging.basicConfig(level=logging.INFO)

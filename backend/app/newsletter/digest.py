@@ -25,8 +25,10 @@ from typing import NotRequired, TypedDict
 import numpy as np
 from sqlmodel import Session, col, func, select
 
-from app.catalog.articles import like_counts_subquery
-from app.catalog.models import Article, Publisher
+from app.core.db.article import Article, kind_from_url
+from app.core.db.ledger import Reject, RejectStage
+from app.core.db.like import like_counts_subquery
+from app.core.db.publisher import Publisher
 from app.core.embedding import (
     SNIPPET_CAP,
     cosine_distances,
@@ -36,8 +38,6 @@ from app.core.embedding import (
     to_embedding_text,
 )
 from pipeline.curation import DEDUP_DIST_THRESHOLD, RELATED_DIST
-from pipeline.models import Reject, RejectStage
-from pipeline.url_kind import kind_from_url
 
 # The agent drafts three issues a week; the rest are there so it can pass over a
 # topic it finds nothing to say about.

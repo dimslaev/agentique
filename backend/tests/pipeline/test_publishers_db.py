@@ -8,7 +8,7 @@ from collections.abc import Generator
 import pytest
 from sqlmodel import Session, col, delete
 
-from app.catalog.models import LinkPlatform, Publisher, PublisherKind, PublisherType
+from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind, PublisherType
 from pipeline import publishers as publishers_module
 from pipeline.publishers import PublisherResolver
 from tests.random_data import random_lower_string

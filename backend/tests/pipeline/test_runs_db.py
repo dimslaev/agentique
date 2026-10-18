@@ -8,8 +8,9 @@ from datetime import UTC, datetime
 import pytest
 from sqlmodel import Session, col, delete, select
 
-from app.catalog.models import Article, Publisher, PublisherKind, PublisherType
-from pipeline.models import PipelineRun
+from app.core.db.article import Article
+from app.core.db.publisher import Publisher, PublisherKind, PublisherType
+from app.core.db.run import PipelineRun
 from pipeline.report import read_night
 from pipeline.runs import RunStats, record_new, record_polled, record_run
 from tests.random_data import random_lower_string

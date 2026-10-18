@@ -14,18 +14,11 @@ from datetime import UTC, datetime
 import numpy as np
 import pytest
 
-from app.catalog.models import (
-    Article,
-    ArticleKind,
-    Publisher,
-    PublisherKind,
-    PublisherType,
-    TrustLevel,
-)
 from app.core import embedding
+from app.core.db.article import Article, ArticleKind
+from app.core.db.ledger import CANDIDATE_CAP, CONTENT_CAP, Reject, RejectStage
+from app.core.db.publisher import Publisher, PublisherKind, PublisherType, TrustLevel
 from pipeline import curation
-from pipeline.models import Reject, RejectStage
-from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP
 from pipeline.tags import Vocabulary
 
 

@@ -9,23 +9,20 @@ from sqlmodel import Session, col, select
 
 from app.catalog.articles import origin_condition
 from app.catalog.models import (
-    Article,
     ArticleFacets,
-    ArticleKind,
-    ArticleTag,
     FoundViaCount,
     Origin,
     OriginCount,
     OriginCounts,
-    Publisher,
     PublisherFacet,
-    PublisherKind,
-    Tag,
     TagFacet,
     Voice,
     VoiceArticle,
     VoiceKind,
 )
+from app.core.db.article import Article, ArticleKind
+from app.core.db.publisher import Publisher, PublisherKind
+from app.core.db.tag import ArticleTag, Tag
 
 
 def publisher_facets(

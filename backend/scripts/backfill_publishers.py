@@ -27,16 +27,11 @@ from pathlib import Path
 
 from sqlmodel import Session, col, func, select
 
-from app.catalog.models import (
-    Article,
-    ArticleKind,
-    LinkPlatform,
-    Publisher,
-    PublisherKind,
-)
-from app.core.db import engine
+from app.core.db.article import Article, ArticleKind
+from app.core.db.engine import engine
+from app.core.db.ledger import Reject
+from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind
 from pipeline.curation import NAMEABLE_KINDS
-from pipeline.models import Reject
 from pipeline.publishers import AGGREGATOR_TYPES, PublisherResolver
 
 # Publishers that train and release their own models. Picked by hand from the

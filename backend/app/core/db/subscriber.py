@@ -1,4 +1,4 @@
-"""Newsletter schema: the subscriber row."""
+"""The newsletter subscriber row."""
 
 from __future__ import annotations
 
