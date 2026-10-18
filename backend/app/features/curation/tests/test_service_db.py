@@ -1,9 +1,10 @@
 """The curation queries against the real schema, with the embedding stubbed.
 
-The pure parts are pinned in test_curation.py. This pins what those cannot:
+The pure parts are pinned in test_service.py. This pins what those cannot:
 that `similar` and `stories` read the right rows (the feed's stored vectors,
-every ledger stage, the window) and that `list_candidates` counts a publisher's
-record from the right ones.
+every ledger stage, the window), that `list_candidates` counts a publisher's
+record from the right ones, and that approving and rejecting write exactly the
+rows they say they do.
 """
 
 from __future__ import annotations
@@ -14,12 +15,13 @@ from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import pytest
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete, func, select
 
 from app.core.db.article import Article
 from app.core.db.ledger import Reject, RejectStage
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType
-from app.features.curation import coverage
+from app.core.db.tag import ArticleTag, Tag
+from app.features.curation import coverage, publish
 from app.features.curation import service as curation
 from app.features.curation.model import CandidateError
 from tests.random_data import random_lower_string
@@ -241,3 +243,156 @@ def test_approval_counts_reads_articles_and_agent_rejects(
     # A pending row is not a decision.
     assert ids[f"{TAG} Verge"] not in counts
     assert world
+
+
+# ─── approve and reject ──────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def queued(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[Reject]:
+    """One pending candidate from a publisher the run has just created."""
+    monkeypatch.setattr(publish, "embed_batch", _fake_embed)
+    publisher = Publisher(
+        name=f"{TAG}.dev",
+        slug=f"{TAG}-dev",
+        kind=PublisherKind.unknown,
+        is_active=False,
+    )
+    db.add(publisher)
+    db.commit()
+    row = Reject(
+        url=f"https://{TAG}.dev/post",
+        stage=RejectStage.pending,
+        title=f"{TAG} — An agent harness, measured",
+        source="Hacker News",
+        publisher_id=publisher.id,
+        content="x" * 5000,
+    )
+    db.add(row)
+    db.commit()
+    yield row
+
+    ids = select(Article.id).where(col(Article.url).contains(TAG))
+    db.exec(delete(ArticleTag).where(col(ArticleTag.article_id).in_(ids)))
+    db.exec(delete(Reject).where(col(Reject.url).contains(TAG)))
+    db.exec(delete(Article).where(col(Article.url).contains(TAG)))
+    db.exec(delete(Publisher).where(col(Publisher.slug).startswith(TAG)))
+    db.commit()
+
+
+def _a_tag(db: Session) -> str:
+    tag = db.exec(select(Tag).order_by(col(Tag.slug))).first()
+    assert tag is not None, "the tag vocabulary is seeded by prestart"
+    return tag.slug
+
+
+def test_approving_writes_one_article_and_settles_the_candidate(
+    db: Session, queued: Reject
+) -> None:
+    slug = _a_tag(db)
+    article_id = curation.approve(
+        db,
+        queued.url,
+        81,
+        "Numbers from a real run.",
+        "What the harness got right.",
+        "Post",
+        [slug, "not-a-tag"],
+        publisher_kind="individual",
+        publisher_name=f" {TAG} Writer ",
+    )
+
+    db.expire_all()
+    article = db.get(Article, article_id)
+    assert article is not None
+    assert (article.url, article.score, article.kind) == (queued.url, 81, "post")
+    # Sanitized on the way in, as every stored title is.
+    assert article.title == f"{TAG} - An agent harness, measured"
+    assert article.found_via == "Hacker News"
+    assert article.embedding is not None
+    assert db.get(Reject, queued.url) is None
+    tags = db.exec(
+        select(Tag.slug)
+        .join(ArticleTag, col(ArticleTag.tag_id) == col(Tag.id))
+        .where(col(ArticleTag.article_id) == article_id)
+    ).all()
+    assert list(tags) == [slug]
+    publisher = db.get(Publisher, article.publisher_id)
+    assert publisher is not None
+    assert (publisher.kind, publisher.name) == (
+        PublisherKind.individual,
+        f"{TAG} Writer",
+    )
+
+
+def test_a_candidate_is_published_once(db: Session, queued: Reject) -> None:
+    def approve() -> int:
+        return curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+
+    approve()
+    with pytest.raises(CandidateError, match="No candidate"):
+        approve()
+    count = db.exec(
+        select(func.count()).select_from(Article).where(Article.url == queued.url)
+    ).one()
+    assert count == 1
+
+
+def test_a_refused_approval_writes_nothing(db: Session, queued: Reject) -> None:
+    """The labels are checked before the candidate is touched."""
+    with pytest.raises(CandidateError, match="publisher_kind"):
+        curation.approve(db, queued.url, 81, "r", "s", "post", [])
+
+    db.expire_all()
+    row = db.get(Reject, queued.url)
+    assert row is not None and row.stage == RejectStage.pending
+    assert db.exec(select(Article).where(Article.url == queued.url)).first() is None
+
+
+def test_a_failed_embedding_still_publishes(
+    db: Session, queued: Reject, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(_texts: list[str]) -> list[list[float]]:
+        raise RuntimeError("model download blocked")
+
+    monkeypatch.setattr(publish, "embed_batch", broken)
+
+    article_id = curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+
+    db.expire_all()
+    article = db.get(Article, article_id)
+    assert article is not None and article.embedding is None
+
+
+def test_a_rejected_candidate_cannot_then_be_approved(
+    db: Session, queued: Reject
+) -> None:
+    curation.reject(db, queued.url, 22, "A vendor tutorial.")
+
+    with pytest.raises(CandidateError, match="already below_threshold"):
+        curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+    db.expire_all()
+    row = db.get(Reject, queued.url)
+    assert row is not None
+    assert (row.stage, row.score, row.reason) == (
+        RejectStage.below_threshold,
+        22,
+        "A vendor tutorial.",
+    )
+    assert row.content is not None and len(row.content) < 5000
+
+
+def test_a_url_twice_in_one_batch_is_rejected_once(db: Session, queued: Reject) -> None:
+    lines = curation.reject_many(
+        db,
+        [
+            {"url": queued.url, "score": 20, "reason": "first"},
+            {"url": queued.url, "score": 90, "reason": "second"},
+        ],
+    )
+
+    assert lines[0] == f"Rejected [20/100] {queued.url}"
+    assert lines[1].startswith(f"Skipped {queued.url}: ")
+    db.expire_all()
+    row = db.get(Reject, queued.url)
+    assert row is not None and (row.score, row.reason) == (20, "first")
