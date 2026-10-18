@@ -11,11 +11,6 @@ from app.core.db.user import User
 from app.core.settings import settings
 from app.entry.api.deps import CurrentUser, SessionDep
 from app.features.audience import service
-from app.features.audience.email import (
-    generate_sign_in_email,
-    generate_welcome_email,
-    send_link_email,
-)
 from app.features.audience.model import (
     MagicLogin,
     Message,
@@ -49,8 +44,12 @@ def request_sign_in_link(
     elif not user.is_active:
         return Message(message=LINK_SENT)
     token = service.issue_login_token(session=session, db_user=user)
-    email = generate_welcome_email(token) if is_new else generate_sign_in_email(token)
-    background_tasks.add_task(send_link_email, user.email, email, token)
+    email = (
+        service.generate_welcome_email(token)
+        if is_new
+        else service.generate_sign_in_email(token)
+    )
+    background_tasks.add_task(service.send_link_email, user.email, email, token)
     return Message(message=LINK_SENT)
 
 

@@ -2,7 +2,7 @@
 reject it.
 
 The nightly collect run ends at a `pending` row. This module is the other end:
-the verbs the agent drives it with, behind the MCP tools in `app/mcp/tools.py`.
+the verbs the agent drives it with, behind the MCP tools in `app/entry/mcp/`.
 Approving is the only thing in the codebase that writes an Article, so the
 insert-and-embed tail (`publish.py`) belongs to curation alone.
 
@@ -42,6 +42,7 @@ from app.core.embedding import (
 )
 from app.core.logging import log
 from app.features.curation import coverage
+from app.features.curation.links import check_link as check_link
 from app.features.curation.model import (
     CandidateError,
     CandidatePage,

@@ -18,6 +18,10 @@ class CandidateError(Exception):
     or never queued. The agent gets the message, not a traceback."""
 
 
+class LinkError(Exception):
+    """A URL ``check_link`` does not read. The message names the tool that does."""
+
+
 class CandidatePage(TypedDict):
     """One page of the pending queue. ``next_offset`` is None on the last page."""
 

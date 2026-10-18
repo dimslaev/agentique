@@ -22,7 +22,7 @@ from app.features.catalog.model import (
     VoiceArticle,
     VoiceKind,
 )
-from app.features.catalog.service import origin_condition
+from app.features.catalog.rows import origin_condition
 
 
 def publisher_facets(

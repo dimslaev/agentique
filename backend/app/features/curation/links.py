@@ -15,6 +15,7 @@ from app.core.extract import GITLAB_SITE_PAGES, HF_HOSTS, HF_SITE_PAGES
 from app.core.github import github_repo_from_url, has_readme, repo_for
 from app.core.http import fetch_with_timeout
 from app.core.urls import hostname
+from app.features.curation.model import LinkError
 
 # What any lookup that did not answer reads as. Never 0 or False: a rate limit
 # must not look like a repo nobody starred or a model with no weights.
@@ -35,10 +36,6 @@ WEIGHT_SUFFIXES = (
 )
 
 type Facts = dict[str, object]
-
-
-class LinkError(Exception):
-    """A URL ``check_link`` does not read. The message names the tool that does."""
 
 
 def _or_unknown(value: object) -> object:

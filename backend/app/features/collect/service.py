@@ -23,7 +23,8 @@ from app.core.logging import log, short_error
 from app.features.collect.fetch import build_sources, fetch_source, resolve_publishers
 from app.features.collect.filter import filter_known_urls
 from app.features.collect.model import Candidate, RunStats
-from app.features.collect.publishers import PublisherResolver
+from app.features.collect.publishers import AGGREGATOR_TYPES as AGGREGATOR_TYPES
+from app.features.collect.publishers import PublisherResolver as PublisherResolver
 from app.features.collect.queue import queue_candidates
 from app.features.collect.report import format_night, read_night, subject
 from app.features.collect.runs import record_new, record_polled, record_run

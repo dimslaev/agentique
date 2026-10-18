@@ -13,6 +13,9 @@ from app.core.db.like import ArticleLike
 from app.core.db.user import User
 from app.core.security import generate_login_token
 from app.core.settings import settings
+from app.features.audience.email import generate_sign_in_email as generate_sign_in_email
+from app.features.audience.email import generate_welcome_email as generate_welcome_email
+from app.features.audience.email import send_link_email as send_link_email
 from app.features.audience.model import UserCreate, UserUpdateMe
 
 LOGIN_LINK_EXPIRE_MINUTES = 60

@@ -14,7 +14,8 @@ import pytest
 from app.core import github
 from app.core.extract import MAX_LINKS_PER_GROUP, group_links, outbound_links
 from app.features.curation import links as page_facts
-from app.features.curation.links import UNKNOWN, LinkError, check_link
+from app.features.curation.links import UNKNOWN, check_link
+from app.features.curation.model import LinkError
 
 PAGE = "https://blog.example.com/2026/09/release"
 
