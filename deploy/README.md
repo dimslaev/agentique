@@ -150,9 +150,9 @@ Read by the backend through `app/core/settings.py`.
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
-| `RESEND_API_KEY` | `app/newsletter/broadcast.py` | Unset: `draft_issue` refuses, naming it. |
-| `RESEND_AUDIENCE_ID` | `app/newsletter/broadcast.py`, `app/newsletter/routes.py` | The audience signups are synced to and the issue is broadcast to. |
-| `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/newsletter/broadcast.py` | The issue's sender. |
+| `RESEND_API_KEY` | `app/features/newsletter/broadcast.py` | Unset: `draft_issue` refuses, naming it. |
+| `RESEND_AUDIENCE_ID` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py` | The audience signups are synced to and the issue is broadcast to. |
+| `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/features/newsletter/broadcast.py` | The issue's sender. |
 
 ## Pipeline environment
 
