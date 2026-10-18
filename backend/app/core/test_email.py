@@ -1,4 +1,4 @@
-"""The daily mail's send: suppressed without the env, never raising."""
+"""The daily mail's send: suppressed without the env, raising when it fails."""
 
 from __future__ import annotations
 
@@ -47,9 +47,10 @@ def test_the_mail_goes_to_the_alert_address_with_the_body_escaped(
 
 
 @pytest.mark.usefixtures("mail_env")
-def test_a_failed_send_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_failed_send_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(_payload: dict[str, str]) -> None:
         raise RuntimeError("resend is down")
 
     monkeypatch.setattr(resend.Emails, "send", fail)
-    send_mail("Pipeline needs a look", "body")
+    with pytest.raises(RuntimeError, match="resend is down"):
+        send_mail("Pipeline needs a look", "body")
