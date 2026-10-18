@@ -2,13 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
+import pytest
+from sqlmodel import Session, col, delete, select
+
+from app.catalog.tests.factories import create_random_publisher
 from app.core.db.ledger import (
     CANDIDATE_CAP,
     CONTENT_CAP,
     LedgerItem,
+    Reject,
     RejectStage,
     record_reject,
 )
+from app.core.db.publisher import Publisher
+from tests.random_data import random_lower_string
+
+URL = f"https://example.com/{random_lower_string()}"
 
 
 class _FakeSession:
@@ -82,3 +93,51 @@ def test_no_links_is_stored_as_null():
     session = _FakeSession()
     record_reject(session, _candidate(links={}), RejectStage.pending)
     assert session.rows[0].links is None
+
+
+@pytest.fixture
+def publisher(db: Session) -> Generator[Publisher]:
+    p = create_random_publisher(db)
+    yield p
+    db.rollback()
+    db.exec(delete(Reject).where(col(Reject.publisher_id) == p.id))
+    db.exec(delete(Publisher).where(col(Publisher.id) == p.id))
+    db.commit()
+
+
+def _stored(
+    db: Session,
+    publisher: Publisher,
+    stage: RejectStage = RejectStage.pending,
+    **overrides: object,
+) -> Reject:
+    record_reject(
+        db, _candidate(publisher_id=publisher.id, url=URL, **overrides), stage
+    )
+    db.commit()
+    row = db.get(Reject, URL)
+    assert row is not None
+    db.refresh(row)
+    return row
+
+
+def test_no_detail_is_sql_null_not_json_null(db: Session, publisher: Publisher):
+    """`detail IS NULL` is how the ledger asks for rows without evidence."""
+    _stored(db, publisher)
+    found = db.exec(select(Reject.url).where(col(Reject.detail).is_(None))).all()
+    assert URL in found
+
+
+def test_recording_a_url_again_overwrites_its_row(db: Session, publisher: Publisher):
+    """The nightly run can meet a URL it already queued; the row is replaced,
+    not duplicated, so the commit does not fail on the primary key."""
+    _stored(db, publisher, title="first")
+    row = _stored(db, publisher, title="second", stage=RejectStage.prefilter)
+    assert (row.title, row.stage) == ("second", RejectStage.prefilter)
+
+
+def test_nul_bytes_and_a_bad_date_still_commit(db: Session, publisher: Publisher):
+    row = _stored(
+        db, publisher, title="a\x00b", content="c\x00d", published_date="not a date"
+    )
+    assert (row.title, row.content, row.published_at) == ("ab", "cd", None)
