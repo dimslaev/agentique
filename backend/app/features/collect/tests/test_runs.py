@@ -49,7 +49,7 @@ def _fresh(db: Session, p: Publisher) -> Publisher:
 
 def test_a_good_fetch_stamps_and_clears_a_failed_one_keeps_the_last_good(
     db: Session, feeds: dict[str, Publisher]
-):
+) -> None:
     names = [p.name for p in feeds.values()]
     record_polled(db, names, {f"{TAG} Broken": "RuntimeError: 403"}, now=NOW)
 
@@ -64,7 +64,7 @@ def test_a_good_fetch_stamps_and_clears_a_failed_one_keeps_the_last_good(
 
 def test_a_queued_candidate_stamps_its_publisher_new(
     db: Session, feeds: dict[str, Publisher]
-):
+) -> None:
     record_new(db, [feeds["Healed"].id or 0], now=NOW)
     assert _fresh(db, feeds["Healed"]).last_new_at == NOW
     assert _fresh(db, feeds["Quiet"]).last_new_at is None
@@ -72,7 +72,7 @@ def test_a_queued_candidate_stamps_its_publisher_new(
 
 def test_the_night_reads_the_last_run_and_the_failing_feeds(
     db: Session, feeds: dict[str, Publisher]
-):
+) -> None:
     names = [p.name for p in feeds.values()]
     record_polled(db, names, {feeds["Broken"].name: "boom"})
     db.add(

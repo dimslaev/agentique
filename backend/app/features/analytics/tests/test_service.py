@@ -30,7 +30,7 @@ def empty_events(db: Session) -> Generator[None]:
 
 def _event(db: Session, **fields: object) -> None:
     fields.setdefault("user_agent", BROWSER)
-    db.add(AnalyticsEvent(**fields))  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+    db.add(AnalyticsEvent(**fields))  # ty: ignore[invalid-argument-type]
     db.commit()
 
 
@@ -145,9 +145,8 @@ def test_report_counts_registered_readers(
 ) -> None:
     def totals(days: int | None) -> dict[str, int]:
         params = {"days": days} if days else {}
-        return client.get(
-            REPORT, headers=superuser_token_headers, params=params
-        ).json()["totals"]
+        body = client.get(REPORT, headers=superuser_token_headers, params=params)
+        return {k: int(v) for k, v in body.json()["totals"].items()}
 
     before, before_all = totals(7), totals(None)
     create_random_user(db)

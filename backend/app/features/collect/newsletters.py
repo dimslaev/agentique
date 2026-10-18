@@ -19,10 +19,12 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from html import unescape
+from typing import TypedDict
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from imap_tools import AND, MailBox
@@ -368,15 +370,24 @@ FIRST_PARTY_THRESHOLD = 0.50  # unmeasured
 CLASSIFY_CONCURRENCY = 10
 
 
-def verdict(answers: dict) -> str:
+type Answers = Mapping[str, jev.Json]
+
+
+def _probability(answers: Answers, key: str) -> float:
+    """A yes/no answer as a number; anything else reads as a firm no."""
+    value = answers.get(key)
+    return float(value) if isinstance(value, int | float) else 0.0
+
+
+def verdict(answers: Answers) -> str:
     """ "keep", or the reason a classified link is dropped."""
-    if answers["is_admin"] > ADMIN_THRESHOLD:
+    if _probability(answers, "is_admin") > ADMIN_THRESHOLD:
         return "admin"
-    if answers["is_sponsor"] > SPONSOR_THRESHOLD:
+    if _probability(answers, "is_sponsor") > SPONSOR_THRESHOLD:
         return "sponsor"
-    if answers["kind"] == "neither":
+    if answers.get("kind") == "neither":
         return "neither"
-    if answers["is_ai_topic"] < AI_TOPIC_THRESHOLD:
+    if _probability(answers, "is_ai_topic") < AI_TOPIC_THRESHOLD:
         return "off_topic"
     return "keep"
 
@@ -391,8 +402,20 @@ def _classify(link: Link) -> jev.Reply:
     return jev.ask(state, QUESTIONS)
 
 
-def _item(link: Link, answers: dict, newsletter_name: str, email_date: str) -> dict:
-    is_product = answers["kind"] == "product"
+class Item(TypedDict):
+    """One link an issue makes, kept by Jev, before it is resolved to a URL."""
+
+    kind: NewsletterItemKind
+    name: str
+    description: str
+    url: str
+    first_party: bool
+    email_date: str
+    newsletter_name: str
+
+
+def _item(link: Link, answers: Answers, newsletter_name: str, email_date: str) -> Item:
+    is_product = answers.get("kind") == "product"
     return {
         "kind": NewsletterItemKind.Product
         if is_product
@@ -402,7 +425,7 @@ def _item(link: Link, answers: dict, newsletter_name: str, email_date: str) -> d
         "url": link.href,
         # Behind an opaque tracker Jev saw no host, so its answer is a guess.
         "first_party": _known_host(link.href) is not None
-        and answers["is_first_party"] > FIRST_PARTY_THRESHOLD,
+        and _probability(answers, "is_first_party") > FIRST_PARTY_THRESHOLD,
         "email_date": email_date,
         "newsletter_name": newsletter_name,
     }
@@ -410,12 +433,12 @@ def _item(link: Link, answers: dict, newsletter_name: str, email_date: str) -> d
 
 def _extract_items(
     html: str, newsletter_name: str, email_date: str, own_host: str
-) -> list[dict]:
+) -> list[Item]:
     kept, dropped = prefilter(extract(html), own_host)
     reasons = {r: len(links) for r, links in dropped.items()}
     log(f"    {len(kept)} link(s) to classify, prefilter dropped {reasons}")
 
-    items: list[dict] = []
+    items: list[Item] = []
     verdicts: dict[str, int] = {}
     cost = 0.0
     with ThreadPoolExecutor(max_workers=CLASSIFY_CONCURRENCY) as ex:
@@ -490,7 +513,7 @@ def _unwrap_tracking_url(url: str) -> str | None:
     return inner if hostname(inner) else None
 
 
-def _resolve_article(item: dict) -> RawItem | None:
+def _resolve_article(item: Item) -> RawItem | None:
     """One article -> its real URL, recovered from the newsletter's redirect.
 
     Unwrap first, follow only if that fails: most trackers spell the
@@ -539,7 +562,7 @@ def _resolve_article(item: dict) -> RawItem | None:
     }
 
 
-def _resolve_product(product: dict) -> RawItem | None:
+def _resolve_product(product: Item) -> RawItem | None:
     """One product -> one canonical URL, or None if nothing is a clean first-party source."""
     name = product["name"]
     description = product["description"]
@@ -551,42 +574,39 @@ def _resolve_product(product: dict) -> RawItem | None:
         log(f'    Search failed for "{name}": {e}')
         return None
 
-    results = [r for r in results if not _is_denied(r["url"])]
-    if not results:
+    candidates = [
+        SearchCandidate(
+            title=r["title"] or "", url=r["url"] or "", snippet=r["description"] or ""
+        )
+        for r in results
+    ]
+    candidates = [c for c in candidates if not _is_denied(c.url)]
+    if not candidates:
         log(f'    No usable search result for "{name}"')
         return None
 
     try:
-        choice = b.SelectProductLink(
-            name,
-            description,
-            [
-                SearchCandidate(
-                    title=r["title"], url=r["url"], snippet=r["description"]
-                )
-                for r in results
-            ],
-        )
+        choice = b.SelectProductLink(name, description, candidates)
     except Exception as e:
         log(f'    Link selection failed for "{name}": {e}')
         return None
 
     # index is 1-based; 0 means "no candidate is a clean first-party source".
-    picked = results[choice.index - 1] if choice.index >= 1 else None
+    picked = candidates[choice.index - 1] if choice.index >= 1 else None
     if not picked:
         log(f'    Dropped "{name}": no first-party result among candidates')
         return None
 
     return {
         "title": name,
-        "url": _canonical_url(picked["url"]),
+        "url": _canonical_url(picked.url),
         "content": "",
         "published_date": product["email_date"],
         "source": product["newsletter_name"],
     }
 
 
-def _resolve_one(item: dict) -> RawItem | None:
+def _resolve_one(item: Item) -> RawItem | None:
     """Route an item to the resolution its kind needs. A product already linked
     at its maker's own page needs no search — its href is the answer."""
     if item["kind"] == NewsletterItemKind.Article or item["first_party"]:
@@ -594,7 +614,7 @@ def _resolve_one(item: dict) -> RawItem | None:
     return _resolve_product(item)
 
 
-def _resolve_items(raw: list[dict]) -> list[RawItem]:
+def _resolve_items(raw: list[Item]) -> list[RawItem]:
     """Dedupe items by name across all issues in this run, drop the un-notable
     ones, then resolve each survivor to a URL.
 
@@ -606,7 +626,7 @@ def _resolve_items(raw: list[dict]) -> list[RawItem]:
     if not raw:
         return []
 
-    by_name: dict[str, dict] = {}
+    by_name: dict[str, Item] = {}
     for item in raw:
         by_name.setdefault(item["name"].lower(), item)
     unique = list(by_name.values())
@@ -658,7 +678,7 @@ def _resolve_items(raw: list[dict]) -> list[RawItem]:
 
 def _run_imap_fetch(
     config: ImapConfig, sources: list[tuple[str, str]], lookback_days: int
-) -> list[dict]:
+) -> list[Item]:
     """One connect -> fetch -> logout cycle. Two passes: headers only to find
     matches in the window (avoids downloading full bodies of unrelated mail),
     then full source for matched UIDs only.
@@ -666,7 +686,7 @@ def _run_imap_fetch(
     Nothing is flagged: the window is the selection, so leaving read state
     alone keeps the mailbox usable by a human and a failed run repeatable.
     """
-    raw: list[dict] = []
+    raw: list[Item] = []
     since = date.today() - timedelta(days=lookback_days)
 
     with MailBox(config.host, port=config.port).login(
@@ -675,7 +695,7 @@ def _run_imap_fetch(
         matches: dict[str, str] = {}
         for msg in mb.fetch(AND(date_gte=since), mark_seen=False, headers_only=True):
             name = _match_sender(msg.from_ or "", sources)
-            if name:
+            if name and msg.uid:
                 matches[msg.uid] = name
 
         log(f"  Found {len(matches)} newsletter emails since {since.isoformat()}")
@@ -685,7 +705,7 @@ def _run_imap_fetch(
         for msg in mb.fetch(
             AND(uid=",".join(matches.keys())), mark_seen=False, headers_only=False
         ):
-            name = matches.get(msg.uid)
+            name = matches.get(msg.uid or "")
             if not name:
                 continue
 

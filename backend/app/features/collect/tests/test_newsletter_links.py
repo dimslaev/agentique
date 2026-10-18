@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import pytest
 
+from app.core import jev
 from app.features.collect import newsletters as email
 from app.features.collect.newsletters import Link, extract, prefilter, verdict
+from baml_client.types import NewsletterItemKind
 
 ZW = "​‌‍﻿­" * 200
 
@@ -34,7 +36,7 @@ def _by_anchor(links: list[Link]) -> dict[str, Link]:
     return {link.anchor: link for link in links}
 
 
-def test_extract_finds_every_anchor_in_order():
+def test_extract_finds_every_anchor_in_order() -> None:
     links = extract(FIXTURE)
     assert [link.anchor for link in links] == [
         "Why agent harnesses fail (6 minute read)",
@@ -43,37 +45,37 @@ def test_extract_finds_every_anchor_in_order():
     ]
 
 
-def test_the_context_window_reaches_the_description_after_the_link():
+def test_the_context_window_reaches_the_description_after_the_link() -> None:
     link = _by_anchor(extract(FIXTURE))["Why agent harnesses fail (6 minute read)"]
     assert "where retries go wrong" in link.context
     assert "where retries go wrong" in link.blurb
 
 
-def test_zero_width_padding_never_reaches_the_context():
+def test_zero_width_padding_never_reaches_the_context() -> None:
     for link in extract(FIXTURE):
         assert not email._ZERO_WIDTH_RE.search(link.context)
     first = extract(FIXTURE)[0]
     assert first.context.startswith("Today's issue Why agent harnesses fail")
 
 
-def test_nested_tags_collapse_to_their_text():
+def test_nested_tags_collapse_to_their_text() -> None:
     link = _by_anchor(extract(FIXTURE))["Acme ships Agent SDK"]
     assert link.href == "https://acme.dev/launch"
     assert link.blurb.startswith("lets you build agents in ten lines.")
 
 
-def test_an_empty_anchor_is_still_extracted_with_its_surroundings():
+def test_an_empty_anchor_is_still_extracted_with_its_surroundings() -> None:
     link = _by_anchor(extract(FIXTURE))[""]
     assert link.href == "https://example.com/post"
     assert "where retries go wrong" in link.context
 
 
-def test_entities_in_hrefs_are_decoded():
+def test_entities_in_hrefs_are_decoded() -> None:
     [link] = extract('<a href="https://example.com/p?a=1&amp;b=2">Post</a>')
     assert link.href == "https://example.com/p?a=1&b=2"
 
 
-def test_the_window_is_bounded_on_both_sides():
+def test_the_window_is_bounded_on_both_sides() -> None:
     html = f"{'x ' * 400}<a href='https://e.com'>A</a>{' y' * 400}"
     html = html.replace("'", '"')
     [link] = extract(html)
@@ -87,7 +89,7 @@ def _link(href: str, anchor: str = "A story") -> Link:
     return Link(href=href, anchor=anchor, context="")
 
 
-def test_prefilter_drops_plumbing_and_keeps_stories():
+def test_prefilter_drops_plumbing_and_keeps_stories() -> None:
     links = [
         _link("mailto:editor@tldrnewsletter.com", "Email us"),
         _link("#top", "Back to top"),
@@ -121,7 +123,7 @@ def test_prefilter_drops_plumbing_and_keeps_stories():
     }
 
 
-def test_the_tracker_is_unwrapped_before_the_host_check():
+def test_the_tracker_is_unwrapped_before_the_host_check() -> None:
     """The tracker lives on the newsletter's own domain; its destination does
     not, and the destination is what decides."""
     tracked = _link(
@@ -133,7 +135,7 @@ def test_the_tracker_is_unwrapped_before_the_host_check():
     assert dropped == {}
 
 
-def test_a_tracked_link_and_a_direct_one_to_the_same_page_are_one():
+def test_a_tracked_link_and_a_direct_one_to_the_same_page_are_one() -> None:
     kept, dropped = prefilter(
         [
             _link(
@@ -148,7 +150,7 @@ def test_a_tracked_link_and_a_direct_one_to_the_same_page_are_one():
     assert len(dropped["duplicate"]) == 1
 
 
-def test_an_opaque_tracker_is_kept_for_jev_to_judge():
+def test_an_opaque_tracker_is_kept_for_jev_to_judge() -> None:
     """Beehiiv hides the destination behind a token: no host to check, and the
     tracker's own host must not read as the sender's."""
     opaque = _link("https://link.mail.beehiiv.com/ss/c/u001.abcdef")
@@ -158,7 +160,7 @@ def test_an_opaque_tracker_is_kept_for_jev_to_judge():
 
 # ─── verdict ─────────────────────────────────────────────────────────────────
 
-_EDITORIAL = {
+_EDITORIAL: dict[str, jev.Json] = {
     "is_admin": 0.02,
     "is_sponsor": 0.05,
     "is_ai_topic": 0.95,
@@ -184,15 +186,17 @@ _EDITORIAL = {
         ({"is_admin": 0.9, "is_sponsor": 0.9}, "admin"),
     ],
 )
-def test_verdict_thresholds(overrides, expected):
+def test_verdict_thresholds(overrides: dict[str, jev.Json], expected: str) -> None:
     assert verdict({**_EDITORIAL, **overrides}) == expected
 
 
 # ─── classification wiring ───────────────────────────────────────────────────
 
 
-def test_extract_items_keeps_only_what_the_verdict_keeps(monkeypatch):
-    answers = {
+def test_extract_items_keeps_only_what_the_verdict_keeps(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    answers: dict[str, dict[str, jev.Json]] = {
         "Sponsored: Try Acme free": {**_EDITORIAL, "is_sponsor": 0.96},
         "Acme ships Agent SDK": {
             **_EDITORIAL,
@@ -201,13 +205,13 @@ def test_extract_items_keeps_only_what_the_verdict_keeps(monkeypatch):
         },
         "The Senior Engineer Death Spiral": {**_EDITORIAL, "is_ai_topic": 0.05},
     }
-    seen_states = []
+    seen_states: list[dict[str, str]] = []
 
-    def ask(state, _questions):
+    def ask(state: dict[str, str], _questions: object) -> jev.Reply:
         seen_states.append(state)
-        return email.jev.Reply(answers=answers[state["link_text"]], cost=0.00002)
+        return jev.Reply(answers=answers[state["link_text"]], cost=0.00002)
 
-    monkeypatch.setattr(email.jev, "ask", ask)
+    monkeypatch.setattr(jev, "ask", ask)
     html = "".join(
         f'<p><a href="https://site{i}.com/p">{anchor}</a> blurb {i}.</p>'
         for i, anchor in enumerate(answers)
@@ -223,18 +227,20 @@ def test_extract_items_keeps_only_what_the_verdict_keeps(monkeypatch):
     }
     [item] = items
     assert item["name"] == "Acme ships Agent SDK"
-    assert item["kind"] == email.NewsletterItemKind.Product
+    assert item["kind"] == NewsletterItemKind.Product
     assert item["first_party"] is True
     assert item["description"].startswith("blurb 1.")
 
 
-def test_a_failed_classification_drops_only_that_link(monkeypatch):
-    def ask(state, _questions):
+def test_a_failed_classification_drops_only_that_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def ask(state: dict[str, str], _questions: object) -> jev.Reply:
         if state["link_text"] == "Broken":
-            raise email.jev.JevError("unanswered: is_sponsor")
-        return email.jev.Reply(answers=_EDITORIAL, cost=0.0)
+            raise jev.JevError("unanswered: is_sponsor")
+        return jev.Reply(answers=_EDITORIAL, cost=0.0)
 
-    monkeypatch.setattr(email.jev, "ask", ask)
+    monkeypatch.setattr(jev, "ask", ask)
     html = '<a href="https://a.com/1">Broken</a> <a href="https://b.com/2">Fine</a>'
 
     items = email._extract_items(html, "TLDR AI", "2026-09-23", "tldr.tech")
@@ -242,12 +248,14 @@ def test_a_failed_classification_drops_only_that_link(monkeypatch):
     assert [i["name"] for i in items] == ["Fine"]
 
 
-def test_an_opaque_tracker_is_never_first_party(monkeypatch):
+def test_an_opaque_tracker_is_never_first_party(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Jev saw "unknown" for the host, so its first-party answer is a guess."""
     monkeypatch.setattr(
-        email.jev,
+        jev,
         "ask",
-        lambda state, questions: email.jev.Reply(
+        lambda state, questions: jev.Reply(
             answers={**_EDITORIAL, "kind": "product", "is_first_party": 0.99}, cost=0
         ),
     )
@@ -258,7 +266,7 @@ def test_an_opaque_tracker_is_never_first_party(monkeypatch):
     assert item["first_party"] is False
 
 
-def test_an_article_about_privacy_is_not_a_privacy_policy():
+def test_an_article_about_privacy_is_not_a_privacy_policy() -> None:
     kept, _ = prefilter(
         [
             _link("https://example.com/blog/privacy-in-llms", "Privacy in LLMs"),
@@ -278,7 +286,7 @@ def test_an_article_about_privacy_is_not_a_privacy_policy():
         ("pointer@mail.beehiiv.com", ""),
     ],
 )
-def test_own_host_ignores_shared_sending_platforms(sender, own):
+def test_own_host_ignores_shared_sending_platforms(sender: str, own: str) -> None:
     """A Substack sender's own host would otherwise drop every post on every
     other Substack."""
     assert email._own_host(sender) == own

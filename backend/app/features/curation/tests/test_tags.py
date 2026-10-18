@@ -10,24 +10,24 @@ from app.features.curation.tags import normalize_tag, validate_tags
 VALID = frozenset({"llm", "agents", "open-source"})
 
 
-def test_keeps_tags_in_the_vocabulary():
+def test_keeps_tags_in_the_vocabulary() -> None:
     assert validate_tags(["llm", "agents"], VALID) == ["llm", "agents"]
 
 
-def test_drops_tags_outside_the_vocabulary():
+def test_drops_tags_outside_the_vocabulary() -> None:
     assert validate_tags(["llm", "not-a-real-tag"], VALID) == ["llm"]
 
 
-def test_dedupes_preserving_first_occurrence_order():
+def test_dedupes_preserving_first_occurrence_order() -> None:
     assert validate_tags(["agents", "llm", "agents"], VALID) == ["agents", "llm"]
 
 
-def test_caps_at_three_even_if_more_are_valid():
+def test_caps_at_three_even_if_more_are_valid() -> None:
     valid = frozenset({"a", "b", "c", "d"})
     assert len(validate_tags(["a", "b", "c", "d"], valid)) == 3
 
 
-def test_lab_tags_do_not_count_toward_the_cap():
+def test_lab_tags_do_not_count_toward_the_cap() -> None:
     valid = frozenset({"a", "b", "c", "d", "openai", "google"})
     assert validate_tags(["openai", "a", "b", "google", "c", "d"], valid) == [
         "openai",
@@ -38,23 +38,23 @@ def test_lab_tags_do_not_count_toward_the_cap():
     ]
 
 
-def test_normalizes_casing_and_underscores_before_validating():
+def test_normalizes_casing_and_underscores_before_validating() -> None:
     assert validate_tags(["LLM", "open_source"], VALID) == ["llm", "open-source"]
 
 
-def test_empty_input_yields_no_tags():
+def test_empty_input_yields_no_tags() -> None:
     assert validate_tags([], VALID) == []
 
 
-def test_all_off_list_yields_no_tags():
+def test_all_off_list_yields_no_tags() -> None:
     assert validate_tags(["nope", "also-nope"], VALID) == []
 
 
-def test_normalize_tag_rejects_none():
+def test_normalize_tag_rejects_none() -> None:
     assert normalize_tag(None, VALID) is None
 
 
-def test_normalize_tag_tolerates_an_enum_like_value():
+def test_normalize_tag_tolerates_an_enum_like_value() -> None:
     class _Tag:
         value = "llm"
 

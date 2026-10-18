@@ -21,6 +21,7 @@ from app.core.db.ledger import Reject, RejectStage
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType
 from app.features.curation import coverage
 from app.features.curation import service as curation
+from app.features.curation.model import CandidateError
 from tests.random_data import random_lower_string
 
 DIM = 256
@@ -37,7 +38,7 @@ def _axis(i: int, wobble: float = 0.0) -> list[float]:
 
 def _noise(text: str) -> list[float]:
     seed = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16)
-    return np.random.default_rng(seed).standard_normal(DIM).tolist()
+    return [float(x) for x in np.random.default_rng(seed).standard_normal(DIM)]
 
 
 # Title -> vector. Everything else embeds to deterministic noise.
@@ -55,7 +56,7 @@ def _fake_embed(texts: list[str]) -> list[list[float]]:
 
 
 @pytest.fixture
-def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
+def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict[str, str]]:
     monkeypatch.setattr(curation, "embed_batch", _fake_embed)
     monkeypatch.setattr(coverage, "embed_batch", _fake_embed)
 
@@ -123,7 +124,9 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
     db.commit()
 
 
-def test_similar_lists_the_feed_and_every_ledger_stage(db: Session, world: dict):
+def test_similar_lists_the_feed_and_every_ledger_stage(
+    db: Session, world: dict[str, str]
+) -> None:
     result = curation.similar(db, world["verge"])
 
     urls = [r["url"] for r in result["rows"]]
@@ -137,25 +140,33 @@ def test_similar_lists_the_feed_and_every_ledger_stage(db: Session, world: dict)
     assert world["verge"] not in urls
 
 
-def test_similar_counts_coverage_by_publisher(db: Session, world: dict):
+def test_similar_counts_coverage_by_publisher(
+    db: Session, world: dict[str, str]
+) -> None:
     result = curation.similar(db, world["verge"])
     assert result["publishers"] == [f"{TAG} OpenAI", f"{TAG} Verge", f"{TAG} Wired"]
     assert result["coverage"] == 3
 
 
-def test_a_story_nobody_else_carries_has_coverage_one(db: Session, world: dict):
+def test_a_story_nobody_else_carries_has_coverage_one(
+    db: Session, world: dict[str, str]
+) -> None:
     result = curation.similar(db, world["lone"])
     assert result["coverage"] == 1
     assert result["publishers"] == [f"{TAG} Blog"]
 
 
-def test_similar_on_an_unknown_url_is_a_message(db: Session, world: dict):
-    with pytest.raises(curation.CandidateError, match="No candidate or article"):
+def test_similar_on_an_unknown_url_is_a_message(
+    db: Session, world: dict[str, str]
+) -> None:
+    with pytest.raises(CandidateError, match="No candidate or article"):
         curation.similar(db, f"https://nowhere.example/{TAG}")
     assert world
 
 
-def test_stories_groups_the_queue_with_the_feed(db: Session, world: dict):
+def test_stories_groups_the_queue_with_the_feed(
+    db: Session, world: dict[str, str]
+) -> None:
     groups = [
         g for g in curation.stories(db) if any(TAG in m["url"] for m in g["members"])
     ]
@@ -165,7 +176,9 @@ def test_stories_groups_the_queue_with_the_feed(db: Session, world: dict):
     assert story["coverage"] == 2
 
 
-def _all_candidates(db: Session, limit: int = curation.LIST_LIMIT) -> list[dict]:
+def _all_candidates(
+    db: Session, limit: int = curation.LIST_LIMIT
+) -> list[dict[str, str]]:
     """Every pending row, read page by page as the agent does."""
     page = curation.list_candidates(db, limit=limit)
     rows = page["rows"]
@@ -175,7 +188,9 @@ def _all_candidates(db: Session, limit: int = curation.LIST_LIMIT) -> list[dict]
     return rows
 
 
-def test_list_candidates_shows_each_publishers_approval_rate(db: Session, world: dict):
+def test_list_candidates_shows_each_publishers_approval_rate(
+    db: Session, world: dict[str, str]
+) -> None:
     rows = {r["url"]: r for r in _all_candidates(db)}
     # Verge: nothing published, nothing turned down yet.
     assert rows[world["verge"]]["approved"] == "new"
@@ -185,7 +200,9 @@ def test_list_candidates_shows_each_publishers_approval_rate(db: Session, world:
     assert rows[world["lone"]]["approved"] == "1/1"
 
 
-def test_list_candidates_pages_through_the_whole_queue(db: Session, world: dict):
+def test_list_candidates_pages_through_the_whole_queue(
+    db: Session, world: dict[str, str]
+) -> None:
     first = curation.list_candidates(db, limit=1)
     assert first["offset"] == 0
     assert len(first["rows"]) == 1
@@ -198,7 +215,9 @@ def test_list_candidates_pages_through_the_whole_queue(db: Session, world: dict)
     assert f"https://wired.example/{TAG}/astra" not in urls
 
 
-def test_list_candidates_past_the_end_is_an_empty_last_page(db: Session, world: dict):
+def test_list_candidates_past_the_end_is_an_empty_last_page(
+    db: Session, world: dict[str, str]
+) -> None:
     page = curation.list_candidates(db, offset=10**6)
     assert page["rows"] == []
     assert page["next_offset"] is None
@@ -206,13 +225,16 @@ def test_list_candidates_past_the_end_is_an_empty_last_page(db: Session, world: 
     assert world
 
 
-def test_approval_counts_reads_articles_and_agent_rejects(db: Session, world: dict):
+def test_approval_counts_reads_articles_and_agent_rejects(
+    db: Session, world: dict[str, str]
+) -> None:
     ids = {
         p.name: p.id
         for p in db.exec(select(Publisher).where(col(Publisher.slug).startswith(TAG)))
+        if p.id is not None
     }
     since = datetime.now(UTC) - timedelta(days=90)
-    counts = curation.approval_counts(db, [i for i in ids.values() if i], since)
+    counts = curation.approval_counts(db, list(ids.values()), since)
 
     assert counts[ids[f"{TAG} OpenAI"]] == (1, 0)
     assert counts[ids[f"{TAG} Wired"]] == (0, 1)

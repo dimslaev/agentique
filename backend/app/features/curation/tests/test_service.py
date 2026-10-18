@@ -9,17 +9,25 @@ agent can act on rather than a traceback.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import cast
 
 import numpy as np
 import pytest
+from sqlmodel import Session
 
-from app.core import embedding
 from app.core.db.article import Article, ArticleKind
 from app.core.db.ledger import CANDIDATE_CAP, CONTENT_CAP, Reject, RejectStage
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType, TrustLevel
 from app.features.curation import coverage
 from app.features.curation import service as curation
+from app.features.curation.model import (
+    CandidateError,
+    Persisted,
+    ProcessedArticle,
+    Summarized,
+)
 from app.features.curation.tags import Vocabulary
 
 
@@ -27,32 +35,41 @@ class _FakeSession:
     """Just enough Session for the module: `get` by primary key, and a record
     of what was written."""
 
-    def __init__(self, *rows) -> None:
+    def __init__(self, *rows: Reject | Publisher) -> None:
         self.rejects = {r.url: r for r in rows if isinstance(r, Reject)}
         self.publishers = {p.id: p for p in rows if isinstance(p, Publisher)}
-        self.articles: dict = {}
-        self.deleted: list = []
-        self.added: list = []
+        self.articles: dict[int, Article] = {}
+        self.deleted: list[object] = []
+        self.added: list[object] = []
         self.commits = 0
+        self.rollbacks = 0
+        self.fail_commits = 0
 
-    def get(self, model, key):
+    def get(self, model: type[object], key: str | int) -> object:
         if model is Reject:
-            return self.rejects.get(key)
+            return self.rejects.get(str(key))
         if model is Article:
-            return self.articles.get(key)
-        return self.publishers.get(key)
+            return self.articles.get(int(key))
+        return self.publishers.get(int(key))
 
-    def delete(self, obj) -> None:
+    def delete(self, obj: object) -> None:
         self.deleted.append(obj)
 
-    def add(self, obj) -> None:
+    def add(self, obj: object) -> None:
         self.added.append(obj)
 
     def commit(self) -> None:
+        if self.fail_commits:
+            self.fail_commits -= 1
+            raise RuntimeError("connection reset")
         self.commits += 1
 
     def rollback(self) -> None:
-        self.rollbacks = getattr(self, "rollbacks", 0) + 1
+        self.rollbacks += 1
+
+    @property
+    def session(self) -> Session:
+        return cast(Session, self)
 
 
 def _publisher(kind: PublisherKind = PublisherKind.individual) -> Publisher:
@@ -67,7 +84,7 @@ def _publisher(kind: PublisherKind = PublisherKind.individual) -> Publisher:
     )
 
 
-def _pending_row(**overrides) -> Reject:
+def _pending_row(**overrides: object) -> Reject:
     row = Reject(
         url="https://simonwillison.net/post",
         stage=RejectStage.pending,
@@ -89,38 +106,68 @@ VOCAB = Vocabulary(
 )
 
 
+@dataclass
+class _Published:
+    """What the insert, the tags and the embedding were handed."""
+
+    inserted: list[Summarized] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
+    embedded: list[ProcessedArticle] = field(default_factory=list)
+
+
 @pytest.fixture
-def stub_publish(monkeypatch: pytest.MonkeyPatch) -> dict:
+def stub_publish(monkeypatch: pytest.MonkeyPatch) -> _Published:
     """Stand in for the insert and the embedding, and record what they were
     handed."""
-    seen: dict = {}
+    seen = _Published()
 
-    def insert(_session, items):
-        seen["inserted"] = items
+    def insert(_session: object, items: list[Summarized]) -> list[Persisted]:
+        seen.inserted = items
         return [{**items[0], "id": 42}]
+
+    def write_tags(
+        _session: object, _article_id: int, slugs: list[str], _vocab: object
+    ) -> None:
+        seen.tags = slugs
+
+    def embed(_session: object, items: list[ProcessedArticle]) -> None:
+        seen.embedded = items
 
     monkeypatch.setattr(curation, "insert_articles", insert)
     monkeypatch.setattr(curation, "load_vocabulary", lambda session: VOCAB)
-    monkeypatch.setattr(
-        curation,
-        "write_article_tags",
-        lambda _s, article_id, slugs, vocab: seen.setdefault("tags", slugs),
-    )
-    monkeypatch.setattr(
-        curation, "embed_articles", lambda _s, items: seen.setdefault("embedded", items)
-    )
+    monkeypatch.setattr(curation, "write_article_tags", write_tags)
+    monkeypatch.setattr(curation, "embed_articles", embed)
     return seen
 
 
-def _approve(session, url, score=84, reason="r", summary="s", **labels):
-    labels = {
-        "kind": "post",
-        "tags": ["agents"],
-    } | labels
-    return curation.approve(session, url, score, reason, summary, **labels)
+def _approve(
+    session: _FakeSession,
+    url: str,
+    score: int = 84,
+    reason: str = "r",
+    summary: str = "s",
+    *,
+    kind: str = "post",
+    tags: tuple[str, ...] = ("agents",),
+    publisher_kind: str | None = None,
+    publisher_name: str | None = None,
+) -> int:
+    return curation.approve(
+        session.session,
+        url,
+        score,
+        reason,
+        summary,
+        kind,
+        list(tags),
+        publisher_kind,
+        publisher_name,
+    )
 
 
-def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
+def test_approving_publishes_and_clears_the_candidate(
+    stub_publish: _Published,
+) -> None:
     row = _pending_row()
     session = _FakeSession(row, _publisher())
 
@@ -132,7 +179,7 @@ def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
     # Deleted, not left pending: the URL is an Article now, and
     # `filter_known_urls` reads either one.
     assert session.deleted == [row]
-    [item] = stub_publish["inserted"]
+    [item] = stub_publish.inserted
     assert (item["score"], item["score_reason"]) == (
         84,
         "Open weights, downloadable today.",
@@ -141,26 +188,26 @@ def test_approving_publishes_and_clears_the_candidate(stub_publish: dict):
     assert item["publisher_id"] == 7
     # The stored text is the article: approving never fetches the page again.
     assert item["content"] == "the stored two thousand characters"
-    assert stub_publish["embedded"][0]["id"] == 42
+    assert stub_publish.embedded[0]["id"] == 42
 
 
-def test_the_agents_labels_are_written(stub_publish: dict):
+def test_the_agents_labels_are_written(stub_publish: _Published) -> None:
     row = _pending_row()
-    article = Article(id=42, title="t", url=row.url, publisher_id=7)
+    article = Article(id=42, title="t", url=row.url, publisher_id=7, score=84)
     session = _FakeSession(row, _publisher())
     session.articles = {42: article}
 
-    _approve(session, row.url, kind="Post", tags=["agents", "not-a-tag"])
+    _approve(session, row.url, kind="Post", tags=("agents", "not-a-tag"))
 
     assert article.kind == ArticleKind.post
     # Off-list tags are dropped, never minted.
-    assert stub_publish["tags"] == ["agents"]
+    assert stub_publish.tags == ["agents"]
 
 
 @pytest.mark.usefixtures("stub_publish")
-def test_the_aggregator_that_found_it_is_kept():
+def test_the_aggregator_that_found_it_is_kept() -> None:
     row = _pending_row(source="Hacker News")
-    article = Article(id=42, title="t", url=row.url, publisher_id=7)
+    article = Article(id=42, title="t", url=row.url, publisher_id=7, score=84)
     session = _FakeSession(row, _publisher())
     session.articles = {42: article}
 
@@ -170,9 +217,9 @@ def test_the_aggregator_that_found_it_is_kept():
 
 
 @pytest.mark.usefixtures("stub_publish")
-def test_a_feeds_own_item_was_found_via_nothing():
+def test_a_feeds_own_item_was_found_via_nothing() -> None:
     row = _pending_row(source="Simon Willison")
-    article = Article(id=42, title="t", url=row.url, publisher_id=7)
+    article = Article(id=42, title="t", url=row.url, publisher_id=7, score=84)
     session = _FakeSession(row, _publisher())
     session.articles = {42: article}
 
@@ -182,7 +229,7 @@ def test_a_feeds_own_item_was_found_via_nothing():
 
 
 @pytest.mark.usefixtures("stub_publish")
-def test_approving_names_a_new_publisher():
+def test_approving_names_a_new_publisher() -> None:
     publisher = _publisher(PublisherKind.unknown)
     row = _pending_row()
     session = _FakeSession(row, publisher)
@@ -194,7 +241,7 @@ def test_approving_names_a_new_publisher():
 
 
 @pytest.mark.usefixtures("stub_publish")
-def test_a_publishers_kind_once_set_stays():
+def test_a_publishers_kind_once_set_stays() -> None:
     """The agent cannot relabel a publisher from one night to the next."""
     publisher = _publisher(PublisherKind.individual)
     row = _pending_row()
@@ -207,10 +254,10 @@ def test_a_publishers_kind_once_set_stays():
 
 
 @pytest.mark.usefixtures("stub_publish")
-def test_the_url_host_overrules_the_agents_kind():
+def test_the_url_host_overrules_the_agents_kind() -> None:
     url = "https://github.com/someone/thing"
     row = _pending_row(url=url)
-    article = Article(id=42, title="t", url=url, publisher_id=7)
+    article = Article(id=42, title="t", url=url, publisher_id=7, score=84)
     session = _FakeSession(row, _publisher())
     session.articles = {42: article}
 
@@ -229,25 +276,32 @@ def test_the_url_host_overrules_the_agents_kind():
     ],
 )
 def test_a_bad_label_leaves_the_candidate_pending(
-    stub_publish: dict, labels: dict, message: str
-):
+    stub_publish: _Published, labels: dict[str, str], message: str
+) -> None:
     row = _pending_row()
     unknown = "publisher_kind" in labels or not labels
     session = _FakeSession(
         row, _publisher(PublisherKind.unknown if unknown else PublisherKind.individual)
     )
 
-    with pytest.raises(curation.CandidateError, match=message):
-        _approve(session, row.url, **labels)
+    with pytest.raises(CandidateError, match=message):
+        _approve(
+            session,
+            row.url,
+            kind=labels.get("kind", "post"),
+            publisher_kind=labels.get("publisher_kind"),
+        )
     assert session.deleted == []
-    assert "inserted" not in stub_publish
+    assert stub_publish.inserted == []
 
 
-def test_rejecting_keeps_the_row_with_the_verdict_on_it():
+def test_rejecting_keeps_the_row_with_the_verdict_on_it() -> None:
     row = _pending_row()
     session = _FakeSession(row)
 
-    curation.reject(session, row.url, 32, "Console steps for one vendor's service.")
+    curation.reject(
+        session.session, row.url, 32, "Console steps for one vendor's service."
+    )
 
     assert row.stage == RejectStage.below_threshold
     assert (row.score, row.reason) == (32, "Console steps for one vendor's service.")
@@ -257,40 +311,42 @@ def test_rejecting_keeps_the_row_with_the_verdict_on_it():
     assert session.deleted == []
 
 
-def test_rejecting_trims_the_full_text_back_to_the_ledger_cap():
+def test_rejecting_trims_the_full_text_back_to_the_ledger_cap() -> None:
     """A candidate carries the whole article so the agent can read it; a settled
     reject keeps only what the ledger keeps for every other reject."""
     row = _pending_row(content="x" * (CONTENT_CAP * 5))
     session = _FakeSession(row)
 
-    curation.reject(session, row.url, 20, "reason")
+    curation.reject(session.session, row.url, 20, "reason")
 
-    assert len(row.content) == CONTENT_CAP
+    assert len(row.content or "") == CONTENT_CAP
 
 
-def test_a_url_that_was_never_queued_is_a_message_not_a_traceback():
+def test_a_url_that_was_never_queued_is_a_message_not_a_traceback() -> None:
     session = _FakeSession()
-    with pytest.raises(curation.CandidateError, match="No candidate for"):
-        curation.reject(session, "https://unknown.example", 10, "reason")
+    with pytest.raises(CandidateError, match="No candidate for"):
+        curation.reject(session.session, "https://unknown.example", 10, "reason")
 
 
-def test_a_candidate_cannot_be_judged_twice():
+def test_a_candidate_cannot_be_judged_twice() -> None:
     row = _pending_row(stage=RejectStage.below_threshold)
     session = _FakeSession(row, _publisher())
 
-    with pytest.raises(curation.CandidateError, match="already"):
+    with pytest.raises(CandidateError, match="already"):
         _approve(session, row.url, 90)
 
 
-def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
+def test_a_candidate_with_no_publisher_is_not_published(
+    stub_publish: _Published,
+) -> None:
     """Every Article has a publisher; a candidate that somehow lost one is a bug
     to look at, not a row to force in."""
     row = _pending_row(publisher_id=None)
     session = _FakeSession(row)
 
-    with pytest.raises(curation.CandidateError, match="no publisher"):
+    with pytest.raises(CandidateError, match="no publisher"):
         _approve(session, row.url, 90)
-    assert "inserted" not in stub_publish
+    assert stub_publish.inserted == []
 
 
 # ─── approval rate ───────────────────────────────────────────────────────────
@@ -300,19 +356,19 @@ def test_a_candidate_with_no_publisher_is_not_published(stub_publish: dict):
     "approved, rejected, expected",
     [(3, 7, "3/10"), (0, 4, "0/4"), (2, 0, "2/2"), (0, 0, "new")],
 )
-def test_approval_rate(approved, rejected, expected):
+def test_approval_rate(approved: int, rejected: int, expected: str) -> None:
     assert curation.approval_rate(approved, rejected) == expected
 
 
 # ─── get_content paging ──────────────────────────────────────────────────────
 
 
-def test_the_first_page_carries_the_text_and_the_links():
+def test_the_first_page_carries_the_text_and_the_links() -> None:
     links = {"repo": ["https://github.com/a/b"]}
     row = _pending_row(content="abcdefghij", links=links)
     session = _FakeSession(row)
 
-    page = curation.get_content(session, row.url, limit=4)
+    page = curation.get_content(session.session, row.url, limit=4)
 
     assert page == {
         "text": "abcd",
@@ -323,18 +379,18 @@ def test_the_first_page_carries_the_text_and_the_links():
     }
 
 
-def test_a_later_page_reads_on_without_the_links():
+def test_a_later_page_reads_on_without_the_links() -> None:
     row = _pending_row(content="abcdefghij", links={"repo": ["x"]})
     session = _FakeSession(row)
 
-    page = curation.get_content(session, row.url, offset=8, limit=4)
+    page = curation.get_content(session.session, row.url, offset=8, limit=4)
 
     assert page == {"text": "ij", "offset": 8, "next_offset": None, "total": 10}
 
 
-def test_a_short_article_is_one_page():
+def test_a_short_article_is_one_page() -> None:
     row = _pending_row()
-    page = curation.get_content(_FakeSession(row), row.url)
+    page = curation.get_content(_FakeSession(row).session, row.url)
     assert page["text"] == "the stored two thousand characters"
     assert page["next_offset"] is None
     assert page["links"] == {}
@@ -352,26 +408,28 @@ def test_a_short_article_is_one_page():
         (CANDIDATE_CAP * 2, 0, CANDIDATE_CAP * 2, (0, CANDIDATE_CAP)),
     ],
 )
-def test_page_bounds(total, offset, limit, expected):
+def test_page_bounds(
+    total: int, offset: int, limit: int, expected: tuple[int, int]
+) -> None:
     assert curation.page_bounds(total, offset, limit) == expected
 
 
-def test_get_content_needs_a_pending_candidate():
+def test_get_content_needs_a_pending_candidate() -> None:
     row = _pending_row(stage=RejectStage.below_threshold)
-    with pytest.raises(curation.CandidateError, match="already"):
-        curation.get_content(_FakeSession(row), row.url)
+    with pytest.raises(CandidateError, match="already"):
+        curation.get_content(_FakeSession(row).session, row.url)
 
 
 # ─── reject_many ─────────────────────────────────────────────────────────────
 
 
-def test_reject_many_settles_each_verdict_on_its_own():
+def test_reject_many_settles_each_verdict_on_its_own() -> None:
     first = _pending_row(url="https://a.example/1")
     third = _pending_row(url="https://a.example/3")
     session = _FakeSession(first, third)
 
     lines = curation.reject_many(
-        session,
+        session.session,
         [
             {"url": first.url, "score": 20, "reason": "Vendor tutorial."},
             {"url": "https://a.example/2", "score": 30, "reason": "r"},
@@ -388,21 +446,14 @@ def test_reject_many_settles_each_verdict_on_its_own():
     assert third.reason == "Opinion, no evidence."
 
 
-def test_reject_many_survives_a_failed_write():
+def test_reject_many_survives_a_failed_write() -> None:
     first = _pending_row(url="https://a.example/1")
     second = _pending_row(url="https://a.example/2")
     session = _FakeSession(first, second)
-    calls = {"n": 0}
-
-    def commit_fails_once() -> None:
-        calls["n"] += 1
-        if calls["n"] == 1:
-            raise RuntimeError("connection reset")
-
-    session.commit = commit_fails_once  # type: ignore[method-assign]
+    session.fail_commits = 1
 
     lines = curation.reject_many(
-        session,
+        session.session,
         [
             {"url": first.url, "score": 20, "reason": "r"},
             {"url": second.url, "score": 20, "reason": "r"},
@@ -414,66 +465,14 @@ def test_reject_many_survives_a_failed_write():
     assert session.rollbacks == 1
 
 
-# ─── similar and stories: the pure parts ─────────────────────────────────────
+# ─── coverage ────────────────────────────────────────────────────────────────
 
 
-def _vecs(*rows: list[float]) -> np.ndarray:
-    return np.array(rows, dtype=np.float32)
-
-
-def test_cosine_distance_is_zero_for_the_same_direction():
-    d = embedding.cosine_distances(_vecs([1, 0]), _vecs([2, 0], [0, 1], [-1, 0]))
-    assert np.allclose(d, [[0, 1, 2]])
-
-
-def test_cosine_distance_survives_a_zero_vector():
-    d = embedding.cosine_distances(_vecs([0, 0]), _vecs([1, 0]))
-    assert np.isfinite(d).all()
-
-
-def test_nearest_is_closest_first_within_the_cutoff():
-    distances = np.array([0.40, 0.10, 0.50, 0.25])
-    assert embedding.nearest(distances, cutoff=0.45, limit=8) == [1, 3, 0]
-    assert embedding.nearest(distances, cutoff=0.45, limit=2) == [1, 3]
-
-
-def test_coverage_counts_distinct_publishers_under_the_cutoff_and_the_own():
+def test_coverage_counts_distinct_publishers_under_the_cutoff_and_the_own() -> None:
     publishers = ["The Verge", "The Verge", "Wired", "Simon Willison", ""]
-    distances = np.array([0.10, 0.20, 0.29, 0.40, 0.05])
+    distances = np.array([0.10, 0.20, 0.29, 0.40, 0.05], dtype=np.float32)
     assert coverage.covering(publishers, distances, "OpenAI", 0.30) == [
         "OpenAI",
         "The Verge",
         "Wired",
     ]
-
-
-def test_story_groups_join_pending_rows_with_each_other_and_the_feed():
-    # 0, 1 pending and the same story; 2 a feed article on it; 3 a pending
-    # candidate on its own; 4 a feed article on nothing queued.
-    vecs = _vecs([1, 0, 0], [0.98, 0.1, 0], [0.97, 0.12, 0], [0, 1, 0], [0, 0, 1])
-    pending = [True, True, False, True, False]
-
-    groups = embedding.story_groups(
-        embedding.cosine_distances(vecs, vecs), pending, 0.30
-    )
-
-    assert [sorted(g) for g in groups] == [[0, 1, 2]]
-
-
-def test_feed_articles_do_not_chain_a_group_through_each_other():
-    # Pending 0 is close to article 1; article 2 is close to article 1 but not
-    # to 0. Without a pending end on every edge, 2 would ride in through 1.
-    distances = np.array(
-        [
-            [0.0, 0.2, 0.6],
-            [0.2, 0.0, 0.2],
-            [0.6, 0.2, 0.0],
-        ]
-    )
-    groups = embedding.story_groups(distances, [True, False, False], 0.30)
-    assert [sorted(g) for g in groups] == [[0, 1]]
-
-
-def test_a_group_of_feed_articles_alone_is_not_a_story():
-    distances = np.array([[0.0, 0.1], [0.1, 0.0]])
-    assert embedding.story_groups(distances, [False, False], 0.30) == []

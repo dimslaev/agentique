@@ -46,7 +46,7 @@ def sources(
 
 def test_an_aggregators_link_to_a_new_site_gets_a_publisher_of_its_own(
     db: Session, sources: dict[str, Publisher]
-):
+) -> None:
     resolver = PublisherResolver(db)
     url = f"https://blog.{TAG}.dev/a-post"
 
@@ -63,7 +63,9 @@ def test_an_aggregators_link_to_a_new_site_gets_a_publisher_of_its_own(
     assert again.id == publisher.id
 
 
-def test_a_github_user_is_an_individual(db: Session, sources: dict[str, Publisher]):
+def test_a_github_user_is_an_individual(
+    db: Session, sources: dict[str, Publisher]
+) -> None:
     resolver = PublisherResolver(db)
     url = f"https://github.com/{TAG}owner/repo"
 
@@ -78,7 +80,7 @@ def test_a_github_user_is_an_individual(db: Session, sources: dict[str, Publishe
 
 def test_the_aggregators_own_page_stays_with_it(
     db: Session, sources: dict[str, Publisher]
-):
+) -> None:
     resolver = PublisherResolver(db)
     url = f"https://news.{TAG}.com/item?id=1"
     assert (
@@ -89,7 +91,7 @@ def test_the_aggregators_own_page_stays_with_it(
 
 def test_a_shared_host_that_names_no_author_stays_with_the_aggregator(
     db: Session, sources: dict[str, Publisher]
-):
+) -> None:
     resolver = PublisherResolver(db)
     url = "https://x.com/someone/status/1"
     assert (
@@ -100,7 +102,7 @@ def test_a_shared_host_that_names_no_author_stays_with_the_aggregator(
 
 def test_a_feeds_own_item_stays_with_the_feed(
     db: Session, sources: dict[str, Publisher]
-):
+) -> None:
     """A feed's posts may live on a host its links do not name; that is not a
     new author."""
     resolver = PublisherResolver(db)

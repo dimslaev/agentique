@@ -12,7 +12,7 @@ class AnalyticsEventCreate(SQLModel):
     path: str | None = None
     referrer: str | None = None
     visitor_id: str | None = None
-    props: dict = Field(default_factory=dict)
+    props: dict[str, object] = Field(default_factory=dict)
 
 
 # ─── Admin report ────────────────────────────────────────────────────────────

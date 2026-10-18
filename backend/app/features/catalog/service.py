@@ -241,7 +241,5 @@ def list_liked_articles(session: Session, viewer_id: uuid.UUID) -> ArticlesPubli
 def stats(session: Session) -> dict[str, int | str | None]:
     """How many articles the catalog holds and when it last grew."""
     total = session.exec(select(func.count()).select_from(Article)).one()
-    last = session.exec(
-        select(func.max(Article.created_at))  # type: ignore[arg-type]
-    ).one()
+    last = session.exec(select(func.max(Article.created_at))).one()
     return {"total": total, "lastUpdated": last.isoformat() if last else None}

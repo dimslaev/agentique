@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
 
-import feedparser
+import feedparser  # type: ignore[import-untyped]
 
 from app.core.extract import extract_text, outbound_links
 from app.core.http import (
@@ -17,7 +18,7 @@ from app.core.http import (
 from app.core.logging import log
 from app.core.urls import feed_url
 from app.features.collect.freshness import is_within_window
-from app.features.collect.model import RawItem
+from app.features.collect.model import FeedSource, RawItem
 from app.features.collect.titles import clean_title
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
@@ -45,18 +46,33 @@ def _log_proxy_status_once() -> None:
         log(f"Substack proxy: set but unparsable (len {len(_PROXY_URL)})")
 
 
-def _entry_html(entry) -> str:
+# One feedparser entry. Every field a feed may leave out, or fill with
+# something other than what the spec says.
+type Entry = Mapping[str, object]
+
+
+def _text(entry: Entry, *keys: str) -> str:
+    """The first of ``keys`` that holds a non-empty string, else ""."""
+    for key in keys:
+        value = entry.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _entry_html(entry: Entry) -> str:
     """A feed entry's HTML, preferring ``content:encoded`` over the ``summary``
     teaser."""
-    encoded = max(
-        ((c.get("value") or "") for c in (entry.get("content") or [])),
-        key=len,
-        default="",
-    )
-    return encoded or entry.get("summary") or ""
+    content = entry.get("content")
+    encoded = ""
+    for part in content if isinstance(content, list) else []:
+        value = part.get("value") if isinstance(part, Mapping) else None
+        if isinstance(value, str) and len(value) > len(encoded):
+            encoded = value
+    return encoded or _text(entry, "summary")
 
 
-def _entry_item(entry, name: str) -> RawItem:
+def _entry_item(entry: Entry, name: str) -> RawItem:
     """One feed entry as an item: plain text and the links its body makes.
 
     The HTML goes through the same trafilatura pass the network extractor uses
@@ -64,14 +80,14 @@ def _entry_item(entry, name: str) -> RawItem:
     (anything under 50 chars) as empty rather than passing a blurb off as an
     article.
     """
-    url = entry.get("link") or ""
+    url = _text(entry, "link")
     html = _entry_html(entry)
     content = extract_text(html)
     item: RawItem = {
-        "title": clean_title(entry.get("title") or "(no title)"),
+        "title": clean_title(_text(entry, "title") or "(no title)"),
         "url": url,
         "content": content,
-        "published_date": entry.get("published") or entry.get("updated") or "",
+        "published_date": _text(entry, "published", "updated"),
         "source": name,
     }
     if content:
@@ -104,20 +120,20 @@ def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     raise RuntimeError("Exhausted retries")
 
 
-def _fetch_source(source: dict) -> tuple[list[RawItem], str | None]:
+def _fetch_source(source: FeedSource) -> tuple[list[RawItem], str | None]:
     name = source["name"]
     rss_url = source["rssUrl"]
     log(f"Fetching {name}...")
     try:
         xml = _fetch_feed_xml(feed_url(rss_url))
-        feed = feedparser.parse(xml)
-        items = feed.get("entries", [])
+        entries = feedparser.parse(xml).get("entries")
+        items: list[Entry] = [e for e in entries or [] if isinstance(e, Mapping)]
         if not items:
             log(f"  {name}: feed parsed but has no entries — check the feed URL")
         within = [
             it
             for it in items
-            if is_within_window(it.get("published") or it.get("updated"))
+            if is_within_window(_text(it, "published", "updated") or None)
         ]
         log(f"  {name}: {len(within)} in window")
         return [_entry_item(it, name) for it in within], None
@@ -126,7 +142,7 @@ def _fetch_source(source: dict) -> tuple[list[RawItem], str | None]:
         return [], f"{type(e).__name__}: {e}"
 
 
-def fetch_feeds(sources: list[dict]) -> tuple[list[RawItem], dict[str, str]]:
+def fetch_feeds(sources: list[FeedSource]) -> tuple[list[RawItem], dict[str, str]]:
     """Fetch a list of RSS/substack feeds in parallel.
 
     ``sources`` is ``[{"name": ..., "rssUrl": ...}]`` — the runtime builds it

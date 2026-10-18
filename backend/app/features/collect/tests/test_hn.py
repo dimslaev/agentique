@@ -11,9 +11,11 @@ import time
 import pytest
 
 from app.features.collect import hn
-from app.features.collect.hn import _to_article, has_traction, is_on_topic
+from app.features.collect.hn import HNItem, _to_article, has_traction, is_on_topic
 
 HOUR = 3600
+# Stands for "twelve hours before the call", resolved when the item is built.
+TWELVE_HOURS_AGO = -1
 
 MATCHES = [
     # version suffixes glued to the name — the case bare \b boundaries miss
@@ -74,26 +76,39 @@ def test_skips_non_ai_titles(title: str) -> None:
 # ─── _to_article ─────────────────────────────────────────────────────────────
 
 
-def _item(**overrides) -> dict:
+def _item(
+    *,
+    type: str = "story",
+    title: str = "Qwen3-Max is out",
+    url: str | None = "https://example.com/qwen3",
+    posted: int | None = TWELVE_HOURS_AGO,
+    score: int = 120,
+    descendants: int = 40,
+) -> HNItem:
     """A firebase item as HN serves it, defaulted to one that passes.
 
     Aged past the grace window and carrying real points, because that is the
     shape of a story worth keeping — the traction gate is exercised by the
-    tests that deliberately vary those two fields.
+    tests that deliberately vary those two fields. ``url`` or ``posted`` set to
+    None leaves the key out, as firebase does.
     """
-    return {
+    item: HNItem = {
         "id": 42,
-        "type": "story",
-        "title": "Qwen3-Max is out",
-        "url": "https://example.com/qwen3",
-        "time": int(time.time()) - HOUR * 12,
-        "score": 120,
-        "descendants": 40,
-        **overrides,
+        "type": type,
+        "title": title,
+        "score": score,
+        "descendants": descendants,
     }
+    if url is not None:
+        item["url"] = url
+    if posted is not None:
+        item["time"] = (
+            int(time.time()) - HOUR * 12 if posted == TWELVE_HOURS_AGO else posted
+        )
+    return item
 
 
-def test_converts_a_passing_story():
+def test_converts_a_passing_story() -> None:
     article = _to_article(_item())
     assert article is not None
     assert article["url"] == "https://example.com/qwen3"
@@ -101,13 +116,13 @@ def test_converts_a_passing_story():
     assert article["content"] == ""
 
 
-def test_strips_the_show_hn_prefix():
+def test_strips_the_show_hn_prefix() -> None:
     article = _to_article(_item(title="Show HN: My LLM inference server"))
     assert article is not None
     assert article["title"] == "My LLM inference server"
 
 
-def test_text_post_falls_back_to_its_hn_permalink():
+def test_text_post_falls_back_to_its_hn_permalink() -> None:
     """An Ask HN post carries no url; the discussion itself is the article."""
     article = _to_article(_item(url=None, title="Ask HN: best local LLM setup?"))
     assert article is not None
@@ -115,25 +130,24 @@ def test_text_post_falls_back_to_its_hn_permalink():
 
 
 @pytest.mark.parametrize(
-    "override, why",
+    "item, why",
     [
         ({}, "not an item at all"),
-        ({"type": "comment"}, "a comment, not a story"),
-        ({"type": "job"}, "a job ad, not a story"),
-        ({"title": ""}, "no title"),
-        ({"title": "Postgres 18 released"}, "title is not AI-related"),
-        ({"time": int(time.time()) - 60 * 60 * 24 * 30}, "outside the window"),
+        (_item(type="comment"), "a comment, not a story"),
+        (_item(type="job"), "a job ad, not a story"),
+        (_item(title=""), "no title"),
+        (_item(title="Postgres 18 released"), "title is not AI-related"),
+        (_item(posted=int(time.time()) - 60 * 60 * 24 * 30), "outside the window"),
     ],
 )
-def test_rejects(override, why):
-    item = {} if not override else _item(**override)
+def test_rejects(item: HNItem, why: str) -> None:
     assert _to_article(item) is None, why
 
 
-def test_an_item_with_no_time_is_kept_and_dated_now():
+def test_an_item_with_no_time_is_kept_and_dated_now() -> None:
     """is_within_window treats a missing date as recent on purpose — an HN item
     without a timestamp is a firebase oddity, not a reason to lose the story."""
-    article = _to_article(_item(time=None))
+    article = _to_article(_item(posted=None))
     assert article is not None
     assert article["published_date"]
 
@@ -141,7 +155,9 @@ def test_an_item_with_no_time_is_kept_and_dated_now():
 # ─── fetch_hn: top + new ─────────────────────────────────────────────────────
 
 
-def _stub_hn(monkeypatch, ids_by_feed: dict[str, list[int]]) -> list[int]:
+def _stub_hn(
+    monkeypatch: pytest.MonkeyPatch, ids_by_feed: dict[str, list[int]]
+) -> list[int]:
     """Run fetch_hn against canned id lists, recording which ids it looked up.
 
     Everything that touches the network is replaced: the two listing calls, the
@@ -152,16 +168,18 @@ def _stub_hn(monkeypatch, ids_by_feed: dict[str, list[int]]) -> list[int]:
     def story_ids(label: str, _url: str) -> list[int]:
         return ids_by_feed.get(label, [])
 
-    def fetch_item(item_id: int) -> dict:
+    def fetch_item(item_id: int) -> HNItem:
         looked_up.append(item_id)
-        return _item(id=item_id, url=f"https://example.com/{item_id}")
+        item = _item(url=f"https://example.com/{item_id}")
+        item["id"] = item_id
+        return item
 
     monkeypatch.setattr(hn, "_story_ids", story_ids)
     monkeypatch.setattr(hn, "_fetch_item", fetch_item)
     return looked_up
 
 
-def test_polls_both_the_top_and_new_listings(monkeypatch):
+def test_polls_both_the_top_and_new_listings(monkeypatch: pytest.MonkeyPatch) -> None:
     """newstories is where a release lands before it trends — dropping it back
     to topstories-only silently halves the source."""
     looked_up = _stub_hn(monkeypatch, {"top": [1, 2], "new": [3, 4]})
@@ -170,7 +188,9 @@ def test_polls_both_the_top_and_new_listings(monkeypatch):
     assert len(articles) == 4
 
 
-def test_an_id_on_both_listings_is_fetched_once(monkeypatch):
+def test_an_id_on_both_listings_is_fetched_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The lists overlap heavily — a new story that trends is on both."""
     looked_up = _stub_hn(monkeypatch, {"top": [1, 2], "new": [2, 3]})
     articles = hn.fetch_hn()
@@ -178,12 +198,14 @@ def test_an_id_on_both_listings_is_fetched_once(monkeypatch):
     assert len({a["url"] for a in articles}) == 3
 
 
-def test_both_listings_failing_yields_nothing(monkeypatch):
+def test_both_listings_failing_yields_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_hn(monkeypatch, {})
     assert hn.fetch_hn() == []
 
 
-def test_items_leave_the_source_with_no_content(monkeypatch):
+def test_items_leave_the_source_with_no_content(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The fetch step re-fetches anything under 500 characters in full. A
     500-character snippet filled here slipped past that check, so every HN
     candidate was stored as a teaser and the agent fetched the page again."""
@@ -198,38 +220,40 @@ def test_items_leave_the_source_with_no_content(monkeypatch):
 # cover the three cases in ``has_traction``.
 
 
-def test_an_aged_story_nobody_read_is_held_back():
+def test_an_aged_story_nobody_read_is_held_back() -> None:
     assert not has_traction(
-        _item(time=int(time.time()) - HOUR * 20, score=3, descendants=0)
+        _item(posted=int(time.time()) - HOUR * 20, score=3, descendants=0)
     )
 
 
-def test_points_alone_clear_the_gate():
+def test_points_alone_clear_the_gate() -> None:
     assert has_traction(
-        _item(time=int(time.time()) - HOUR * 20, score=40, descendants=0)
+        _item(posted=int(time.time()) - HOUR * 20, score=40, descendants=0)
     )
 
 
-def test_discussion_alone_clears_the_gate():
+def test_discussion_alone_clears_the_gate() -> None:
     """A story that got argued about is real even when the votes stayed flat."""
     assert has_traction(
-        _item(time=int(time.time()) - HOUR * 20, score=2, descendants=25)
+        _item(posted=int(time.time()) - HOUR * 20, score=2, descendants=25)
     )
 
 
-def test_a_young_story_is_held_back_not_judged():
+def test_a_young_story_is_held_back_not_judged() -> None:
     """Every story starts at 1 point, so nothing can be concluded yet. It is
     held, not rejected — the source records nothing, so the next run sees the
     same id again with settled numbers, still inside the 48h window."""
-    assert not has_traction(_item(time=int(time.time()) - HOUR, score=1, descendants=0))
+    assert not has_traction(
+        _item(posted=int(time.time()) - HOUR, score=1, descendants=0)
+    )
 
 
-def test_a_young_first_party_release_goes_straight_through():
+def test_a_young_first_party_release_goes_straight_through() -> None:
     """The reason newstories is polled at all: a lab's own post is news at zero
     points, and holding it for a day would publish it late."""
     assert has_traction(
         _item(
-            time=int(time.time()) - 60,
+            posted=int(time.time()) - 60,
             score=1,
             descendants=0,
             url="https://openai.com/index/gpt-5-6/",
@@ -237,31 +261,31 @@ def test_a_young_first_party_release_goes_straight_through():
     )
 
 
-def test_first_party_matching_covers_subdomains():
+def test_first_party_matching_covers_subdomains() -> None:
     assert has_traction(
         _item(
-            time=int(time.time()) - 60,
+            posted=int(time.time()) - 60,
             score=1,
             url="https://platform.claude.com/docs/en/about-claude/models",
         )
     )
 
 
-def test_the_gate_can_be_switched_off(monkeypatch):
+def test_the_gate_can_be_switched_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(hn, "hn_min_points", lambda: 0)
     assert has_traction(
-        _item(time=int(time.time()) - HOUR * 20, score=0, descendants=0)
+        _item(posted=int(time.time()) - HOUR * 20, score=0, descendants=0)
     )
 
 
-def test_a_story_without_traction_never_becomes_an_article():
+def test_a_story_without_traction_never_becomes_an_article() -> None:
     assert (
-        _to_article(_item(time=int(time.time()) - HOUR * 20, score=1, descendants=0))
+        _to_article(_item(posted=int(time.time()) - HOUR * 20, score=1, descendants=0))
         is None
     )
 
 
-def test_the_article_carries_its_traction_to_the_scorer():
+def test_the_article_carries_its_traction_to_the_scorer() -> None:
     """Passed on as evidence, not only used as a gate: the scorer put unread
     Show HN repos in the 90s while a title was all it could see.
 

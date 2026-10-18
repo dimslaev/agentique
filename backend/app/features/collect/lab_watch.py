@@ -157,17 +157,18 @@ def _watch_one(name: str, domain: str, cutoff: datetime) -> list[RawItem]:
 
     articles: list[RawItem] = []
     for r in results:
-        if not _host_is_first_party(r["url"], domain):
+        url = r["url"] or ""
+        if not _host_is_first_party(url, domain):
             continue
-        if not _is_article_url(r["url"]):
+        if not _is_article_url(url):
             continue
         if not _is_recent(r.get("published_date"), cutoff):
             continue
         articles.append(
             RawItem(
-                title=r["title"],
-                url=r["url"],
-                content=r["description"],
+                title=r["title"] or "",
+                url=url,
+                content=r["description"] or "",
                 published_date=r.get("published_date"),
                 source=name,
             )

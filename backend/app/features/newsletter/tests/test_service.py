@@ -22,6 +22,7 @@ from app.core.db.like import ArticleLike
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType
 from app.features.audience.tests.factories import create_random_user
 from app.features.newsletter import service as digest
+from app.features.newsletter.model import DigestError, WeekTopic
 from tests.random_data import random_lower_string
 
 DIM = 256
@@ -44,7 +45,7 @@ def _axis(i: int, wobble: float = 0.0) -> list[float]:
 
 def _noise(text: str) -> list[float]:
     seed = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16)
-    return np.random.default_rng(seed).standard_normal(DIM).tolist()
+    return [float(x) for x in np.random.default_rng(seed).standard_normal(DIM)]
 
 
 # Title -> vector, for the ledger rows (embedded on the fly).
@@ -67,7 +68,7 @@ def _url(host: str, path: str) -> str:
 
 
 @pytest.fixture
-def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
+def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict[str, str]]:
     monkeypatch.setattr(digest, "embed_batch", _fake_embed)
 
     publishers = {
@@ -91,7 +92,15 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
     db.commit()
     now = datetime.now(UTC)
 
-    def article(pub: str, url: str, score: int, vec: list[float], **kw):
+    def article(
+        pub: str,
+        url: str,
+        score: int,
+        vec: list[float],
+        kind: ArticleKind = ArticleKind.post,
+        created_at: datetime = now,
+        marked_for_deletion_at: datetime | None = None,
+    ) -> Article:
         return Article(
             title=f"{TAG} {url}",
             url=url,
@@ -99,17 +108,26 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
             score=score,
             embedding=vec,
             summary=f"summary of {url}",
-            **kw,
+            kind=kind,
+            created_at=created_at,
+            marked_for_deletion_at=marked_for_deletion_at,
         )
 
-    def reject(url: str, title: str, score: int, pub: str | None = None, **kw):
+    def reject(
+        url: str,
+        title: str,
+        score: int,
+        pub: str | None = None,
+        stage: RejectStage = RejectStage.below_threshold,
+        reason: str | None = None,
+    ) -> Reject:
         return Reject(
             url=url,
-            stage=kw.pop("stage", RejectStage.below_threshold),
+            stage=stage,
             title=f"{TAG} {title}",
             publisher_id=publishers[pub].id if pub else None,
             score=score,
-            **kw,
+            reason=reason,
         )
 
     release = article("Ollama", _url("ollama.example", "mlx"), 92, _axis(0))
@@ -200,7 +218,7 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict]:
     db.commit()
 
 
-def _ours(db: Session) -> list[digest.WeekTopic]:
+def _ours(db: Session) -> list[WeekTopic]:
     # A high limit: the local db carries other articles from this week.
     return [
         t
@@ -209,14 +227,14 @@ def _ours(db: Session) -> list[digest.WeekTopic]:
     ]
 
 
-def _topic(db: Session, url: str) -> digest.WeekTopic:
+def _topic(db: Session, url: str) -> WeekTopic:
     [topic] = [t for t in _ours(db) if t["articles"][0]["url"] == url]
     return topic
 
 
 def test_week_ranks_topics_by_how_many_publishers_carried_them(
-    db: Session, world: dict
-):
+    db: Session, world: dict[str, str]
+) -> None:
     """The kernel post scores lowest of the three, and two outlets whose copies
     curation rejected carried it too: it is the week's most talked-about."""
     assert [t["articles"][0]["url"] for t in _ours(db)] == [
@@ -227,7 +245,9 @@ def test_week_ranks_topics_by_how_many_publishers_carried_them(
     ]
 
 
-def test_week_counts_the_rejected_copies_as_coverage(db: Session, world: dict):
+def test_week_counts_the_rejected_copies_as_coverage(
+    db: Session, world: dict[str, str]
+) -> None:
     topic = _topic(db, world["kernels"])
     assert topic["coverage"] == 3
     assert topic["publishers"] == [f"{TAG} Blog", f"{TAG} Register", f"{TAG} Wired"]
@@ -240,8 +260,8 @@ def test_week_counts_the_rejected_copies_as_coverage(db: Session, world: dict):
 
 
 def test_a_week_topic_carries_its_articles_likes_and_summaries(
-    db: Session, world: dict
-):
+    db: Session, world: dict[str, str]
+) -> None:
     topic = _topic(db, world["release"])
     assert [a["url"] for a in topic["articles"]] == [
         world["release"],
@@ -259,20 +279,22 @@ def test_a_week_topic_carries_its_articles_likes_and_summaries(
     assert lead["summary"] == f"summary of {world['release']}"
 
 
-def test_week_leaves_out_what_is_not_this_weeks(db: Session, world: dict):
+def test_week_leaves_out_what_is_not_this_weeks(
+    db: Session, world: dict[str, str]
+) -> None:
     urls = {a["url"] for t in _ours(db) for a in t["articles"]}
     for name in ("repo", "ancient", "marked"):
         assert world[name] not in urls
 
 
-def test_week_returns_at_most_limit_topics(db: Session, world: dict):
+def test_week_returns_at_most_limit_topics(db: Session, world: dict[str, str]) -> None:
     assert world
     assert len(digest.week(db, limit=1)) == 1
 
 
 def test_related_reaches_the_review_the_repo_and_the_commentary(
-    db: Session, world: dict
-):
+    db: Session, world: dict[str, str]
+) -> None:
     result = digest.related(db, world["release"])
     rows = {r["url"]: r for r in result["rows"]}
 
@@ -290,12 +312,16 @@ def test_related_reaches_the_review_the_repo_and_the_commentary(
     assert distances == sorted(distances)
 
 
-def test_related_leaves_out_slop_the_queue_and_the_window(db: Session, world: dict):
+def test_related_leaves_out_slop_the_queue_and_the_window(
+    db: Session, world: dict[str, str]
+) -> None:
     urls = {r["url"] for r in digest.related(db, world["release"])["rows"]}
     for name in ("release", "hot_take", "pending", "ancient", "marked", "kernels"):
         assert world[name] not in urls
 
 
-def test_related_on_an_unknown_url_is_a_message(db: Session, world: dict):
-    with pytest.raises(digest.DigestError, match="No published article"):
+def test_related_on_an_unknown_url_is_a_message(
+    db: Session, world: dict[str, str]
+) -> None:
+    with pytest.raises(DigestError, match="No published article"):
         digest.related(db, world["pending"])

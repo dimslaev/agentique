@@ -120,9 +120,9 @@ def approval_counts(
     counts: dict[int, tuple[int, int]] = {}
     for pid, n in approved:
         counts[pid] = (n, 0)
-    for pid, n in rejected:
-        if pid is not None:
-            counts[pid] = (counts.get(pid, (0, 0))[0], n)
+    for rejected_pid, n in rejected:
+        if rejected_pid is not None:
+            counts[rejected_pid] = (counts.get(rejected_pid, (0, 0))[0], n)
     return counts
 
 

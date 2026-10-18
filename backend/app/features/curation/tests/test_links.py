@@ -47,7 +47,7 @@ _RELEASE_HTML = """
 """
 
 
-def test_groups_the_links_an_article_body_makes():
+def test_groups_the_links_an_article_body_makes() -> None:
     links = outbound_links(_RELEASE_HTML, PAGE)
     assert links == {
         "model": [
@@ -63,17 +63,17 @@ def test_groups_the_links_an_article_body_makes():
     }
 
 
-def test_nav_and_footer_links_are_not_the_articles():
+def test_nav_and_footer_links_are_not_the_articles() -> None:
     links = outbound_links(_RELEASE_HTML, PAGE)
     assert "https://github.com/example/website" not in links.get("repo", [])
     assert "https://blog.example.com/about" not in links.get("docs", [])
 
 
-def test_empty_html_has_no_links():
+def test_empty_html_has_no_links() -> None:
     assert outbound_links("", PAGE) == {}
 
 
-def test_every_blob_of_one_repo_is_the_repo():
+def test_every_blob_of_one_repo_is_the_repo() -> None:
     urls = [
         "https://github.com/a/b",
         "https://github.com/a/b/pull/12",
@@ -85,7 +85,7 @@ def test_every_blob_of_one_repo_is_the_repo():
     }
 
 
-def test_papers_come_from_every_paper_host():
+def test_papers_come_from_every_paper_host() -> None:
     urls = [
         "https://arxiv.org/pdf/2609.01234",
         "https://openreview.net/forum?id=abc",
@@ -95,7 +95,7 @@ def test_papers_come_from_every_paper_host():
     assert group_links(urls, PAGE) == {"paper": urls}
 
 
-def test_hugging_face_site_pages_are_not_models():
+def test_hugging_face_site_pages_are_not_models() -> None:
     urls = [
         "https://huggingface.co/docs/transformers",
         "https://huggingface.co/blog/example",
@@ -106,16 +106,16 @@ def test_hugging_face_site_pages_are_not_models():
     assert group_links(urls, PAGE) == {"docs": ["https://huggingface.co/blog/example"]}
 
 
-def test_links_to_nowhere_in_particular_are_dropped():
+def test_links_to_nowhere_in_particular_are_dropped() -> None:
     urls = ["https://x.com/a", "https://news.ycombinator.com/item?id=1", "mailto:a@b"]
     assert group_links(urls, PAGE) == {}
 
 
-def test_a_link_back_to_the_page_is_not_a_link():
+def test_a_link_back_to_the_page_is_not_a_link() -> None:
     assert group_links([PAGE, f"{PAGE}#comments"], PAGE) == {}
 
 
-def test_each_group_is_capped():
+def test_each_group_is_capped() -> None:
     urls = [f"https://arxiv.org/abs/2609.{i:05d}" for i in range(25)]
     assert len(group_links(urls, PAGE)["paper"]) == MAX_LINKS_PER_GROUP
 
@@ -135,11 +135,13 @@ class _Response:
         return self._body
 
 
-def _stub_http(monkeypatch, answers: dict[str, _Response]) -> list[str]:
+def _stub_http(
+    monkeypatch: pytest.MonkeyPatch, answers: dict[str, _Response]
+) -> list[str]:
     """Answer each API URL from ``answers`` (by prefix); 404 otherwise."""
     asked: list[str] = []
 
-    def fetch(url: str, **_options: object):
+    def fetch(url: str, **_options: object) -> _Response:
         asked.append(url)
         for prefix, response in answers.items():
             if url.startswith(prefix):
@@ -161,7 +163,7 @@ GITHUB_REPO = {
 }
 
 
-def test_a_github_repo_maps_to_its_facts(monkeypatch):
+def test_a_github_repo_maps_to_its_facts(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_http(
         monkeypatch,
         {
@@ -185,7 +187,7 @@ def test_a_github_repo_maps_to_its_facts(monkeypatch):
     }
 
 
-def test_a_repo_with_no_readme_says_so(monkeypatch):
+def test_a_repo_with_no_readme_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
     _stub_http(
         monkeypatch,
         {
@@ -196,7 +198,9 @@ def test_a_repo_with_no_readme_says_so(monkeypatch):
     assert check_link("https://github.com/a/b")["has_readme"] is False
 
 
-def test_a_rate_limited_github_lookup_is_unknown_not_zero(monkeypatch):
+def test_a_rate_limited_github_lookup_is_unknown_not_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub_http(
         monkeypatch,
         {"https://api.github.com/": _Response(403, text="API rate limit exceeded")},
@@ -207,7 +211,7 @@ def test_a_rate_limited_github_lookup_is_unknown_not_zero(monkeypatch):
     assert facts == {"url": "https://github.com/a/b", "kind": "repo", "lookup": UNKNOWN}
 
 
-def test_a_missing_field_is_unknown_not_zero(monkeypatch):
+def test_a_missing_field_is_unknown_not_zero(monkeypatch: pytest.MonkeyPatch) -> None:
     repo = {**GITHUB_REPO, "license": None, "stargazers_count": None}
     _stub_http(
         monkeypatch,
@@ -222,7 +226,7 @@ def test_a_missing_field_is_unknown_not_zero(monkeypatch):
     assert (facts["license"], facts["stars"], facts["has_readme"]) == (UNKNOWN,) * 3
 
 
-def test_a_gitlab_project_maps_to_its_facts(monkeypatch):
+def test_a_gitlab_project_maps_to_its_facts(monkeypatch: pytest.MonkeyPatch) -> None:
     asked = _stub_http(
         monkeypatch,
         {
@@ -259,7 +263,9 @@ def test_a_gitlab_project_maps_to_its_facts(monkeypatch):
     }
 
 
-def test_a_hugging_face_model_maps_to_its_facts(monkeypatch):
+def test_a_hugging_face_model_maps_to_its_facts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     asked = _stub_http(
         monkeypatch,
         {
@@ -295,7 +301,9 @@ def test_a_hugging_face_model_maps_to_its_facts(monkeypatch):
     }
 
 
-def test_a_model_repo_with_only_a_readme_has_no_weights(monkeypatch):
+def test_a_model_repo_with_only_a_readme_has_no_weights(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub_http(
         monkeypatch,
         {
@@ -318,7 +326,9 @@ def test_a_model_repo_with_only_a_readme_has_no_weights(monkeypatch):
     )
 
 
-def test_a_hugging_face_dataset_has_no_weights_field(monkeypatch):
+def test_a_hugging_face_dataset_has_no_weights_field(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub_http(
         monkeypatch,
         {
@@ -335,7 +345,9 @@ def test_a_hugging_face_dataset_has_no_weights_field(monkeypatch):
     assert "weights" not in facts
 
 
-def test_a_failed_hugging_face_lookup_is_unknown(monkeypatch):
+def test_a_failed_hugging_face_lookup_is_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub_http(monkeypatch, {})
     facts = check_link("https://huggingface.co/org/Model-7B")
     assert facts["lookup"] == UNKNOWN
@@ -352,7 +364,9 @@ def test_a_failed_hugging_face_lookup_is_unknown(monkeypatch):
         "https://huggingface.co/blog/release",
     ],
 )
-def test_anything_else_is_refused_toward_web_fetch(monkeypatch, url):
+def test_anything_else_is_refused_toward_web_fetch(
+    monkeypatch: pytest.MonkeyPatch, url: str
+) -> None:
     asked = _stub_http(monkeypatch, {})
     with pytest.raises(LinkError, match="web_fetch"):
         check_link(url)

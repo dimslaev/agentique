@@ -74,7 +74,7 @@ def liveness(last: PipelineRun | None, now: datetime) -> str | None:
     return None
 
 
-def source_lines(sources: list[dict]) -> tuple[list[str], list[str]]:
+def source_lines(sources: list[dict[str, object]]) -> tuple[list[str], list[str]]:
     """``(silent, errors)`` from a run's stored per-source counts. Pure.
 
     Tolerates the older, longer shape and the ``errors`` list it carried, so a
@@ -87,7 +87,8 @@ def source_lines(sources: list[dict]) -> tuple[list[str], list[str]]:
         if not s.get("fetched"):
             silent.append(name)
         error = s.get("error")
-        for e in [error] if error else s.get("errors") or []:
+        older = s.get("errors")
+        for e in [error] if error else older if isinstance(older, list) else []:
             errors.append(f"{name}: {e}")
     return silent, errors
 

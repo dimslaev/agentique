@@ -8,7 +8,7 @@ feed already carries (ADR 11).
 
 from __future__ import annotations
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from app.core.db.article import Article
 from app.core.db.ledger import Reject
@@ -24,10 +24,10 @@ def filter_known_urls[T: RawItem](
     all_urls = [a["url"] for a in articles]
 
     existing_urls = set(
-        session.exec(select(Article.url).where(Article.url.in_(all_urls))).all()
+        session.exec(select(Article.url).where(col(Article.url).in_(all_urls))).all()
     )
     scored_urls = set(
-        session.exec(select(Reject.url).where(Reject.url.in_(all_urls))).all()
+        session.exec(select(Reject.url).where(col(Reject.url).in_(all_urls))).all()
     )
 
     fresh = [

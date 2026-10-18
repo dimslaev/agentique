@@ -39,6 +39,7 @@ from app.core.http import fetch_with_timeout
 from app.core.llm_text import enum_value
 from app.core.logging import log
 from app.core.urls import feed_url, hostname
+from app.features.collect.model import FeedSource
 
 # Publishers whose items link to other people's posts. An item one of them
 # found is credited to the site it links to, never to them.
@@ -344,14 +345,14 @@ def _active_publisher_links(session: Session) -> list[tuple[Publisher, dict[str,
     ]
 
 
-def feed_sources_from_db(session: Session) -> list[dict]:
+def feed_sources_from_db(session: Session) -> list[FeedSource]:
     """Active publishers with an rss/substack link -> feed configs.
 
     Replaces ``sources/substack-sources.json``. Shape mirrors the old JSON
     (``name`` / ``rssUrl``) so the substack fetcher needs no interface change.
     Prefers an explicit ``rss`` link, else falls back to ``substack``.
     """
-    sources: list[dict] = []
+    sources: list[FeedSource] = []
     for pub, links in _active_publisher_links(session):
         for platform in _FEED_PLATFORMS:
             url = links.get(platform)

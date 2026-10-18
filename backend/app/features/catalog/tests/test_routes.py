@@ -6,7 +6,6 @@ import uuid
 from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,7 +20,7 @@ from app.core.settings import settings
 from app.features.audience import service
 from app.features.audience.tests.factories import authentication_token_from_email
 from app.features.catalog import semantic_search
-from app.features.catalog.model import Origin
+from app.features.catalog.model import Origin, Voice
 from app.features.catalog.tests.factories import (
     create_random_article,
     create_random_publisher,
@@ -630,12 +629,13 @@ VOICES_URL = f"{ARTICLES_URL}/voices"
 
 def _voices(
     client: TestClient, kind: str, slugs: set[str], since: str = RECENT_SINCE
-) -> list[dict[str, Any]]:
+) -> list[Voice]:
     """The voices of `kind`, narrowed to the publishers a test made: other
     tests' articles share the window."""
     r = client.get(VOICES_URL, params={"kind": kind, "since": since, "limit": 20})
     assert r.status_code == 200
-    return [v for v in r.json() if v["slug"] in slugs]
+    voices = [Voice.model_validate(v) for v in r.json()]
+    return [v for v in voices if v.slug in slugs]
 
 
 def _ago(hours: float) -> datetime:
@@ -649,8 +649,8 @@ def test_voices_filter_by_kind(client: TestClient, db: Session) -> None:
         create_random_article(db, publisher_id=p.id, published_at=_ago(1))
     slugs = {lab.slug, company.slug}
 
-    assert [v["slug"] for v in _voices(client, "lab", slugs)] == [lab.slug]
-    assert [v["slug"] for v in _voices(client, "company", slugs)] == [company.slug]
+    assert [v.slug for v in _voices(client, "lab", slugs)] == [lab.slug]
+    assert [v.slug for v in _voices(client, "company", slugs)] == [company.slug]
     assert _voices(client, "individual", slugs) == []
 
 
@@ -666,21 +666,21 @@ def test_voices_writers_count_posts_only(client: TestClient, db: Session) -> Non
     )
 
     voices = _voices(client, "individual", {writer.slug, owner.slug})
-    assert [(v["slug"], v["count"]) for v in voices] == [(writer.slug, 1)]
+    assert [(v.slug, v.count) for v in voices] == [(writer.slug, 1)]
 
 
 def test_voices_labs_count_every_kind(client: TestClient, db: Session) -> None:
     lab = create_random_publisher(db, kind=PublisherKind.lab)
     for kind in (ArticleKind.post, ArticleKind.model, ArticleKind.paper):
         create_random_article(db, publisher_id=lab.id, kind=kind, published_at=_ago(1))
-    assert _voices(client, "lab", {lab.slug})[0]["count"] == 3
+    assert _voices(client, "lab", {lab.slug})[0].count == 3
 
 
 def test_voices_are_bounded_by_since(client: TestClient, db: Session) -> None:
     lab = create_random_publisher(db, kind=PublisherKind.lab)
     create_random_article(db, publisher_id=lab.id, published_at=_ago(1))
     create_random_article(db, publisher_id=lab.id, published_at=_ago(24 * 10))
-    assert _voices(client, "lab", {lab.slug})[0]["count"] == 1
+    assert _voices(client, "lab", {lab.slug})[0].count == 1
 
 
 def test_voices_scores_oldest_first_capped(client: TestClient, db: Session) -> None:
@@ -692,8 +692,8 @@ def test_voices_scores_oldest_first_capped(client: TestClient, db: Session) -> N
             db, publisher_id=lab.id, score=score, published_at=_ago(20 - i)
         )
     voice = _voices(client, "lab", {lab.slug})[0]
-    assert voice["count"] == 17
-    assert voice["scores"] == scores[-15:]
+    assert voice.count == 17
+    assert voice.scores == scores[-15:]
 
 
 def test_voices_best_is_highest_score(client: TestClient, db: Session) -> None:
@@ -703,9 +703,9 @@ def test_voices_best_is_highest_score(client: TestClient, db: Session) -> None:
     create_random_article(db, publisher_id=lab.id, score=6, published_at=_ago(1))
 
     voice = _voices(client, "lab", {lab.slug})[0]
-    assert voice["best"]["title"] == best.title
-    assert voice["best"]["url"] == best.url
-    assert voice["best"]["score"] == 9
+    assert voice.best.title == best.title
+    assert voice.best.url == best.url
+    assert voice.best.score == 9
 
 
 def test_voices_order_by_count_then_best(client: TestClient, db: Session) -> None:
@@ -726,7 +726,7 @@ def test_voices_order_by_count_then_best(client: TestClient, db: Session) -> Non
         )
 
     voices = _voices(client, "company", {busy.slug, strong.slug, weak.slug})
-    assert [v["slug"] for v in voices] == [busy.slug, strong.slug, weak.slug]
+    assert [v.slug for v in voices] == [busy.slug, strong.slug, weak.slug]
 
 
 def test_voices_unknown_kind_returns_422(client: TestClient) -> None:

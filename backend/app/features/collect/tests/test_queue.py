@@ -8,7 +8,11 @@ must not lose the candidates this one found.
 
 from __future__ import annotations
 
-from app.core.db.ledger import RejectStage
+from typing import cast
+
+from sqlmodel import Session
+
+from app.core.db.ledger import Reject, RejectStage
 from app.features.collect.model import Candidate
 from app.features.collect.queue import queue_candidates
 
@@ -17,17 +21,22 @@ class _FakeSession:
     """Just enough Session for the step: it records what it would record."""
 
     def __init__(self) -> None:
-        self.rows: list = []
+        self.rows: list[Reject] = []
         self.commits = 0
 
-    def merge(self, obj) -> None:
+    def merge(self, obj: Reject) -> Reject:
         self.rows.append(obj)
+        return obj
 
     def commit(self) -> None:
         self.commits += 1
 
+    @property
+    def session(self) -> Session:
+        return cast(Session, self)
 
-def _candidate(url: str, **overrides) -> Candidate:
+
+def _candidate(url: str, traction: str | None = None) -> Candidate:
     a: Candidate = {
         "title": "Something about agents",
         "url": url,
@@ -36,13 +45,16 @@ def _candidate(url: str, **overrides) -> Candidate:
         "source": "Hacker News",
         "publisher_id": 7,
     }
-    return {**a, **overrides}
+    if traction:
+        a["traction"] = traction
+    return a
 
 
-def test_every_survivor_is_queued_as_pending():
+def test_every_survivor_is_queued_as_pending() -> None:
     session = _FakeSession()
     queued = queue_candidates(
-        session, [_candidate("https://a.example"), _candidate("https://b.example")]
+        session.session,
+        [_candidate("https://a.example"), _candidate("https://b.example")],
     )
 
     assert [row.url for row in session.rows] == [
@@ -53,10 +65,10 @@ def test_every_survivor_is_queued_as_pending():
     assert len(queued) == 2
 
 
-def test_the_row_carries_what_the_agent_will_judge_by():
+def test_the_row_carries_what_the_agent_will_judge_by() -> None:
     session = _FakeSession()
     queue_candidates(
-        session,
+        session.session,
         [_candidate("https://a.example", traction="120 points, 40 comments")],
     )
 
@@ -68,19 +80,20 @@ def test_the_row_carries_what_the_agent_will_judge_by():
     )
     assert row.traction == "120 points, 40 comments"
     assert row.content == "body"
+    assert row.published_at is not None
     assert row.published_at.year == 2026
     # No verdict yet: the agent writes both.
     assert (row.score, row.reason) == (None, None)
 
 
-def test_the_candidates_are_committed():
+def test_the_candidates_are_committed() -> None:
     """A later source crashing must not take this source's candidates with it."""
     session = _FakeSession()
-    queue_candidates(session, [_candidate("https://a.example")])
+    queue_candidates(session.session, [_candidate("https://a.example")])
     assert session.commits == 1
 
 
-def test_nothing_to_queue_touches_nothing():
+def test_nothing_to_queue_touches_nothing() -> None:
     session = _FakeSession()
-    assert queue_candidates(session, []) == []
+    assert queue_candidates(session.session, []) == []
     assert (session.rows, session.commits) == ([], 0)

@@ -16,8 +16,9 @@ import pytest
 from app.core.extract import Page
 from app.core.urls import feed_url
 from app.features.collect import fetch as fetch_step
-from app.features.collect.feeds import _entry_item
+from app.features.collect.feeds import Entry, _entry_item
 from app.features.collect.fetch import MIN_CONTENT_CHARS, MIN_SUMMARIZABLE_CHARS
+from app.features.collect.model import RawItem
 
 # Varied prose on purpose: trafilatura deduplicates repeated segments, so a
 # fixture built from one repeated sentence extracts to nothing.
@@ -54,7 +55,7 @@ _ARTICLE_HTML = """
         ("https://console.dev/rss.xml", "https://console.dev/rss.xml"),
     ],
 )
-def test_feed_url_normalises_bare_substack_links(given, expected):
+def test_feed_url_normalises_bare_substack_links(given: str, expected: str) -> None:
     assert feed_url(given) == expected
 
 
@@ -68,21 +69,23 @@ def test_feed_url_normalises_bare_substack_links(given, expected):
         ("https://www.latent.space/feed", "https://www.latent.space/feed"),
     ],
 )
-def test_feed_url_appends_feed_for_substack_platform_links(given, expected):
+def test_feed_url_appends_feed_for_substack_platform_links(
+    given: str, expected: str
+) -> None:
     assert feed_url(given, is_substack=True) == expected
 
 
-def test_feed_url_is_idempotent():
+def test_feed_url_is_idempotent() -> None:
     """Applied by publisher config and again by the fetcher — must not double up."""
     once = feed_url("https://linas.substack.com")
     assert feed_url(once) == once
 
 
-def _entry_content(entry: dict) -> str:
+def _entry_content(entry: Entry) -> str:
     return _entry_item(entry, "Feed A")["content"]
 
 
-def test_content_encoded_preferred_over_summary_teaser():
+def test_content_encoded_preferred_over_summary_teaser() -> None:
     entry = {
         "summary": "<p>A short teaser.</p>",
         "content": [{"value": _ARTICLE_HTML}],
@@ -93,29 +96,29 @@ def test_content_encoded_preferred_over_summary_teaser():
     assert "A short teaser" not in text
 
 
-def test_falls_back_to_summary_when_no_content_encoded():
+def test_falls_back_to_summary_when_no_content_encoded() -> None:
     entry = {"summary": _ARTICLE_HTML, "content": []}
     text = _entry_content(entry)
     assert len(text) >= MIN_CONTENT_CHARS
 
 
-def test_html_is_stripped_not_stored_raw():
+def test_html_is_stripped_not_stored_raw() -> None:
     entry = {"summary": "", "content": [{"value": _ARTICLE_HTML}]}
     text = _entry_content(entry)
     assert "<p>" not in text and "<div>" not in text
 
 
-def test_short_teaser_yields_empty_rather_than_pretending_to_be_content():
+def test_short_teaser_yields_empty_rather_than_pretending_to_be_content() -> None:
     """A teaser must not masquerade as an article — the gate reads its length."""
     entry = {"summary": "<p>Read more at the link.</p>", "content": []}
     assert _entry_content(entry) == ""
 
 
-def test_missing_fields_do_not_raise():
+def test_missing_fields_do_not_raise() -> None:
     assert _entry_content({}) == ""
 
 
-def test_a_feed_item_carries_the_links_its_body_makes():
+def test_a_feed_item_carries_the_links_its_body_makes() -> None:
     html = _ARTICLE_HTML.replace(
         "</div>",
         '<p>Code is on <a href="https://github.com/anthropics/sdk/tree/main">'
@@ -126,7 +129,7 @@ def test_a_feed_item_carries_the_links_its_body_makes():
     assert item["links"] == {"repo": ["https://github.com/anthropics/sdk"]}
 
 
-def test_a_teaser_carries_no_links():
+def test_a_teaser_carries_no_links() -> None:
     entry = {"summary": '<p><a href="https://github.com/a/b">x</a></p>'}
     assert "links" not in _entry_item(entry, "Feed A")
 
@@ -140,11 +143,19 @@ def test_a_teaser_carries_no_links():
 _FULL_TEXT = "x" * MIN_CONTENT_CHARS
 
 
-def _fetched(url: str, content: str = "") -> dict:
-    return {"title": "A title", "url": url, "content": content, "source": "Lab Watch"}
+def _fetched(url: str, content: str = "") -> RawItem:
+    return {
+        "title": "A title",
+        "url": url,
+        "content": content,
+        "published_date": None,
+        "source": "Lab Watch",
+    }
 
 
-def _stub_refetch(monkeypatch, content_map: dict[str, str]) -> list[list[str]]:
+def _stub_refetch(
+    monkeypatch: pytest.MonkeyPatch, content_map: dict[str, str]
+) -> list[list[str]]:
     """Replace the network re-fetch, recording which URLs it was asked for."""
     asked: list[list[str]] = []
 
@@ -160,7 +171,9 @@ def _stub_refetch(monkeypatch, content_map: dict[str, str]) -> list[list[str]]:
     return asked
 
 
-def test_thin_item_is_refetched_and_kept_when_the_refetch_lands(monkeypatch):
+def test_thin_item_is_refetched_and_kept_when_the_refetch_lands(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     asked = _stub_refetch(monkeypatch, {"u1": _FULL_TEXT})
     kept = fetch_step._with_content([_fetched("u1", "a snippet")], "Lab Watch")
     assert asked == [["u1"]]
@@ -168,21 +181,27 @@ def test_thin_item_is_refetched_and_kept_when_the_refetch_lands(monkeypatch):
     assert kept[0]["links"] == {"paper": ["https://arxiv.org/abs/1"]}
 
 
-def test_thin_item_the_refetch_could_not_fill_is_dropped(monkeypatch):
+def test_thin_item_the_refetch_could_not_fill_is_dropped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The cause of the Lab Watch LLM bill: a snippet that never became an
     article still reached the scorer. It must not survive this step."""
     _stub_refetch(monkeypatch, {})
     assert fetch_step._with_content([_fetched("u1", "")], "Lab Watch") == []
 
 
-def test_a_snippet_that_stays_thin_is_dropped_even_though_it_is_non_empty(monkeypatch):
+def test_a_snippet_that_stays_thin_is_dropped_even_though_it_is_non_empty(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """A failed re-fetch leaves the original snippet in place; length, not
     presence, is what decides."""
     _stub_refetch(monkeypatch, {})
     assert fetch_step._with_content([_fetched("u1", "a snippet")], "Lab Watch") == []
 
 
-def test_content_just_long_enough_to_summarize_is_kept(monkeypatch):
+def test_content_just_long_enough_to_summarize_is_kept(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub_refetch(monkeypatch, {})
     text = "x" * MIN_SUMMARIZABLE_CHARS
     assert (
@@ -191,7 +210,9 @@ def test_content_just_long_enough_to_summarize_is_kept(monkeypatch):
     )
 
 
-def test_an_item_that_already_has_full_content_is_not_refetched(monkeypatch):
+def test_an_item_that_already_has_full_content_is_not_refetched(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     asked = _stub_refetch(monkeypatch, {})
     kept = fetch_step._with_content([_fetched("u1", _FULL_TEXT)], "Feeds")
     assert asked == []

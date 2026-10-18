@@ -21,11 +21,11 @@ SOURCES = [
 ]
 
 
-def test_at_prefix_matches_any_local_part_at_that_exact_domain():
+def test_at_prefix_matches_any_local_part_at_that_exact_domain() -> None:
     assert _match_sender("writer@substack.com", SOURCES) == "Some Substack"
 
 
-def test_at_prefix_does_not_match_a_deeper_subdomain():
+def test_at_prefix_does_not_match_a_deeper_subdomain() -> None:
     """ "@substack.com" matches "anyone@substack.com" only — the check is a
     string suffix on the whole address, so a subdomain like "foo.substack.com"
     changes what precedes "substack.com" and no longer ends in "@substack.com"."""
@@ -36,29 +36,31 @@ def test_at_prefix_does_not_match_a_deeper_subdomain():
     "address",
     ["writer@notsubstack.com", "writer@evilsubstack.com"],
 )
-def test_at_prefix_does_not_match_a_lookalike_domain(address):
+def test_at_prefix_does_not_match_a_lookalike_domain(address: str) -> None:
     """Confirms the check is a suffix match requiring the literal "@" right
     before the domain, not a raw substring search for "substack.com"."""
     assert _match_sender(address, SOURCES) is None
 
 
-def test_exact_pattern_requires_an_exact_address_match():
+def test_exact_pattern_requires_an_exact_address_match() -> None:
     assert _match_sender("news@bensbites.com", SOURCES) == "Ben's Bites"
 
 
-def test_exact_pattern_does_not_match_a_different_local_part_at_the_same_domain():
+def test_exact_pattern_does_not_match_a_different_local_part_at_the_same_domain() -> (
+    None
+):
     assert _match_sender("other@bensbites.com", SOURCES) is None
 
 
-def test_matching_is_case_insensitive():
+def test_matching_is_case_insensitive() -> None:
     assert _match_sender("Writer@Substack.COM", SOURCES) == "Some Substack"
 
 
-def test_no_match_returns_none():
+def test_no_match_returns_none() -> None:
     assert _match_sender("someone@example.com", SOURCES) is None
 
 
-def test_empty_sources_never_matches():
+def test_empty_sources_never_matches() -> None:
     assert _match_sender("writer@substack.com", []) is None
 
 
@@ -68,7 +70,7 @@ def test_empty_sources_never_matches():
 # the wrapper spells it out — is the whole job of this half of the source.
 
 
-def test_unwraps_a_percent_encoded_destination():
+def test_unwraps_a_percent_encoded_destination() -> None:
     assert (
         _unwrap_tracking_url(
             "https://tracking.tldrnewsletter.com/CL0/"
@@ -78,7 +80,7 @@ def test_unwraps_a_percent_encoded_destination():
     )
 
 
-def test_unwraps_a_literal_destination_with_its_own_path_separators():
+def test_unwraps_a_literal_destination_with_its_own_path_separators() -> None:
     assert (
         _unwrap_tracking_url(
             "https://tracking.tldrnewsletter.com/CL0/"
@@ -88,7 +90,7 @@ def test_unwraps_a_literal_destination_with_its_own_path_separators():
     )
 
 
-def test_keeps_the_destination_query_while_dropping_the_tracker_tail():
+def test_keeps_the_destination_query_while_dropping_the_tracker_tail() -> None:
     """The tail is the tracker's message id and click token, appended after the
     destination; the destination's own query must survive it."""
     assert (
@@ -100,12 +102,12 @@ def test_keeps_the_destination_query_while_dropping_the_tracker_tail():
     )
 
 
-def test_an_opaque_token_cannot_be_unwrapped():
+def test_an_opaque_token_cannot_be_unwrapped() -> None:
     """Nothing to recover without a request — the caller follows the redirect."""
     assert _unwrap_tracking_url("https://links.tldrnewsletter.com/zPfy8Y") is None
 
 
-def test_a_direct_link_is_not_a_wrapper():
+def test_a_direct_link_is_not_a_wrapper() -> None:
     assert _unwrap_tracking_url("https://example.com/blog/post") is None
 
 
@@ -113,14 +115,14 @@ def test_a_direct_link_is_not_a_wrapper():
 # Two links to one post must reduce to one string, or dedup stores it twice.
 
 
-def test_drops_campaign_params_and_keeps_the_rest():
+def test_drops_campaign_params_and_keeps_the_rest() -> None:
     assert (
         _canonical_url("https://example.com/p?id=7&utm_source=tldr&page=2")
         == "https://example.com/p?id=7&page=2"
     )
 
 
-def test_drops_campaign_params_hidden_after_a_fragment():
+def test_drops_campaign_params_hidden_after_a_fragment() -> None:
     """Newsletters append their params after the anchor, where a query parser
     never looks."""
     assert (
@@ -129,13 +131,13 @@ def test_drops_campaign_params_hidden_after_a_fragment():
     )
 
 
-def test_a_trailing_slash_does_not_make_a_second_url():
+def test_a_trailing_slash_does_not_make_a_second_url() -> None:
     assert _canonical_url("https://example.com/p/") == _canonical_url(
         "https://example.com/p"
     )
 
 
-def test_the_host_is_lowercased_but_the_path_is_not():
+def test_the_host_is_lowercased_but_the_path_is_not() -> None:
     """Hosts are case-insensitive; paths are not, and lowercasing one would
     404."""
     assert (
@@ -144,5 +146,5 @@ def test_the_host_is_lowercased_but_the_path_is_not():
     )
 
 
-def test_a_bare_root_url_keeps_its_slash():
+def test_a_bare_root_url_keeps_its_slash() -> None:
     assert _canonical_url("https://example.com/") == "https://example.com/"

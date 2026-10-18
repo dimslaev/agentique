@@ -21,5 +21,5 @@ from app.features.collect.titles import clean_title
         ("Why Show HN posts do well", "Why Show HN posts do well"),
     ],
 )
-def test_clean_title_strips_only_a_leading_hn_prefix(given, expected):
+def test_clean_title_strips_only_a_leading_hn_prefix(given: str, expected: str) -> None:
     assert clean_title(given) == expected

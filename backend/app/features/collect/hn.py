@@ -6,6 +6,7 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from typing import TypedDict
 
 from app.core.http import fetch_with_timeout
 from app.core.logging import log
@@ -160,12 +161,26 @@ HN_FEEDS = (
 HN_FETCH_LIMIT = 200
 
 
-def _fetch_item(item_id: int) -> dict | None:
+class HNItem(TypedDict, total=False):
+    """The slice of an HN item this module reads. Every key can be missing: a
+    deleted or dead item comes back with little more than its id."""
+
+    id: int
+    type: str
+    title: str
+    url: str
+    time: int
+    score: int
+    descendants: int
+
+
+def _fetch_item(item_id: int) -> HNItem | None:
     try:
         resp = fetch_with_timeout(f"{HN_ITEM}/{item_id}.json", timeout=10.0)
-        return resp.json()
+        item: HNItem | None = resp.json()
     except Exception:
         return None
+    return item
 
 
 def _story_ids(label: str, url: str) -> list[int]:
@@ -178,7 +193,7 @@ def _story_ids(label: str, url: str) -> list[int]:
     return ids[:HN_FETCH_LIMIT]
 
 
-def _age_hours(item: dict) -> float | None:
+def _age_hours(item: HNItem) -> float | None:
     """Hours since the story was posted, or None if it carries no timestamp."""
     posted = item.get("time")
     if not posted:
@@ -186,7 +201,7 @@ def _age_hours(item: dict) -> float | None:
     return (datetime.now(UTC).timestamp() - float(posted)) / 3600
 
 
-def _passes_topic_and_window(item: dict) -> bool:
+def _passes_topic_and_window(item: HNItem) -> bool:
     """Every ``_to_article`` gate except traction — the denominator the run log
     reports the traction gate against."""
     if not item or item.get("type") != "story" or not item.get("title"):
@@ -198,7 +213,7 @@ def _passes_topic_and_window(item: dict) -> bool:
     return is_within_window(pub_date)
 
 
-def has_traction(item: dict) -> bool:
+def has_traction(item: HNItem) -> bool:
     """Has HN itself said this story is worth reading?
 
     The firehose is not an editorial feed — ``newstories`` is every submission,
@@ -240,7 +255,7 @@ def has_traction(item: dict) -> bool:
     return points >= hn_min_points() or comments >= hn_min_comments()
 
 
-def _to_article(item: dict) -> RawItem | None:
+def _to_article(item: HNItem) -> RawItem | None:
     """One HN item -> a fetched article, or None if it fails a gate.
 
     Gates, cheapest first: it must be a titled story, its title must look

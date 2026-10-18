@@ -12,19 +12,19 @@ from app.features.collect.freshness import is_within_window
 # ─── parse_date ──────────────────────────────────────────────────────────────
 
 
-def test_parses_rfc_2822_as_rss_pubdate_emits_it():
+def test_parses_rfc_2822_as_rss_pubdate_emits_it() -> None:
     parsed = parse_date("Wed, 02 Oct 2002 13:00:00 GMT")
     assert parsed is not None
     assert (parsed.year, parsed.month, parsed.day) == (2002, 10, 2)
 
 
-def test_parses_iso_8601():
+def test_parses_iso_8601() -> None:
     parsed = parse_date("2026-07-17T12:30:00+00:00")
     assert parsed is not None
     assert (parsed.year, parsed.month, parsed.day) == (2026, 7, 17)
 
 
-def test_parses_iso_with_z_suffix():
+def test_parses_iso_with_z_suffix() -> None:
     """`Z` is what feeds actually emit; fromisoformat rejected it before 3.11."""
     parsed = parse_date("2026-07-17T12:30:00Z")
     assert parsed is not None
@@ -34,37 +34,37 @@ def test_parses_iso_with_z_suffix():
 @pytest.mark.parametrize(
     "given", ["2026-07-17T12:30:00", "Fri, 17 Jul 2026 12:30:00 -0000"]
 )
-def test_a_date_with_no_offset_is_read_as_utc(given):
+def test_a_date_with_no_offset_is_read_as_utc(given: str) -> None:
     """A naive datetime would be compared and stored in the server's local time."""
     assert parse_date(given) == datetime(2026, 7, 17, 12, 30, tzinfo=UTC)
 
 
 @pytest.mark.parametrize("given", [None, "", "not a date", "2026-13-45"])
-def test_unparsable_dates_return_none_rather_than_raising(given):
+def test_unparsable_dates_return_none_rather_than_raising(given: str | None) -> None:
     assert parse_date(given) is None
 
 
 # ─── is_within_window ────────────────────────────────────────────────────────
 
 
-def test_recent_date_is_within_window():
+def test_recent_date_is_within_window() -> None:
     recent = (datetime.now(UTC) - timedelta(hours=2)).isoformat()
     assert is_within_window(recent) is True
 
 
-def test_old_date_is_outside_window():
+def test_old_date_is_outside_window() -> None:
     old = (datetime.now(UTC) - timedelta(days=30)).isoformat()
     assert is_within_window(old) is False
 
 
-def test_window_boundary_is_inclusive():
+def test_window_boundary_is_inclusive() -> None:
     edge = (datetime.now(UTC) - timedelta(hours=10)).isoformat()
     assert is_within_window(edge, window_hours=24) is True
     assert is_within_window(edge, window_hours=1) is False
 
 
 @pytest.mark.parametrize("given", [None, "", "garbage"])
-def test_missing_or_unparsable_date_is_kept_not_dropped(given):
+def test_missing_or_unparsable_date_is_kept_not_dropped(given: str | None) -> None:
     """Deliberate: dropping an article because its feed emitted a date we cannot
     read loses real content, while keeping it only risks a stale item that
     scoring can still reject."""

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 import resend
 from sqlmodel import Session
 
@@ -10,7 +11,9 @@ from app.features.newsletter.service import subscribe
 from tests.random_data import random_email
 
 
-def test_subscribe_defaults_to_all(db: Session, monkeypatch) -> None:
+def test_subscribe_defaults_to_all(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.delenv("RESEND_API_KEY", raising=False)
     email = random_email()
 
@@ -23,7 +26,9 @@ def test_subscribe_defaults_to_all(db: Session, monkeypatch) -> None:
     db.commit()
 
 
-def test_subscribe_keeps_an_existing_row(db: Session, monkeypatch) -> None:
+def test_subscribe_keeps_an_existing_row(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.delenv("RESEND_API_KEY", raising=False)
     email = random_email()
     db.add(NewsletterSubscriber(email=email, categories=["dev"], utm_source="x"))
@@ -40,11 +45,13 @@ def test_subscribe_keeps_an_existing_row(db: Session, monkeypatch) -> None:
     db.commit()
 
 
-def test_subscribe_ignores_existing_resend_contact(db: Session, monkeypatch) -> None:
+def test_subscribe_ignores_existing_resend_contact(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("RESEND_API_KEY", "test-key")
     monkeypatch.setenv("RESEND_AUDIENCE_ID", "test-audience")
 
-    def exists(_payload: dict) -> None:
+    def exists(_payload: dict[str, object]) -> None:
         raise RuntimeError("Contact already exists")
 
     monkeypatch.setattr(resend.Contacts, "create", exists)

@@ -22,6 +22,7 @@ from app.features.catalog.tests.factories import (
     create_random_publisher,
 )
 from app.features.stories import service as stories
+from app.features.stories.model import SavedStory, StoryError, StoryPublic
 from tests.random_data import random_lower_string
 
 NOW = datetime(2026, 10, 10, 12, tzinfo=UTC)
@@ -46,10 +47,10 @@ def made(db: Session) -> Generator[dict[str, list[int]]]:
     yield created
     db.rollback()
     ours = select(Story.id).where(col(Story.id) > before)
-    db.exec(delete(StoryArticle).where(col(StoryArticle.story_id).in_(ours)))  # type: ignore[call-overload]
-    db.exec(delete(Story).where(col(Story.id) > before))  # type: ignore[call-overload]
-    db.exec(delete(Article).where(col(Article.id).in_(created["articles"])))  # type: ignore[call-overload]
-    db.exec(delete(Publisher).where(col(Publisher.id).in_(created["publishers"])))  # type: ignore[call-overload]
+    db.exec(delete(StoryArticle).where(col(StoryArticle.story_id).in_(ours)))
+    db.exec(delete(Story).where(col(Story.id) > before))
+    db.exec(delete(Article).where(col(Article.id).in_(created["articles"])))
+    db.exec(delete(Publisher).where(col(Publisher.id).in_(created["publishers"])))
     db.commit()
 
 
@@ -86,7 +87,7 @@ def _save(
     name: str | None = None,
     blurb: str = "What it is. Why it matters now.",
     now: datetime = NOW,
-) -> stories.SavedStory:
+) -> SavedStory:
     name = name or slug.replace("-", " ").title()
     return stories.save_story(db, slug, name, blurb, urls, now=now)
 
@@ -105,14 +106,14 @@ def _story(
     return articles
 
 
-def _mine(listed: list, slugs: set[str]) -> list[str]:
+def _mine(listed: list[StoryPublic], slugs: set[str]) -> list[str]:
     return [s.slug for s in listed if s.slug in slugs]
 
 
 # ─── Migration ───────────────────────────────────────────────────────────────
 
 
-def test_the_migration_creates_both_tables():
+def test_the_migration_creates_both_tables() -> None:
     schema = inspect(engine)
     story = {c["name"] for c in schema.get_columns("story")}
     assert story >= {
@@ -142,7 +143,7 @@ def test_the_migration_creates_both_tables():
 
 def test_list_needs_three_articles_from_two_publishers(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     one_publisher = _publisher(db, made)
     p1, p2 = _publisher(db, made), _publisher(db, made)
     _save(
@@ -161,7 +162,7 @@ def test_list_needs_three_articles_from_two_publishers(
     ]
 
 
-def test_list_hides_closed_stories(db: Session, made: dict[str, list[int]]):
+def test_list_hides_closed_stories(db: Session, made: dict[str, list[int]]) -> None:
     _story(db, made, S("closed-one"))
     stories.close_story(db, S("closed-one"), now=NOW)
 
@@ -170,7 +171,7 @@ def test_list_hides_closed_stories(db: Session, made: dict[str, list[int]]):
 
 def test_list_orders_by_newest_article_and_shapes_each_story(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     older = _story(db, made, S("older"), days_ago=5)
     _story(db, made, S("newer"), days_ago=1)
 
@@ -187,7 +188,7 @@ def test_list_orders_by_newest_article_and_shapes_each_story(
 
 def test_grew_today_reads_when_an_article_was_added(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     _story(db, made, S("quiet"))
     later = NOW + timedelta(days=2)
 
@@ -201,7 +202,7 @@ def test_grew_today_reads_when_an_article_was_added(
 
 def test_the_rail_caps_the_articles_it_sends(
     db: Session, made: dict[str, list[int]], monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     monkeypatch.setattr(stories, "STORY_ARTICLES", 8)
     p1, p2 = _publisher(db, made), _publisher(db, made)
     urls = [_article(db, made, p1 if i % 2 else p2, i).url for i in range(10)]
@@ -218,7 +219,7 @@ def test_the_rail_caps_the_articles_it_sends(
 
 def test_the_route_serves_the_list(
     client: TestClient, db: Session, made: dict[str, list[int]]
-):
+) -> None:
     _story(db, made, S("served"))
 
     r = client.get(f"{settings.API_V1_STR}/stories/", params={"limit": 20})
@@ -237,7 +238,9 @@ def test_the_route_serves_the_list(
 # ─── save_story ──────────────────────────────────────────────────────────────
 
 
-def test_save_creates_then_updates_in_place(db: Session, made: dict[str, list[int]]):
+def test_save_creates_then_updates_in_place(
+    db: Session, made: dict[str, list[int]]
+) -> None:
     p = _publisher(db, made)
     first, second = _article(db, made, p), _article(db, made, p)
 
@@ -287,17 +290,17 @@ def test_save_refuses_a_bad_label(
     name: str,
     blurb: str,
     message: str,
-):
+) -> None:
     url = _article(db, made, _publisher(db, made)).url
-    with pytest.raises(stories.StoryError, match=message):
+    with pytest.raises(StoryError, match=message):
         stories.save_story(db, slug, name, blurb, [url], now=NOW)
 
 
 def test_save_refuses_unknown_urls_and_writes_nothing(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     known = _article(db, made, _publisher(db, made)).url
-    with pytest.raises(stories.StoryError, match="Not a published article"):
+    with pytest.raises(StoryError, match="Not a published article"):
         _save(db, S("nothing-written"), [known, "https://never.example/x"])
     db.rollback()
     assert (
@@ -305,19 +308,19 @@ def test_save_refuses_unknown_urls_and_writes_nothing(
     )
 
 
-def test_save_refuses_a_new_story_with_no_articles(db: Session):
-    with pytest.raises(stories.StoryError, match="at least one"):
+def test_save_refuses_a_new_story_with_no_articles(db: Session) -> None:
+    with pytest.raises(StoryError, match="at least one"):
         _save(db, S("empty"), [])
 
 
-def test_an_article_sits_in_one_open_story(db: Session, made: dict[str, list[int]]):
+def test_an_article_sits_in_one_open_story(
+    db: Session, made: dict[str, list[int]]
+) -> None:
     p = _publisher(db, made)
     shared, other = _article(db, made, p), _article(db, made, p)
     _save(db, S("first"), [shared.url])
 
-    with pytest.raises(
-        stories.StoryError, match=rf"another open story.*\({S('first')}\)"
-    ):
+    with pytest.raises(StoryError, match=rf"another open story.*\({S('first')}\)"):
         _save(db, S("second"), [other.url, shared.url])
     db.rollback()
     assert db.exec(select(Story).where(Story.slug == S("second"))).first() is None
@@ -328,16 +331,16 @@ def test_an_article_sits_in_one_open_story(db: Session, made: dict[str, list[int
 
 def test_a_closed_story_cannot_be_saved_or_closed_again(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     url = _article(db, made, _publisher(db, made)).url
     _save(db, S("done"), [url])
     stories.close_story(db, S("done"), now=NOW)
 
-    with pytest.raises(stories.StoryError, match="closed"):
+    with pytest.raises(StoryError, match="closed"):
         _save(db, S("done"), [url])
-    with pytest.raises(stories.StoryError, match="already closed"):
+    with pytest.raises(StoryError, match="already closed"):
         stories.close_story(db, S("done"), now=NOW)
-    with pytest.raises(stories.StoryError, match="No story"):
+    with pytest.raises(StoryError, match="No story"):
         stories.close_story(db, S("never-was"), now=NOW)
 
 
@@ -354,7 +357,7 @@ def _near(axis: int, wobble: float = 0.0) -> list[float]:
 
 def test_candidates_cluster_free_articles_and_name_the_story_they_reach(
     db: Session, made: dict[str, list[int]]
-):
+) -> None:
     p1, p2 = _publisher(db, made), _publisher(db, made)
     held = _article(db, made, p1, embedding=_near(0))
     _save(db, S("held"), [held.url])
@@ -385,7 +388,7 @@ def test_candidates_cluster_free_articles_and_name_the_story_they_reach(
 
 def test_save_story_tool_reports_what_it_did(
     db: Session, made: dict[str, list[int]], monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     from fastmcp.server.auth import AccessToken
 
     from app.mcp import tools

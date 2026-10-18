@@ -10,23 +10,35 @@ from __future__ import annotations
 import pytest
 
 from app.features.collect import tweets
+from app.features.collect.model import RawItem
+from app.features.collect.tweets import Tweet
 
 _TWEET_URL = "https://x.com/cantinasecurity/status/2078158487759290614"
 
 
-def _item(url: str, content: str = "a blurb") -> dict:
-    return {"title": "A title", "url": url, "content": content, "source": "Feeds"}
+def _item(url: str, content: str = "a blurb") -> RawItem:
+    return {
+        "title": "A title",
+        "url": url,
+        "content": content,
+        "published_date": None,
+        "source": "Feeds",
+    }
 
 
-def _tweet(text: str, *links: str) -> dict:
-    facets = [{"type": "url", "replacement": link} for link in links]
-    return {"text": text, "raw_text": {"text": text, "facets": facets}}
+def _tweet(text: str, *links: str) -> Tweet:
+    return {
+        "text": text,
+        "raw_text": {
+            "facets": [{"type": "url", "replacement": link} for link in links]
+        },
+    }
 
 
-def _stub(monkeypatch, tweet: dict | None) -> list[str]:
+def _stub(monkeypatch: pytest.MonkeyPatch, tweet: Tweet | None) -> list[str]:
     asked: list[str] = []
 
-    def fetch_tweet(status_id: str) -> dict | None:
+    def fetch_tweet(status_id: str) -> Tweet | None:
         asked.append(status_id)
         return tweet
 
@@ -44,11 +56,13 @@ def _stub(monkeypatch, tweet: dict | None) -> list[str]:
         ("https://example.com/a/status/1", None),
     ],
 )
-def test_tweet_id(url, expected):
+def test_tweet_id(url: str, expected: str | None) -> None:
     assert tweets.tweet_id(url) == expected
 
 
-def test_a_tweet_that_links_out_becomes_that_link(monkeypatch):
+def test_a_tweet_that_links_out_becomes_that_link(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     link = "https://cantina.review/cantina-agentic-5a0a34"
     _stub(monkeypatch, _tweet("Full story:", f"{_TWEET_URL}/photo/1", link))
     [item] = tweets.unwrap_tweets([_item(_TWEET_URL)])
@@ -56,7 +70,9 @@ def test_a_tweet_that_links_out_becomes_that_link(monkeypatch):
     assert item["content"] == ""
 
 
-def test_a_tweet_with_no_link_keeps_its_full_text(monkeypatch):
+def test_a_tweet_with_no_link_keeps_its_full_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     text = "A long thread opener. " * 20
     _stub(monkeypatch, _tweet(text))
     [item] = tweets.unwrap_tweets([_item(_TWEET_URL)])
@@ -64,13 +80,17 @@ def test_a_tweet_with_no_link_keeps_its_full_text(monkeypatch):
     assert item["content"] == text
 
 
-def test_a_tweet_fxtwitter_cannot_return_is_left_as_it_came(monkeypatch):
+def test_a_tweet_fxtwitter_cannot_return_is_left_as_it_came(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     _stub(monkeypatch, None)
     [item] = tweets.unwrap_tweets([_item(_TWEET_URL)])
     assert item == _item(_TWEET_URL)
 
 
-def test_items_that_are_not_tweets_are_never_looked_up(monkeypatch):
+def test_items_that_are_not_tweets_are_never_looked_up(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     asked = _stub(monkeypatch, None)
     tweets.unwrap_tweets([_item("https://example.com/post")])
     assert asked == []

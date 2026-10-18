@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 from datetime import timedelta
 
 import jwt
@@ -26,7 +27,7 @@ from tests.random_data import random_email
 LINK_SENT = {"message": "Check your inbox for your sign-in link"}
 
 
-def enable_resend_email(monkeypatch) -> list[dict]:
+def enable_resend_email(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
     monkeypatch.setattr(
         "app.core.settings.settings.RESEND_API_KEY", "test-key", raising=False
     )
@@ -34,13 +35,13 @@ def enable_resend_email(monkeypatch) -> list[dict]:
         "app.core.settings.settings.EMAILS_FROM_EMAIL", "hello@example.com"
     )
     monkeypatch.setattr(resend.Contacts, "create", lambda *args, **kwargs: None)
-    sent: list[dict] = []
+    sent: list[dict[str, str]] = []
     monkeypatch.setattr(resend.Emails, "send", lambda payload: sent.append(payload))
     return sent
 
 
 def test_link_request_emails_existing_user(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sent = enable_resend_email(monkeypatch)
     user = create_random_user(db)
@@ -68,11 +69,11 @@ def test_new_link_replaces_the_old_one(client: TestClient, db: Session) -> None:
 
 
 def test_link_request_succeeds_when_send_fails(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_resend_email(monkeypatch)
 
-    def fail(_payload: dict) -> None:
+    def fail(_payload: dict[str, object]) -> None:
         raise RuntimeError("resend down")
 
     monkeypatch.setattr(resend.Emails, "send", fail)
@@ -168,7 +169,9 @@ def _signed(user_id: uuid.UUID, key: str, expires_in: timedelta) -> str:
     ],
     ids=["expired", "wrong-key", "tampered"],
 )
-def test_access_token_is_rejected(client: TestClient, db: Session, make_token) -> None:
+def test_access_token_is_rejected(
+    client: TestClient, db: Session, make_token: Callable[[uuid.UUID], str]
+) -> None:
     user = create_random_user(db)
     r = client.post(
         f"{settings.API_V1_STR}/login/test-token",
@@ -178,7 +181,7 @@ def test_access_token_is_rejected(client: TestClient, db: Session, make_token) -
 
 
 def test_link_request_unknown_email_creates_account(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sent = enable_resend_email(monkeypatch)
     email = random_email()
@@ -201,11 +204,11 @@ def test_link_request_unknown_email_creates_account(
 
 
 def test_new_account_syncs_resend_contact(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("RESEND_API_KEY", "test-key")
     monkeypatch.setenv("RESEND_AUDIENCE_ID", "test-audience")
-    calls: list[dict] = []
+    calls: list[dict[str, object]] = []
     monkeypatch.setattr(
         resend.Contacts, "create", lambda payload: calls.append(payload)
     )
@@ -226,7 +229,7 @@ def test_new_account_syncs_resend_contact(
 
 
 def test_link_request_never_duplicates_an_account(
-    client: TestClient, db: Session, monkeypatch
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     sent = enable_resend_email(monkeypatch)
     user = create_random_user(db)

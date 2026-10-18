@@ -45,6 +45,13 @@ class RawItem(TypedDict):
     links: NotRequired[dict[str, list[str]]]
 
 
+class FeedSource(TypedDict):
+    """One rss or substack feed to poll, built from an active publisher."""
+
+    name: str
+    rssUrl: str
+
+
 class Candidate(RawItem):
     """An item resolved to the Publisher it came from."""
 
