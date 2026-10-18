@@ -25,11 +25,6 @@ SHELL_SCRIPTS = (
 )
 
 
-def _python_targets(command: str) -> list[str]:
-    """The modules a command runs with ``python -m``."""
-    return re.findall(r"python -m ([\w.]+)", command)
-
-
 @pytest.mark.parametrize(
     "unit", sorted((REPO / "deploy").glob("*.service")), ids=lambda p: p.name
 )
@@ -48,7 +43,7 @@ def test_every_python_unit_starts_something_that_exists(unit: Path) -> None:
 
 @pytest.mark.parametrize("script", SHELL_SCRIPTS, ids=lambda p: p.name)
 def test_every_module_a_shell_script_runs_exists(script: Path) -> None:
-    targets = _python_targets(script.read_text())
+    targets = re.findall(r"python -m ([\w.]+)", script.read_text())
     assert targets
     for target in targets:
         assert importlib.util.find_spec(target) is not None, target

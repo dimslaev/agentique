@@ -7,12 +7,12 @@ from sqlmodel import Session
 
 from app.core.db.engine import engine
 from app.entry.mcp.auth import require_write
-from app.features.newsletter import service as digest
+from app.features.newsletter import service as newsletter
 from app.features.newsletter.model import DigestError, Related
 
 
 def related(
-    url: str, days: int = digest.RELATED_DAYS, limit: int = digest.RELATED_LIMIT
+    url: str, days: int = newsletter.RELATED_DAYS, limit: int = newsletter.RELATED_LIMIT
 ) -> Related:
     """What else covers one published article's subject: the individual writer
     who tried it, the repo built on it, the commentary on it.
@@ -27,6 +27,6 @@ def related(
     require_write()
     with Session(engine) as session:
         try:
-            return digest.related(session, url, days, limit)
+            return newsletter.related(session, url, days, limit)
         except DigestError as exc:
             raise ToolError(str(exc))

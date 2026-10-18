@@ -6,11 +6,11 @@ from sqlmodel import Session
 
 from app.core.db.engine import engine
 from app.entry.mcp.auth import require_write
-from app.features.newsletter import service as digest
+from app.features.newsletter import service as newsletter
 from app.features.newsletter.model import WeekTopic
 
 
-def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[WeekTopic]:
+def week(days: int = 7, limit: int = newsletter.WEEK_LIMIT) -> list[WeekTopic]:
     """The weekly newsletter's material: the last `days` of published articles
     grouped into topics, the most talked-about first.
 
@@ -24,4 +24,4 @@ def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[WeekTopic]:
     """
     require_write()
     with Session(engine) as session:
-        return digest.week(session, days, limit)
+        return newsletter.week(session, days, limit)
