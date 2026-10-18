@@ -75,11 +75,11 @@ def both_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _call_tool(
     client: TestClient, token: str, name: str, arguments: dict[str, object]
-) -> dict[str, object]:
+) -> tuple[bool, str]:
     """Open a session with ``token`` and call one tool, as an MCP client would.
 
-    Returns the JSON-RPC ``result``. A refused tool call is still a 200 with
-    ``isError`` set: the gate inside the tool answers, not the HTTP layer.
+    Returns the result's ``isError`` and its text. A refused tool call is still
+    a 200: the gate inside the tool answers, not the HTTP layer.
     """
     headers = {**HEADERS, "Authorization": f"Bearer {token}"}
     opened = client.post(MCP_URL, json=INITIALIZE, headers=headers)
@@ -106,33 +106,27 @@ def _call_tool(
         for line in response.text.splitlines()
         if line.startswith("data: ")
     )
-    result: dict[str, object] = json.loads(data)["result"]
-    return result
-
-
-def _text(result: dict[str, object]) -> str:
-    content = result["content"]
-    assert isinstance(content, list)
-    return str(content[0]["text"])
+    result = json.loads(data)["result"]
+    return result["isError"], result["content"][0]["text"]
 
 
 @pytest.mark.usefixtures("both_tokens")
 def test_the_read_token_is_refused_by_a_write_tool(client: TestClient) -> None:
-    result = _call_tool(
+    is_error, text = _call_tool(
         client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
     )
-    assert result["isError"] is True
-    assert "curation token" in _text(result)
+    assert is_error
+    assert "curation token" in text
 
 
 @pytest.mark.usefixtures("both_tokens")
 def test_the_write_token_gets_past_the_gate(client: TestClient) -> None:
     # Past the gate it is an ordinary lookup, so the refusal is the candidate's.
-    result = _call_tool(
+    is_error, text = _call_tool(
         client, WRITE_TOKEN, "get_content", {"url": "https://never-queued.example"}
     )
-    assert result["isError"] is True
-    assert "No candidate for" in _text(result)
+    assert is_error
+    assert "No candidate for" in text
 
 
 def test_an_unset_write_token_opens_no_write_tool(
@@ -148,8 +142,8 @@ def test_an_unset_write_token_opens_no_write_tool(
     )
     assert stale.status_code == 401
 
-    result = _call_tool(
+    is_error, text = _call_tool(
         client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
     )
-    assert result["isError"] is True
-    assert "curation token" in _text(result)
+    assert is_error
+    assert "curation token" in text
