@@ -315,9 +315,13 @@ def test_a_report_is_read_from_the_db_and_mailed(
 def test_a_report_that_cannot_be_sent_exits_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    def broken(_subject: str, _body: str) -> None:
+    tried: list[str] = []
+
+    def broken(subject: str, _body: str) -> None:
+        tried.append(subject)
         raise RuntimeError("resend down")
 
     monkeypatch.setattr(run_module, "send_mail", broken)
 
     assert run_module.send_report() == 1
+    assert len(tried) == 1

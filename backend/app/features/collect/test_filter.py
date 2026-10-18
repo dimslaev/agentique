@@ -10,6 +10,7 @@ from sqlmodel import Session, col, delete
 
 from app.core.db.factories import create_random_article, random_lower_string
 from app.core.db.ledger import Reject, RejectStage
+from app.core.db.publisher import Publisher
 from app.features.collect.filter import filter_known_urls
 from app.features.collect.model import RawItem
 
@@ -38,7 +39,9 @@ def known(db: Session) -> Generator[None]:
     db.commit()
     yield
     db.exec(delete(Reject).where(col(Reject.url).contains(TAG)))
+    publisher_id = article.publisher_id
     db.delete(article)
+    db.exec(delete(Publisher).where(col(Publisher.id) == publisher_id))
     db.commit()
 
 
