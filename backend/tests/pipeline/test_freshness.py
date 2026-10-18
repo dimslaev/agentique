@@ -40,7 +40,7 @@ def test_a_date_with_no_offset_is_read_as_utc(given):
 
 
 @pytest.mark.parametrize("given", [None, "", "not a date", "2026-13-45"])
-def test_unparseable_dates_return_none_rather_than_raising(given):
+def test_unparsable_dates_return_none_rather_than_raising(given):
     assert parse_date(given) is None
 
 
@@ -64,7 +64,7 @@ def test_window_boundary_is_inclusive():
 
 
 @pytest.mark.parametrize("given", [None, "", "garbage"])
-def test_missing_or_unparseable_date_is_kept_not_dropped(given):
+def test_missing_or_unparsable_date_is_kept_not_dropped(given):
     """Deliberate: dropping an article because its feed emitted a date we cannot
     read loses real content, while keeping it only risks a stale item that
     scoring can still reject."""
