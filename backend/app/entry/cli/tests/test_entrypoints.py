@@ -7,6 +7,7 @@ import importlib.util
 import re
 import runpy
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -118,3 +119,14 @@ def test_the_seeds_refuse_production(
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     with pytest.raises((RuntimeError, SystemExit), match="Refusing"):
         main()
+
+
+def test_the_collect_run_leaves_the_root_logger_alone() -> None:
+    # At INFO, httpx logs a line for every request the night makes and buries
+    # the run's own progress in the journal.
+    probe = (
+        "import logging, app.entry.cli.collect; "
+        "root = logging.getLogger(); "
+        "assert root.level == logging.WARNING and not root.handlers, root"
+    )
+    subprocess.run([sys.executable, "-c", probe], cwd=BACKEND, check=True)
