@@ -6,7 +6,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from pipeline.freshness import is_within_window, parse_date
+from app.core.dates import parse_date
+from pipeline.freshness import is_within_window
 
 # ─── parse_date ──────────────────────────────────────────────────────────────
 
@@ -28,6 +29,14 @@ def test_parses_iso_with_z_suffix():
     parsed = parse_date("2026-07-17T12:30:00Z")
     assert parsed is not None
     assert parsed.tzinfo is not None
+
+
+@pytest.mark.parametrize(
+    "given", ["2026-07-17T12:30:00", "Fri, 17 Jul 2026 12:30:00 -0000"]
+)
+def test_a_date_with_no_offset_is_read_as_utc(given):
+    """A naive datetime would be compared and stored in the server's local time."""
+    assert parse_date(given) == datetime(2026, 7, 17, 12, 30, tzinfo=UTC)
 
 
 @pytest.mark.parametrize("given", [None, "", "not a date", "2026-13-45"])
