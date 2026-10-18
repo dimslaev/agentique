@@ -8,6 +8,7 @@ from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind
 from app.features.collect.publishers import (
     host_kind,
     hosts_to_publishers,
+    is_shared_host,
     match_publisher,
     owner_key,
 )
@@ -103,3 +104,33 @@ def test_owner_key(url: str, key: str | None) -> None:
 def test_a_personal_host_is_an_individual() -> None:
     assert host_kind("someone.github.io") == PublisherKind.individual
     assert host_kind("goodfire.ai") == PublisherKind.unknown
+
+
+@pytest.mark.parametrize(
+    "host, shared",
+    [
+        ("reddit.com", True),
+        ("old.reddit.com", True),
+        ("m.youtube.com", True),
+        ("youtu.be", True),
+        ("mobile.twitter.com", True),
+        ("gist.github.com", True),
+        # A subdomain of these is one writer's site.
+        ("writer.substack.com", False),
+        ("someone.medium.com", False),
+        ("notreddit.com", False),
+        ("simonwillison.net", False),
+    ],
+)
+def test_a_shared_platform_includes_its_subdomains(host: str, shared: bool) -> None:
+    assert is_shared_host(host) is shared
+
+
+def test_a_publisher_on_a_platform_subdomain_claims_nothing() -> None:
+    sub = _pub(11, website="https://old.reddit.com/r/LocalLLaMA")
+    assert _credited("https://old.reddit.com/r/LocalLLaMA/comments/x", sub) is None
+
+
+def test_a_substack_writer_still_claims_their_own_subdomain() -> None:
+    writer = _pub(12, substack="https://writer.substack.com")
+    assert _credited("https://writer.substack.com/p/a-post", writer) == 12

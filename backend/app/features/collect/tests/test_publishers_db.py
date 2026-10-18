@@ -100,6 +100,28 @@ def test_a_shared_host_that_names_no_author_stays_with_the_aggregator(
     )
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://old.reddit.com/r/LocalLLaMA/comments/abc/a_thread/",
+        "https://m.youtube.com/watch?v=abc",
+        "https://youtu.be/abc",
+        "https://mobile.twitter.com/someone/status/1",
+    ],
+)
+def test_a_shared_platforms_subdomain_names_no_author_either(
+    db: Session, sources: dict[str, Publisher], url: str
+) -> None:
+    """Another door into the platform is not a site of its own: no publisher
+    named after it."""
+    resolver = PublisherResolver(db)
+    assert (
+        resolver.publisher_for(url, sources["aggregator"].name).id
+        == sources["aggregator"].id
+    )
+    assert resolver.created == []
+
+
 def test_a_feeds_own_item_stays_with_the_feed(
     db: Session, sources: dict[str, Publisher]
 ) -> None:

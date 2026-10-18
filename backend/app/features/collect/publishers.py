@@ -97,7 +97,7 @@ class PublisherResolver:
         """
         key = owner_key(url)
         host = hostname(url)
-        if key is None and (not host or host in SHARED_HOSTS):
+        if key is None and (not host or is_shared_host(host)):
             return None
         site = key or host
         name = site.partition("/")[2].removeprefix("@") if key else host
@@ -190,9 +190,13 @@ SHARED_HOSTS = frozenset(
         "substack.com",
         "twitter.com",
         "x.com",
+        "youtu.be",
         "youtube.com",
     }
 )
+# Shared hosts whose subdomains are one author's site (writer.substack.com),
+# not another door into the platform (old.reddit.com, m.youtube.com).
+PERSONAL_SUBDOMAIN_HOSTS = frozenset({"medium.com", "substack.com"})
 
 _HOST_PLATFORMS = (
     LinkPlatform.website.value,
@@ -210,6 +214,15 @@ HF_NOT_OWNERS = frozenset({"models", "docs", "api", "papers", "learn", "join"})
 MEDIUM_NOT_OWNERS = frozenset({"tag", "topic", "m", "p", "search", "me"})
 # Hosts where every site is one person's.
 PERSONAL_HOST_SUFFIXES = (".github.io", ".substack.com", ".bearblog.dev")
+
+
+def is_shared_host(host: str) -> bool:
+    """A host many unrelated authors publish under. Pure."""
+    return any(
+        host == shared
+        or (host.endswith(f".{shared}") and shared not in PERSONAL_SUBDOMAIN_HOSTS)
+        for shared in SHARED_HOSTS
+    )
 
 
 def owner_key(url: str) -> str | None:
@@ -299,7 +312,7 @@ def hosts_to_publishers(publishers: Iterable[Publisher]) -> dict[str, Publisher]
                 host = owner_key(link) or hostname(link)
             else:
                 continue
-            if host and host not in SHARED_HOSTS:
+            if host and not is_shared_host(host):
                 claims.setdefault(host, {})[p.id] = p
     return {
         host: next(iter(pubs.values()))
