@@ -17,7 +17,6 @@ from jinja2 import Template
 from app.core.logging import log
 from app.core.settings import settings
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
