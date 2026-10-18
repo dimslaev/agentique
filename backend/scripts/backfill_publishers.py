@@ -31,8 +31,8 @@ from app.core.db.article import Article, ArticleKind
 from app.core.db.engine import engine
 from app.core.db.ledger import Reject
 from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind
-from pipeline.curation import NAMEABLE_KINDS
-from pipeline.publishers import AGGREGATOR_TYPES, PublisherResolver
+from app.features.collect.publishers import AGGREGATOR_TYPES, PublisherResolver
+from app.features.curation.service import NAMEABLE_KINDS
 
 # Publishers that train and release their own models. Picked by hand from the
 # 2026-10-03 publisher list.

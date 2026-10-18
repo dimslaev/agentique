@@ -6,8 +6,8 @@ import logging
 
 from sqlmodel import Session
 
-from app.audience.service import init_db
 from app.core.db.engine import engine
+from app.features.audience.service import init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,6 +1,6 @@
 """Load the controlled tag vocabulary into the `tag` table.
 
-Unlike `seed_articles`, this is real data, not sample data: `pipeline.tags.
+Unlike `seed_articles`, this is real data, not sample data: `app.features.curation.tags.
 load_vocabulary()` raises on an empty `tag` table, so every environment —
 production included — needs it. Idempotent, keyed on `slug`; tags no longer in
 the file are left alone, because `article_tag` rows may still point at them.

@@ -17,10 +17,10 @@ from typing import TypedDict
 
 from sqlmodel import Session, col, select
 
-from app.catalog import stories
 from app.core.db.article import Article
 from app.core.db.engine import engine
 from app.core.settings import settings
+from app.features.stories import service as stories
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

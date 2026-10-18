@@ -18,14 +18,25 @@ from fastmcp.exceptions import ToolError
 from fastmcp.server.dependencies import get_access_token
 from sqlmodel import Session
 
-from app.catalog import stories as story_domain
 from app.core.db.engine import engine
 from app.core.extract import fetch_and_extract
 from app.core.settings import settings
 from app.core.web_search import tavily_search
-from app.newsletter import broadcast, digest
-from pipeline import curation
-from pipeline.fetching import page_facts
+from app.features.curation import links
+from app.features.curation import service as curation
+from app.features.curation.model import (
+    CandidateError,
+    CandidatePage,
+    ContentPage,
+    Coverage,
+    Similar,
+    Verdict,
+)
+from app.features.newsletter import broadcast
+from app.features.newsletter import service as digest
+from app.features.newsletter.model import DigestError, IssueError, Related, WeekTopic
+from app.features.stories import service as story_domain
+from app.features.stories.model import Candidates, StoryError
 
 # The scope `MCP_WRITE_TOKEN` carries and the read token does not. Named for
 # what it lets a caller do, not for the token that carries it: `server.py` mints
@@ -196,9 +207,7 @@ def _curation_session() -> Session:
     return Session(engine)
 
 
-def list_candidates(
-    offset: int = 0, limit: int = curation.LIST_LIMIT
-) -> curation.CandidatePage:
+def list_candidates(offset: int = 0, limit: int = curation.LIST_LIMIT) -> CandidatePage:
     """List one page of the articles waiting on a curation verdict, freshest first.
 
     Returns `rows`, `offset`, `next_offset` (null on the last page — pass it
@@ -224,7 +233,7 @@ def list_candidates(
 
 def get_content(
     url: str, offset: int = 0, limit: int = curation.PAGE_LIMIT
-) -> curation.ContentPage:
+) -> ContentPage:
     """Return one page of the article text the pipeline extracted for a candidate.
 
     The stored text is what a page fetch returns, cut at 12000 characters, so
@@ -238,11 +247,11 @@ def get_content(
     with _curation_session() as session:
         try:
             return curation.get_content(session, url, offset, limit)
-        except curation.CandidateError as exc:
+        except CandidateError as exc:
             raise ToolError(str(exc))
 
 
-def similar(url: str, days: int = 7, limit: int = 8) -> curation.Similar:
+def similar(url: str, days: int = 7, limit: int = 8) -> Similar:
     """Show what the feed and the ledger hold that is close to one candidate.
 
     Compares by embedding against every published article and every candidate
@@ -256,11 +265,11 @@ def similar(url: str, days: int = 7, limit: int = 8) -> curation.Similar:
     with _curation_session() as session:
         try:
             return curation.similar(session, url, days, limit)
-        except curation.CandidateError as exc:
+        except CandidateError as exc:
             raise ToolError(str(exc))
 
 
-def stories(days: int = 7) -> list[curation.Story]:
+def stories(days: int = 7) -> list[Coverage]:
     """Group the pending candidates that are one story, with each other or with
     an article published in the last `days`.
 
@@ -286,8 +295,8 @@ def check_link(url: str) -> dict[str, object]:
     """
     _require_write()
     try:
-        return page_facts.check_link(url)
-    except page_facts.LinkError as exc:
+        return links.check_link(url)
+    except links.LinkError as exc:
         raise ToolError(str(exc))
 
 
@@ -336,12 +345,12 @@ def approve(
                 publisher_kind,
                 publisher_name,
             )
-        except curation.CandidateError as exc:
+        except CandidateError as exc:
             raise ToolError(str(exc))
     return f"Published article #{article_id}: {url}"
 
 
-def reject_many(verdicts: list[curation.Verdict]) -> str:
+def reject_many(verdicts: list[Verdict]) -> str:
     """Turn down many candidates at once: each of `verdicts` is `{url, score,
     reason}`, the same fields `reject` takes.
 
@@ -365,7 +374,7 @@ def reject(url: str, score: int, reason: str) -> str:
     with _curation_session() as session:
         try:
             curation.reject(session, url, score, reason)
-        except curation.CandidateError as exc:
+        except CandidateError as exc:
             raise ToolError(str(exc))
     return f"Rejected [{score}/100] {url}"
 
@@ -376,7 +385,7 @@ def reject(url: str, score: int, reason: str) -> str:
 # subscribers are mailed from. Sending is a person's, from the Resend dashboard.
 
 
-def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[digest.WeekTopic]:
+def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[WeekTopic]:
     """The weekly newsletter's material: the last `days` of published articles
     grouped into topics, the most talked-about first.
 
@@ -395,7 +404,7 @@ def week(days: int = 7, limit: int = digest.WEEK_LIMIT) -> list[digest.WeekTopic
 
 def related(
     url: str, days: int = digest.RELATED_DAYS, limit: int = digest.RELATED_LIMIT
-) -> digest.Related:
+) -> Related:
     """What else covers one published article's subject: the individual writer
     who tried it, the repo built on it, the commentary on it.
 
@@ -410,7 +419,7 @@ def related(
     with _curation_session() as session:
         try:
             return digest.related(session, url, days, limit)
-        except digest.DigestError as exc:
+        except DigestError as exc:
             raise ToolError(str(exc))
 
 
@@ -439,7 +448,7 @@ def draft_issue(post: str) -> str:
     _require_write()
     try:
         return broadcast.draft(post)
-    except broadcast.IssueError as exc:
+    except IssueError as exc:
         raise ToolError(str(exc))
 
 
@@ -448,7 +457,7 @@ def draft_issue(post: str) -> str:
 # Behind the write scope: a saved story is on the public site at once.
 
 
-def story_candidates(days: int = 14) -> story_domain.Candidates:
+def story_candidates(days: int = 14) -> Candidates:
     """What the stories routine decides from.
 
     `open`: every open story, the most recently active first, with `slug`,
@@ -481,7 +490,7 @@ def save_story(slug: str, name: str, blurb: str, urls: list[str]) -> str:
     with _curation_session() as session:
         try:
             saved = story_domain.save_story(session, slug, name, blurb, urls)
-        except story_domain.StoryError as exc:
+        except StoryError as exc:
             raise ToolError(str(exc))
     verb = "Created" if saved["created"] else "Updated"
     return (
@@ -497,6 +506,6 @@ def close_story(slug: str) -> str:
     with _curation_session() as session:
         try:
             story_domain.close_story(session, slug)
-        except story_domain.StoryError as exc:
+        except StoryError as exc:
             raise ToolError(str(exc))
     return f"Closed {slug}"

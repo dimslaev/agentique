@@ -63,7 +63,7 @@ class LinkPlatform(StrEnum):
     website = "website"
     rss = "rss"
     # first-party domain to discover articles from via search, for labs that
-    # publish no RSS feed (see pipeline.sources.lab_watch). Value is the bare
+    # publish no RSS feed (see features/collect/lab_watch.py). Value is the bare
     # host, e.g. "anthropic.com".
     search = "search"
     twitter = "twitter"
@@ -98,7 +98,7 @@ class Publisher(PublisherBase, table=True):
     # column stays because deploy runs additive migrations only.
     topic_gated: bool = Field(default=False, nullable=False)
     # What the nightly run last saw of this publisher, written by
-    # pipeline.runs: when its feed last answered, when it last gave us a new
+    # features/collect/runs.py: when its feed last answered, when it last gave us a new
     # candidate, and the error it last failed with (cleared by the next good
     # fetch). Ingestion bookkeeping, not on the public API.
     last_fetched_at: datetime | None = Field(

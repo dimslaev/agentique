@@ -7,7 +7,6 @@ from collections.abc import Generator
 import pytest
 from sqlmodel import Session, col, delete, select
 
-from app.catalog.tests.factories import create_random_publisher
 from app.core.db.ledger import (
     CANDIDATE_CAP,
     CONTENT_CAP,
@@ -17,6 +16,7 @@ from app.core.db.ledger import (
     record_reject,
 )
 from app.core.db.publisher import Publisher
+from app.features.catalog.tests.factories import create_random_publisher
 from tests.random_data import random_lower_string
 
 URL = f"https://example.com/{random_lower_string()}"

@@ -1,11 +1,13 @@
-"""Email: rendering the templates and handing them to Resend or SMTP."""
+"""Email: rendering a template and handing the mail to Resend or SMTP.
+
+The templates sit beside the feature that sends them.
+"""
 
 from __future__ import annotations
 
 import html
 import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
 
 import emails
@@ -18,19 +20,9 @@ from app.core.settings import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TEMPLATES = Path(__file__).parent / "email-templates"
 
-
-@dataclass
-class EmailData:
-    html_content: str
-    subject: str
-
-
-def render_email_template(*, template_name: str, context: dict[str, str | int]) -> str:
-    template_str = (TEMPLATES / template_name).read_text()
-    html_content = Template(template_str).render(context)
-    return html_content
+def render_email_template(*, template: Path, context: dict[str, str | int]) -> str:
+    return Template(template.read_text()).render(context)
 
 
 def send_email(
@@ -94,23 +86,3 @@ def send_mail(subject_line: str, body: str) -> None:
         log(f"  Mail sent to {to_email}: {subject_line}")
     except Exception as e:
         log(f"  Mail send failed: {e}")
-
-
-def sign_in_link(login_token: str) -> str:
-    return f"{settings.FRONTEND_HOST}/auth?token={login_token}"
-
-
-def generate_welcome_email(login_token: str) -> EmailData:
-    html_content = render_email_template(
-        template_name="welcome.html",
-        context={"link": sign_in_link(login_token)},
-    )
-    return EmailData(html_content=html_content, subject="Welcome to Agentique")
-
-
-def generate_sign_in_email(login_token: str) -> EmailData:
-    html_content = render_email_template(
-        template_name="sign_in.html",
-        context={"link": sign_in_link(login_token)},
-    )
-    return EmailData(html_content=html_content, subject="Sign in to Agentique")

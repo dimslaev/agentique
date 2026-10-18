@@ -90,18 +90,18 @@ keep-runtime-typing = true
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
-# The pipeline and ops scripts log to stdout via print() so systemd/journald
+# The collect run and ops scripts log to stdout via print() so systemd/journald
 # captures it.
-"pipeline/**" = ["T201"]
+"app/features/collect/**" = ["T201"]
 "scripts/**" = ["T201"]
 
 [tool.pytest.ini_options]
-# Domain tests live inside the domain (ADR 4); `tests/` keeps what belongs to
-# no single domain - the pipeline, the schema-wide enum guard, ops scripts.
-testpaths = ["app", "pipeline", "tests"]
+# Feature tests live inside the feature (ADR 4); `tests/` keeps what belongs to
+# no single feature - core, the schema-wide enum guard, ops scripts.
+testpaths = ["app", "tests"]
 
 [tool.coverage.run]
-source = ["app", "pipeline"]
+source = ["app"]
 # Colocated tests are inside `source`; measuring the tests themselves would
 # only inflate the number.
 omit = ["*/tests/*"]

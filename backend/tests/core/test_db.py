@@ -10,9 +10,9 @@ from sqlmodel import SQLModel
 from app.core import db
 from app.core.db.engine import engine, get_session
 from app.core.settings import settings
-from app.deps import SessionDep
+from app.entry.api.deps import SessionDep
+from app.features.collect import service as collect
 from app.main import app  # noqa: F401  # every module that could declare a table
-from pipeline import report, run
 
 
 def test_every_table_lives_in_core_db():
@@ -54,8 +54,6 @@ def test_the_request_session_is_closed_after_the_request():
     assert not session.in_transaction()
 
 
-def test_routes_and_the_pipeline_share_the_engine():
-
-    assert run.engine is engine
-    assert report.engine is engine
+def test_routes_and_the_collect_run_share_the_engine():
+    assert collect.engine is engine
     assert SessionDep.__metadata__[0].dependency is get_session
