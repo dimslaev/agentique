@@ -1,10 +1,10 @@
-"""``check_link``: look a repo or model up where it lives.
+"""``check_link`` looks a repo or model up where it lives.
 
-The facts a page cannot fake: stars, downloads, the last push, whether there
-are weights at all. The curation agent judges an article partly by what it
-rests on — a release post with a repo and weights behind it is a different
-thing from one with a waitlist. The links themselves are read once at fetch
-time, beside the text (``app.core.extract.outbound_links``).
+It returns the facts a page cannot fake: stars, downloads, the last push,
+whether there are weights at all. The curation agent judges an article partly
+by what it links to. A release post with a repo and weights behind it is a
+different thing from one with a waitlist. ``app.core.extract.outbound_links``
+reads the links once at fetch time and stores them beside the text.
 """
 
 from __future__ import annotations
