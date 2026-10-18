@@ -297,3 +297,27 @@ def test_a_report_that_cannot_be_read_exits_one(
     monkeypatch.setattr(run_module, "read_night", broken)
 
     assert run_module.send_report() == 1
+
+
+def test_a_report_is_read_from_the_db_and_mailed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sent: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        run_module, "send_mail", lambda subject, body: sent.append((subject, body))
+    )
+
+    assert run_module.send_report() == 0
+    [(subject, body)] = sent
+    assert subject and body
+
+
+def test_a_report_that_cannot_be_sent_exits_one(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def broken(_subject: str, _body: str) -> None:
+        raise RuntimeError("resend down")
+
+    monkeypatch.setattr(run_module, "send_mail", broken)
+
+    assert run_module.send_report() == 1

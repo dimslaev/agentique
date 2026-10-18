@@ -142,6 +142,47 @@ def test_login_with_link_inactive_user(client: TestClient, db: Session) -> None:
     assert r.json()["detail"] == "Inactive user"
 
 
+def test_link_request_for_an_inactive_user_sends_nothing(
+    client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Same answer as for anyone else, so the endpoint does not tell a
+    switched-off account apart, but no link and no token."""
+    sent = enable_resend_email(monkeypatch)
+    user = create_random_user(db)
+    user.is_active = False
+    db.add(user)
+    db.commit()
+
+    r = client.post(f"{settings.API_V1_STR}/login/link", json={"email": user.email})
+    assert r.json() == LINK_SENT
+    assert sent == []
+    db.refresh(user)
+    assert user.login_token is None
+
+
+def test_an_access_token_for_an_inactive_user_is_refused(
+    client: TestClient, db: Session
+) -> None:
+    user = create_random_user(db)
+    headers = user_authentication_headers(user)
+    user.is_active = False
+    db.add(user)
+    db.commit()
+
+    r = client.post(f"{settings.API_V1_STR}/login/test-token", headers=headers)
+    assert r.status_code == 400
+    assert r.json()["detail"] == "Inactive user"
+
+
+def test_an_access_token_for_a_deleted_user_is_refused(client: TestClient) -> None:
+    token = create_access_token(uuid.uuid4(), timedelta(minutes=5))
+    r = client.post(
+        f"{settings.API_V1_STR}/login/test-token",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 404
+
+
 def test_use_access_token(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:

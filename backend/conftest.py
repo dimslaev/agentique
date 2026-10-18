@@ -17,9 +17,11 @@ from app.core.db.factories import (
     authentication_token_from_email,
     get_superuser_token_headers,
     random_email,
+    random_lower_string,
 )
+from app.core.db.ledger import Reject, RejectStage
 from app.core.db.like import ArticleLike
-from app.core.db.publisher import Publisher
+from app.core.db.publisher import Publisher, PublisherKind
 from app.core.db.story import Story, StoryArticle
 from app.core.db.user import User
 from app.core.settings import settings
@@ -93,4 +95,28 @@ def made(db: Session) -> Generator[dict[str, list[int]]]:
     db.exec(delete(Story).where(col(Story.id) > before))
     db.exec(delete(Article).where(col(Article.id).in_(created["articles"])))
     db.exec(delete(Publisher).where(col(Publisher.id).in_(created["publishers"])))
+    db.commit()
+
+
+@pytest.fixture
+def candidate(db: Session) -> Generator[Reject]:
+    """One pending candidate from a publisher the run has just created."""
+    name = random_lower_string()
+    publisher = Publisher(name=f"{name}.dev", slug=name, kind=PublisherKind.unknown)
+    db.add(publisher)
+    db.commit()
+    row = Reject(
+        url=f"https://{name}.dev/post",
+        stage=RejectStage.pending,
+        title="An agent harness, measured",
+        source="Hacker News",
+        publisher_id=publisher.id,
+        content="x" * 5000,
+    )
+    db.add(row)
+    db.commit()
+    yield row
+    db.rollback()
+    db.exec(delete(Reject).where(col(Reject.url) == row.url))
+    db.exec(delete(Publisher).where(col(Publisher.id) == publisher.id))
     db.commit()

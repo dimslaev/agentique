@@ -11,7 +11,12 @@ from sqlmodel import Session, col, delete, select
 from app.core.db.factories import random_lower_string
 from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind, PublisherType
 from app.features.collect import publishers as publishers_module
-from app.features.collect.publishers import PublisherResolver
+from app.features.collect.publishers import (
+    PublisherResolver,
+    feed_sources_from_db,
+    lab_watch_targets_from_db,
+    newsletter_senders_from_db,
+)
 
 TAG = random_lower_string()[:8]
 
@@ -174,3 +179,61 @@ def test_a_url_on_a_known_site_beats_the_feed_that_carried_it(
     assert (
         resolver.publisher_for(url, sources["aggregator"].name).id == sources["feed"].id
     )
+
+
+@pytest.fixture
+def polled(db: Session) -> Generator[dict[str, Publisher]]:
+    """Active publishers with each kind of pollable link, and one switched off."""
+
+    def pub(name: str, active: bool = True, **links: str) -> Publisher:
+        return Publisher(
+            name=f"{TAG} {name}",
+            slug=f"{TAG}-{name}",
+            kind=PublisherKind.media,
+            is_active=active,
+            links={LinkPlatform(k): v for k, v in links.items()},
+        )
+
+    made = {
+        "both": pub(
+            "both",
+            rss=f"https://{TAG}-both.com/feed.xml",
+            substack=f"https://{TAG}both.substack.com",
+        ),
+        "substack": pub("substack", substack=f"https://{TAG}stack.substack.com"),
+        "lab": pub("lab", search=f"{TAG}-lab.ai"),
+        "letter": pub("letter", email=f"@{TAG}-letter.com"),
+        "off": pub(
+            "off",
+            active=False,
+            rss=f"https://{TAG}-off.com/feed.xml",
+            search=f"{TAG}-off.ai",
+            email=f"@{TAG}-off.com",
+        ),
+    }
+    db.add_all(made.values())
+    db.commit()
+    yield made
+    db.exec(delete(Publisher).where(col(Publisher.slug).contains(TAG)))
+    db.commit()
+
+
+@pytest.mark.usefixtures("polled")
+def test_feeds_come_from_active_publishers_preferring_rss(db: Session) -> None:
+    feeds = [f for f in feed_sources_from_db(db) if f["name"].startswith(TAG)]
+    assert sorted(feeds, key=lambda f: f["name"]) == [
+        {"name": f"{TAG} both", "rssUrl": f"https://{TAG}-both.com/feed.xml"},
+        {"name": f"{TAG} substack", "rssUrl": f"https://{TAG}stack.substack.com/feed"},
+    ]
+
+
+@pytest.mark.usefixtures("polled")
+def test_lab_watch_targets_come_from_active_search_links(db: Session) -> None:
+    targets = [t for t in lab_watch_targets_from_db(db) if t[0].startswith(TAG)]
+    assert targets == [(f"{TAG} lab", f"{TAG}-lab.ai")]
+
+
+@pytest.mark.usefixtures("polled")
+def test_newsletter_senders_come_from_active_email_links(db: Session) -> None:
+    senders = [s for s in newsletter_senders_from_db(db) if s[1].startswith(TAG)]
+    assert senders == [(f"@{TAG}-letter.com", f"{TAG} letter")]

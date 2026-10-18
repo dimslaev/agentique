@@ -4,6 +4,7 @@ a tool error."""
 from __future__ import annotations
 
 import pytest
+from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.factories import (
@@ -36,3 +37,18 @@ def test_save_story_tool_reports_what_it_did(
         f"Updated {slug}: added 1, 2 articles in all"
     )
     assert close_story(slug) == f"Closed {slug}"
+
+
+@pytest.mark.usefixtures("curator")
+def test_save_story_refuses_an_unknown_url_as_a_tool_error() -> None:
+    slug = f"tool-refused-{random_lower_string()[:6]}"
+    with pytest.raises(ToolError, match="Not a published article"):
+        save_story(
+            slug, "Tool refused", "It fails.", ["https://never-published.example/post"]
+        )
+
+
+@pytest.mark.usefixtures("curator")
+def test_close_story_refuses_an_unknown_slug_as_a_tool_error() -> None:
+    with pytest.raises(ToolError, match="No story"):
+        close_story(f"no-such-story-{random_lower_string()[:6]}")
