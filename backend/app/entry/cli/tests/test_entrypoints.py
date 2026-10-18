@@ -32,7 +32,7 @@ def _python_targets(command: str) -> list[str]:
 @pytest.mark.parametrize(
     "unit", sorted((REPO / "deploy").glob("*.service")), ids=lambda p: p.name
 )
-def test_every_python_unit_starts_something_that_exists(unit: Path):
+def test_every_python_unit_starts_something_that_exists(unit: Path) -> None:
     # The units run from /opt/agentique/backend. A renamed module fails there
     # only when the timer fires, at night.
     for line in unit.read_text().splitlines():
@@ -46,7 +46,7 @@ def test_every_python_unit_starts_something_that_exists(unit: Path):
 
 
 @pytest.mark.parametrize("script", SHELL_SCRIPTS, ids=lambda p: p.name)
-def test_every_module_a_shell_script_runs_exists(script: Path):
+def test_every_module_a_shell_script_runs_exists(script: Path) -> None:
     targets = _python_targets(script.read_text())
     assert targets
     for target in targets:
@@ -60,14 +60,14 @@ def test_every_module_a_shell_script_runs_exists(script: Path):
 @pytest.mark.parametrize("code", [0, 1])
 def test_a_timer_entrypoint_exits_with_its_verbs_code(
     monkeypatch: pytest.MonkeyPatch, module: str, verb: str, code: int
-):
+) -> None:
     monkeypatch.setattr(collect, verb, lambda: code)
     with pytest.raises(SystemExit) as exited:
         runpy.run_module(module, run_name="__main__")
     assert exited.value.code == code
 
 
-def test_the_backup_finds_the_compose_file():
+def test_the_backup_finds_the_compose_file() -> None:
     assert backup_db.COMPOSE_FILE == REPO / "compose.yml"
     assert backup_db.COMPOSE_FILE.is_file()
 
@@ -81,12 +81,12 @@ def _fake_pg_dump(monkeypatch: pytest.MonkeyPatch, script: str) -> None:
     def popen(_cmd: list[str], stdout: int) -> subprocess.Popen[bytes]:
         return real(["sh", "-c", script], stdout=stdout)
 
-    monkeypatch.setattr(backup_db.subprocess, "Popen", popen)
+    monkeypatch.setattr(subprocess, "Popen", popen)
 
 
 def test_a_failed_pg_dump_fails_the_backup(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-):
+) -> None:
     _fake_pg_dump(monkeypatch, "echo partial; exit 3")
     with pytest.raises(RuntimeError, match="exited with 3"):
         backup_db.dump_db(tmp_path / "dump.sql.gz")
@@ -94,13 +94,15 @@ def test_a_failed_pg_dump_fails_the_backup(
 
 def test_an_empty_dump_fails_the_backup(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-):
+) -> None:
     _fake_pg_dump(monkeypatch, "true")
     with pytest.raises(RuntimeError, match="empty"):
         backup_db.dump_db(tmp_path / "dump.sql.gz")
 
 
-def test_a_dump_with_output_is_kept(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def test_a_dump_with_output_is_kept(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     _fake_pg_dump(monkeypatch, "echo 'CREATE TABLE x ();'")
     dest = tmp_path / "dump.sql.gz"
     backup_db.dump_db(dest)
@@ -112,7 +114,7 @@ def test_a_dump_with_output_is_kept(monkeypatch: pytest.MonkeyPatch, tmp_path: P
 )
 def test_the_seeds_refuse_production(
     monkeypatch: pytest.MonkeyPatch, main: Callable[[], None]
-):
+) -> None:
     monkeypatch.setattr(settings, "ENVIRONMENT", "production")
     with pytest.raises((RuntimeError, SystemExit), match="Refusing"):
         main()

@@ -29,7 +29,7 @@ def token(monkeypatch: pytest.MonkeyPatch) -> str:
     return "test-mcp-token"
 
 
-def test_the_right_token_gets_a_session(client: TestClient, token: str):
+def test_the_right_token_gets_a_session(client: TestClient, token: str) -> None:
     response = client.post(
         MCP_URL,
         json=INITIALIZE,
@@ -39,7 +39,7 @@ def test_the_right_token_gets_a_session(client: TestClient, token: str):
 
 
 @pytest.mark.usefixtures("token")
-def test_a_wrong_token_is_rejected(client: TestClient):
+def test_a_wrong_token_is_rejected(client: TestClient) -> None:
     response = client.post(
         MCP_URL, json=INITIALIZE, headers={**HEADERS, "Authorization": "Bearer nope"}
     )
@@ -47,14 +47,14 @@ def test_a_wrong_token_is_rejected(client: TestClient):
 
 
 @pytest.mark.usefixtures("token")
-def test_no_token_is_rejected(client: TestClient):
+def test_no_token_is_rejected(client: TestClient) -> None:
     response = client.post(MCP_URL, json=INITIALIZE, headers=HEADERS)
     assert response.status_code == 401
 
 
 def test_an_unconfigured_server_rejects_every_token(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     # A deploy that forgets MCP_TOKEN must serve 401s, not an open database.
     monkeypatch.setattr(settings, "MCP_TOKEN", None)
     response = client.post(
@@ -117,7 +117,7 @@ def _text(result: dict[str, object]) -> str:
 
 
 @pytest.mark.usefixtures("both_tokens")
-def test_the_read_token_is_refused_by_a_write_tool(client: TestClient):
+def test_the_read_token_is_refused_by_a_write_tool(client: TestClient) -> None:
     result = _call_tool(
         client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
     )
@@ -126,7 +126,7 @@ def test_the_read_token_is_refused_by_a_write_tool(client: TestClient):
 
 
 @pytest.mark.usefixtures("both_tokens")
-def test_the_write_token_gets_past_the_gate(client: TestClient):
+def test_the_write_token_gets_past_the_gate(client: TestClient) -> None:
     # Past the gate it is an ordinary lookup, so the refusal is the candidate's.
     result = _call_tool(
         client, WRITE_TOKEN, "get_content", {"url": "https://never-queued.example"}
@@ -137,7 +137,7 @@ def test_the_write_token_gets_past_the_gate(client: TestClient):
 
 def test_an_unset_write_token_opens_no_write_tool(
     client: TestClient, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     monkeypatch.setattr(settings, "MCP_TOKEN", READ_TOKEN)
     monkeypatch.setattr(settings, "MCP_WRITE_TOKEN", None)
 

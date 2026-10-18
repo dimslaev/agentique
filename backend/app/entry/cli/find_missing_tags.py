@@ -34,19 +34,23 @@ from datetime import datetime
 from typing import TypedDict
 
 import numpy as np
-from sqlmodel import Session, select
+import numpy.typing as npt
+from sqlmodel import Session, col, select
 
 from app.core.db.article import Article
 from app.core.db.engine import engine
 from app.core.db.tag import ArticleTag, Tag
 from app.core.embedding import embed_batch
 
+# Rows of float32 vectors, or one vector.
+type Vectors = npt.NDArray[np.float32]
+
 
 @dataclass
 class ArticleVec:
     id: int
     title: str
-    vec: np.ndarray  # L2-normalized
+    vec: Vectors  # L2-normalized
     tags: list[str] = field(default_factory=list)
 
 
@@ -59,7 +63,7 @@ class GapCluster(TypedDict):
     sample_titles: list[str]
 
 
-def normalize(m: np.ndarray) -> np.ndarray:
+def normalize(m: Vectors) -> Vectors:
     """L2-normalize rows; leave all-zero rows at zero (cosine -> 0)."""
     norms = np.linalg.norm(m, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -71,7 +75,7 @@ def tag_text(name: str, description: str | None) -> str:
     return f"{name}: {description}" if description else name
 
 
-def load_tags(session: Session) -> tuple[list[str], list[str], np.ndarray]:
+def load_tags(session: Session) -> tuple[list[str], list[str], Vectors]:
     """Return (slugs, names, normalized tag vectors), aligned by index."""
     rows = session.exec(select(Tag)).all()
     if not rows:
@@ -86,10 +90,10 @@ def load_articles(
     session: Session, since: datetime | None, limit: int
 ) -> list[ArticleVec]:
     """Articles that have an embedding, with their assigned tag slugs attached."""
-    stmt = select(Article).where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
+    stmt = select(Article).where(col(Article.embedding).is_not(None))
     if since is not None:
-        stmt = stmt.where(Article.published_at >= since)  # type: ignore[operator]  # ty: ignore[unsupported-operator]
-    stmt = stmt.order_by(Article.id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        stmt = stmt.where(col(Article.published_at) >= since)
+    stmt = stmt.order_by(col(Article.id))
     if limit > 0:
         stmt = stmt.limit(limit)
     rows = session.exec(stmt).all()
@@ -99,8 +103,8 @@ def load_articles(
     if ids:
         pairs = session.exec(
             select(ArticleTag.article_id, Tag.slug)
-            .join(Tag, Tag.id == ArticleTag.tag_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
-            .where(ArticleTag.article_id.in_(ids))  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+            .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
+            .where(col(ArticleTag.article_id).in_(ids))
         ).all()
         for aid, slug in pairs:
             tags_by_article.setdefault(aid, []).append(slug)
@@ -118,16 +122,17 @@ def load_articles(
 
 @dataclass
 class Cluster:
-    centroid: np.ndarray  # normalized running mean
+    centroid: Vectors  # normalized running mean
     members: list[int]  # indices into the under-covered list
 
-    def add(self, idx: int, vec: np.ndarray) -> None:
+    def add(self, idx: int, vec: Vectors) -> None:
         n = len(self.members)
-        self.centroid = normalize(((self.centroid * n + vec) / (n + 1))[None, :])[0]
+        mean = (self.centroid * np.float32(n) + vec) / np.float32(n + 1)
+        self.centroid = normalize(mean[None, :])[0]
         self.members.append(idx)
 
 
-def greedy_cluster(vecs: np.ndarray, sim_threshold: float) -> list[Cluster]:
+def greedy_cluster(vecs: Vectors, sim_threshold: float) -> list[Cluster]:
     """One-pass greedy cosine clustering. Each vector joins the most similar
     existing cluster if it clears the threshold, else it seeds a new one.
     Good enough to surface coherent themes; not trying to be k-means."""

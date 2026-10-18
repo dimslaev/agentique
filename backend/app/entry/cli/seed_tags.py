@@ -21,7 +21,8 @@ TAGS_FILE = Path(__file__).resolve().parent / "tags.json"
 
 def load_tags() -> list[dict[str, str]]:
     with TAGS_FILE.open() as f:
-        return json.load(f)["tags"]
+        tags: list[dict[str, str]] = json.load(f)["tags"]
+    return tags
 
 
 def seed(session: Session) -> None:

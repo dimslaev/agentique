@@ -11,7 +11,7 @@ from app.entry.mcp import web_search as web_search_tool
 
 def test_web_fetch_returns_extracted_text_and_forwards_the_cap(
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     seen: list[tuple[str, int]] = []
 
     def fake(url: str, max_length: int) -> str:
@@ -26,13 +26,13 @@ def test_web_fetch_returns_extracted_text_and_forwards_the_cap(
 
 def test_web_fetch_fails_loudly_when_nothing_is_readable(
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     monkeypatch.setattr(web_fetch_tool, "fetch_and_extract", lambda url, max_length: "")
     with pytest.raises(ToolError, match="No readable content"):
         web_fetch_tool.web_fetch("https://example.com/paywalled")
 
 
-def test_web_search_forwards_every_argument(monkeypatch: pytest.MonkeyPatch):
+def test_web_search_forwards_every_argument(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, int, list[str] | None]] = []
 
     def fake(

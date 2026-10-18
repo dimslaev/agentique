@@ -24,7 +24,7 @@ from app.entry.mcp.web_fetch import web_fetch
 from app.entry.mcp.web_search import web_search
 from app.entry.mcp.week import week
 
-mcp: FastMCP = FastMCP(
+mcp = FastMCP(
     name="agentique",
     instructions=(
         "Tools for the agentique article pipeline. Reading: `sql_query` reads "
