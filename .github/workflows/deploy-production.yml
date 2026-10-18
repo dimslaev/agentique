@@ -76,7 +76,7 @@ jobs:
       # --env-file is load-bearing: prestart.sh's seed guard checks the shell
       # ENVIRONMENT, and a bare deploy shell doesn't have it.
       - name: Run migrations + prestart
-        run: uv run --env-file ../.env bash scripts/prestart.sh
+        run: uv run --env-file ../.env bash app/entry/cli/prestart.sh
         working-directory: /opt/agentique/backend
       - name: Restart backend
         run: sudo systemctl restart agentique-backend

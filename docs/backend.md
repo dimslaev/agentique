@@ -15,14 +15,14 @@
 ```bash
 docker compose up -d              # from repo root: starts the db
 cd backend
-uv run bash scripts/prestart.sh   # migrations + initial data
+uv run bash app/entry/cli/prestart.sh   # migrations + initial data
 uv run fastapi dev app/main.py
 ```
 
 Pipeline, manual run:
 
 ```bash
-cd backend && uv run --env-file ../.env python -m pipeline.run
+cd backend && uv run --env-file ../.env python -m app.entry.cli.collect
 ```
 
 The run ends at pending candidates and publishes nothing — the curation agent
@@ -30,7 +30,7 @@ does that (ADR 9). Judge them, then send the night's report:
 
 ```bash
 claude "/curate"                                        # from the repo root
-cd backend && uv run --env-file ../.env python -m pipeline.report
+cd backend && uv run --env-file ../.env python -m app.entry.cli.report
 ```
 
 `AGENTIQUE_MCP_TOKEN` must be the write token for `/curate` to publish anything;
@@ -68,16 +68,16 @@ VS Code: debugger and Python-tests-tab configs are already set up.
 With the db up:
 
 ```bash
-uv run bash scripts/tests-start.sh
+uv run bash ../scripts/tests-start.sh
 ```
 
 - Domain tests live in that domain's `tests/` folder (`app/catalog/tests/`, `app/audience/tests/`, ...)
 - `backend/tests/` holds what belongs to no single domain: pipeline, schema-wide enum guard, ops scripts
 - Shared fixtures: `backend/conftest.py`
-- `tests-start.sh` waits for the db, then runs `scripts/test.sh` (pytest + coverage). Extra args forward to pytest:
+- `tests-start.sh` waits for the db, then runs `scripts/test.sh` beside it (pytest + coverage). Extra args forward to pytest:
 
 ```bash
-uv run bash scripts/tests-start.sh -x
+uv run bash ../scripts/tests-start.sh -x
 ```
 
 - Coverage report: `htmlcov/index.html`

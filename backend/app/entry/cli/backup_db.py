@@ -1,4 +1,4 @@
-"""Nightly Postgres backup to kDrive. Run with: python scripts/backup_db.py
+"""Nightly Postgres backup to kDrive. Run with: python app/entry/cli/backup_db.py
 
 pg_dump runs inside the pgvector container (`docker compose exec`) so the
 client always matches the server version and nothing Postgres needs installing
@@ -23,7 +23,7 @@ from pathlib import Path
 from kdrive_client.kdrive_client import KDriveClient  # type: ignore[import-untyped]
 from kdrive_client.kdrive_file import KDriveFile  # type: ignore[import-untyped]
 
-COMPOSE_FILE = Path(__file__).resolve().parents[2] / "compose.yml"
+COMPOSE_FILE = Path(__file__).resolve().parents[4] / "compose.yml"
 BACKUP_DIR = os.environ.get("KDRIVE_BACKUP_DIR", "/Private/agentique-db")
 KEEP = int(os.environ.get("KDRIVE_BACKUP_KEEP", "14"))
 PREFIX = "agentique-db-"

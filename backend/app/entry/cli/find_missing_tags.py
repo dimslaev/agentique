@@ -11,14 +11,14 @@ Articles whose best tag is far away are the ones the vocabulary can't describe â
 candidates for a missing tag (e.g. text-to-speech, if no such tag exists). We
 group those under-covered articles into clusters and print each cluster with a
 few representative titles and its nearest existing tag, so a human can name the
-gap and add it to `scripts/tags.json`.
+gap and add it to `app/entry/cli/tags.json`.
 
 No LLM calls: embeddings are already in the DB, tag vectors are one local encode
 of ~30 tag strings, and clustering is greedy cosine math. Run it against prod by
 pointing the POSTGRES_* env vars at prod (same vars the pipeline reads).
 
-    cd backend && python -m scripts.find_missing_tags
-    cd backend && python -m scripts.find_missing_tags --threshold 0.30 --json
+    cd backend && python -m app.entry.cli.find_missing_tags
+    cd backend && python -m app.entry.cli.find_missing_tags --threshold 0.30 --json
 
 Tune `--threshold` to what "poorly covered" means for your data: run once, look
 at the coverage percentiles it prints, then set the threshold near the low tail.
@@ -265,8 +265,8 @@ def main() -> None:
             print(f"      - {t}")
         print()
     print(
-        "Next: name each real gap and add it to scripts/tags.json, then "
-        "re-run `python scripts/seed_tags.py`."
+        "Next: name each real gap and add it to app/entry/cli/tags.json, then "
+        "re-run `python -m app.entry.cli.seed_tags`."
     )
 
 

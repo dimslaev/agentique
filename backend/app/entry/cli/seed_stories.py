@@ -21,6 +21,7 @@ from app.core.db.article import Article
 from app.core.db.engine import engine
 from app.core.settings import settings
 from app.features.stories import service as stories
+from app.features.stories.model import StoryError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ def main() -> None:
                     story["blurb"],
                     story["urls"],
                 )
-            except stories.StoryError as exc:
+            except StoryError as exc:
                 session.rollback()
                 logger.warning("Skipped %s: %s", story["slug"], exc)
                 continue

@@ -53,14 +53,14 @@ repos:
 
       - id: local-mypy
         name: mypy check
-        entry: uv run mypy backend/app backend/scripts
+        entry: uv run mypy backend/app
         require_serial: true
         language: unsupported
         pass_filenames: false
 
       - id: local-ty
         name: ty check
-        entry: uv run ty check backend/app backend/scripts
+        entry: uv run ty check backend/app
         require_serial: true
         language: unsupported
         pass_filenames: false

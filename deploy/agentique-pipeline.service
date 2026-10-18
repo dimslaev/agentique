@@ -19,4 +19,4 @@ EnvironmentFile=/opt/agentique/.env
 # expands ~ for its cache dir — fails with EACCES against /nonexistent. /var/lib/agentique is real and writable (vps-setup.sh) and
 # lives outside /opt/agentique so the deploy rsync's --delete never touches it.
 Environment=HOME=/var/lib/agentique
-ExecStart=/opt/agentique/.venv/bin/python -m pipeline.run
+ExecStart=/opt/agentique/.venv/bin/python -m app.entry.cli.collect

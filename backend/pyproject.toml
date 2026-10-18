@@ -90,14 +90,14 @@ keep-runtime-typing = true
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.per-file-ignores]
-# The collect run and ops scripts log to stdout via print() so systemd/journald
-# captures it.
+# The collect run and the command-line entrypoints log to stdout via print() so
+# systemd/journald captures it.
 "app/features/collect/**" = ["T201"]
-"scripts/**" = ["T201"]
+"app/entry/cli/**" = ["T201"]
 
 [tool.pytest.ini_options]
 # Feature tests live inside the feature (ADR 4); `tests/` keeps what belongs to
-# no single feature - core, the schema-wide enum guard, ops scripts.
+# no single feature - core and the schema-wide enum guard.
 testpaths = ["app", "tests"]
 
 [tool.coverage.run]
@@ -110,9 +110,6 @@ dynamic_context = "test_function"
 [tool.coverage.report]
 show_missing = true
 sort = "-Cover"
-# `scripts/` is deliberately outside `source`: those are ops entrypoints run by
-# prestart.sh and by hand, not by pytest, so measuring them would only report a
-# number nobody can act on.
 
 [tool.coverage.html]
 show_contexts = true

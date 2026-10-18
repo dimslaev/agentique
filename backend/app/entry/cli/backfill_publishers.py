@@ -7,9 +7,9 @@ stop saying it). Writes as it goes and is safe to re-run: a row already moved
 is no longer an aggregator's, and a publisher already made is found by its
 link. Run it against a restored dump first and read the report.
 
-    python scripts/backfill_publishers.py              # re-credit + lab kinds
-    python scripts/backfill_publishers.py --export unknown.csv
-    python scripts/backfill_publishers.py --kinds kinds.csv
+    python -m app.entry.cli.backfill_publishers              # re-credit + lab kinds
+    python -m app.entry.cli.backfill_publishers --export unknown.csv
+    python -m app.entry.cli.backfill_publishers --kinds kinds.csv
 
 `--export` writes the `unknown` publishers that have published articles, with
 titles and summaries to judge them by. Fill in `kind` (lab, company,
@@ -31,7 +31,7 @@ from app.core.db.article import Article, ArticleKind
 from app.core.db.engine import engine
 from app.core.db.ledger import Reject
 from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind
-from app.features.collect.publishers import AGGREGATOR_TYPES, PublisherResolver
+from app.features.collect.service import AGGREGATOR_TYPES, PublisherResolver
 from app.features.curation.service import NAMEABLE_KINDS
 
 # Publishers that train and release their own models. Picked by hand from the

@@ -1,4 +1,4 @@
-"""The nightly collect run, as the systemd unit starts it: python -m pipeline.run"""
+"""The nightly collect run, as the systemd unit starts it: python -m app.entry.cli.collect"""
 
 from __future__ import annotations
 

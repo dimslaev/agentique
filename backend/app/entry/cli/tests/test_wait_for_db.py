@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from sqlmodel import select
 
-from scripts.wait_for_db import init, logger
+from app.entry.cli.wait_for_db import init, logger
 
 
 def test_init_successful_connection() -> None:
@@ -18,8 +18,8 @@ def test_init_successful_connection() -> None:
     select1 = select(1)
 
     with (
-        patch("scripts.wait_for_db.Session", return_value=session_mock),
-        patch("scripts.wait_for_db.select", return_value=select1),
+        patch("app.entry.cli.wait_for_db.Session", return_value=session_mock),
+        patch("app.entry.cli.wait_for_db.select", return_value=select1),
         patch.object(logger, "info"),
         patch.object(logger, "error"),
         patch.object(logger, "warn"),
