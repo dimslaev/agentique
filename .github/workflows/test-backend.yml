@@ -39,6 +39,9 @@ jobs:
           POSTGRES_USER=postgres
           POSTGRES_PASSWORD=ci-test-password
           EOF
+      - name: Check import layers
+        run: uv run lint-imports
+        working-directory: backend
       - run: docker compose up -d
       - name: Migrate DB
         run: uv run bash app/entry/cli/prestart.sh
