@@ -92,6 +92,14 @@ def test_a_failed_pg_dump_fails_the_backup(
         backup_db.dump_db(tmp_path / "dump.sql.gz")
 
 
+def test_an_empty_dump_fails_the_backup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    _fake_pg_dump(monkeypatch, "true")
+    with pytest.raises(RuntimeError, match="empty"):
+        backup_db.dump_db(tmp_path / "dump.sql.gz")
+
+
 def test_a_dump_with_output_is_kept(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
     _fake_pg_dump(monkeypatch, "echo 'CREATE TABLE x ();'")
     dest = tmp_path / "dump.sql.gz"

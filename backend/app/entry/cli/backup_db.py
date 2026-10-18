@@ -53,8 +53,10 @@ def dump_db(dest: Path) -> None:
         proc.stdout.close()
         if proc.wait() != 0:
             raise RuntimeError(f"pg_dump exited with {proc.returncode}")
-    if dest.stat().st_size == 0:
-        raise RuntimeError("dump is empty")
+        # The uncompressed size: a gzip of nothing still has a header, so the
+        # file on disk is never 0 bytes.
+        if out.tell() == 0:
+            raise RuntimeError("dump is empty")
 
 
 def prune(client: KDriveClient, directory_id: int) -> None:
