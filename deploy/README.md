@@ -14,13 +14,30 @@ How agentique runs in production. Docker runs only the database
 | `agentique-backup.service` + `.timer` | nightly DB dump to off-box storage at 03:30 |
 | `agentique-sql` | run SQL against the prod DB from stdin, inside the `db` container |
 | `sql-roles.sql` | one-time: creates the read-only and read/write login roles `agentique-sql` uses |
+| `rsync-filter` | what the deploy copies to `/opt/agentique`, and what it never deletes there |
 
 ## Shape
 
 - A push to `master` triggers `.github/workflows/deploy-production.yml`: build
   the frontend on a GitHub-hosted runner, then a self-hosted runner on the box
-  rsyncs the source, syncs the venv, runs migrations + prestart, and restarts
-  the backend. Additive migrations only; rollback is `git revert` + push.
+  rsyncs what the box runs, syncs the venv, runs migrations + prestart, and
+  restarts the backend. Additive migrations only; rollback is `git revert` +
+  push.
+- The rsync copies only what `rsync-filter` lists: the backend's `app/`
+  without tests, `migrations/`, `baml_client/`, the uv workspace files,
+  `compose.yml`, `deploy/` and the built frontend. It deletes everything
+  else in `/opt/agentique`, except `.env`, `.venv` and `.git`, which the
+  deploy never sends. A file the box needs goes in the filter.
+  `app/entry/cli/test_deploy_files.py` runs the filter and checks every path
+  the units and the deploy job use.
+- The units, the Caddyfile and `agentique-sql` are installed by hand. After
+  a deploy that changes one, copy it from `/opt/agentique/deploy/` and run
+  `sudo systemctl daemon-reload`. If an `ExecStart` path changed, the
+  deploy has already deleted the old file. The backend then fails from the
+  deploy's own restart until you copy its unit and restart it, and each
+  timer fails the next time it fires. The deploy job doesn't install units
+  because the runner can rewrite anything under `/opt/agentique`. Letting
+  it install units with sudo would give it root.
 - The pipeline needs no restart — the timer starts a fresh process each run.
 - The night runs in three steps an hour apart: 04:00 the pipeline queues
   candidates, 05:00 the agent judges them, 06:00 the report goes out. The box
