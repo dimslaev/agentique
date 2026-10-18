@@ -1,27 +1,62 @@
-"""GitHub repos from the public REST API, for the curation agent's ``check_link``,
-and the account type publisher resolution reads to tell a person from an org.
+"""GitHub: which github.com URLs name a repository, and what the REST API says
+about a repo or an account.
 
-Stars, forks and the last push are the outside view of a repo: unlike a title
-or a README they cannot be written to sound impressive. Not a source any more:
-the thin-repo gate that read it at fetch time is gone, and the module kept its
-name.
+Every shape a repo link lands in starts ``/owner/repo`` — the root, a PR, an
+issue, a blob, a tree path — so one parse serves them all.
 
-No key needed. Unauthenticated the API allows 60 requests/hour/IP, enough for a
-night's handful of lookups; ``GITHUB_TOKEN`` raises the ceiling to 5000.
-
-Every failure returns None, never 0. A rate limit, a timeout or a private repo
-must not read as "unpopular".
+The API needs no key. Unauthenticated it allows 60 requests/hour/IP, enough for
+a night's handful of lookups; ``GITHUB_TOKEN`` raises the ceiling to 5000.
+Every failed lookup returns None, never 0: a rate limit, a timeout or a private
+repo must not read as "unpopular".
 """
 
 from __future__ import annotations
 
 import os
+from urllib.parse import urlparse
 
-from app.platform.logging import log
-from pipeline.fetching.http import fetch_with_timeout
+from app.core.http import fetch_with_timeout
+from app.core.logging import log
+from app.core.urls import hostname
 
 GITHUB_API = "https://api.github.com/repos"
 LOOKUP_TIMEOUT_SECS = 10.0
+
+NON_REPO_OWNERS = {
+    "features",
+    "login",
+    "pricing",
+    "about",
+    "marketplace",
+    "explore",
+    "topics",
+    "collections",
+    "trending",
+    "sponsors",
+    "orgs",
+    "apps",
+    "contact",
+    "security",
+}
+
+
+def github_repo_from_url(url: str) -> tuple[str, str] | None:
+    """``(owner, repo)`` for a github.com URL that names a repository, else None.
+
+    Handles every shape a link lands in — the repo root, a PR, an issue, a blob
+    or a tree path — because they all start ``/owner/repo``. Anything else on
+    the host (a user profile, ``/features``, gist.github.com) is not a repo and
+    returns None rather than a bogus pair.
+    """
+    if hostname(url) != "github.com":
+        return None
+    parts = [p for p in urlparse(url).path.split("/") if p]
+    if len(parts) < 2:
+        return None
+    owner, repo = parts[0], parts[1]
+    if owner.lower() in NON_REPO_OWNERS:
+        return None
+    return owner, repo.removesuffix(".git")
 
 
 def _headers() -> dict[str, str]:

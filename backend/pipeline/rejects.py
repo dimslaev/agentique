@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from pipeline.freshness import parse_date
+from app.core.dates import parse_date
 from pipeline.models import Reject, RejectStage
 from pipeline.types import Candidate
 

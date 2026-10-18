@@ -34,7 +34,7 @@ from app.catalog.models import (
     Publisher,
     PublisherKind,
 )
-from app.platform.db import engine
+from app.core.db import engine
 from pipeline.curation import NAMEABLE_KINDS
 from pipeline.models import Reject
 from pipeline.publishers import AGGREGATOR_TYPES, PublisherResolver

@@ -27,16 +27,16 @@ from sqlmodel import Session, col, func, select
 
 from app.catalog.articles import like_counts_subquery
 from app.catalog.models import Article, Publisher
-from pipeline.curation import (
-    DEDUP_DIST_THRESHOLD,
-    RELATED_DIST,
+from app.core.embedding import (
+    SNIPPET_CAP,
     cosine_distances,
+    embed_batch,
     nearest,
     story_groups,
+    to_embedding_text,
 )
-from pipeline.embedding import embed_batch, to_embedding_text
+from pipeline.curation import DEDUP_DIST_THRESHOLD, RELATED_DIST
 from pipeline.models import Reject, RejectStage
-from pipeline.steps import SNIPPET_CAP
 from pipeline.url_kind import kind_from_url
 
 # The agent drafts three issues a week; the rest are there so it can pass over a

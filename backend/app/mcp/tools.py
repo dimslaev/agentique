@@ -19,13 +19,13 @@ from fastmcp.server.dependencies import get_access_token
 from sqlmodel import Session
 
 from app.catalog import stories as story_domain
+from app.core.db import engine
+from app.core.extract import fetch_and_extract
+from app.core.settings import settings
+from app.core.web_search import tavily_search
 from app.newsletter import broadcast, digest
-from app.platform.db import engine
-from app.platform.settings import settings
 from pipeline import curation
 from pipeline.fetching import page_facts
-from pipeline.fetching.extract_content import fetch_and_extract
-from pipeline.fetching.http import tavily_search
 
 # The scope `MCP_WRITE_TOKEN` carries and the read token does not. Named for
 # what it lets a caller do, not for the token that carries it: `server.py` mints
@@ -42,7 +42,7 @@ MAX_ROWS = 1000
 # a role that has the grant anyway, which is every local database.
 BLOCKED_TABLES = frozenset({"user"})
 
-# Its own connection, not `app.platform.db` — that one logs in as POSTGRES_USER
+# Its own connection, not `app.core.db` — that one logs in as POSTGRES_USER
 # and would happily run a DELETE. One per call rather than a pool: the cost is
 # nothing at this call rate, and no session state survives a query.
 DSN = settings.MCP_DATABASE_URI

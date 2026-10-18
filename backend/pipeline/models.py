@@ -8,7 +8,7 @@ from enum import StrEnum
 from sqlalchemy import JSON, Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
-from app.platform.dates import get_datetime_utc
+from app.core.dates import get_datetime_utc
 
 
 class RejectStage(StrEnum):
@@ -67,7 +67,7 @@ class Reject(SQLModel, table=True):
         default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )
     # The repo / model / paper / docs links the article body makes,
-    # {"repo": [...], "paper": [...]}; see ``fetching.page_facts``.
+    # {"repo": [...], "paper": [...]}; see ``app.core.extract``.
     links: dict[str, list[str]] | None = Field(
         default=None, sa_column=Column(JSON(none_as_null=True), nullable=True)
     )

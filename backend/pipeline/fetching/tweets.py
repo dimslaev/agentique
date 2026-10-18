@@ -1,7 +1,7 @@
 """Turn a tweet item into the page the tweet points at, via the fxtwitter API.
 
 x.com shows a login wall to anything that is not a signed-in browser, so
-``extract_content`` skips it and a tweet arrives with only its feed blurb,
+``app.core.extract`` skips it and a tweet arrives with only its feed blurb,
 which the fetch step then drops as too thin. Aligned News is nothing but tweet
 links; Hacker News and the newsletters carry some too.
 
@@ -19,10 +19,10 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import TypedDict
 from urllib.parse import urlparse
 
-from app.platform.logging import log
-from pipeline.fetching.http import fetch_with_timeout
+from app.core.http import fetch_with_timeout
+from app.core.logging import log
+from app.core.urls import hostname
 from pipeline.types import RawItem
-from pipeline.urls import hostname
 
 FXTWITTER_URL = "https://api.fxtwitter.com/status/{id}"
 TIMEOUT_SECS = 5.0

@@ -8,7 +8,7 @@ only consulted when it comes back inconclusive.
 from __future__ import annotations
 
 from app.catalog.models import ArticleKind
-from pipeline.urls import hostname
+from app.core.urls import hostname
 
 
 def kind_from_url(url: str) -> ArticleKind | None:

@@ -22,6 +22,7 @@ from app.catalog.models import (
     PublisherType,
     TrustLevel,
 )
+from app.core import embedding
 from pipeline import curation
 from pipeline.models import Reject, RejectStage
 from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP
@@ -427,19 +428,19 @@ def _vecs(*rows: list[float]) -> np.ndarray:
 
 
 def test_cosine_distance_is_zero_for_the_same_direction():
-    d = curation.cosine_distances(_vecs([1, 0]), _vecs([2, 0], [0, 1], [-1, 0]))
+    d = embedding.cosine_distances(_vecs([1, 0]), _vecs([2, 0], [0, 1], [-1, 0]))
     assert np.allclose(d, [[0, 1, 2]])
 
 
 def test_cosine_distance_survives_a_zero_vector():
-    d = curation.cosine_distances(_vecs([0, 0]), _vecs([1, 0]))
+    d = embedding.cosine_distances(_vecs([0, 0]), _vecs([1, 0]))
     assert np.isfinite(d).all()
 
 
 def test_nearest_is_closest_first_within_the_cutoff():
     distances = np.array([0.40, 0.10, 0.50, 0.25])
-    assert curation.nearest(distances, cutoff=0.45, limit=8) == [1, 3, 0]
-    assert curation.nearest(distances, cutoff=0.45, limit=2) == [1, 3]
+    assert embedding.nearest(distances, cutoff=0.45, limit=8) == [1, 3, 0]
+    assert embedding.nearest(distances, cutoff=0.45, limit=2) == [1, 3]
 
 
 def test_coverage_counts_distinct_publishers_under_the_cutoff_and_the_own():
@@ -458,7 +459,9 @@ def test_story_groups_join_pending_rows_with_each_other_and_the_feed():
     vecs = _vecs([1, 0, 0], [0.98, 0.1, 0], [0.97, 0.12, 0], [0, 1, 0], [0, 0, 1])
     pending = [True, True, False, True, False]
 
-    groups = curation.story_groups(curation.cosine_distances(vecs, vecs), pending, 0.30)
+    groups = embedding.story_groups(
+        embedding.cosine_distances(vecs, vecs), pending, 0.30
+    )
 
     assert [sorted(g) for g in groups] == [[0, 1, 2]]
 
@@ -473,10 +476,10 @@ def test_feed_articles_do_not_chain_a_group_through_each_other():
             [0.6, 0.2, 0.0],
         ]
     )
-    groups = curation.story_groups(distances, [True, False, False], 0.30)
+    groups = embedding.story_groups(distances, [True, False, False], 0.30)
     assert [sorted(g) for g in groups] == [[0, 1]]
 
 
 def test_a_group_of_feed_articles_alone_is_not_a_story():
     distances = np.array([[0.0, 0.1], [0.1, 0.0]])
-    assert curation.story_groups(distances, [False, False], 0.30) == []
+    assert embedding.story_groups(distances, [False, False], 0.30) == []

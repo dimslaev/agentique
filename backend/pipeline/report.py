@@ -20,8 +20,6 @@ just quiet, and a mail that lists them every day stops being read.
 
 from __future__ import annotations
 
-import html
-import os
 import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -29,7 +27,7 @@ from datetime import UTC, datetime, timedelta
 from sqlmodel import Session, col, func, select
 
 from app.catalog.models import Article, Publisher
-from app.platform.logging import log
+from app.core.email import send_mail
 from pipeline.db import get_engine
 from pipeline.models import PipelineRun, Reject, RejectStage
 
@@ -190,33 +188,6 @@ def format_night(night: Night) -> str:
         else "Queue empty — every candidate got a verdict."
     )
     return "\n".join(lines)
-
-
-def send_mail(subject_line: str, body: str) -> None:
-    """Email through Resend, or log the mail when the environment has no key.
-    Best-effort: a failed send is logged, never raised."""
-    api_key = os.environ.get("RESEND_API_KEY")
-    from_email = os.environ.get("EMAILS_FROM_EMAIL")
-    to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
-    project = os.environ.get("PROJECT_NAME") or "Agentique"
-    if not (api_key and from_email and to_email):
-        log(f"  [mail suppressed — email env not set] {subject_line}\n{body}")
-        return
-    try:
-        import resend
-
-        resend.api_key = api_key
-        resend.Emails.send(
-            {
-                "from": f"{project} pipeline <{from_email}>",
-                "to": to_email,
-                "subject": f"[{project}] {subject_line}",
-                "html": f"<pre>{html.escape(body)}</pre>",
-            }
-        )
-        log(f"  Mail sent to {to_email}: {subject_line}")
-    except Exception as e:
-        log(f"  Mail send failed: {e}")
 
 
 if __name__ == "__main__":

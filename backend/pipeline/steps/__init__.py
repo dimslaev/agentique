@@ -18,7 +18,3 @@ in the funnel it belongs.
 """
 
 from __future__ import annotations
-
-# How much of an article goes into its embedding. The title carries most of
-# the signal; the opening sentence or two sharpens it.
-SNIPPET_CAP = 200

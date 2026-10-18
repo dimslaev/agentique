@@ -14,7 +14,7 @@ from pathlib import Path
 from sqlmodel import Session, select
 
 from app.catalog.models import Tag
-from app.platform.db import engine
+from app.core.db import engine
 
 TAGS_FILE = Path(__file__).resolve().parent / "tags.json"
 

@@ -7,6 +7,7 @@ import secrets
 from fastmcp import FastMCP
 from fastmcp.server.auth import AccessToken, TokenVerifier
 
+from app.core.settings import settings
 from app.mcp.tools import (
     WRITE_SCOPE,
     approve,
@@ -28,7 +29,6 @@ from app.mcp.tools import (
     web_search,
     week,
 )
-from app.platform.settings import settings
 
 
 def _matches(token: str, expected: str | None) -> bool:

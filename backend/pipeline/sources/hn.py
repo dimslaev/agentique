@@ -7,9 +7,9 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
-from app.platform.logging import log
-from pipeline.fetching.http import fetch_with_timeout
-from pipeline.first_party import is_first_party
+from app.core.http import fetch_with_timeout
+from app.core.logging import log
+from app.core.urls import is_first_party
 from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
 from pipeline.types import RawItem

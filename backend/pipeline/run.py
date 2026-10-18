@@ -17,7 +17,7 @@ import sys
 
 from sqlmodel import Session
 
-from app.platform.logging import log, short_error
+from app.core.logging import log, short_error
 from pipeline.db import get_engine
 from pipeline.publishers import PublisherResolver
 from pipeline.runs import RunStats, record_new, record_polled, record_run

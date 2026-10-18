@@ -1,8 +1,10 @@
-"""Transactional email: rendering the templates and handing them to a sender."""
+"""Email: rendering the templates and handing them to Resend or SMTP."""
 
 from __future__ import annotations
 
+import html
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +12,8 @@ import emails
 import resend
 from jinja2 import Template
 
-from app.platform.settings import settings
+from app.core.logging import log
+from app.core.settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -66,6 +69,31 @@ def send_email(
         smtp_options["password"] = settings.SMTP_PASSWORD
     response = message.send(to=email_to, smtp=smtp_options)
     logger.info(f"send email result: {response}")
+
+
+def send_mail(subject_line: str, body: str) -> None:
+    """Email through Resend, or log the mail when the environment has no key.
+    Best-effort: a failed send is logged, never raised."""
+    api_key = os.environ.get("RESEND_API_KEY")
+    from_email = os.environ.get("EMAILS_FROM_EMAIL")
+    to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
+    project = os.environ.get("PROJECT_NAME") or "Agentique"
+    if not (api_key and from_email and to_email):
+        log(f"  [mail suppressed — email env not set] {subject_line}\n{body}")
+        return
+    try:
+        resend.api_key = api_key
+        resend.Emails.send(
+            {
+                "from": f"{project} pipeline <{from_email}>",
+                "to": to_email,
+                "subject": f"[{project}] {subject_line}",
+                "html": f"<pre>{html.escape(body)}</pre>",
+            }
+        )
+        log(f"  Mail sent to {to_email}: {subject_line}")
+    except Exception as e:
+        log(f"  Mail send failed: {e}")
 
 
 def sign_in_link(login_token: str) -> str:

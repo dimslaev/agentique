@@ -28,9 +28,9 @@ import resend
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup, escape
 
-from app.platform.email import TEMPLATES
-from app.platform.logging import log
-from app.platform.settings import settings
+from app.core.email import TEMPLATES
+from app.core.logging import log
+from app.core.settings import settings
 
 # Resend swaps this for each recipient's own unsubscribe link.
 UNSUBSCRIBE_PLACEHOLDER = "{{{RESEND_UNSUBSCRIBE_URL}}}"

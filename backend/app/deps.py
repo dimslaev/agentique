@@ -13,9 +13,9 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.audience.models import TokenPayload, User
-from app.platform import security
-from app.platform.db import engine
-from app.platform.settings import settings
+from app.core import security
+from app.core.db import engine
+from app.core.settings import settings
 
 reusable_bearer = HTTPBearer()
 

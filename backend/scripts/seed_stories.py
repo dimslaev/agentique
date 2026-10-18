@@ -19,8 +19,8 @@ from sqlmodel import Session, col, select
 
 from app.catalog import stories
 from app.catalog.models import Article
-from app.platform.db import engine
-from app.platform.settings import settings
+from app.core.db import engine
+from app.core.settings import settings
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

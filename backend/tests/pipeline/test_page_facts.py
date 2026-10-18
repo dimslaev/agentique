@@ -11,16 +11,10 @@ from __future__ import annotations
 
 import pytest
 
+from app.core import github
+from app.core.extract import MAX_LINKS_PER_GROUP, group_links, outbound_links
 from pipeline.fetching import page_facts
-from pipeline.fetching.page_facts import (
-    MAX_LINKS_PER_GROUP,
-    UNKNOWN,
-    LinkError,
-    check_link,
-    group_links,
-    outbound_links,
-)
-from pipeline.sources import github_stars
+from pipeline.fetching.page_facts import UNKNOWN, LinkError, check_link
 
 PAGE = "https://blog.example.com/2026/09/release"
 
@@ -153,7 +147,7 @@ def _stub_http(monkeypatch, answers: dict[str, _Response]) -> list[str]:
         return _Response(404)
 
     monkeypatch.setattr(page_facts, "fetch_with_timeout", fetch)
-    monkeypatch.setattr(github_stars, "fetch_with_timeout", fetch)
+    monkeypatch.setattr(github, "fetch_with_timeout", fetch)
     return asked
 
 

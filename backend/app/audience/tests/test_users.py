@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from app.audience.models import User
 from app.audience.tests.factories import create_random_user, user_authentication_headers
-from app.platform.settings import settings
+from app.core.settings import settings
 from tests.random_data import random_email
 
 

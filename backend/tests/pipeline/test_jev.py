@@ -8,7 +8,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from pipeline import jev
+from app.core import jev
 
 QUESTIONS = {
     "is_sponsor": jev.noul("sponsor?", "yes", "no"),

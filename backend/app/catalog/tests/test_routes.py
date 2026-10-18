@@ -24,9 +24,9 @@ from app.catalog.tests.factories import (
     create_random_tag,
     tag_article,
 )
+from app.core.security import create_access_token
+from app.core.settings import settings
 from app.main import app
-from app.platform.security import create_access_token
-from app.platform.settings import settings
 from tests.random_data import random_email
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"

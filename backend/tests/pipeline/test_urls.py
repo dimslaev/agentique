@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.urls import hostname
+from app.core.urls import hostname
 
 
 @pytest.mark.parametrize(

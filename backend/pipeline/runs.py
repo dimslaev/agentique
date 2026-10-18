@@ -21,7 +21,7 @@ from datetime import UTC, datetime
 from sqlmodel import Session, col, select
 
 from app.catalog.models import Publisher
-from app.platform.logging import log
+from app.core.logging import log
 from pipeline.models import PipelineRun
 
 

@@ -8,7 +8,7 @@ from datetime import date, datetime
 from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import Field, SQLModel
 
-from app.platform.dates import get_datetime_utc
+from app.core.dates import get_datetime_utc
 
 
 class AnalyticsEvent(SQLModel, table=True):

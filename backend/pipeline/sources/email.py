@@ -27,13 +27,14 @@ from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from imap_tools import AND, MailBox
 
-from app.platform.logging import log, short_error
+from app.core import jev
+from app.core.http import BROWSER_HEADERS, fetch_with_timeout
+from app.core.logging import log, short_error
+from app.core.urls import hostname
+from app.core.web_search import tavily_search
 from baml_client.sync_client import b
 from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
-from pipeline import jev
-from pipeline.fetching.http import BROWSER_HEADERS, fetch_with_timeout, tavily_search
 from pipeline.types import RawItem
-from pipeline.urls import hostname
 
 IMAP_FOLDER = "sub"
 

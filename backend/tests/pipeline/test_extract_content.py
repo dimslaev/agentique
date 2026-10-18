@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.fetching.extract_content import _is_blocker
+from app.core.extract import _is_blocker
 
 _REAL_ARTICLE = (
     "Anthropic shipped a new model today with a longer context window and "

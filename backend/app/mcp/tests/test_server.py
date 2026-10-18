@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.platform.settings import settings
+from app.core.settings import settings
 
 MCP_URL = "/mcp/"
 HEADERS = {"Accept": "application/json, text/event-stream"}

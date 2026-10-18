@@ -146,7 +146,7 @@ Finish with a short report: stories created, extended and closed, and anything a
 
 ## Newsletter environment
 
-Read by the backend through `app/platform/settings.py`.
+Read by the backend through `app/core/settings.py`.
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
@@ -161,5 +161,5 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
-| `OPENROUTER_API_KEY` | `pipeline/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
-| `PIPELINE_ALERT_EMAIL` | `pipeline/report.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
+| `OPENROUTER_API_KEY` | `app/core/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
+| `PIPELINE_ALERT_EMAIL` | `app/core/email.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |

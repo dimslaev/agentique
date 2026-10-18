@@ -45,7 +45,7 @@ class RawItem(TypedDict):
     # merely used as a gate -- see sources/hn.py.
     traction: NotRequired[str]
     # The repo / model / paper / docs links the article body makes, grouped by
-    # ``fetching.page_facts``. Absent when the text came from nowhere with HTML.
+    # ``app.core.extract``. Absent when the text came from nowhere with HTML.
     links: NotRequired[dict[str, list[str]]]
 
 

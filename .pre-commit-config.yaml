@@ -14,7 +14,7 @@ repos:
             (?x)^(
                 frontend/src/client/.*|
                 backend/baml_client/.*|
-                backend/app/platform/email-templates/.*
+                backend/app/core/email-templates/.*
             )$
       - id: trailing-whitespace
         exclude: |

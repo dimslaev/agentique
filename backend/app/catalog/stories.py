@@ -29,7 +29,7 @@ from app.catalog.models import (
     StoryArticlePublic,
     StoryPublic,
 )
-from pipeline.curation import cosine_distances, story_groups
+from app.core.embedding import cosine_distances, story_groups
 
 # What the rail shows: a story carried by fewer is coverage, or not yet a story.
 MIN_ARTICLES = 3

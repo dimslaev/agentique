@@ -28,7 +28,7 @@ from sqlmodel import SQLModel  # noqa
 from app.analytics import models as analytics_models  # noqa
 from app.audience import models as audience_models  # noqa
 from app.catalog import models as catalog_models  # noqa
-from app.platform.settings import settings  # noqa
+from app.core.settings import settings  # noqa
 from app.newsletter import models as newsletter_models  # noqa
 from pipeline import models as pipeline_models  # noqa
 

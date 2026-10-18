@@ -11,9 +11,9 @@ import pytest
 from fastmcp.exceptions import ToolError
 from fastmcp.server.auth import AccessToken
 
+from app.core.settings import settings
 from app.mcp import tools
 from app.mcp.server import SharedSecret
-from app.platform.settings import settings
 
 WRITE_TOOLS = (
     "list_candidates",

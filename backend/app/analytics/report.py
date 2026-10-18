@@ -23,7 +23,7 @@ from app.analytics.models import (
 )
 from app.audience.models import User
 from app.catalog.models import Article
-from app.platform.dates import get_datetime_utc
+from app.core.dates import get_datetime_utc
 
 # Loose on purpose: a human caught here costs one visitor, a bot let through
 # inflates every number.

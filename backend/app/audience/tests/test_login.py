@@ -14,9 +14,9 @@ from app.audience.tests.factories import (
     create_random_user,
     user_authentication_headers,
 )
+from app.core.dates import get_datetime_utc
+from app.core.settings import settings
 from app.newsletter.models import NewsletterSubscriber
-from app.platform.dates import get_datetime_utc
-from app.platform.settings import settings
 from tests.random_data import random_email
 
 LINK_SENT = {"message": "Check your inbox for your sign-in link"}
@@ -24,10 +24,10 @@ LINK_SENT = {"message": "Check your inbox for your sign-in link"}
 
 def enable_resend_email(monkeypatch) -> list[dict]:
     monkeypatch.setattr(
-        "app.platform.settings.settings.RESEND_API_KEY", "test-key", raising=False
+        "app.core.settings.settings.RESEND_API_KEY", "test-key", raising=False
     )
     monkeypatch.setattr(
-        "app.platform.settings.settings.EMAILS_FROM_EMAIL", "hello@example.com"
+        "app.core.settings.settings.EMAILS_FROM_EMAIL", "hello@example.com"
     )
     monkeypatch.setattr(resend.Contacts, "create", lambda *args, **kwargs: None)
     sent: list[dict] = []

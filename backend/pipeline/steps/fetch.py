@@ -8,8 +8,9 @@ from dataclasses import dataclass
 
 from sqlmodel import Session
 
-from app.platform.logging import log
-from pipeline.fetching.extract_content import fetch_full_content
+from app.core.extract import fetch_full_content
+from app.core.logging import log
+from app.core.urls import hostname
 from pipeline.fetching.tweets import unwrap_tweets
 from pipeline.publishers import (
     PublisherResolver,
@@ -22,7 +23,6 @@ from pipeline.sources.hn import fetch_hn
 from pipeline.sources.lab_watch import fetch_lab_watch
 from pipeline.sources.substack import fetch_feeds
 from pipeline.types import Candidate, RawItem
-from pipeline.urls import hostname
 
 # Below this, content is a teaser/blurb rather than an article, and the
 # categorizer fails on it ~30-40% of the time (vs ~2% above it). Used to decide

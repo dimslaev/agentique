@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pipeline.llm_text import enum_value
+from app.core.llm_text import enum_value
 
 
 class _Colour(StrEnum):

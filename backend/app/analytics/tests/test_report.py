@@ -13,8 +13,8 @@ from app.analytics.models import AnalyticsEvent
 from app.audience.models import User
 from app.audience.tests.factories import create_random_user
 from app.catalog.tests.factories import create_random_article
-from app.platform.dates import get_datetime_utc
-from app.platform.settings import settings
+from app.core.dates import get_datetime_utc
+from app.core.settings import settings
 
 REPORT = f"{settings.API_V1_STR}/analytics/report"
 BROWSER = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15"

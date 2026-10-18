@@ -13,8 +13,8 @@ from datetime import date
 import pytest
 import resend
 
+from app.core.settings import settings
 from app.newsletter import broadcast
-from app.platform.settings import settings
 
 FILLER = " ".join(["word"] * 70)
 BODY = (

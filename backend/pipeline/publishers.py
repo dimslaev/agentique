@@ -34,12 +34,11 @@ from app.catalog.models import (
     TrustLevel,
     slugify,
 )
-from app.platform.logging import log
-from pipeline.fetching.http import fetch_with_timeout
-from pipeline.github import NON_REPO_OWNERS
-from pipeline.llm_text import enum_value
-from pipeline.sources.github_stars import account_type
-from pipeline.urls import feed_url, hostname
+from app.core.github import NON_REPO_OWNERS, account_type
+from app.core.http import fetch_with_timeout
+from app.core.llm_text import enum_value
+from app.core.logging import log
+from app.core.urls import feed_url, hostname
 
 # Publishers whose items link to other people's posts. An item one of them
 # found is credited to the site it links to, never to them.

@@ -9,9 +9,9 @@ from sqlmodel import Session, col, select
 
 from app.audience.models import ArticleLike, User, UserCreate, UserUpdateMe
 from app.catalog.models import Article
-from app.platform.dates import get_datetime_utc
-from app.platform.security import generate_login_token
-from app.platform.settings import settings
+from app.core.dates import get_datetime_utc
+from app.core.security import generate_login_token
+from app.core.settings import settings
 
 LOGIN_LINK_EXPIRE_MINUTES = 60
 

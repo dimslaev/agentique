@@ -7,12 +7,10 @@ enum rather than as free text.
 
 from __future__ import annotations
 
-from typing import Any
-
 import regex
 
 
-def enum_value(raw: Any) -> str:
+def enum_value(raw: object) -> str:
     """The ``.value`` of an enum-ish object, else the object itself, as a str.
 
     BAML returns plain strings for some fields and enum members for others, and

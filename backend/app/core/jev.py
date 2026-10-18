@@ -13,7 +13,6 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 
@@ -27,39 +26,43 @@ BACKOFF_START_SECS = 0.5
 BACKOFF_MAX_SECS = 8.0
 
 
+type Question = dict[str, object]
+type Json = dict[str, Json] | list[Json] | str | float | bool | None
+
+
 class JevError(RuntimeError):
     pass
 
 
 @dataclass(frozen=True)
 class Reply:
-    answers: dict[str, Any]
+    answers: dict[str, Json]
     cost: float
 
 
 def noul(
     instructions: str, true_desc: str | None = None, false_desc: str | None = None
-) -> dict:
+) -> Question:
     """A yes/no question answered as a probability."""
-    q: dict = {"type": "noul", "instructions": instructions}
+    q: Question = {"type": "noul", "instructions": instructions}
     if true_desc is not None or false_desc is not None:
         q["criteria"] = {"true": true_desc or "", "false": false_desc or ""}
     return q
 
 
-def score(instructions: str, levels: list[str]) -> dict:
+def score(instructions: str, levels: list[str]) -> Question:
     """An ordinal question over 2-10 described levels, lowest first."""
     if not 2 <= len(levels) <= 10:
         raise ValueError("score takes 2-10 levels")
     return {"type": "score", "instructions": instructions, "criteria": levels}
 
 
-def choice(instructions: str, options: dict[str, str]) -> dict:
+def choice(instructions: str, options: dict[str, str]) -> Question:
     """Pick one of ``options``, each described by its value."""
     return {"type": "choice", "instructions": instructions, "criteria": options}
 
 
-def _post(payload: dict) -> httpx.Response:
+def _post(payload: dict[str, object]) -> httpx.Response:
     return httpx.post(
         URL,
         json=payload,
@@ -79,10 +82,10 @@ def _retry_after(resp: httpx.Response, attempt: int) -> float:
             return max(float(header), 0.0)
         except ValueError:
             pass  # an HTTP-date; fall back to our own backoff
-    return min(BACKOFF_START_SECS * 2**attempt, BACKOFF_MAX_SECS)
+    return min(BACKOFF_START_SECS * 2.0**attempt, BACKOFF_MAX_SECS)
 
 
-def _unwrap(value: Any, qtype: str) -> Any:
+def _unwrap(value: Json, qtype: str) -> Json:
     """An answer arrives either bare or keyed by its question type."""
     if isinstance(value, dict):
         for key in (qtype, "value", "answer"):
@@ -92,11 +95,13 @@ def _unwrap(value: Any, qtype: str) -> Any:
     return value
 
 
-def _answers(body: dict, questions: dict) -> dict[str, Any]:
+def _answers(body: dict[str, Json], questions: dict[str, Question]) -> dict[str, Json]:
     raw = body.get("answers")
     if not isinstance(raw, dict):
         raise JevError(f"no answers in response: {str(body)[:200]}")
-    answers = {qid: _unwrap(raw.get(qid), q["type"]) for qid, q in questions.items()}
+    answers = {
+        qid: _unwrap(raw.get(qid), str(q["type"])) for qid, q in questions.items()
+    }
     # A missing answer read as 0 would look like "not a sponsor" or "off topic"
     # and silently decide the link. Better to fail the link loudly.
     missing = [qid for qid, a in answers.items() if a is None]
@@ -105,9 +110,13 @@ def _answers(body: dict, questions: dict) -> dict[str, Any]:
     return answers
 
 
-def ask(state: Any, questions: dict, *, retries: int = 4) -> Reply:
+def ask(state: object, questions: dict[str, Question], *, retries: int = 4) -> Reply:
     """POST once, retry 429 honouring retry-after, raise on a missing answer."""
-    payload = {"model": MODEL, "state": state, "questions": questions}
+    payload: dict[str, object] = {
+        "model": MODEL,
+        "state": state,
+        "questions": questions,
+    }
     for attempt in range(retries + 1):
         resp = _post(payload)
         if resp.status_code == 429 and attempt < retries:

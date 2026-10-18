@@ -9,8 +9,8 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.catalog.models import Article
-from app.platform.logging import log
-from pipeline.embedding import embed_batch, to_embedding_text
+from app.core.embedding import embed_batch, to_embedding_text
+from app.core.logging import log
 from pipeline.types import ProcessedArticle
 
 

@@ -24,17 +24,17 @@ from app.audience.models import (
 )
 from app.catalog.articles import list_liked_articles
 from app.catalog.models import ArticlesPublic
-from app.deps import CurrentUser, SessionDep
-from app.newsletter.subscribers import subscribe
-from app.platform import security
-from app.platform.email import (
+from app.core import security
+from app.core.email import (
     EmailData,
     generate_sign_in_email,
     generate_welcome_email,
     send_email,
     sign_in_link,
 )
-from app.platform.settings import settings
+from app.core.settings import settings
+from app.deps import CurrentUser, SessionDep
+from app.newsletter.subscribers import subscribe
 
 logger = logging.getLogger(__name__)
 

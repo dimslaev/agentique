@@ -15,9 +15,9 @@ from app.audience.tests.factories import (
     authentication_token_from_email,
     get_superuser_token_headers,
 )
+from app.core.db import engine
+from app.core.settings import settings
 from app.main import app
-from app.platform.db import engine
-from app.platform.settings import settings
 
 
 @pytest.fixture(scope="session", autouse=True)

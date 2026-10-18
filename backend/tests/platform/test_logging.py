@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.platform.logging import short_error
+from app.core.logging import short_error
 
 
 def test_short_error_names_the_type_and_the_message():

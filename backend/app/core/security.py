@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 import jwt
 
-from app.platform.settings import settings
+from app.core.settings import settings
 
 ALGORITHM = "HS256"
 

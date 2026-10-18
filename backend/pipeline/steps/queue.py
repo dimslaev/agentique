@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
-from app.platform.logging import log
+from app.core.logging import log
 from pipeline.models import RejectStage
 from pipeline.rejects import record_reject
 from pipeline.types import Candidate

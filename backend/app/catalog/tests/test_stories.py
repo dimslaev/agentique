@@ -15,8 +15,8 @@ from sqlmodel import Session, col, delete, func, select
 from app.catalog import stories
 from app.catalog.models import Article, Publisher, Story, StoryArticle
 from app.catalog.tests.factories import create_random_article, create_random_publisher
-from app.platform.db import engine
-from app.platform.settings import settings
+from app.core.db import engine
+from app.core.settings import settings
 from tests.random_data import random_lower_string
 
 NOW = datetime(2026, 10, 10, 12, tzinfo=UTC)

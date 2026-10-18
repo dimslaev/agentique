@@ -1,8 +1,7 @@
-"""Shared transport for the source adapters: HTTP, search, and text extraction.
+"""Lookups that are not a source: the curation agent's ``check_link``, and
+unwrapping tweet links.
 
-Not a source. Every adapter in ``pipeline.sources`` reaches for the same pooled
-client, the same browser headers and the same proxy retry, so they live here
-rather than inside one adapter that the others import from sideways.
+HTTP, search and text extraction live in ``app.core``.
 """
 
 from __future__ import annotations

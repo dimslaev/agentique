@@ -7,7 +7,7 @@ from sqlmodel import Session, col, select
 
 from app.analytics.models import AnalyticsEvent
 from app.audience.models import User
-from app.platform.settings import settings
+from app.core.settings import settings
 
 
 def _latest_event(db: Session, visitor_id: str) -> AnalyticsEvent | None:

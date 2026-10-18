@@ -1,15 +1,37 @@
-"""Is a URL a lab publishing on its own domain, rather than someone's writeup?
-
-Two callers lean on this and both treat it as a fast path: the scoring rubric
-floors a first-party post at 70, and the Hacker News source lets one past its
-traction gate.
-"""
+"""URL normalisation: feed endpoints, comparable hostnames, and first-party lab
+domains."""
 
 from __future__ import annotations
 
 from urllib.parse import urlparse
 
-from pipeline.urls import hostname
+
+def feed_url(url: str, is_substack: bool = False) -> str:
+    """Normalise a publisher link to the feed endpoint to actually poll.
+
+    A bare Substack link (``https://foo.substack.com``, or a custom domain
+    stored under the ``substack`` platform) serves the HTML site, not the feed -
+    feedparser finds no entries and the source silently yields nothing. Substack
+    always serves the feed at ``/feed``. Pass ``is_substack`` when the link's
+    platform says so; the host check catches bare substack.com links stored
+    under ``rss``. Idempotent, so it is safe to apply more than once.
+    """
+    trimmed = url.rstrip("/")
+    if (is_substack or trimmed.endswith(".substack.com")) and not trimmed.endswith(
+        "/feed"
+    ):
+        return f"{trimmed}/feed"
+    return url
+
+
+def hostname(url: str) -> str:
+    """Lowercase host without a ``www.`` prefix, or "" if the URL has no host."""
+    try:
+        host = urlparse(url).hostname or ""
+    except Exception:
+        return ""
+    return host.lower().removeprefix("www.")
+
 
 # Domains where a post is the release itself rather than someone's writeup of
 # it. Two places lean on this: the scoring rubric floors these at 70, and the

@@ -15,7 +15,7 @@ from app.audience.tests.factories import (
     create_random_user,
 )
 from app.catalog.tests.factories import create_random_article
-from app.platform.settings import settings
+from app.core.settings import settings
 from tests.random_data import random_email
 
 

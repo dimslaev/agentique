@@ -7,8 +7,8 @@ from fastapi import FastAPI
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
+from app.core.settings import settings
 from app.mcp.server import mcp_app
-from app.platform.settings import settings
 from app.router import api_router
 
 

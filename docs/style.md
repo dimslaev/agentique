@@ -25,7 +25,7 @@ express, enforced by review.
   one module is an implementation detail of that module — it does not move
   to a shared file. A constant read by two or more modules is a real
   interface and lives at that seam (see `SNIPPET_CAP` in
-  `pipeline/steps/__init__.py`, read by the embedding and by curation, for the
+  `app/core/embedding.py`, read by curation and by the newsletter, for the
   two-reader case). See the constants-vs-config discussion in the refactor plan for
   the reasoning.
 - **`app/` holds the running service; `backend/scripts/` holds ops
@@ -36,7 +36,7 @@ express, enforced by review.
   deliberately outside coverage's `source`, because pytest never runs them.
 - **Config is different from constants.** Deployment-varying, env-provided
   values (database URL, API keys) live in one settings object
-  (`app/platform/settings.py`). Tuning knobs compiled into the code
+  (`app/core/settings.py`). Tuning knobs compiled into the code
   (`CANDIDATE_CAP`, `SNIPPET_CAP`) never move there.
 - **The pipeline is the exception, on purpose.** It reads `os.environ` beside
   each consumer rather than through that settings object — see ADR 7. The index

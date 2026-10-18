@@ -7,8 +7,8 @@ import json
 import pytest
 from fastmcp.exceptions import ToolError
 
+from app.core.settings import settings
 from app.mcp import tools
-from app.platform.settings import settings
 
 
 @pytest.fixture(autouse=True)

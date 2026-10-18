@@ -18,8 +18,8 @@ transaction that inserts the Article.
 Comparing is by embedding: `similar` and `stories` put a candidate beside what
 the feed already carries and what else is queued, so the agent can tell a story
 that three outlets covered from one only its publisher did. The distance maths
-is pure numpy and kept apart from the queries, so it is tested on synthetic
-vectors with no model load.
+is pure numpy in `app.core.embedding`, kept apart from the queries, so it is
+tested on synthetic vectors with no model load.
 """
 
 from __future__ import annotations
@@ -31,11 +31,17 @@ import numpy as np
 from sqlmodel import Session, col, func, select
 
 from app.catalog.models import Article, ArticleKind, Publisher, PublisherKind
-from app.platform.logging import log
-from pipeline.embedding import embed_batch, to_embedding_text
+from app.core.embedding import (
+    SNIPPET_CAP,
+    cosine_distances,
+    embed_batch,
+    nearest,
+    story_groups,
+    to_embedding_text,
+)
+from app.core.logging import log
 from pipeline.models import Reject, RejectStage
 from pipeline.rejects import CANDIDATE_CAP, CONTENT_CAP
-from pipeline.steps import SNIPPET_CAP
 from pipeline.steps.enrich import embed_articles
 from pipeline.steps.persist import insert_articles
 from pipeline.tags import load_vocabulary, validate_tags, write_article_tags
@@ -265,21 +271,6 @@ class Story(TypedDict):
     members: list[Neighbour]
 
 
-def cosine_distances(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    """Pairwise cosine distance, rows of ``a`` against rows of ``b``. Pure."""
-    if a.size == 0 or b.size == 0:
-        return np.empty((a.shape[0], b.shape[0]), dtype=np.float32)
-    a_norm = a / np.maximum(np.linalg.norm(a, axis=1, keepdims=True), 1e-12)
-    b_norm = b / np.maximum(np.linalg.norm(b, axis=1, keepdims=True), 1e-12)
-    return 1 - (a_norm @ b_norm.T)
-
-
-def nearest(distances: np.ndarray, cutoff: float, limit: int) -> list[int]:
-    """Indices of the closest rows within ``cutoff``, closest first. Pure."""
-    order = np.argsort(distances, kind="stable")
-    return [int(i) for i in order if distances[i] <= cutoff][: max(limit, 0)]
-
-
 def covering(
     publishers: list[str], distances: np.ndarray, own: str | None, cutoff: float
 ) -> list[str]:
@@ -288,39 +279,6 @@ def covering(
     if own:
         names.add(own)
     return sorted(n for n in names if n)
-
-
-def story_groups(
-    distances: np.ndarray, pending: list[bool], cutoff: float
-) -> list[list[int]]:
-    """Group rows that are the same story, with at least one pending row in each.
-
-    ``distances`` is the square matrix over every row. An edge needs a pending
-    row at one end or both, so two feed articles never join a group through each
-    other and a chain of loosely related stories cannot grow through the feed.
-    Returns only groups of two or more, largest first. Pure.
-    """
-    n = len(pending)
-    parent = list(range(n))
-
-    def root(i: int) -> int:
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
-
-    for i in range(n):
-        if not pending[i]:
-            continue
-        for j in range(n):
-            if j != i and distances[i, j] <= cutoff:
-                parent[root(j)] = root(i)
-
-    groups: dict[int, list[int]] = {}
-    for i in range(n):
-        groups.setdefault(root(i), []).append(i)
-    found = [g for g in groups.values() if len(g) >= 2 and any(pending[i] for i in g)]
-    return sorted(found, key=len, reverse=True)
 
 
 def _publisher_names(session: Session) -> dict[int, str]:

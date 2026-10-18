@@ -8,18 +8,17 @@ from urllib.parse import urlparse
 
 import feedparser
 
-from app.platform.logging import log
-from pipeline.fetching.extract_content import extract_text
-from pipeline.fetching.http import (
+from app.core.extract import extract_text, outbound_links
+from app.core.http import (
     BROWSER_HEADERS,
     RESIDENTIAL_PROXY_URL,
     fetch_with_timeout,
 )
-from pipeline.fetching.page_facts import outbound_links
+from app.core.logging import log
+from app.core.urls import feed_url
 from pipeline.freshness import is_within_window
 from pipeline.titles import clean_title
 from pipeline.types import RawItem
-from pipeline.urls import feed_url
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
 _proxy_status_logged = False
@@ -43,7 +42,7 @@ def _log_proxy_status_once() -> None:
             f"(auth: {'yes' if u.username else 'no'})"
         )
     except Exception:
-        log(f"Substack proxy: set but unparseable (len {len(_PROXY_URL)})")
+        log(f"Substack proxy: set but unparsable (len {len(_PROXY_URL)})")
 
 
 def _entry_html(entry) -> str:

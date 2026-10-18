@@ -1,7 +1,7 @@
 """Find gaps in the controlled tag vocabulary — cheaply, without the LLM.
 
 The idea: every article already carries a `potion-base-8M` embedding (see
-`pipeline.embedding`). Each tag carries a "when to apply this" description we can
+`app.core.embedding`). Each tag carries a "when to apply this" description we can
 embed with the *same* model. So we can measure, in pure numpy, how well the
 current vocabulary covers each article:
 
@@ -37,8 +37,8 @@ import numpy as np
 from sqlmodel import Session, select
 
 from app.catalog.models import Article, ArticleTag, Tag
+from app.core.embedding import embed_batch
 from pipeline.db import get_engine
-from pipeline.embedding import embed_batch
 
 
 @dataclass

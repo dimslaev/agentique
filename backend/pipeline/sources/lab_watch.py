@@ -19,10 +19,10 @@ from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from urllib.parse import urlparse
 
-from app.platform.logging import log
-from pipeline.fetching.http import tavily_search
+from app.core.logging import log
+from app.core.urls import hostname
+from app.core.web_search import tavily_search
 from pipeline.types import RawItem
-from pipeline.urls import hostname
 
 WATCH_DAYS = 2  # nightly cadence + one missed run of slack
 WATCH_CONCURRENCY = 5

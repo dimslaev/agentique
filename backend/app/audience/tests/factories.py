@@ -8,8 +8,8 @@ from sqlmodel import Session
 
 from app.audience import service
 from app.audience.models import User, UserCreate
-from app.platform.security import create_access_token
-from app.platform.settings import settings
+from app.core.security import create_access_token
+from app.core.settings import settings
 from tests.random_data import random_email
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from pipeline.llm_text import sanitize_llm_text
+from app.core.llm_text import sanitize_llm_text
 
 # ─── sanitize_llm_text ──────────────────────────────────────────────────────
 
