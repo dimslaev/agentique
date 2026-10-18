@@ -194,8 +194,9 @@ SHARED_HOSTS = frozenset(
         "youtube.com",
     }
 )
-# Shared hosts whose subdomains are one author's site (writer.substack.com),
-# not another door into the platform (old.reddit.com, m.youtube.com).
+# Shared hosts whose subdomains are one author's site (writer.substack.com).
+# Any other shared host's subdomain is the platform itself (old.reddit.com,
+# m.youtube.com).
 PERSONAL_SUBDOMAIN_HOSTS = frozenset({"medium.com", "substack.com"})
 
 _HOST_PLATFORMS = (

@@ -14,8 +14,6 @@ from app.features.collect import hn
 from app.features.collect.hn import HNItem, _to_article, has_traction, is_on_topic
 
 HOUR = 3600
-# Stands for "twelve hours before the call", resolved when the item is built.
-TWELVE_HOURS_AGO = -1
 
 MATCHES = [
     # version suffixes glued to the name — the case bare \b boundaries miss
@@ -81,7 +79,7 @@ def _item(
     type: str = "story",
     title: str = "Qwen3-Max is out",
     url: str | None = "https://example.com/qwen3",
-    posted: int | None = TWELVE_HOURS_AGO,
+    posted: int | None = int(time.time()) - HOUR * 12,
     score: int = 120,
     descendants: int = 40,
 ) -> HNItem:
@@ -102,9 +100,7 @@ def _item(
     if url is not None:
         item["url"] = url
     if posted is not None:
-        item["time"] = (
-            int(time.time()) - HOUR * 12 if posted == TWELVE_HOURS_AGO else posted
-        )
+        item["time"] = posted
     return item
 
 

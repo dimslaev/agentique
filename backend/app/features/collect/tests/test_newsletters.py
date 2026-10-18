@@ -213,8 +213,8 @@ def test_a_product_resolves_to_the_result_picked(
 def test_no_pick_or_a_pick_past_the_list_drops_the_product(
     monkeypatch: pytest.MonkeyPatch, index: int
 ) -> None:
-    """The denied x.com result never reaches the model, so the list it picks
-    from has one entry: anything else is no pick, not an IndexError that would
-    end the whole night's newsletter source."""
+    """The model never sees the denied x.com result, so it picks from a list
+    of one. Any other index is no pick. Before the bounds check it raised
+    IndexError, which ended the whole night's newsletter source."""
     _stub_search(monkeypatch, index)
     assert newsletters._resolve_product(_product()) is None

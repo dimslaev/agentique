@@ -1,8 +1,8 @@
 """The pure cores of the fetch step.
 
-These carry the decisions that silently change what gets queued — whose
-article it is, which URLs are never fetched, which channels are polled — so
-they are pulled out of the I/O and pinned here.
+These decide what gets queued: whose article it is, which URLs are never
+fetched, which channels are polled. A wrong one changes the queue without an
+error, so they are pulled out of the I/O and pinned here.
 """
 
 from __future__ import annotations

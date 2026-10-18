@@ -374,7 +374,7 @@ type Answers = Mapping[str, jev.Json]
 
 
 def _probability(answers: Answers, key: str) -> float:
-    """A yes/no answer as a number; anything else reads as a firm no."""
+    """A yes/no answer as a number. A missing or non-numeric answer is 0."""
     value = answers.get(key)
     return float(value) if isinstance(value, int | float) else 0.0
 

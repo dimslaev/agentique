@@ -98,9 +98,9 @@ class Publisher(PublisherBase, table=True):
     # column stays because deploy runs additive migrations only.
     topic_gated: bool = Field(default=False, nullable=False)
     # What the nightly run last saw of this publisher, written by
-    # features/collect/runs.py: when its feed last answered, when it last gave us a new
-    # candidate, and the error it last failed with (cleared by the next good
-    # fetch). Ingestion bookkeeping, not on the public API.
+    # features/collect/runs.py: when its feed last answered, when it last gave
+    # us a new candidate, and the error it last failed with (cleared by the
+    # next good fetch). Ingestion bookkeeping, not on the public API.
     last_fetched_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),  # type: ignore

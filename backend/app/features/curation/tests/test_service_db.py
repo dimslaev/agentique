@@ -339,7 +339,7 @@ def test_a_candidate_is_published_once(db: Session, queued: Reject) -> None:
 
 
 def test_a_refused_approval_writes_nothing(db: Session, queued: Reject) -> None:
-    """The labels are checked before the candidate is touched."""
+    """approve checks the labels before it touches the candidate."""
     with pytest.raises(CandidateError, match="publisher_kind"):
         curation.approve(db, queued.url, 81, "r", "s", "post", [])
 

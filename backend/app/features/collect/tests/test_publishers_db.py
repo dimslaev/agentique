@@ -112,8 +112,8 @@ def test_a_shared_host_that_names_no_author_stays_with_the_aggregator(
 def test_a_shared_platforms_subdomain_names_no_author_either(
     db: Session, sources: dict[str, Publisher], url: str
 ) -> None:
-    """Another door into the platform is not a site of its own: no publisher
-    named after it."""
+    """A platform's subdomain is the platform, not a site of its own, so no
+    publisher is made for it."""
     resolver = PublisherResolver(db)
     assert (
         resolver.publisher_for(url, sources["aggregator"].name).id
