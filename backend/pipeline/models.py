@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 
-from sqlalchemy import JSON, Column, DateTime, String
+from sqlalchemy import JSON, Column, DateTime, String, Text, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from app.core.dates import get_datetime_utc
@@ -43,8 +44,11 @@ class Reject(SQLModel, table=True):
     # Still named scored_url: deploy runs additive migrations only, and a
     # rename is not one.
     __tablename__ = "scored_url"
-    url: str = Field(primary_key=True)
-    created_at: datetime = Field(default_factory=get_datetime_utc)
+    url: str = Field(primary_key=True, sa_type=Text)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
     # A plain string, not a Postgres enum, so a new stage needs no migration.
     stage: RejectStage | None = Field(default=None, sa_type=String)
     title: str | None = None
@@ -92,8 +96,12 @@ class PipelineRun(SQLModel, table=True):
     # [{source, fetched, queued, error}]. Rows from before 2026-09-23 carry
     # the older, longer funnel shape.
     sources: list[dict] = Field(
-        default_factory=list, sa_column=Column(JSON, nullable=False)
+        default_factory=list, sa_column=Column(JSONB, nullable=False)
     )
-    # The table also has a `publishers` column, per-publisher counts from before
-    # the Publisher row kept its own (last_fetched_at, last_new_at, last_error).
-    # No longer written; its default fills it.
+    # Per-publisher counts from before the Publisher row kept its own
+    # (last_fetched_at, last_new_at, last_error). No longer read; new rows get
+    # an empty list.
+    publishers: list[dict] = Field(
+        default_factory=list,
+        sa_column=Column(JSONB, nullable=False, server_default=text("'[]'::jsonb")),
+    )

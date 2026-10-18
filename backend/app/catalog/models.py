@@ -176,6 +176,16 @@ class ArticleBase(SQLModel):
 
 
 class Article(ArticleBase, table=True):
+    __table_args__ = (
+        Index("ix_article_score", "score"),
+        Index("ix_article_published_at", "published_at"),
+        Index(
+            "ix_article_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
     id: int | None = Field(default=None, primary_key=True)
     # 256-dim model2vec vectors; nullable until the import script runs
     embedding: list[float] | None = Field(
