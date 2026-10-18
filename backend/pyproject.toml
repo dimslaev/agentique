@@ -96,15 +96,14 @@ required-imports = ["from __future__ import annotations"]
 "app/entry/cli/**" = ["T201"]
 
 [tool.pytest.ini_options]
-# Feature tests live inside the feature (ADR 4); `tests/` keeps what belongs to
-# no single feature - core and the schema-wide enum guard.
-testpaths = ["app", "tests"]
+# Each test sits beside the module it tests (ADR 4).
+testpaths = ["app"]
 
 [tool.coverage.run]
 source = ["app"]
 # Colocated tests are inside `source`; measuring the tests themselves would
 # only inflate the number.
-omit = ["*/tests/*"]
+omit = ["*/test_*.py", "*/conftest.py", "*/factories.py"]
 dynamic_context = "test_function"
 
 [tool.coverage.report]
