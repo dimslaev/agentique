@@ -11,8 +11,8 @@ Type=oneshot
 User=agentique
 Group=agentique
 WorkingDirectory=/opt/agentique/backend
-# pipeline/report.py reads raw os.environ and loads no dotenv, same as
-# pipeline/run.py -- EnvironmentFile is what feeds it.
+# Same as agentique-pipeline.service: EnvironmentFile feeds the database
+# settings and the raw os.environ reads alike.
 EnvironmentFile=/opt/agentique/.env
 Environment=HOME=/var/lib/agentique
-ExecStart=/opt/agentique/.venv/bin/python -m pipeline.report
+ExecStart=/opt/agentique/.venv/bin/python -m app.entry.cli.report

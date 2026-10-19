@@ -65,14 +65,14 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         return PostgresDsn.build(
             scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
+            username=quote(self.POSTGRES_USER, safe=""),
+            password=quote(self.POSTGRES_PASSWORD, safe=""),
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
 
-    # The MCP server (app/mcp/) is gated by this one shared bearer token. Unset
+    # The MCP server (app/entry/mcp/) is gated by this one shared bearer token. Unset
     # means every request is rejected, so a deploy that forgets it is closed,
     # not open.
     MCP_TOKEN: str | None = None
@@ -99,8 +99,8 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
         """
         dsn = PostgresDsn.build(
             scheme="postgresql",
-            username=self.MCP_DB_USER,
-            password=self.MCP_DB_PASSWORD or None,
+            username=quote(self.MCP_DB_USER, safe=""),
+            password=quote(self.MCP_DB_PASSWORD, safe="") or None,
             host=self.POSTGRES_SERVER,
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,

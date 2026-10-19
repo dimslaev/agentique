@@ -17,6 +17,13 @@ MODEL_NAME = "minishlab/potion-base-8M"
 # How much of an article goes into its embedding. The title carries most of
 # the signal; the opening sentence or two sharpens it.
 SNIPPET_CAP = 200
+# Two texts this close are the same story. Same-story pairs sit at 0.29-0.35
+# with the potion-base-8M embeddings; tight on purpose, because coverage counts
+# what falls under it and a loose cut inflates every story.
+DEDUP_DIST_THRESHOLD = 0.30
+# Related out to here: close enough to be about the same subject, not close
+# enough to count as the same story.
+RELATED_DIST = 0.45
 
 _model: StaticModel | None = None
 

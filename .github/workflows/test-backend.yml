@@ -39,12 +39,15 @@ jobs:
           POSTGRES_USER=postgres
           POSTGRES_PASSWORD=ci-test-password
           EOF
+      - name: Check import layers
+        run: uv run lint-imports
+        working-directory: backend
       - run: docker compose up -d
       - name: Migrate DB
-        run: uv run bash scripts/prestart.sh
+        run: uv run bash app/entry/cli/prestart.sh
         working-directory: backend
       - name: Run tests
-        run: uv run bash scripts/tests-start.sh "Coverage for ${{ github.sha }}"
+        run: uv run bash ../scripts/tests-start.sh "Coverage for ${{ github.sha }}"
         working-directory: backend
       - run: docker compose down -v
       - name: Store coverage files

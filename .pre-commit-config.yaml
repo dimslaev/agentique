@@ -14,7 +14,7 @@ repos:
             (?x)^(
                 frontend/src/client/.*|
                 backend/baml_client/.*|
-                backend/app/core/email-templates/.*
+                backend/app/features/(audience|newsletter)/.*\.html
             )$
       - id: trailing-whitespace
         exclude: |
@@ -53,14 +53,21 @@ repos:
 
       - id: local-mypy
         name: mypy check
-        entry: uv run mypy backend/app backend/scripts
+        entry: uv run mypy --config-file backend/pyproject.toml backend/app
         require_serial: true
         language: unsupported
         pass_filenames: false
 
       - id: local-ty
         name: ty check
-        entry: uv run ty check backend/app backend/scripts
+        entry: uv run ty check --project backend backend/app
+        require_serial: true
+        language: unsupported
+        pass_filenames: false
+
+      - id: local-lint-imports
+        name: import-linter
+        entry: uv run lint-imports --config backend/pyproject.toml
         require_serial: true
         language: unsupported
         pass_filenames: false
