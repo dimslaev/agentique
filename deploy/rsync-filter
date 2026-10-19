@@ -1,0 +1,35 @@
+# The deploy's rsync filter (.github/workflows/deploy-production.yml): what
+# lands in /opt/agentique. The first matching rule wins.
+#
+# The deploy runs with --delete-excluded, so rsync deletes anything on the box
+# that is not listed here, including files from earlier deploys. It never
+# deletes the P paths. The deploy doesn't send them either.
+P /.env
+P /.venv/
+P /.git/
+
+# Test-only code. backend/conftest.py falls under the final rule.
+- __pycache__/
+- test_*.py
+- /backend/app/core/db/factories.py
+
+# uv sync --frozen --package app reads the workspace root and the member.
++ /pyproject.toml
++ /uv.lock
++ /.python-version
+# backup_db.py runs `docker compose -f <repo>/compose.yml`.
++ /compose.yml
+# The units, agentique-sql, the Caddyfile and sql-roles.sql, for installing
+# by hand.
++ /deploy/***
++ /backend/
++ /backend/pyproject.toml
++ /backend/.python-version
++ /backend/app/***
++ /backend/migrations/***
++ /backend/baml_client/***
+# Caddy serves the built frontend. The deploy downloads it into frontend/dist
+# before the sync.
++ /frontend/
++ /frontend/dist/***
+- *

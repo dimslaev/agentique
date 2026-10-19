@@ -38,6 +38,7 @@ dev = [
     "ruff<1.0.0,>=0.2.2",
     "coverage<8.0.0,>=7.4.3",
     "types-regex>=2026.9.29.20261017",
+    "import-linter>=2.15,<3.0.0",
 ]
 
 [build-system]
@@ -96,15 +97,14 @@ required-imports = ["from __future__ import annotations"]
 "app/entry/cli/**" = ["T201"]
 
 [tool.pytest.ini_options]
-# Feature tests live inside the feature (ADR 4); `tests/` keeps what belongs to
-# no single feature - core and the schema-wide enum guard.
-testpaths = ["app", "tests"]
+# Each test sits beside the module it tests (ADR 4).
+testpaths = ["app"]
 
 [tool.coverage.run]
 source = ["app"]
 # Colocated tests are inside `source`; measuring the tests themselves would
 # only inflate the number.
-omit = ["*/tests/*"]
+omit = ["*/test_*.py", "*/conftest.py", "*/factories.py"]
 dynamic_context = "test_function"
 
 [tool.coverage.report]
@@ -119,3 +119,45 @@ error-on-warning = true
 
 [tool.fastapi]
 entrypoint = "app.main:app"
+
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "main > entry > features > core"
+type = "layers"
+containers = ["app"]
+layers = ["main", "entry", "features", "core"]
+# A new top-level module under app/ has to join a layer.
+exhaustive = true
+exhaustive_ignores = ["test_main"]
+
+[[tool.importlinter.contracts]]
+name = "Features never import each other"
+type = "independence"
+modules = ["app.features.*"]
+
+[[tool.importlinter.contracts]]
+name = "api, mcp and cli never import each other"
+type = "independence"
+modules = ["app.entry.api", "app.entry.mcp", "app.entry.cli"]
+
+[[tool.importlinter.contracts]]
+name = "Flat core modules never import core.db"
+type = "forbidden"
+# app.core.* matches app.core.db too; import-linter skips that overlap.
+source_modules = ["app.core.*"]
+forbidden_modules = ["app.core.db"]
+
+[[tool.importlinter.contracts]]
+name = "Entry reaches a feature only through its service and model"
+type = "forbidden"
+source_modules = ["app.entry"]
+forbidden_modules = ["app.features.*.*"]
+allow_indirect_imports = true
+ignore_imports = [
+    "app.entry.** -> app.features.*.service",
+    "app.entry.** -> app.features.*.model",
+    # The search tests stub the query embedding where it is computed.
+    "app.entry.api.test_articles -> app.features.catalog.semantic_search",
+]

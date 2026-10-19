@@ -102,11 +102,12 @@ aren't wired into the nightly run yet — candidates for whoever picks up sourci
 ## Under the hood, briefly
 
 - **Backend**: FastAPI (Python), auto-generates the OpenAPI spec the frontend client is
-  built from.
+  built from. One package in three layers: `entry/` (the API, the MCP server, the
+  commands) calls `features/`, which call `core/` (docs/adr/0017).
 - **Database**: Postgres with the pgvector extension — one table holds articles plus
   their embedding vectors, so relevance search is just a SQL query.
-- **Pipeline**: a separate scheduled Python process (once a day, 04:00) that fetches
-  and filters, plus a Claude Code session an hour later that judges what it queued and
+- **Pipeline**: a separate scheduled Python process (once a day, 04:00,
+  `app.entry.cli.collect`) that fetches and filters, plus a Claude Code session an hour later that judges what it queued and
   a report email an hour after that. A second Claude Code session drafts the newsletter
   on Friday mornings.
 - **Embeddings**: model2vec — a tiny, fast, CPU-only static embedding model, no GPU or
@@ -129,4 +130,4 @@ above, and a real load/scale test (current data volume is small — this has bee
 architecture spike more than a performance one so far).
 
 If you want the ground-level detail — endpoints, models, exact commands — see
-`backend/README.md` and `frontend/README.md`.
+`docs/backend.md` and `docs/frontend.md`.
