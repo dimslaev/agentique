@@ -14,7 +14,7 @@ from app.core.db.publisher import PublisherKind
 class Origin(StrEnum):
     """The feed's "From" filter: what the article is when that is settled (a
     repo, a paper, a model), otherwise who published it. Not stored; each
-    article falls under exactly one, see `catalog.articles.origin_condition`."""
+    article falls under exactly one, see `catalog.rows.origin_condition`."""
 
     lab = "lab"
     company = "company"

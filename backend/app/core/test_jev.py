@@ -1,6 +1,6 @@
 """The Jev transport's two guarantees: a 429 waits as long as it is told to
-and tries again, and an answer set with a hole in it is an error, never a
-quiet zero that reads as "not a sponsor" or "off topic".
+and tries again, and an answer set with a hole or a non-numeric probability in
+it is an error, never a quiet zero that reads as "not a sponsor" or "off topic".
 """
 
 from __future__ import annotations
@@ -102,6 +102,16 @@ def test_a_missing_answer_raises_instead_of_reading_as_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _stub(monkeypatch, [_resp(200, {"answers": {"kind": {"choice": "article"}}})])
+
+    with pytest.raises(jev.JevError, match="is_sponsor"):
+        jev.ask({}, QUESTIONS)
+
+
+def test_a_non_numeric_probability_raises_instead_of_reading_as_zero(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    body = {"answers": {"is_sponsor": {"noul": "0.93"}, "kind": "article"}}
+    _stub(monkeypatch, [_resp(200, body)])
 
     with pytest.raises(jev.JevError, match="is_sponsor"):
         jev.ask({}, QUESTIONS)

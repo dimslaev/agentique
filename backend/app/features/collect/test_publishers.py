@@ -130,9 +130,18 @@ def test_a_shared_platform_includes_its_subdomains(host: str, shared: bool) -> N
     assert is_shared_host(host) is shared
 
 
-def test_a_publisher_on_a_platform_subdomain_claims_nothing() -> None:
-    sub = _pub(11, website="https://old.reddit.com/r/LocalLLaMA")
-    assert _credited("https://old.reddit.com/r/LocalLLaMA/comments/x", sub) is None
+@pytest.mark.parametrize(
+    ("link", "url"),
+    [
+        ("https://engineering.linkedin.com", "https://engineering.linkedin.com/blog/a"),
+        ("https://docs.github.com/en", "https://docs.github.com/en/copilot/agents"),
+        ("https://blog.x.com", "https://blog.x.com/engineering/en_us/a-post"),
+    ],
+)
+def test_a_publishers_own_link_claims_a_platform_subdomain(link: str, url: str) -> None:
+    """A platform's first-party site is the publisher's own, unlike the bare
+    platform host."""
+    assert _credited(url, _pub(11, website=link)) == 11
 
 
 def test_a_substack_writer_still_claims_their_own_subdomain() -> None:
