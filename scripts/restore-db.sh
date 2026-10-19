@@ -18,7 +18,7 @@ set +a
 
 dump=$(ls -1 .ignored/dumps/agentique-db-*.sql.gz 2>/dev/null | sort | tail -1)
 if [ -z "$dump" ]; then
-  echo "no dump in .ignored/dumps/ — drop one there or run backend/scripts/seed_articles.py" >&2
+  echo "no dump in .ignored/dumps/ — drop one there or run python -m app.entry.cli.seed_articles in backend/" >&2
   exit 1
 fi
 

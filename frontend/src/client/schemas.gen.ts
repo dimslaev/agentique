@@ -322,7 +322,7 @@ export const OriginSchema = {
     title: 'Origin',
     description: `The feed's "From" filter: what the article is when that is settled (a
 repo, a paper, a model), otherwise who published it. Not stored; each
-article falls under exactly one, see \`catalog.articles.origin_condition\`.`
+article falls under exactly one, see \`catalog.rows.origin_condition\`.`
 } as const;
 
 export const OriginCountSchema = {

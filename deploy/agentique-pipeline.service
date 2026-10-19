@@ -11,12 +11,12 @@ Type=oneshot
 User=agentique
 Group=agentique
 WorkingDirectory=/opt/agentique/backend
-# pipeline/run.py reads raw os.environ and loads no dotenv — EnvironmentFile
-# is what feeds it.
+# The database settings come through app.core.settings, the per-source knobs
+# straight from os.environ (ADR 7). EnvironmentFile feeds both.
 EnvironmentFile=/opt/agentique/.env
 # agentique is a system user (adduser --system) with home=/nonexistent.
 # Anything that embeds via model2vec lazy-downloads through huggingface_hub and
 # expands ~ for its cache dir — fails with EACCES against /nonexistent. /var/lib/agentique is real and writable (vps-setup.sh) and
 # lives outside /opt/agentique so the deploy rsync's --delete never touches it.
 Environment=HOME=/var/lib/agentique
-ExecStart=/opt/agentique/.venv/bin/python -m pipeline.run
+ExecStart=/opt/agentique/.venv/bin/python -m app.entry.cli.collect

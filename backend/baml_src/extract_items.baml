@@ -10,7 +10,7 @@
 // - Article: a blog post, essay, paper, or write-up. Here the link IS the
 //   subject — there is nothing to search for, and a search would land on some
 //   other page about the same topic. Its href is kept and followed instead
-//   (see ``_resolve_article`` in pipeline/sources/email.py), which turns a
+//   (see ``_resolve_article`` in app/features/collect/newsletters.py), which turns a
 //   tracking redirect into the real destination.
 //
 // Hence NewsletterItem.url: the model must copy an article's href verbatim

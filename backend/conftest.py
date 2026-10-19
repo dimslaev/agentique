@@ -1,4 +1,5 @@
-"""Shared pytest fixtures: test client, db session, and auth token headers."""
+"""Shared pytest fixtures: test clients, db session, auth token headers, and the
+MCP write scope."""
 
 from __future__ import annotations
 
@@ -6,18 +7,27 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, delete
+from fastmcp.server.auth import AccessToken
+from sqlmodel import Session, col, delete, func, select
 
-from app.analytics.models import AnalyticsEvent
-from app.audience.models import ArticleLike, User
-from app.audience.service import init_db
-from app.audience.tests.factories import (
+from app.core.db.article import Article
+from app.core.db.engine import engine
+from app.core.db.event import AnalyticsEvent
+from app.core.db.factories import (
     authentication_token_from_email,
     get_superuser_token_headers,
+    random_email,
+    random_lower_string,
 )
+from app.core.db.ledger import Reject, RejectStage
+from app.core.db.like import ArticleLike
+from app.core.db.publisher import Publisher, PublisherKind
+from app.core.db.story import Story, StoryArticle
+from app.core.db.user import User
+from app.core.settings import settings
+from app.entry.mcp import auth
+from app.features.audience.service import init_db
 from app.main import app
-from app.platform.db import engine
-from app.platform.settings import settings
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -48,3 +58,65 @@ def superuser_token_headers(db: Session) -> dict[str, str]:
 @pytest.fixture(scope="module")
 def normal_user_token_headers(db: Session) -> dict[str, str]:
     return authentication_token_from_email(email=settings.EMAIL_TEST_USER, db=db)
+
+
+@pytest.fixture(scope="module")
+def auth_client(db: Session) -> Generator[TestClient]:
+    """A TestClient that sends a logged-in reader's bearer token on every request.
+
+    Reads are public; the token only decides whether `liked_by_me` is filled in.
+    """
+    headers = authentication_token_from_email(email=random_email(), db=db)
+    with TestClient(app) as c:
+        c.headers.update(headers)
+        yield c
+
+
+@pytest.fixture
+def curator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Answer the MCP tools' scope check as the curation agent's write token."""
+    monkeypatch.setattr(
+        auth,
+        "get_access_token",
+        lambda: AccessToken(token="t", client_id="c", scopes=[auth.WRITE_SCOPE]),
+    )
+
+
+@pytest.fixture
+def made(db: Session) -> Generator[dict[str, list[int]]]:
+    """Ids of what a test created, deleted afterwards with every story made
+    meanwhile, so the next test starts from the same rows."""
+    created: dict[str, list[int]] = {"articles": [], "publishers": []}
+    before = db.exec(select(func.max(Story.id))).one() or 0
+    yield created
+    db.rollback()
+    ours = select(Story.id).where(col(Story.id) > before)
+    db.exec(delete(StoryArticle).where(col(StoryArticle.story_id).in_(ours)))
+    db.exec(delete(Story).where(col(Story.id) > before))
+    db.exec(delete(Article).where(col(Article.id).in_(created["articles"])))
+    db.exec(delete(Publisher).where(col(Publisher.id).in_(created["publishers"])))
+    db.commit()
+
+
+@pytest.fixture
+def candidate(db: Session) -> Generator[Reject]:
+    """One pending candidate from a publisher the run has just created."""
+    name = random_lower_string()
+    publisher = Publisher(name=f"{name}.dev", slug=name, kind=PublisherKind.unknown)
+    db.add(publisher)
+    db.commit()
+    row = Reject(
+        url=f"https://{name}.dev/post",
+        stage=RejectStage.pending,
+        title="An agent harness, measured",
+        source="Hacker News",
+        publisher_id=publisher.id,
+        content="x" * 5000,
+    )
+    db.add(row)
+    db.commit()
+    yield row
+    db.rollback()
+    db.exec(delete(Reject).where(col(Reject.url) == row.url))
+    db.exec(delete(Publisher).where(col(Publisher.id) == publisher.id))
+    db.commit()
