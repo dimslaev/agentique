@@ -112,6 +112,7 @@ def test_a_shared_host_that_names_no_author_stays_with_the_aggregator(
         "https://m.youtube.com/watch?v=abc",
         "https://youtu.be/abc",
         "https://mobile.twitter.com/someone/status/1",
+        "https://gist.github.com/someone/abc",
     ],
 )
 def test_a_shared_platforms_subdomain_names_no_author_either(
@@ -124,6 +125,26 @@ def test_a_shared_platforms_subdomain_names_no_author_either(
         resolver.publisher_for(url, sources["aggregator"].name).id
         == sources["aggregator"].id
     )
+    assert resolver.created == []
+
+
+def test_a_platform_subdomain_a_publisher_links_goes_to_that_publisher(
+    db: Session, sources: dict[str, Publisher]
+) -> None:
+    """The explicit link wins over the rule that keeps a platform's subdomains
+    with the aggregator."""
+    engineering = Publisher(
+        name=f"{TAG} Engineering",
+        slug=f"{TAG}-engineering",
+        kind=PublisherKind.company,
+        type=PublisherType.rss,
+        links={LinkPlatform.website: f"https://{TAG}.linkedin.com"},
+    )
+    db.add(engineering)
+    db.commit()
+    resolver = PublisherResolver(db)
+    url = f"https://{TAG}.linkedin.com/blog/a-post"
+    assert resolver.publisher_for(url, sources["aggregator"].name).id == engineering.id
     assert resolver.created == []
 
 
