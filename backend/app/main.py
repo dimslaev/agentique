@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import sentry_sdk
 from fastapi import APIRouter, FastAPI
 from fastapi.routing import APIRoute
@@ -10,6 +12,13 @@ from starlette.middleware.cors import CORSMiddleware
 from app.core.settings import settings
 from app.entry.api import analytics, articles, likes, login, stories, users
 from app.entry.mcp.server import mcp_app
+
+# uvicorn configures only its own loggers, and collect and report print to
+# stdout, so the API's INFO lines (the dev sign-in link) need this.
+logging.basicConfig(level=logging.INFO)
+# They log every request at INFO.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:

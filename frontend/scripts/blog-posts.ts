@@ -5,7 +5,7 @@
  *
  * Only structural checks live here: what a page needs to render. The content
  * rules for an issue (lengths, word count, sources) live in
- * backend/app/newsletter/broadcast.py, which refuses a post before it is ever
+ * backend/app/features/newsletter/broadcast.py, which refuses a post before it is ever
  * drafted.
  */
 
