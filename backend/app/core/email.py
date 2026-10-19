@@ -1,11 +1,13 @@
-"""Email: rendering the templates and handing them to Resend or SMTP."""
+"""Email: rendering a template and handing the mail to Resend or SMTP.
+
+The templates sit beside the feature that sends them.
+"""
 
 from __future__ import annotations
 
 import html
 import logging
 import os
-from dataclasses import dataclass
 from pathlib import Path
 
 import emails
@@ -15,22 +17,11 @@ from jinja2 import Template
 from app.core.logging import log
 from app.core.settings import settings
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-TEMPLATES = Path(__file__).parent / "email-templates"
 
-
-@dataclass
-class EmailData:
-    html_content: str
-    subject: str
-
-
-def render_email_template(*, template_name: str, context: dict[str, str | int]) -> str:
-    template_str = (TEMPLATES / template_name).read_text()
-    html_content = Template(template_str).render(context)
-    return html_content
+def render_email_template(*, template: Path, context: dict[str, str | int]) -> str:
+    return Template(template.read_text()).render(context)
 
 
 def send_email(
@@ -73,7 +64,8 @@ def send_email(
 
 def send_mail(subject_line: str, body: str) -> None:
     """Email through Resend, or log the mail when the environment has no key.
-    Best-effort: a failed send is logged, never raised."""
+    A failed send raises: the daily report's exit code is the only sign that
+    no mail went out."""
     api_key = os.environ.get("RESEND_API_KEY")
     from_email = os.environ.get("EMAILS_FROM_EMAIL")
     to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
@@ -81,36 +73,13 @@ def send_mail(subject_line: str, body: str) -> None:
     if not (api_key and from_email and to_email):
         log(f"  [mail suppressed — email env not set] {subject_line}\n{body}")
         return
-    try:
-        resend.api_key = api_key
-        resend.Emails.send(
-            {
-                "from": f"{project} pipeline <{from_email}>",
-                "to": to_email,
-                "subject": f"[{project}] {subject_line}",
-                "html": f"<pre>{html.escape(body)}</pre>",
-            }
-        )
-        log(f"  Mail sent to {to_email}: {subject_line}")
-    except Exception as e:
-        log(f"  Mail send failed: {e}")
-
-
-def sign_in_link(login_token: str) -> str:
-    return f"{settings.FRONTEND_HOST}/auth?token={login_token}"
-
-
-def generate_welcome_email(login_token: str) -> EmailData:
-    html_content = render_email_template(
-        template_name="welcome.html",
-        context={"link": sign_in_link(login_token)},
+    resend.api_key = api_key
+    resend.Emails.send(
+        {
+            "from": f"{project} pipeline <{from_email}>",
+            "to": to_email,
+            "subject": f"[{project}] {subject_line}",
+            "html": f"<pre>{html.escape(body)}</pre>",
+        }
     )
-    return EmailData(html_content=html_content, subject="Welcome to Agentique")
-
-
-def generate_sign_in_email(login_token: str) -> EmailData:
-    html_content = render_email_template(
-        template_name="sign_in.html",
-        context={"link": sign_in_link(login_token)},
-    )
-    return EmailData(html_content=html_content, subject="Sign in to Agentique")
+    log(f"  Mail sent to {to_email}: {subject_line}")
