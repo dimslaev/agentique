@@ -17,7 +17,6 @@ from jinja2 import Template
 from app.core.logging import log
 from app.core.settings import settings
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -65,7 +64,8 @@ def send_email(
 
 def send_mail(subject_line: str, body: str) -> None:
     """Email through Resend, or log the mail when the environment has no key.
-    Best-effort: a failed send is logged, never raised."""
+    A failed send raises: the daily report's exit code is the only sign that
+    no mail went out."""
     api_key = os.environ.get("RESEND_API_KEY")
     from_email = os.environ.get("EMAILS_FROM_EMAIL")
     to_email = os.environ.get("PIPELINE_ALERT_EMAIL") or from_email
@@ -73,16 +73,13 @@ def send_mail(subject_line: str, body: str) -> None:
     if not (api_key and from_email and to_email):
         log(f"  [mail suppressed — email env not set] {subject_line}\n{body}")
         return
-    try:
-        resend.api_key = api_key
-        resend.Emails.send(
-            {
-                "from": f"{project} pipeline <{from_email}>",
-                "to": to_email,
-                "subject": f"[{project}] {subject_line}",
-                "html": f"<pre>{html.escape(body)}</pre>",
-            }
-        )
-        log(f"  Mail sent to {to_email}: {subject_line}")
-    except Exception as e:
-        log(f"  Mail send failed: {e}")
+    resend.api_key = api_key
+    resend.Emails.send(
+        {
+            "from": f"{project} pipeline <{from_email}>",
+            "to": to_email,
+            "subject": f"[{project}] {subject_line}",
+            "html": f"<pre>{html.escape(body)}</pre>",
+        }
+    )
+    log(f"  Mail sent to {to_email}: {subject_line}")

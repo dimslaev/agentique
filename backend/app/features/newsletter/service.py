@@ -43,6 +43,7 @@ from app.core.embedding import (
     story_groups,
     to_embedding_text,
 )
+from app.features.newsletter.broadcast import draft as draft
 from app.features.newsletter.model import (
     CoveredBy,
     DigestError,

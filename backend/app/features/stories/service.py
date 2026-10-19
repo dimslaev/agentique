@@ -3,7 +3,7 @@
 A story is wider than coverage. Coverage is one event told by several outlets,
 within `DEDUP_DIST_THRESHOLD`; a story is a theme a builder follows, which
 takes judgment, so an agent names and keeps them (ADR 16). This module is what
-that agent drives through the MCP tools in `app/mcp/tools.py`, and what the
+that agent drives through the MCP tools in `app/entry/mcp/`, and what the
 public rail reads.
 
 An article sits in at most one open story. Postgres cannot say that without a

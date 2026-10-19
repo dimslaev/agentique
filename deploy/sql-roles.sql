@@ -1,5 +1,5 @@
 -- Login roles for /usr/local/bin/agentique-sql (deploy/agentique-sql) and for
--- the MCP `sql_query` tool (backend/app/mcp/tools.py).
+-- the MCP `sql_query` tool (backend/app/entry/mcp/sql_query.py).
 -- One-time, on the box:
 --   docker exec -i agentique-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 --     -v ON_ERROR_STOP=1 < /opt/agentique/deploy/sql-roles.sql

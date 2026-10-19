@@ -18,7 +18,7 @@ from app.core.db.article import Article
 from app.core.db.like import like_counts_subquery
 from app.core.db.publisher import Publisher
 from app.features.catalog.model import ArticlesPublic
-from app.features.catalog.service import build_rows, liked_article_ids
+from app.features.catalog.rows import build_rows, liked_article_ids
 
 # model2vec is CPU-only and small (~30 MB), so one process-wide instance loaded
 # on first use costs less than a model server.

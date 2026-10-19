@@ -7,7 +7,6 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 
 from app.entry.api.deps import CurrentUserOptional, SessionDep
-from app.features.catalog import facets, semantic_search
 from app.features.catalog.model import (
     ArticleFacets,
     ArticlesPublic,
@@ -18,7 +17,16 @@ from app.features.catalog.model import (
     Voice,
     VoiceKind,
 )
-from app.features.catalog.service import list_articles, stats
+from app.features.catalog.service import (
+    all_facets,
+    list_articles,
+    origin_counts,
+    publisher_facets,
+    search,
+    stats,
+    tag_facets,
+    voices,
+)
 
 router = APIRouter(prefix="/articles", tags=["articles"])
 
@@ -72,7 +80,7 @@ def search_articles(
     q: str,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> ArticlesPublic:
-    return semantic_search.search(
+    return search(
         session, q, limit, viewer_id=current_user.id if current_user else None
     )
 
@@ -81,7 +89,7 @@ def search_articles(
 def article_facets(
     session: SessionDep, limit: int = Query(default=8, ge=1, le=20)
 ) -> ArticleFacets:
-    return facets.all_facets(session, limit)
+    return all_facets(session, limit)
 
 
 @router.get("/origins", response_model=OriginCounts)
@@ -90,7 +98,7 @@ def article_origins(session: SessionDep, since: str) -> OriginCounts:
         since_dt = datetime.fromisoformat(since)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
-    return facets.origin_counts(session, since_dt)
+    return origin_counts(session, since_dt)
 
 
 @router.get("/voices", response_model=list[Voice])
@@ -104,7 +112,7 @@ def article_voices(
         since_dt = datetime.fromisoformat(since)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid 'since' datetime")
-    return facets.voices(session, kind, since_dt, limit)
+    return voices(session, kind, since_dt, limit)
 
 
 @router.get("/publishers", response_model=list[PublisherFacet])
@@ -113,7 +121,7 @@ def search_publishers(
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> list[PublisherFacet]:
-    return facets.publisher_facets(session, q, limit)
+    return publisher_facets(session, q, limit)
 
 
 @router.get("/tags", response_model=list[TagFacet])
@@ -122,7 +130,7 @@ def search_tags(
     q: str | None = None,
     limit: int = Query(default=20, ge=1, le=50),
 ) -> list[TagFacet]:
-    return facets.tag_facets(session, q, limit)
+    return tag_facets(session, q, limit)
 
 
 @router.get("/stats")

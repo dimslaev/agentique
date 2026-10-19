@@ -196,7 +196,8 @@ SHARED_HOSTS = frozenset(
 )
 # Shared hosts whose subdomains are one author's site (writer.substack.com).
 # Any other shared host's subdomain is the platform itself (old.reddit.com,
-# m.youtube.com).
+# m.youtube.com), unless a publisher's own link names it
+# (engineering.linkedin.com, see `hosts_to_publishers`).
 PERSONAL_SUBDOMAIN_HOSTS = frozenset({"medium.com", "substack.com"})
 
 _HOST_PLATFORMS = (
@@ -313,7 +314,9 @@ def hosts_to_publishers(publishers: Iterable[Publisher]) -> dict[str, Publisher]
                 host = owner_key(link) or hostname(link)
             else:
                 continue
-            if host and not is_shared_host(host):
+            # Only the bare platform: a subdomain a publisher links to
+            # (engineering.linkedin.com) is that publisher's own site.
+            if host and host not in SHARED_HOSTS:
                 claims.setdefault(host, {})[p.id] = p
     return {
         host: next(iter(pubs.values()))

@@ -3,7 +3,7 @@
 The last step of the nightly run. Nothing is scored, summarized or inserted
 here: a candidate becomes a `pending` row in the reject ledger and waits to be
 read. The agent (see `.claude/skills/curate/SKILL.md`) approves or rejects it
-through the MCP tools in `app/mcp/tools.py`, and only an approval writes an
+through the MCP tools in `app/entry/mcp/`, and only an approval writes an
 Article.
 
 Why the ledger and not a table of its own: the row already holds everything a

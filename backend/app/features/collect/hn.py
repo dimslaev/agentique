@@ -45,7 +45,7 @@ def hn_grace_hours() -> float:
     return float(os.environ.get("HN_GRACE_HOURS", "6"))
 
 
-# The title-only AI gate. Moved here from pipeline/topic_gate.py when the
+# The title-only AI gate. Moved here from the old topic gate module when the
 # pipeline stopped gating feeds by topic: HN is the one source whose firehose
 # is mostly not about AI, so it keeps the gate.
 AI_TITLE_KEYWORDS = re.compile(

@@ -41,7 +41,7 @@ class Story(SQLModel, table=True):
 
 class StoryArticle(SQLModel, table=True):
     """An article in a story. At most one open story per article, enforced in
-    `catalog.stories.save_story`: a closed story keeps its articles."""
+    `stories.service.save_story`: a closed story keeps its articles."""
 
     __tablename__ = "story_article"
     # The primary key leads with story_id; "which story holds this article" is

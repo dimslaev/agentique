@@ -18,4 +18,4 @@ EnvironmentFile=/opt/agentique/.env
 # Root running python against the shared venv would otherwise leave root-owned
 # __pycache__ files behind, breaking `uv sync` on the next deploy.
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart=/opt/agentique/.venv/bin/python scripts/backup_db.py
+ExecStart=/opt/agentique/.venv/bin/python app/entry/cli/backup_db.py

@@ -72,7 +72,7 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
             path=self.POSTGRES_DB,
         )
 
-    # The MCP server (app/mcp/) is gated by this one shared bearer token. Unset
+    # The MCP server (app/entry/mcp/) is gated by this one shared bearer token. Unset
     # means every request is rejected, so a deploy that forgets it is closed,
     # not open.
     MCP_TOKEN: str | None = None
