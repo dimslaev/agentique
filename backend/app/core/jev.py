@@ -107,6 +107,14 @@ def _answers(body: dict[str, Json], questions: dict[str, Question]) -> dict[str,
     missing = [qid for qid, a in answers.items() if a is None]
     if missing:
         raise JevError(f"unanswered: {', '.join(missing)}")
+    # "0.93" as a string would read as 0 the same way.
+    odd = [
+        qid
+        for qid, q in questions.items()
+        if q["type"] == "noul" and not isinstance(answers[qid], int | float)
+    ]
+    if odd:
+        raise JevError(f"non-numeric: {', '.join(odd)}")
     return answers
 
 

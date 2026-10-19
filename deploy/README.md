@@ -14,13 +14,30 @@ How agentique runs in production. Docker runs only the database
 | `agentique-backup.service` + `.timer` | nightly DB dump to off-box storage at 03:30 |
 | `agentique-sql` | run SQL against the prod DB from stdin, inside the `db` container |
 | `sql-roles.sql` | one-time: creates the read-only and read/write login roles `agentique-sql` uses |
+| `rsync-filter` | what the deploy copies to `/opt/agentique`, and what it never deletes there |
 
 ## Shape
 
 - A push to `master` triggers `.github/workflows/deploy-production.yml`: build
   the frontend on a GitHub-hosted runner, then a self-hosted runner on the box
-  rsyncs the source, syncs the venv, runs migrations + prestart, and restarts
-  the backend. Additive migrations only; rollback is `git revert` + push.
+  rsyncs what the box runs, syncs the venv, runs migrations + prestart, and
+  restarts the backend. Additive migrations only; rollback is `git revert` +
+  push.
+- The rsync copies only what `rsync-filter` lists: the backend's `app/`
+  without tests, `migrations/`, `baml_client/`, the uv workspace files,
+  `compose.yml`, `deploy/` and the built frontend. It deletes everything
+  else in `/opt/agentique`, except `.env`, `.venv` and `.git`, which the
+  deploy never sends. A file the box needs goes in the filter.
+  `app/entry/cli/test_deploy_files.py` runs the filter and checks every path
+  the units and the deploy job use.
+- The units, the Caddyfile and `agentique-sql` are installed by hand. After
+  a deploy that changes one, copy it from `/opt/agentique/deploy/` and run
+  `sudo systemctl daemon-reload`. If an `ExecStart` path changed, the
+  deploy has already deleted the old file. The backend then fails from the
+  deploy's own restart until you copy its unit and restart it, and each
+  timer fails the next time it fires. The deploy job doesn't install units
+  because the runner can rewrite anything under `/opt/agentique`. Letting
+  it install units with sudo would give it root.
 - The pipeline needs no restart — the timer starts a fresh process each run.
 - The night runs in three steps an hour apart: 04:00 the pipeline queues
   candidates, 05:00 the agent judges them, 06:00 the report goes out. The box
@@ -146,13 +163,17 @@ Finish with a short report: stories created, extended and closed, and anything a
 
 ## Newsletter environment
 
-Read by the backend through `app/core/settings.py`.
+Read by the backend through `app/core/settings.py`, with two exceptions that
+read `os.environ`: `subscribe` (`app/features/newsletter/service.py`) reads
+`RESEND_API_KEY` and `RESEND_AUDIENCE_ID`, and `send_mail`
+(`app/core/email.py`), which sends the daily mail, reads `RESEND_API_KEY` and
+`EMAILS_FROM_EMAIL`.
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
-| `RESEND_API_KEY` | `app/newsletter/broadcast.py` | Unset: `draft_issue` refuses, naming it. |
-| `RESEND_AUDIENCE_ID` | `app/newsletter/broadcast.py`, `app/newsletter/routes.py` | The audience signups are synced to and the issue is broadcast to. |
-| `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/newsletter/broadcast.py` | The issue's sender. |
+| `RESEND_API_KEY` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py`, `app/core/email.py` | Unset: `draft_issue` refuses, naming it, signups are not synced to Resend, and the daily mail is only logged. |
+| `RESEND_AUDIENCE_ID` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py` | The audience signups are synced to and the issue is broadcast to. |
+| `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/features/newsletter/broadcast.py`, `app/core/email.py` (email only) | The issue's sender, and the daily mail's. |
 
 ## Pipeline environment
 
@@ -163,3 +184,9 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | `app/core/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
 | `PIPELINE_ALERT_EMAIL` | `app/core/email.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
+| `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_PORT` | `app/features/collect/newsletters.py` | The inbox the newsletter source reads. The first three are required by that source; the port defaults to 993. |
+| `HN_MIN_POINTS`, `HN_MIN_COMMENTS`, `HN_GRACE_HOURS` | `app/features/collect/hn.py` | The HN traction gate: 10 points or 5 comments. A story under 6 hours old is held back for the next run. A first-party URL skips the gate, and `HN_MIN_POINTS=0` turns it off. |
+| `TAVILY_API_KEY` | `app/core/web_search.py` | Search for the lab-watch source, the newsletter source and the `web_search` tool. |
+| `GITHUB_TOKEN` | `app/core/github.py` | Optional. Raises the GitHub API rate limit for repo lookups. |
+| `RESIDENTIAL_PROXY_URL` | `app/core/http.py` | Optional. A metered proxy, tried when a feed fetch or a page extraction is blocked direct. |
+| `KDRIVE_API_TOKEN`, `KDRIVE_DRIVE_ID`, `KDRIVE_BACKUP_DIR`, `KDRIVE_BACKUP_KEEP` | `app/entry/cli/backup_db.py` | Where the nightly dump goes. The dir defaults to `/Private/agentique-db`, and 14 dumps are kept. |

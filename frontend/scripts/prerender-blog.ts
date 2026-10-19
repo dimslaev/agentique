@@ -10,7 +10,7 @@
  * The checks here are structural only (see blog-posts.ts): frontmatter parses,
  * title/description/topic present, filename is YYYY-MM-DD-slug.md, date not in
  * the future, slugs unique. Any violation exits non-zero and fails the build.
- * The content rules for an issue live in backend/app/newsletter/broadcast.py
+ * The content rules for an issue live in backend/app/features/newsletter/broadcast.py
  * (draft_issue refuses a post that breaks them); the writing guide is
  * .claude/skills/newsletter/SKILL.md; the PR is the editorial review.
  *

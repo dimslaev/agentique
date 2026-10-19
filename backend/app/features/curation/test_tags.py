@@ -1,6 +1,6 @@
 """validate_tags: the last line of defence between whatever the LLM returns and
 what gets written as ArticleTag rows. Off-list tags must never be written, and
-no tag is ever minted at runtime — see pipeline/tags.py.
+no tag is ever minted at runtime. See app/features/curation/tags.py.
 """
 
 from __future__ import annotations
