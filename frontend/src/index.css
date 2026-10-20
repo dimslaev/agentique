@@ -125,24 +125,21 @@
     cursor: pointer;
   }
 
-  /* Thin, permanently visible scrollbar for internally-scrolling panels.
-     Defining ::-webkit-scrollbar switches Chrome/Safari out of auto-hiding
-     overlay mode, so the track renders at rest, not just on hover/scroll.
-     Firefox via scrollbar-width/-color (also always-on, not hover-reveal). */
+  /* Thin thumb, no track. Defining ::-webkit-scrollbar keeps it visible at
+     rest in Chrome/Safari instead of auto-hiding. */
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: var(--color-muted-foreground) var(--color-muted);
+    scrollbar-color: var(--color-border) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   .scrollbar-thin::-webkit-scrollbar-track {
-    background: var(--color-muted);
-    border-radius: 9999px;
+    background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--color-muted-foreground);
+    background-color: var(--color-border);
     border-radius: 9999px;
   }
 }
