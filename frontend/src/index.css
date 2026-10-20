@@ -125,22 +125,17 @@
     cursor: pointer;
   }
 
-  /* Thin thumb, no track. Defining ::-webkit-scrollbar keeps it visible at
-     rest in Chrome/Safari instead of auto-hiding. */
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-border) transparent;
+  /* Rails scroll without a visible scrollbar. */
+  .scrollbar-none {
+    scrollbar-width: none;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 9999px;
+  /* Fades the bottom edge so a scrolling rail shows there is more below.
+     The rail's pb-10 lets the last item clear the fade at the end. */
+  .fade-bottom {
+    mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent);
   }
 }
 

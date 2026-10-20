@@ -55,7 +55,7 @@ function RailSide({ side }: { side: Side }) {
       <Rail
         side={side}
         panels={panels[side]}
-        className="scrollbar-thin sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
+        className="scrollbar-none fade-bottom sticky top-[76px] max-h-[calc(100vh-92px)] w-full max-w-[272px] overflow-y-auto pb-10"
       />
     </div>
   )
@@ -103,7 +103,7 @@ function RailSheet({ side }: { side: Side }) {
           if (target?.closest?.("[data-rail-trigger]")) e.preventDefault()
         }}
         // No X: the header button that opened the sheet closes it.
-        className="scrollbar-thin top-12! bottom-0 h-auto w-full gap-0 overflow-y-auto border-0 px-4 pb-4 shadow-none sm:max-w-[360px] sm:border-r [&>button:last-child]:hidden"
+        className="scrollbar-none top-12! bottom-0 h-auto w-full gap-0 overflow-y-auto border-0 px-4 pb-4 shadow-none sm:max-w-[360px] sm:border-r [&>button:last-child]:hidden"
       >
         {/* Radix needs a dialog title; there is no visible one. */}
         <SheetTitle className="sr-only">Rails</SheetTitle>
