@@ -8,7 +8,7 @@ What "resolving" an item means depends on that kind:
 
 - a Product (a named launch) whose href is not the maker's own page — a
   write-up, a tweet mirror, an aggregator — has its canonical URL rediscovered
-  by web search.
+  by web search, and Jev picks the maker's own page among the results.
 - an Article (a post someone wrote) IS its link. Searching for it would land
   on some other page about the same topic, so its href is followed instead,
   which resolves the redirect to the real destination. A product already
@@ -23,6 +23,7 @@ from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from enum import StrEnum
 from html import unescape
 from typing import TypedDict
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
@@ -35,10 +36,13 @@ from app.core.logging import log, short_error
 from app.core.urls import hostname
 from app.core.web_search import tavily_search
 from app.features.collect.model import RawItem
-from baml_client.sync_client import b
-from baml_client.types import NewsletterItem, NewsletterItemKind, SearchCandidate
 
 IMAP_FOLDER = "sub"
+
+
+class NewsletterItemKind(StrEnum):
+    Product = "Product"
+    Article = "Article"
 
 
 @dataclass(frozen=True)
@@ -149,7 +153,7 @@ _ZERO_WIDTH_RE = re.compile("[\u200b-\u200f\ufeff\u00ad\u034f\u2060]")
 CONTEXT_BEFORE = 300
 CONTEXT_AFTER = 400
 # Enough of the text after a link to name what it is — the product search
-# query and SelectProductLink's description, not the stored content.
+# query and the product link question's description, not the stored content.
 BLURB_CHARS = 200
 
 _NON_HTTP_RE = re.compile(r"^(?!https?://)", re.IGNORECASE)
@@ -355,6 +359,11 @@ QUESTIONS = {
         "The host belongs to the maker: the vendor's own site, product page, model card, docs, or source repo.",
         "The host is a publication, aggregator, social mirror or content farm writing about it rather than the maker's own page.",
     ),
+    "is_notable": jev.noul(
+        "Is the linked item individually newsworthy for an AI-news aggregator?",
+        "A new model, a significant product or platform, a notable agent or tool, a major release, or an article with real substance: a technical write-up, benchmark, teardown, engineering post or argument a developer would want to read.",
+        "A minor or incremental item (small SDK or utility bump, niche helper library, config tweak), a vague or marketing-only entry with no concrete product behind it, a listicle, SEO filler, a press-release rewrite, or a thin blurb that only restates an announcement.",
+    ),
 }
 
 # Measured on the same two issues and nowhere else — there is no held-out set.
@@ -365,6 +374,9 @@ ADMIN_THRESHOLD = 0.55
 SPONSOR_THRESHOLD = 0.75
 AI_TOPIC_THRESHOLD = 0.50
 FIRST_PARTY_THRESHOLD = 0.50  # unmeasured
+# Checked 2026-10-22 on two days of issues against the BAML list filter it
+# replaced: 45 of 58 items agreed, all 27 above 0.73 kept by both.
+NOTABLE_THRESHOLD = 0.50
 
 # Jev answered 152 links in 12.2s at this concurrency.
 CLASSIFY_CONCURRENCY = 10
@@ -390,6 +402,8 @@ def verdict(answers: Answers) -> str:
         return "neither"
     if _probability(answers, "is_ai_topic") < AI_TOPIC_THRESHOLD:
         return "off_topic"
+    if _probability(answers, "is_notable") < NOTABLE_THRESHOLD:
+        return "not_notable"
     return "keep"
 
 
@@ -563,6 +577,10 @@ def _resolve_article(item: Item) -> RawItem | None:
     }
 
 
+PRODUCT_LINK_QUESTION = "Which search result is the canonical first-party source for this exact product: its official site, product page, model card, repo, or the maker's own announcement?"
+NO_PRODUCT_LINK = "None of them: every result is a social post, a video, an aggregator or listicle, someone else's write-up about it, or a different product that shares the name."
+
+
 def _resolve_product(product: Item) -> RawItem | None:
     """One product -> one canonical URL, or None if nothing is a clean first-party source."""
     name = product["name"]
@@ -576,34 +594,34 @@ def _resolve_product(product: Item) -> RawItem | None:
         return None
 
     candidates = [
-        SearchCandidate(
-            title=r["title"] or "", url=r["url"] or "", snippet=r["description"] or ""
-        )
+        (url, f"{r['title'] or ''} | {url} | {r['description'] or ''}")
         for r in results
+        if (url := r["url"]) and not _is_denied(url)
     ]
-    candidates = [c for c in candidates if not _is_denied(c.url)]
     if not candidates:
         log(f'    No usable search result for "{name}"')
         return None
 
+    options = {str(i): text for i, (_, text) in enumerate(candidates, 1)}
+    options["none"] = NO_PRODUCT_LINK
     try:
-        choice = b.SelectProductLink(name, description, candidates)
+        reply = jev.ask(
+            {"product_name": name, "product_description": description},
+            {"link": jev.choice(PRODUCT_LINK_QUESTION, options)},
+        )
     except Exception as e:
-        log(f'    Link selection failed for "{name}": {e}')
+        log(f'    Link selection failed for "{name}": {short_error(e)}')
         return None
 
-    # index is 1-based; 0 means "no candidate is a clean first-party source",
-    # and one past the list is a model mistake read the same way.
-    picked = (
-        candidates[choice.index - 1] if 1 <= choice.index <= len(candidates) else None
-    )
-    if not picked:
+    # Anything but a listed number, "none" included, means no clean first-party source.
+    answer = str(reply.answers["link"])
+    if not (answer.isdigit() and answer in options):
         log(f'    Dropped "{name}": no first-party result among candidates')
         return None
 
     return {
         "title": name,
-        "url": _canonical_url(picked.url),
+        "url": _canonical_url(candidates[int(answer) - 1][0]),
         "content": "",
         "published_date": product["email_date"],
         "source": product["newsletter_name"],
@@ -619,8 +637,8 @@ def _resolve_one(item: Item) -> RawItem | None:
 
 
 def _resolve_items(raw: list[Item]) -> list[RawItem]:
-    """Dedupe items by name across all issues in this run, drop the un-notable
-    ones, then resolve each survivor to a URL.
+    """Dedupe items by name across all issues in this run, then resolve each
+    survivor to a URL. Notability was already decided per link by Jev.
 
     Deduping by name and not by URL is deliberate: a product has no URL yet at
     this point, and the same launch is written up by two newsletters under the
@@ -633,27 +651,7 @@ def _resolve_items(raw: list[Item]) -> list[RawItem]:
     by_name: dict[str, Item] = {}
     for item in raw:
         by_name.setdefault(item["name"].lower(), item)
-    unique = list(by_name.values())
-
-    items = unique
-    try:
-        keep = b.SelectNotableItems(
-            [
-                NewsletterItem(
-                    kind=i["kind"],
-                    name=i["name"],
-                    description=i["description"],
-                    url=i["url"] or None,
-                )
-                for i in unique
-            ]
-        )
-        keep_idx = set(keep)
-        selected = [i for n, i in enumerate(unique) if (n + 1) in keep_idx]
-        if selected:  # guard against a degenerate empty response dropping everything
-            items = selected
-    except Exception as e:
-        log(f"  Notability filter failed, resolving all: {e}")
+    items = list(by_name.values())
 
     searched = sum(
         1
@@ -661,9 +659,9 @@ def _resolve_items(raw: list[Item]) -> list[RawItem]:
         if i["kind"] == NewsletterItemKind.Product and not i["first_party"]
     )
     log(
-        f"  Resolving {len(items)} notable items "
+        f"  Resolving {len(items)} items "
         f"({searched} product(s) via search, {len(items) - searched} link(s) followed) "
-        f"— {len(raw)} raw -> {len(unique)} unique -> {len(items)} notable"
+        f"— {len(raw)} raw -> {len(items)} unique"
     )
 
     articles: list[RawItem] = []

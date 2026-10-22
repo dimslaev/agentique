@@ -28,7 +28,7 @@
 - Branch name: same, but slash instead of `: ` and dashes instead of spaces - `feat/auth-something`.
 
 ## Client generation
-- `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts`, `baml_client/` are generated. Regenerate after changes and commit them.
+- `types.gen.ts`, `sdk.gen.ts`, `schemas.gen.ts` are generated. Regenerate after changes and commit them.
 
 ## Local db
 - `scripts/restore-db.sh` starts the `db` container and restores the newest dump in `.ignored/dumps/`. Always use the latest dump, never an older one.

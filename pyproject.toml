@@ -12,7 +12,6 @@ extend-exclude = [
     "img/",
     "uv.lock",
     "bun.lock",
-    "backend/baml_client/",
     "backend/coverage/",
     "backend/htmlcov/",
     "frontend/dist/",

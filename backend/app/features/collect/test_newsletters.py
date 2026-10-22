@@ -21,6 +21,7 @@ from app.features.collect import newsletters
 from app.features.collect.newsletters import (
     Item,
     Link,
+    NewsletterItemKind,
     _canonical_url,
     _match_sender,
     _unwrap_tracking_url,
@@ -28,7 +29,6 @@ from app.features.collect.newsletters import (
     prefilter,
     verdict,
 )
-from baml_client.types import NewsletterItemKind, ProductLinkChoice, SearchCandidate
 
 SOURCES = [
     ("@substack.com", "Some Substack"),
@@ -180,19 +180,8 @@ def _product() -> Item:
     }
 
 
-class _Picks:
-    """Stands in for the BAML client: picks ``index`` from what it is shown."""
-
-    def __init__(self, index: int) -> None:
-        self.index = index
-
-    def SelectProductLink(
-        self, name: str, description: str, candidates: list[SearchCandidate]
-    ) -> ProductLinkChoice:
-        return ProductLinkChoice(index=self.index, confidence=0.9)
-
-
-def _stub_search(monkeypatch: pytest.MonkeyPatch, index: int) -> None:
+def _stub_search(monkeypatch: pytest.MonkeyPatch, pick: str) -> None:
+    """Search returns two results; Jev answers ``pick`` from what it is shown."""
     results: list[dict[str, str | None]] = [
         {
             "title": "Acme SDK",
@@ -208,27 +197,29 @@ def _stub_search(monkeypatch: pytest.MonkeyPatch, index: int) -> None:
         },
     ]
     monkeypatch.setattr(newsletters, "tavily_search", lambda query: results)
-    monkeypatch.setattr(newsletters, "b", _Picks(index))
+    monkeypatch.setattr(
+        jev, "ask", lambda state, questions: jev.Reply(answers={"link": pick}, cost=0.0)
+    )
 
 
 def test_a_product_resolves_to_the_result_picked(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _stub_search(monkeypatch, 1)
+    _stub_search(monkeypatch, "1")
     item = newsletters._resolve_product(_product())
     assert item is not None
     assert item["url"] == "https://acme.dev/sdk"
     assert item["source"] == "TLDR AI"
 
 
-@pytest.mark.parametrize("index", [0, 2, 9])
+@pytest.mark.parametrize("pick", ["none", "0", "2", "9", "first"])
 def test_no_pick_or_a_pick_past_the_list_drops_the_product(
-    monkeypatch: pytest.MonkeyPatch, index: int
+    monkeypatch: pytest.MonkeyPatch, pick: str
 ) -> None:
-    """The model never sees the denied x.com result, so it picks from a list
-    of one. Any other index is no pick. Before the bounds check it raised
-    IndexError, which ended the whole night's newsletter source."""
-    _stub_search(monkeypatch, index)
+    """Jev never sees the denied x.com result, so it picks from a list of one.
+    Any other answer is no pick. An unchecked index once raised IndexError,
+    which ended the whole night's newsletter source."""
+    _stub_search(monkeypatch, pick)
     assert newsletters._resolve_product(_product()) is None
 
 
@@ -388,6 +379,7 @@ _EDITORIAL: dict[str, jev.Json] = {
     "is_ai_topic": 0.95,
     "kind": "article",
     "is_first_party": 0.3,
+    "is_notable": 0.9,
 }
 
 
@@ -403,6 +395,9 @@ _EDITORIAL: dict[str, jev.Json] = {
         ({"is_ai_topic": 0.49}, "off_topic"),
         ({"kind": "product"}, "keep"),
         ({"kind": "neither"}, "neither"),
+        ({"is_notable": 0.51}, "keep"),
+        ({"is_notable": 0.49}, "not_notable"),
+        ({"is_notable": 0.1, "is_ai_topic": 0.1}, "off_topic"),
         # The measured false positive at 0.5: a launch post that reads promotional.
         ({"is_sponsor": 0.64}, "keep"),
         ({"is_admin": 0.9, "is_sponsor": 0.9}, "admin"),

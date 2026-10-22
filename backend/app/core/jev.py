@@ -20,8 +20,8 @@ URL = "https://openrouter.ai/api/alpha/decisions"
 MODEL = "~typesafe/jev-latest"
 TIMEOUT_SECS = 30.0
 
-# Same shape as the Burst policy in baml_src/clients.baml: a 429 from a
-# concurrency cap clears in seconds, so waiting beats failing the link.
+# A 429 from a concurrency cap clears in seconds, so waiting beats failing
+# the link.
 BACKOFF_START_SECS = 0.5
 BACKOFF_MAX_SECS = 8.0
 

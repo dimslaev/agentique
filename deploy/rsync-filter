@@ -27,7 +27,6 @@ P /.git/
 + /backend/.python-version
 + /backend/app/***
 + /backend/migrations/***
-+ /backend/baml_client/***
 # Caddy serves the built frontend. The deploy downloads it into frontend/dist
 # before the sync.
 + /frontend/

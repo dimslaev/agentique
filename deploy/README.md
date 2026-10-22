@@ -24,7 +24,7 @@ How agentique runs in production. Docker runs only the database
   restarts the backend. Additive migrations only; rollback is `git revert` +
   push.
 - The rsync copies only what `rsync-filter` lists: the backend's `app/`
-  without tests, `migrations/`, `baml_client/`, the uv workspace files,
+  without tests, `migrations/`, the uv workspace files,
   `compose.yml`, `deploy/` and the built frontend. It deletes everything
   else in `/opt/agentique`, except `.env`, `.venv` and `.git`, which the
   deploy never sends. A file the box needs goes in the filter.
