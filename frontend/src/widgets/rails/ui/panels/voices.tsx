@@ -6,7 +6,7 @@ import { trackEvent } from "@/shared/lib/analytics"
 import { cutoffIso } from "@/shared/lib/published"
 import { cn } from "@/shared/lib/utils"
 import { FilterOption } from "@/shared/ui/filter-option"
-import { ScoreBars } from "../ScoreMarks"
+import { ScoreBars } from "../score-marks"
 
 // Fixed, not the feed's window: over 3 days most names have one article or
 // none, and a row of bars says nothing.

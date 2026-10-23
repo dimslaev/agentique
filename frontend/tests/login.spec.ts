@@ -20,18 +20,24 @@ test("There is no password field", async ({ page }) => {
   await expect(page.getByLabel("Password")).toHaveCount(0)
 })
 
-test("Log in with the emailed link", async ({ page }) => {
-  await logInUser(page, firstSuperuser)
-})
+// Each link request replaces the user's token, so two tests asking for the
+// same user's link at once would break each other's.
+test.describe("superuser", () => {
+  test.describe.configure({ mode: "serial" })
 
-test("The same link works again after logging out", async ({ page }) => {
-  await logInUser(page, firstSuperuser)
-  const link = signInLinkFor(firstSuperuser)
-  await logOutUser(page)
+  test("Log in with the emailed link", async ({ page }) => {
+    await logInUser(page, firstSuperuser)
+  })
 
-  await page.goto(link)
-  await page.waitForURL("/")
-  await expect(page.getByTestId("user-menu")).toBeVisible()
+  test("The same link works again after logging out", async ({ page }) => {
+    await logInUser(page, firstSuperuser)
+    const link = signInLinkFor(firstSuperuser)
+    await logOutUser(page)
+
+    await page.goto(link)
+    await page.waitForURL("/")
+    await expect(page.getByTestId("user-menu")).toBeVisible()
+  })
 })
 
 test("Log in with invalid email", async ({ page }) => {
@@ -60,4 +66,17 @@ test("Redirects to /login when token is wrong", async ({ page }) => {
   })
   await page.goto("/profile")
   await expect(page).toHaveURL(/\/login/)
+})
+
+test("Sign-in pages keep the site header and footer", async ({ page }) => {
+  for (const path of ["/login", "/auth?token=bad"]) {
+    await page.goto(path)
+    await expect(
+      page.getByRole("banner").getByRole("link", { name: "agentique" }),
+    ).toBeVisible()
+    // The dev server adds the router devtools' own footer.
+    await expect(
+      page.getByRole("contentinfo").filter({ hasNotText: "TanStack" }),
+    ).toBeVisible()
+  }
 })

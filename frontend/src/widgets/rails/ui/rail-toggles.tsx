@@ -1,6 +1,6 @@
 import { PanelLeft, PanelRight } from "lucide-react"
-import type { Side } from "./panels"
-import { useRails } from "./RailsProvider"
+import type { Side } from "../config/panels"
+import { useRails } from "../model/rails-provider"
 
 const SIDES: Side[] = ["left", "right"]
 const KEYS: Record<Side, string> = { left: "[", right: "]" }

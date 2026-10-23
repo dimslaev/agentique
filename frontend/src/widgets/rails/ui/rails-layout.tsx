@@ -2,9 +2,9 @@ import { type ReactNode, useEffect } from "react"
 import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet"
-import type { Side } from "./panels"
-import { Rail } from "./Rail"
-import { useRails } from "./RailsProvider"
+import type { Side } from "../config/panels"
+import { useRails } from "../model/rails-provider"
+import { Rail } from "./rail"
 
 /**
  * The feed's page shell: the feed column with a rail on either side. The

@@ -1,8 +1,8 @@
 import type { ComponentType } from "react"
-import { ReaderPicks } from "./panels/ReaderPicks"
-import { STORIES_PANEL_ID, Stories } from "./panels/Stories"
-import { Voices } from "./panels/Voices"
-import { WhoWrote } from "./panels/WhoWrote"
+import { ReaderPicks } from "../ui/panels/reader-picks"
+import { STORIES_PANEL_ID, Stories } from "../ui/panels/stories"
+import { Voices } from "../ui/panels/voices"
+import { WhoWrote } from "../ui/panels/who-wrote"
 
 export type Side = "left" | "right"
 

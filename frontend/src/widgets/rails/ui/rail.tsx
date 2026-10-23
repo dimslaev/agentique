@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
 import { cn } from "@/shared/lib/utils"
-import type { RailPanelDef, Side } from "./panels"
-import { RailPanel } from "./RailPanel"
+import type { RailPanelDef, Side } from "../config/panels"
+import { RailPanel } from "./rail-panel"
 
 /** A rail: its panels, nothing above them. The same markup sits inline,
  *  over the feed's edge, or in a phone sheet. */

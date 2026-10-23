@@ -3,8 +3,8 @@ import { useId, useState } from "react"
 import { StoriesService, type StoryPublic } from "@/shared/api"
 import { articleClickHandlers, trackEvent } from "@/shared/lib/analytics"
 import { cn } from "@/shared/lib/utils"
-import { RailRow } from "../RailRow"
-import { ScoreBars } from "../ScoreMarks"
+import { RailRow } from "../rail-row"
+import { ScoreBars } from "../score-marks"
 
 export const STORIES_PANEL_ID = "stories"
 

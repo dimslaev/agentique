@@ -5,13 +5,11 @@ import {
   useMatches,
   useRouterState,
 } from "@tanstack/react-router"
-import { Footer } from "@/components/Common/Footer"
-import { Header } from "@/components/Common/Header"
-import { UserMenu } from "@/components/Common/UserMenu"
-import { RailsProvider, useRails } from "@/components/Rails/RailsProvider"
-import { RailToggles } from "@/components/Rails/RailToggles"
 import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
+import { Footer } from "@/widgets/footer"
+import { Header, UserMenu } from "@/widgets/header"
+import { RailsProvider, RailToggles, useRails } from "@/widgets/rails"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
