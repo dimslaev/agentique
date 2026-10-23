@@ -156,6 +156,37 @@ test.describe("mid screen rails", () => {
     await expect(search).toHaveValue("[")
     await expect(sheet).toHaveCount(0)
   })
+
+  test("the sheet takes focus, and Escape gives it back to the button", async ({
+    page,
+  }) => {
+    await page.goto("/")
+    const button = page.getByRole("button", { name: "Toggle the rails" })
+    await button.click()
+    await expect(
+      page.getByRole("dialog", { name: "Rails" }).getByRole("complementary"),
+    ).toBeFocused()
+
+    await page.keyboard.press("Escape")
+    await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)
+    await expect(button).toBeFocused()
+  })
+
+  test("crossing the wide breakpoint drops an open sheet", async ({ page }) => {
+    await page.goto("/")
+    await page.getByRole("button", { name: "Toggle the rails" }).click()
+    await expect(page.getByRole("dialog", { name: "Rails" })).toBeVisible()
+
+    await page.setViewportSize({ width: 1440, height: 800 })
+    await expect(leftRail(page)).toBeVisible()
+    await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)
+
+    await page.setViewportSize({ width: 1000, height: 800 })
+    await expect(page.getByRole("dialog", { name: "Rails" })).toHaveCount(0)
+    await expect(
+      page.getByRole("button", { name: "Toggle the rails" }),
+    ).toHaveAttribute("aria-pressed", "false")
+  })
 })
 
 for (const [name, width, height] of [

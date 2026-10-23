@@ -9,7 +9,7 @@ import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Footer } from "@/widgets/footer"
 import { Header, UserMenu } from "@/widgets/header"
-import { RailsProvider, RailToggles, useRails } from "@/widgets/rails"
+import { hasPanels, RailToggles, useRails } from "@/widgets/rails"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -37,32 +37,33 @@ function Layout() {
     select: (matches) => matches.some((m) => m.staticData?.wide),
   })
   return (
-    <RailsProvider>
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="w-full flex-1 pt-7 pb-12">
-          {wide ? (
+    <div className="flex min-h-screen flex-col">
+      <SiteHeader />
+      <main className="w-full flex-1 pt-7 pb-12">
+        {wide ? (
+          <Outlet />
+        ) : (
+          <PageColumn>
             <Outlet />
-          ) : (
-            <PageColumn>
-              <Outlet />
-            </PageColumn>
-          )}
-        </main>
-        <Footer />
-      </div>
-    </RailsProvider>
+          </PageColumn>
+        )}
+      </main>
+      <Footer />
+    </div>
   )
 }
 
 /** On wide screens with inline rails, the header spans them too. */
 function SiteHeader() {
-  const { mode, present, hasPanels } = useRails()
+  const wide = useRails(
+    (s) =>
+      s.present &&
+      s.mode === "wide" &&
+      (hasPanels(s, "left") || hasPanels(s, "right")),
+  )
   const onFeed = useRouterState({
     select: (s) => s.location.pathname === "/",
   })
-  const wide =
-    present && mode === "wide" && (hasPanels("left") || hasPanels("right"))
   return (
     <Header
       wide={wide}

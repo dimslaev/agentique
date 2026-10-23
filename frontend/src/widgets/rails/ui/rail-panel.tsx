@@ -2,14 +2,14 @@ import { ChevronDown } from "lucide-react"
 import { useId, useLayoutEffect, useRef, useState } from "react"
 import { cn } from "@/shared/lib/utils"
 import type { RailPanelDef } from "../config/panels"
-import { useRails } from "../model/rails-provider"
+import { isCollapsed, togglePanel, useRails } from "../model/rails-store"
 
 /** One collapsible section of a rail. Each folds on its own and is
  *  remembered across visits. On a phone all are open and none folds. */
 export function RailPanel({ panel }: { panel: RailPanelDef }) {
-  const { foldable, isCollapsed, togglePanel } = useRails()
+  const foldable = useRails((s) => !s.phone)
+  const collapsed = useRails((s) => isCollapsed(s, panel.id))
   const bodyId = useId()
-  const collapsed = isCollapsed(panel.id)
   const { Component } = panel
   const body = useRef<HTMLDivElement>(null)
   const [empty, setEmpty] = useState(false)

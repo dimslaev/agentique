@@ -3,7 +3,15 @@ import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Sheet, SheetContent, SheetTitle } from "@/shared/ui/sheet"
 import type { Side } from "../config/panels"
-import { useRails } from "../model/rails-provider"
+import {
+  closeRail,
+  hasPanels,
+  isOpen,
+  selectPanels,
+  toggleRail,
+  useRails,
+} from "../model/rails-store"
+import { useHasStories } from "./panels/stories"
 import { Rail } from "./rail"
 
 /**
@@ -13,14 +21,23 @@ import { Rail } from "./rail"
  * registered this is exactly the plain column.
  */
 export function RailsLayout({ children }: { children: ReactNode }) {
-  const { mode, hasPanels, setPresent } = useRails()
-  const left = hasPanels("left")
-  const right = hasPanels("right")
+  const mode = useRails((s) => s.mode)
+  const left = useRails((s) => hasPanels(s, "left"))
+  const right = useRails((s) => hasPanels(s, "right"))
+  const hasStories = useHasStories()
 
   useEffect(() => {
-    setPresent(true)
-    return () => setPresent(false)
-  }, [setPresent])
+    useRails.setState({ hasStories })
+  }, [hasStories])
+
+  useEffect(() => {
+    useRails.setState({ present: true })
+    document.addEventListener("keydown", onKey)
+    return () => {
+      useRails.setState({ present: false })
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [])
 
   if (!left && !right) return <PageColumn>{children}</PageColumn>
 
@@ -43,7 +60,7 @@ export function RailsLayout({ children }: { children: ReactNode }) {
 }
 
 function RailSide({ side }: { side: Side }) {
-  const { panels } = useRails()
+  const panels = useRails(selectPanels)
   if (panels[side].length === 0) return <div />
   return (
     <div
@@ -64,8 +81,8 @@ function RailSide({ side }: { side: Side }) {
 /** Below wide: the merged rail as a sheet under the header, full width on
  *  phones and a side panel on bigger screens. */
 function RailSheet({ side }: { side: Side }) {
-  const { panels, isOpen, close } = useRails()
-  const open = isOpen(side)
+  const panels = useRails(selectPanels)
+  const open = useRails((s) => isOpen(s, side))
 
   // The sheet is non-modal, so Radix leaves the page scrollable; lock it here
   // so a swipe on the sheet doesn't scroll the feed behind it.
@@ -83,7 +100,7 @@ function RailSheet({ side }: { side: Side }) {
     <Sheet
       open={open}
       onOpenChange={(open) => {
-        if (!open) close(side, false)
+        if (!open) closeRail(side, false)
       }}
       // Non-modal keeps the header live, so the button that opened the sheet
       // also closes it.
@@ -96,7 +113,7 @@ function RailSheet({ side }: { side: Side }) {
         onCloseAutoFocus={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => {
           e.preventDefault()
-          close(side, true, "key")
+          closeRail(side, true, "key")
         }}
         onInteractOutside={(e) => {
           const target = e.detail.originalEvent.target as Element | null
@@ -110,5 +127,32 @@ function RailSheet({ side }: { side: Side }) {
         <Rail side={side} panels={panels[side]} focusOnMount />
       </SheetContent>
     </Sheet>
+  )
+}
+
+// [ and ] toggle a side's rail below wide, Escape closes it. Keys typed into a
+// field, or held with a modifier, are the reader's, not the rails'.
+function onKey(e: KeyboardEvent) {
+  if (e.defaultPrevented || e.isComposing) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (isTyping(e.target)) return
+  const state = useRails.getState()
+  const side: Side | null =
+    e.key === "[" ? "left" : e.key === "]" ? "right" : null
+  if (side && hasPanels(state, side) && state.mode !== "wide") {
+    e.preventDefault()
+    toggleRail(side, "key")
+  } else if (e.key === "Escape" && state.mode !== "wide") {
+    for (const s of ["left", "right"] as const) closeRail(s, true, "key")
+  }
+}
+
+function isTyping(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
   )
 }
