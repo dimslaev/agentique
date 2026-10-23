@@ -135,7 +135,11 @@
   /* Fades the bottom edge so a scrolling rail shows there is more below.
      The rail's pb-10 lets the last item clear the fade at the end. */
   .fade-bottom {
-    mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent);
+    mask-image: linear-gradient(
+      to bottom,
+      black calc(100% - 3rem),
+      transparent
+    );
   }
 }
 

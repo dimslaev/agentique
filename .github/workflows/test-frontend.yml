@@ -27,3 +27,8 @@ jobs:
       - name: Build
         run: bun run build
         working-directory: frontend
+      # Report only while the frontend moves to FSD layers.
+      - name: Layer imports
+        run: bun run lint:layers
+        working-directory: frontend
+        continue-on-error: true

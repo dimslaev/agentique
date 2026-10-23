@@ -25,7 +25,11 @@
         "noNonNullAssertion": "off",
         "noParameterAssign": "error",
         "useSelfClosingElements": "error",
-        "noUselessElse": "error"
+        "noUselessElse": "error",
+        "useFilenamingConvention": {
+          "level": "warn",
+          "options": { "filenameCases": ["kebab-case"], "requireAscii": true }
+        }
       }
     }
   },
