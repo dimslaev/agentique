@@ -1,7 +1,8 @@
 import { Link as RouterLink } from "@tanstack/react-router"
 import { ChartColumn, LogOut, User as UserIcon } from "lucide-react"
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useAuth } from "@/shared/auth"
+import { trackEvent } from "@/shared/lib/analytics"
+import { Avatar, AvatarFallback } from "@/shared/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,9 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import useAuth from "@/hooks/useAuth"
-import { trackEvent } from "@/lib/analytics"
+} from "@/shared/ui/dropdown-menu"
 
 const getInitials = (name: string): string =>
   name

@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
-
-import { LikesService } from "@/client"
 import { ArticleRow } from "@/components/Articles/ArticleRow"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { LikesService } from "@/shared/api"
+import { isLoggedIn } from "@/shared/auth"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
 
 export const Route = createFileRoute("/_layout/profile")({
   component: Profile,

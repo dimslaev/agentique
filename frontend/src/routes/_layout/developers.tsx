@@ -1,14 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { trackEvent } from "@/shared/lib/analytics"
+import { Button } from "@/shared/ui/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { trackEvent } from "@/lib/analytics"
+} from "@/shared/ui/dialog"
 
 export const Route = createFileRoute("/_layout/developers")({
   component: DevelopersPage,

@@ -1,6 +1,6 @@
 import { type KeyboardEvent, useState } from "react"
-import type { ReportDay } from "@/client"
-import { cn } from "@/lib/utils"
+import type { ReportDay } from "@/shared/api"
+import { cn } from "@/shared/lib/utils"
 import { formatCount, formatDay } from "./format"
 
 /** The axis top: twice a 1/2/5 step, so the midline lands on a round number. */

@@ -8,8 +8,8 @@ import { useEffect } from "react"
 import { z } from "zod"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
-import { signInWithLink, takeRedirect } from "@/hooks/useAuth"
-import { trackEvent } from "@/lib/analytics"
+import { signInWithLink, takeRedirect } from "@/shared/auth"
+import { trackEvent } from "@/shared/lib/analytics"
 
 const searchSchema = z.object({
   token: z.string().catch(""),

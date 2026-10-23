@@ -2,8 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-
-import { handleError } from "@/apiError"
+import { trackEvent } from "@/shared/lib/analytics"
+import { handleError } from "@/shared/lib/api-error"
+import useCustomToast from "@/shared/lib/use-custom-toast"
 import {
   Form,
   FormControl,
@@ -11,11 +12,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import useCustomToast from "@/hooks/useCustomToast"
-import { trackEvent } from "@/lib/analytics"
+} from "@/shared/ui/form"
+import { Input } from "@/shared/ui/input"
+import { LoadingButton } from "@/shared/ui/loading-button"
 
 const formSchema = z.object({
   email: z.email({ message: "Invalid email address" }),

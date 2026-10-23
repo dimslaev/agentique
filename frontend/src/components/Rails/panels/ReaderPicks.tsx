@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
-import { type ArticlePublic, ArticlesService } from "@/client"
-import { cutoffIso } from "@/components/Articles/ArticlesList"
 import { LikeButton } from "@/components/Articles/LikeButton"
-import { articleClickHandlers } from "@/lib/analytics"
+import { type ArticlePublic, ArticlesService } from "@/shared/api"
+import { articleClickHandlers } from "@/shared/lib/analytics"
+import { cutoffIso } from "@/shared/lib/published"
 import { RailRow } from "../RailRow"
 
 // Likes are sparse (most liked articles have one or two), so a week would

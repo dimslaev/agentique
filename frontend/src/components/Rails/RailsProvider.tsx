@@ -9,7 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react"
-import { trackEvent } from "@/lib/analytics"
+import { trackEvent } from "@/shared/lib/analytics"
 import {
   LEFT,
   type RailPanelDef,

@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { AnalyticsDashboard } from "@/components/Admin/AnalyticsDashboard"
-import { isLoggedIn } from "@/hooks/useAuth"
+import { isLoggedIn } from "@/shared/auth"
 
 export const Route = createFileRoute("/_layout/admin")({
   component: AnalyticsDashboard,

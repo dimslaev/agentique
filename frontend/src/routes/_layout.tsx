@@ -7,12 +7,12 @@ import {
 } from "@tanstack/react-router"
 import { Footer } from "@/components/Common/Footer"
 import { Header } from "@/components/Common/Header"
-import { PageColumn } from "@/components/Common/PageColumn"
 import { UserMenu } from "@/components/Common/UserMenu"
 import { RailsProvider, useRails } from "@/components/Rails/RailsProvider"
 import { RailToggles } from "@/components/Rails/RailToggles"
 import { FiltersProvider } from "@/context/filters"
-import { cn } from "@/lib/utils"
+import { cn } from "@/shared/lib/utils"
+import { PageColumn } from "@/shared/ui/page-column"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {

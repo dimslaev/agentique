@@ -1,5 +1,5 @@
-import { SCORE_STANDOUT, scoreFraction } from "@/components/Articles/ScoreRail"
-import { cn } from "@/lib/utils"
+import { SCORE_STANDOUT, scoreFraction } from "@/shared/lib/score"
+import { cn } from "@/shared/lib/utils"
 
 // Marks every rail panel draws scores with. Both read the feed's own rule
 // (scoreFraction, SCORE_STANDOUT) so a score looks the same beside the wire
