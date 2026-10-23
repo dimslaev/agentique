@@ -11,6 +11,17 @@ function whoWrote(page: Page) {
   return page.locator('[data-panel="who-wrote"]')
 }
 
+/** The width of the header's content row: the reading column's 768px, or
+ *  wider when it spans inline rails. */
+async function headerWidth(page: Page) {
+  const box = await page.getByRole("banner").locator("> div").boundingBox()
+  return box?.width ?? 0
+}
+
+function railToggles(page: Page) {
+  return page.getByRole("banner").locator("[data-rail-trigger]")
+}
+
 test.describe("wide screen", () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
@@ -78,6 +89,72 @@ test.describe("wide screen", () => {
         name: "All",
       }),
     ).toHaveAttribute("aria-pressed", "true")
+  })
+
+  test("the header spans the inline rails on the feed only, with no rail buttons", async ({
+    page,
+  }) => {
+    await page.goto("/profile")
+    await expect(page.getByRole("tab", { name: "Liked" })).toBeVisible()
+    expect(await headerWidth(page)).toBe(768)
+
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Feed", exact: true })
+      .click()
+    await expect(leftRail(page)).toBeVisible()
+    await expect.poll(() => headerWidth(page)).toBeGreaterThan(1000)
+    await expect(railToggles(page)).toHaveCount(0)
+
+    await page.goto("/profile")
+    await expect.poll(() => headerWidth(page)).toBe(768)
+  })
+})
+
+test.describe("mid screen rails", () => {
+  test.use({ viewport: { width: 1000, height: 800 } })
+
+  test("the rail button shows on the feed only, and the header keeps the column's width", async ({
+    page,
+  }) => {
+    await page.goto("/profile")
+    await expect(page.getByRole("tab", { name: "Liked" })).toBeVisible()
+    await expect(railToggles(page)).toHaveCount(0)
+
+    await page
+      .getByRole("banner")
+      .getByRole("link", { name: "Feed", exact: true })
+      .click()
+    await expect(railToggles(page)).toHaveCount(1)
+    expect(await headerWidth(page)).toBe(768)
+
+    await page.getByTestId("user-menu").click()
+    await page.getByRole("menuitem", { name: "Profile" }).click()
+    await expect(page.getByRole("tab", { name: "Liked" })).toBeVisible()
+    await expect(railToggles(page)).toHaveCount(0)
+  })
+
+  test("[ toggles the sheet and the button shows it, except while typing", async ({
+    page,
+  }) => {
+    await page.goto("/")
+    const button = page.getByRole("button", { name: "Toggle the rails" })
+    const sheet = page.getByRole("dialog", { name: "Rails" })
+    await expect(button).toHaveAttribute("aria-pressed", "false")
+
+    await page.keyboard.press("[")
+    await expect(sheet).toBeVisible()
+    await expect(button).toHaveAttribute("aria-pressed", "true")
+
+    await page.keyboard.press("[")
+    await expect(sheet).toHaveCount(0)
+    await expect(button).toHaveAttribute("aria-pressed", "false")
+
+    const search = page.getByRole("textbox", { name: "Search articles" })
+    await search.click()
+    await page.keyboard.press("[")
+    await expect(search).toHaveValue("[")
+    await expect(sheet).toHaveCount(0)
   })
 })
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Accepted. Amended for the frontend's `shared/` layer.
 
 ## Context
 
@@ -31,9 +31,17 @@ that exact path — renaming it fights the code generator forever. That is
 the only grandfathered `utils` file in the repo, and it stays that way on
 purpose rather than by oversight.
 
+`frontend/src/shared/` is the one folder that keeps a banned name. The
+frontend uses Feature-Sliced Design layers, and FSD names its bottom layer
+`shared`. Steiger, the linter that checks the layers, recognizes the layer
+by that name only. The folder holds segments named for their contents
+(`ui/`, `lib/`, `api/`, `auth/`), and the hook still checks every name
+below it.
+
 ## Consequences
 
 Enforced by a local pre-commit hook that greps the tracked file list and
 fails on a banned name (see `docs/style.md`), so this cannot silently
-regress. A reviewer who sees a new `utils.py` in a diff has grounds to
-reject it on sight, no discussion needed.
+regress. The hook skips the `frontend/src/shared/` prefix and checks the
+rest of each path under it. A reviewer who sees a new `utils.py` in a diff
+has grounds to reject it on sight, no discussion needed.

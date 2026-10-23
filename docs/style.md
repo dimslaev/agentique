@@ -73,8 +73,8 @@ style a linter cannot express, enforced by review.
 ## Repo-wide
 
 - No module named `utils`, `helpers`, `common`, `shared`, or `misc` — see
-  ADR 3. One documented exception: `frontend/src/lib/utils.ts`'s `cn()`,
-  which is shadcn convention.
+  ADR 3. Two documented exceptions: `frontend/src/lib/utils.ts`'s `cn()`,
+  which is shadcn convention, and `frontend/src/shared/`, the FSD layer.
 - Hide mechanism, never hide capability — see ADR 2.
 - Tests sit beside the code they test. Backend: see ADR 17. Frontend: see
   ADR 4.
