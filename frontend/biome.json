@@ -6,9 +6,9 @@
       "**",
       "!**/dist/**/*",
       "!**/node_modules/**/*",
-      "!**/src/routeTree.gen.ts",
+      "!**/src/route-tree.gen.ts",
       "!**/src/shared/api/**/*",
-      "!**/src/shared/ui/{alert,avatar,badge,button,button-group,card,checkbox,command,dialog,dropdown-menu,form,input,label,loading-button,pagination,popover,select,separator,sheet,sidebar,skeleton,sonner,table,tabs,textarea,tooltip}.tsx",
+      "!**/src/shared/ui/{avatar,button,dialog,dropdown-menu,form,input,label,loading-button,sheet,sonner,tabs}.tsx",
       "!**/playwright-report",
       "!**/playwright.config.ts"
     ]

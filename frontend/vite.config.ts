@@ -15,6 +15,7 @@ export default defineConfig({
     tanstackRouter({
       target: "react",
       autoCodeSplitting: true,
+      generatedRouteTree: "./src/route-tree.gen.ts",
     }),
     react(),
     tailwindcss(),

@@ -2,7 +2,7 @@
 // single-value filters cannot express; the API ORs within each list and ANDs
 // the two.
 
-export type TopicDef = {
+type TopicDef = {
   slug: string
   label: string
   /** Tag slugs, OR'd. */

@@ -11,7 +11,7 @@ import { ApiError, LoginService, OpenAPI } from "@/shared/api"
 import { Toaster } from "@/shared/ui/sonner"
 import "./index.css"
 import { trackPageview } from "@/shared/lib/analytics"
-import { routeTree } from "./routeTree.gen"
+import { routeTree } from "./route-tree.gen"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL
 OpenAPI.TOKEN = async () => {
