@@ -1,23 +1,11 @@
 import { Search, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useFilters } from "@/context/filters"
-import { trackEvent } from "@/lib/analytics"
-import { cn } from "@/lib/utils"
-import { FilterOptions, FilterRow } from "./FilterOption"
+import { trackEvent } from "@/shared/lib/analytics"
+import { ORIGIN_OPTIONS } from "@/shared/lib/origins"
+import { cn } from "@/shared/lib/utils"
+import { FilterOptions, FilterRow } from "@/shared/ui/filter-option"
 import { TOPICS } from "./topics"
-
-// Who published it, or what it is when that is settled. Each article falls
-// under exactly one: a repo is a repo whoever published it.
-export const ORIGIN_OPTIONS = [
-  { value: "", label: "All" },
-  { value: "lab", label: "Labs" },
-  { value: "company", label: "Companies" },
-  { value: "individual", label: "Writers" },
-  { value: "media", label: "Media" },
-  { value: "repo", label: "Repos" },
-  { value: "paper", label: "Papers" },
-  { value: "model", label: "Models" },
-]
 
 const TOPIC_OPTIONS = [
   { value: "", label: "All" },

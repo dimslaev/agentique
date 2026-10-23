@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { ArticlesService, type OriginCounts } from "@/client"
-import { cutoffIso, PUBLISHED_DAYS } from "@/components/Articles/ArticlesList"
-import { ORIGIN_OPTIONS } from "@/components/Articles/FeedFilters"
 import { useFilters } from "@/context/filters"
-import { trackEvent } from "@/lib/analytics"
-import { cn } from "@/lib/utils"
+import { ArticlesService, type OriginCounts } from "@/shared/api"
+import { trackEvent } from "@/shared/lib/analytics"
+import { ORIGIN_OPTIONS } from "@/shared/lib/origins"
+import { cutoffIso, PUBLISHED_DAYS } from "@/shared/lib/published"
+import { cn } from "@/shared/lib/utils"
 
 const LABELS = Object.fromEntries(ORIGIN_OPTIONS.map((o) => [o.value, o.label]))
 

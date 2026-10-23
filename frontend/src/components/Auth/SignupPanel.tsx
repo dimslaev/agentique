@@ -1,11 +1,11 @@
 import { useMutation } from "@tanstack/react-query"
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { useState } from "react"
-import { handleError } from "@/apiError"
-import { LoginService } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
-import { trackEvent } from "@/lib/analytics"
-import { utmSource } from "@/lib/utm"
+import { LoginService } from "@/shared/api"
+import { trackEvent } from "@/shared/lib/analytics"
+import { handleError } from "@/shared/lib/api-error"
+import useCustomToast from "@/shared/lib/use-custom-toast"
+import { utmSource } from "@/shared/lib/utm"
 
 /**
  * A bordered bar at the top of the feed: a short pitch and an email field, on

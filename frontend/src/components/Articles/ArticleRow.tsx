@@ -1,5 +1,5 @@
-import type { ArticlePublic } from "@/client"
-import { articleClickHandlers } from "@/lib/analytics"
+import type { ArticlePublic } from "@/shared/api"
+import { articleClickHandlers } from "@/shared/lib/analytics"
 import { LikeButton } from "./LikeButton"
 import { ScoreRail } from "./ScoreRail"
 

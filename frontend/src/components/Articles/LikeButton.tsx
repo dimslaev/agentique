@@ -1,17 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { Flame } from "lucide-react"
-import { handleError } from "@/apiError"
 import {
   type ApiError,
   type ArticlePublic,
   type ArticlesPublic,
   LikesService,
-} from "@/client"
-import { isLoggedIn } from "@/hooks/useAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import { trackEvent } from "@/lib/analytics"
-import { cn } from "@/lib/utils"
+} from "@/shared/api"
+import { isLoggedIn } from "@/shared/auth"
+import { trackEvent } from "@/shared/lib/analytics"
+import { handleError } from "@/shared/lib/api-error"
+import useCustomToast from "@/shared/lib/use-custom-toast"
+import { cn } from "@/shared/lib/utils"
 
 function patchArticle(
   data: ArticlesPublic | undefined,

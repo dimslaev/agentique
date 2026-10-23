@@ -1,11 +1,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
-import { ArticlesService, type Voice, type VoiceKind } from "@/client"
-import { cutoffIso } from "@/components/Articles/ArticlesList"
-import { FilterOption } from "@/components/Articles/FilterOption"
 import { useFilters } from "@/context/filters"
-import { trackEvent } from "@/lib/analytics"
-import { cn } from "@/lib/utils"
+import { ArticlesService, type Voice, type VoiceKind } from "@/shared/api"
+import { trackEvent } from "@/shared/lib/analytics"
+import { cutoffIso } from "@/shared/lib/published"
+import { cn } from "@/shared/lib/utils"
+import { FilterOption } from "@/shared/ui/filter-option"
 import { ScoreBars } from "../ScoreMarks"
 
 // Fixed, not the feed's window: over 3 days most names have one article or

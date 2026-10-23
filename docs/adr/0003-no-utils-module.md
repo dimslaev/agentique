@@ -25,9 +25,10 @@ not a date helper); `clean_title` → `pipeline/titles.py`; and so on. If a
 good name is hard to find, the function does not have a job yet — leave it
 beside its only caller until a second caller proves the seam.
 
-One documented exception: `frontend/src/lib/utils.ts` holding `cn()` stays,
-because it is shadcn convention and every generated component imports it by
-that exact path — renaming it fights the code generator forever. That is
+One documented exception: `frontend/src/shared/lib/utils.ts` holding `cn()`
+stays, because it is shadcn convention and every generated component imports
+it by that exact path — renaming it fights the code generator forever. It
+was `frontend/src/lib/utils.ts` until the frontend moved to FSD layers. That is
 the only grandfathered `utils` file in the repo, and it stays that way on
 purpose rather than by oversight.
 

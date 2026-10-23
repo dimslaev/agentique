@@ -7,10 +7,10 @@ import {
 import { createRouter, RouterProvider } from "@tanstack/react-router"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
-import { ApiError, LoginService, OpenAPI } from "./client"
-import { Toaster } from "./components/ui/sonner"
+import { ApiError, LoginService, OpenAPI } from "@/shared/api"
+import { Toaster } from "@/shared/ui/sonner"
 import "./index.css"
-import { trackPageview } from "./lib/analytics"
+import { trackPageview } from "@/shared/lib/analytics"
 import { routeTree } from "./routeTree.gen"
 
 OpenAPI.BASE = import.meta.env.VITE_API_URL

@@ -1,11 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
-
-import { LoginService } from "@/client"
 import { EmailLinkForm } from "@/components/Auth/EmailLinkForm"
 import { AuthLayout } from "@/components/Common/AuthLayout"
-import { isLoggedIn, rememberRedirect } from "@/hooks/useAuth"
-import { utmSource } from "@/lib/utm"
+import { LoginService } from "@/shared/api"
+import { isLoggedIn, rememberRedirect } from "@/shared/auth"
+import { utmSource } from "@/shared/lib/utm"
 
 const searchSchema = z.object({
   redirect: z.string().optional(),

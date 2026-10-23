@@ -3,9 +3,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { handleError } from "@/apiError"
-import { UsersService, type UserUpdateMe } from "@/client"
-import { Button } from "@/components/ui/button"
+import { UsersService, type UserUpdateMe } from "@/shared/api"
+import { useAuth } from "@/shared/auth"
+import { handleError } from "@/shared/lib/api-error"
+import useCustomToast from "@/shared/lib/use-custom-toast"
+import { cn } from "@/shared/lib/utils"
+import { Button } from "@/shared/ui/button"
 import {
   Form,
   FormControl,
@@ -13,12 +16,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { LoadingButton } from "@/components/ui/loading-button"
-import useAuth from "@/hooks/useAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
+} from "@/shared/ui/form"
+import { Input } from "@/shared/ui/input"
+import { LoadingButton } from "@/shared/ui/loading-button"
 
 const formSchema = z.object({
   full_name: z.string().max(30).optional(),

@@ -1,5 +1,5 @@
-import { Logo } from "@/components/Common/Logo"
-import { cn } from "@/lib/utils"
+import { cn } from "@/shared/lib/utils"
+import { Logo } from "@/shared/ui/logo"
 
 interface HeaderProps {
   nav?: React.ReactNode

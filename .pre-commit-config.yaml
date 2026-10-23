@@ -12,13 +12,13 @@ repos:
       - id: end-of-file-fixer
         exclude: |
             (?x)^(
-                frontend/src/client/.*|
+                frontend/src/shared/api/.*|
                 backend/app/features/(audience|newsletter)/.*\.html
             )$
       - id: trailing-whitespace
         exclude: |
             (?x)^(
-                frontend/src/client/.*
+                frontend/src/shared/api/.*
             )$
   - repo: https://github.com/crate-ci/typos
     rev: 37bb98842b0d8c4ffebdb75301a13db0267cef89 # v1.47.2

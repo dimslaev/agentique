@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { useId, useState } from "react"
-import { StoriesService, type StoryPublic } from "@/client"
-import { articleClickHandlers, trackEvent } from "@/lib/analytics"
-import { cn } from "@/lib/utils"
+import { StoriesService, type StoryPublic } from "@/shared/api"
+import { articleClickHandlers, trackEvent } from "@/shared/lib/analytics"
+import { cn } from "@/shared/lib/utils"
 import { RailRow } from "../RailRow"
 import { ScoreBars } from "../ScoreMarks"
 

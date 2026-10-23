@@ -1,4 +1,4 @@
-import { LoginService, OpenAPI } from "../src/client"
+import { LoginService, OpenAPI } from "../src/shared/api"
 
 OpenAPI.BASE = `${process.env.VITE_API_URL}`
 
