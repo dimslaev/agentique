@@ -16,8 +16,8 @@ import {
   type RailPanels,
   RIGHT,
   type Side,
-} from "./panels"
-import { STORIES_PANEL_ID, useHasStories } from "./panels/Stories"
+} from "../config/panels"
+import { STORIES_PANEL_ID, useHasStories } from "../ui/panels/stories"
 
 /**
  * wide: rails sit inline in the gutters beside the feed, always open.

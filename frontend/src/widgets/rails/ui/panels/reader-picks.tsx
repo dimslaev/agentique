@@ -3,7 +3,7 @@ import { LikeButton } from "@/features/feed"
 import { type ArticlePublic, ArticlesService } from "@/shared/api"
 import { articleClickHandlers } from "@/shared/lib/analytics"
 import { cutoffIso } from "@/shared/lib/published"
-import { RailRow } from "../RailRow"
+import { RailRow } from "../rail-row"
 
 // Likes are sparse (most liked articles have one or two), so a week would
 // often be empty.

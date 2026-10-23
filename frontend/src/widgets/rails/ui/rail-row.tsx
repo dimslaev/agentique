@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react"
-import { MiniRail } from "./ScoreMarks"
+import { MiniRail } from "./score-marks"
 
 /** One article in a rail: score rail, "source · date", the title as a link,
  *  and an optional control on the right. Every rail list uses it. */

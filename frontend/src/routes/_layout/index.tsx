@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { Feed } from "@/components/Articles/Feed"
-import { FiltersProvider } from "@/features/feed"
+import { ArticlesList, FeedFilters, FiltersProvider } from "@/features/feed"
+import { SignupPanel } from "@/features/sign-in"
+import { isLoggedIn } from "@/shared/auth"
+import { RailsLayout } from "@/widgets/rails"
 
 export const Route = createFileRoute("/_layout/")({
-  component: FeedPage,
+  component: Feed,
   // The feed sets its own width: the column plus side rails.
   staticData: { wide: true },
   head: () => ({
@@ -12,10 +14,15 @@ export const Route = createFileRoute("/_layout/")({
 })
 
 // Only the feed reads the filters, so they reset when the reader leaves it.
-function FeedPage() {
+function Feed() {
   return (
     <FiltersProvider>
-      <Feed />
+      <RailsLayout>
+        {/* A signed-in reader already has an account and the newsletter. */}
+        {!isLoggedIn() && <SignupPanel />}
+        <FeedFilters />
+        <ArticlesList />
+      </RailsLayout>
     </FiltersProvider>
   )
 }
