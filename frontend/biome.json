@@ -27,8 +27,19 @@
         "useSelfClosingElements": "error",
         "noUselessElse": "error",
         "useFilenamingConvention": {
-          "level": "warn",
+          "level": "error",
           "options": { "filenameCases": ["kebab-case"], "requireAscii": true }
+        },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@/features/*/**", "@/widgets/*/**"],
+                "message": "Import a slice through its index.ts (ADR 18)."
+              }
+            ]
+          }
         }
       }
     }

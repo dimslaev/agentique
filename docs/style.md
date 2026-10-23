@@ -1,8 +1,9 @@
 # Style
 
 Rules a linter can enforce live in `backend/pyproject.toml` (ruff, mypy,
-import-linter) and `biome.json`, and fail CI. This file holds the rest, the
-style a linter cannot express, enforced by review.
+import-linter), `frontend/biome.json` and `frontend/steiger.config.ts`, and
+fail CI. This file holds the rest, the style a linter cannot express,
+enforced by review.
 
 ## Backend
 
@@ -62,13 +63,19 @@ style a linter cannot express, enforced by review.
 
 ## Frontend
 
-- Route files (`routes/**/*.tsx`) stay one-liners — each imports one
-  feature page component and nothing else. This is the one place
-  file-based routing forces a structural exception, and it's a documented
-  one.
-- Feature code lives in `features/<name>/`, not in a generic `components/`.
-  `ui/` (vendored shadcn) is left untouched — high churn, zero domain
-  signal, not worth fighting the generator over.
+- **Four layers, imports point down.** `routes/` composes `widgets/`,
+  widgets compose `features/`, and everything uses `shared/`. Slices on one
+  layer never import each other. Steiger and Biome enforce it (ADR 18).
+- **A slice is reached through its `index.ts`.** Inside a slice, imports are
+  relative. Its segments are `ui/` for components, `model/` for state,
+  `lib/` for helpers and `config/` for static setup.
+- **Routes stay thin.** A route file holds its `createFileRoute` config and
+  composes widgets and features. Page content with its own state goes in a
+  feature.
+- **Files are kebab-case** (`article-row.tsx`, `use-auth.ts`). Exported
+  names stay PascalCase or camelCase.
+- **Vendored shadcn files in `shared/ui/` stay as the generator wrote
+  them.** `biome.json` excludes them by name, so add a new one to that list.
 
 ## Repo-wide
 
