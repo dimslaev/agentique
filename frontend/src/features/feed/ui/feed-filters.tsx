@@ -1,11 +1,11 @@
 import { Search, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { useFilters } from "@/context/filters"
 import { trackEvent } from "@/shared/lib/analytics"
 import { ORIGIN_OPTIONS } from "@/shared/lib/origins"
 import { cn } from "@/shared/lib/utils"
 import { FilterOptions, FilterRow } from "@/shared/ui/filter-option"
-import { TOPICS } from "./topics"
+import { useFilters } from "../model/filters"
+import { TOPICS } from "../model/topics"
 
 const TOPIC_OPTIONS = [
   { value: "", label: "All" },

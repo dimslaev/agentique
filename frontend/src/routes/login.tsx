@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { z } from "zod"
-import { EmailLinkForm } from "@/components/Auth/EmailLinkForm"
 import { AuthLayout } from "@/components/Common/AuthLayout"
+import { EmailLinkForm } from "@/features/sign-in"
 import { LoginService } from "@/shared/api"
 import { isLoggedIn, rememberRedirect } from "@/shared/auth"
 import { utmSource } from "@/shared/lib/utm"

@@ -1,8 +1,7 @@
-import { SignupPanel } from "@/components/Auth/SignupPanel"
 import { RailsLayout } from "@/components/Rails/RailsLayout"
+import { ArticlesList, FeedFilters } from "@/features/feed"
+import { SignupPanel } from "@/features/sign-in"
 import { isLoggedIn } from "@/shared/auth"
-import { ArticlesList } from "./ArticlesList"
-import { FeedFilters } from "./FeedFilters"
 
 export function Feed() {
   return (

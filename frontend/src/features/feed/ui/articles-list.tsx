@@ -1,12 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useFilters } from "@/context/filters"
 import { ArticlesService, type Origin } from "@/shared/api"
 import { cutoffIso, PUBLISHED_DAYS } from "@/shared/lib/published"
 import { SCORE_STANDOUT } from "@/shared/lib/score"
 import { cn } from "@/shared/lib/utils"
 import { FilterOptions } from "@/shared/ui/filter-option"
-import { ArticleRow } from "./ArticleRow"
-import { findTopic } from "./topics"
+import { useFilters } from "../model/filters"
+import { findTopic } from "../model/topics"
+import { ArticleRow } from "./article-row"
 
 const DATE_OPTIONS = [
   { value: "3d", label: "3 days" },

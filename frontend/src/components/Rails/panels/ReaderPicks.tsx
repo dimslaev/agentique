@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { LikeButton } from "@/components/Articles/LikeButton"
+import { LikeButton } from "@/features/feed"
 import { type ArticlePublic, ArticlesService } from "@/shared/api"
 import { articleClickHandlers } from "@/shared/lib/analytics"
 import { cutoffIso } from "@/shared/lib/published"

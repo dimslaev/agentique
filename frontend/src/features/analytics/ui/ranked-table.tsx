@@ -1,4 +1,4 @@
-import { formatCount } from "./format"
+import { formatCount } from "../lib/format"
 
 export type RankedRow = {
   key: string

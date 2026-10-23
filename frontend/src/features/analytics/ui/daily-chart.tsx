@@ -1,7 +1,7 @@
 import { type KeyboardEvent, useState } from "react"
 import type { ReportDay } from "@/shared/api"
 import { cn } from "@/shared/lib/utils"
-import { formatCount, formatDay } from "./format"
+import { formatCount, formatDay } from "../lib/format"
 
 /** The axis top: twice a 1/2/5 step, so the midline lands on a round number. */
 function axisTop(max: number): number {

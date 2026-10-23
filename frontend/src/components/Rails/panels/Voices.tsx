@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useState } from "react"
-import { useFilters } from "@/context/filters"
+import { useFilters } from "@/features/feed"
 import { ArticlesService, type Voice, type VoiceKind } from "@/shared/api"
 import { trackEvent } from "@/shared/lib/analytics"
 import { cutoffIso } from "@/shared/lib/published"
