@@ -165,3 +165,26 @@ test("a search replaces the feed and greys out the rows it ignores", async ({
   await expect(page.getByText(found.title)).toHaveCount(0)
   await expect(articleRows(page).first()).toBeVisible()
 })
+
+test("filters reset when the reader leaves the feed and comes back", async ({
+  page,
+}) => {
+  await pick(page, "From", "Media", (q) => q.get("origin") === "media")
+
+  await page.getByTestId("user-menu").click()
+  await page.getByRole("menuitem", { name: "Profile" }).click()
+  await page.waitForURL("/profile")
+  await page
+    .getByRole("banner")
+    .getByRole("link", { name: "Feed", exact: true })
+    .click()
+
+  await expect(option(page, "From", "All")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(option(page, "From", "Media")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  )
+})

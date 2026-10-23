@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { useFilters } from "@/context/filters"
+import { useFilters } from "@/features/feed"
 import { ArticlesService, type OriginCounts } from "@/shared/api"
 import { trackEvent } from "@/shared/lib/analytics"
 import { ORIGIN_OPTIONS } from "@/shared/lib/origins"

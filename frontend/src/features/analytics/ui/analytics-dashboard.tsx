@@ -4,9 +4,9 @@ import { AnalyticsService, type ReportRow } from "@/shared/api"
 import { useAuth } from "@/shared/auth"
 import { cn } from "@/shared/lib/utils"
 import { FilterOption, FilterRow } from "@/shared/ui/filter-option"
-import { DailyChart } from "./DailyChart"
-import { formatCount } from "./format"
-import { type RankedRow, RankedTable } from "./RankedTable"
+import { formatCount } from "../lib/format"
+import { DailyChart } from "./daily-chart"
+import { type RankedRow, RankedTable } from "./ranked-table"
 
 const WINDOWS = [
   { days: 7, label: "7 days" },

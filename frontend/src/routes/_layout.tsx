@@ -10,7 +10,6 @@ import { Header } from "@/components/Common/Header"
 import { UserMenu } from "@/components/Common/UserMenu"
 import { RailsProvider, useRails } from "@/components/Rails/RailsProvider"
 import { RailToggles } from "@/components/Rails/RailToggles"
-import { FiltersProvider } from "@/context/filters"
 import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 
@@ -40,23 +39,21 @@ function Layout() {
     select: (matches) => matches.some((m) => m.staticData?.wide),
   })
   return (
-    <FiltersProvider>
-      <RailsProvider>
-        <div className="flex min-h-screen flex-col">
-          <SiteHeader />
-          <main className="w-full flex-1 pt-7 pb-12">
-            {wide ? (
+    <RailsProvider>
+      <div className="flex min-h-screen flex-col">
+        <SiteHeader />
+        <main className="w-full flex-1 pt-7 pb-12">
+          {wide ? (
+            <Outlet />
+          ) : (
+            <PageColumn>
               <Outlet />
-            ) : (
-              <PageColumn>
-                <Outlet />
-              </PageColumn>
-            )}
-          </main>
-          <Footer />
-        </div>
-      </RailsProvider>
-    </FiltersProvider>
+            </PageColumn>
+          )}
+        </main>
+        <Footer />
+      </div>
+    </RailsProvider>
   )
 }
 

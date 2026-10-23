@@ -1,7 +1,7 @@
 import type { ArticlePublic } from "@/shared/api"
 import { articleClickHandlers } from "@/shared/lib/analytics"
-import { LikeButton } from "./LikeButton"
-import { ScoreRail } from "./ScoreRail"
+import { LikeButton } from "./like-button"
+import { ScoreRail } from "./score-rail"
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
