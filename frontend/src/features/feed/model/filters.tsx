@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useContext, useState } from "react"
 
-export type Filters = {
+type Filters = {
   search: string
   dateRange: string
   sort: string

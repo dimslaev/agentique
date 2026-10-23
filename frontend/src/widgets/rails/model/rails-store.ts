@@ -13,8 +13,8 @@ import { STORIES_PANEL_ID } from "../ui/panels/stories"
  * wide: rails sit inline in the gutters beside the feed, always open.
  * narrow: both rails merge into one sheet behind one header button.
  */
-export type RailMode = "wide" | "narrow"
-export type ToggleVia = "key" | "button"
+type RailMode = "wide" | "narrow"
+type ToggleVia = "key" | "button"
 
 const WIDE_QUERY = "(min-width: 1360px)"
 // Matches useIsMobile's breakpoint.

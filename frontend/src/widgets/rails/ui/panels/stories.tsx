@@ -13,7 +13,7 @@ const TIMELINE = 6
 // Enough bars to read a story's shape without crowding its name.
 const BARS = 12
 
-export function useStories() {
+function useStories() {
   return useQuery({
     queryKey: ["stories"],
     queryFn: () => StoriesService.readStories({ limit: 5 }),

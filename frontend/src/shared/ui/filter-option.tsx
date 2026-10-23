@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { trackEvent } from "@/shared/lib/analytics"
 import { cn } from "@/shared/lib/utils"
 
-export type Option = { value: string; label: string }
+type Option = { value: string; label: string }
 
 export function FilterOption({
   label,
