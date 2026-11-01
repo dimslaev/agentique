@@ -41,9 +41,3 @@ Bad:
 - "A plugin that remembers repo facts between sessions and reports 18.4-30.9%
   lower mean cost." This is too dense.
 - "An interesting look at agent swarms." This names the topic and says nothing.
-
-## Choosing articles
-
-When a summary goes in a list, the article must be something a builder can use.
-A high score or a big number is not enough. If you can't name what a builder
-would do with it, leave it out.
