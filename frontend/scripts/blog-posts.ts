@@ -43,6 +43,8 @@ export type PostMeta = {
   readingMinutes: number
   // The body's distinct http(s) links, in the order they first appear.
   links: PostLink[]
+  // False when the frontmatter sets `sources: false`.
+  showSources: boolean
   bodyMd: string
 }
 
@@ -134,6 +136,7 @@ export function parsePost(
     topic,
     readingMinutes: readingMinutes(bodyMd),
     links: bodyLinks(bodyMd),
+    showSources: fields.sources !== false,
     bodyMd,
   }
 }

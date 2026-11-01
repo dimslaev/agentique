@@ -114,8 +114,7 @@ async function loadHighlighter(posts: PostMeta[]): Promise<Highlighter> {
 
 // ─── Markdown to HTML ────────────────────────────────────────────────────────
 
-const A_PROSE =
-  "text-paper underline decoration-signal decoration-[1.5px] underline-offset-4 hover:text-signal"
+const A_PROSE = "text-signal underline-offset-4 hover:underline"
 const P_PROSE = "mb-[1.3em]"
 const H2_PROSE =
   "mt-[1.8em] mb-[0.6em] font-display text-[28px] font-bold leading-[1.2] tracking-[-0.02em] text-paper"
@@ -267,6 +266,7 @@ function postHref(p: PostMeta): string {
 }
 
 function sources(p: PostMeta) {
+  if (!p.showSources) return []
   return p.links.filter((l) => !l.url.startsWith(SITE_URL))
 }
 
