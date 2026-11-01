@@ -119,7 +119,7 @@ const P_PROSE = "mb-[1.3em]"
 const H2_PROSE =
   "mt-[1.8em] mb-[0.6em] font-display text-[28px] font-bold leading-[1.2] tracking-[-0.02em] text-paper"
 const H3_PROSE =
-  "mt-[1.8em] mb-[0.6em] font-display text-[21px] font-semibold leading-[1.3] tracking-[-0.01em] text-paper"
+  "mt-[1.8em] mb-[0.6em] font-display text-[21px] font-semibold leading-[1.3] tracking-[-0.01em] text-signal"
 const CODE_PROSE =
   "border border-wire bg-[#22251a] px-1.5 py-0.5 font-wire text-[0.86em] text-paper"
 const FIGURE_PROSE = "mb-[1.5em] border border-wire bg-[#1a1c13]"
@@ -127,9 +127,9 @@ const FIGCAPTION_PROSE =
   "border-b border-wire px-4 py-2 font-wire text-[11px] uppercase tracking-[0.08em] text-dim"
 const PRE_PROSE =
   "m-0 overflow-x-auto px-5 py-[18px] font-wire text-[14px] leading-[1.65]"
-const LIST_PROSE = "mb-[1.3em] list-none p-0"
+const LIST_PROSE = "mb-[1.3em] list-none p-0 [&_a]:text-paper"
 const LI_PROSE = "mb-[0.35em] flex gap-[14px]"
-const UL_MARK = "mt-[0.72em] h-1.5 w-1.5 flex-none bg-signal"
+const UL_MARK = "mt-[0.72em] h-1.5 w-1.5 flex-none bg-paper"
 const OL_MARK =
   "w-6 flex-none font-wire text-[14px] leading-[1.72rem] text-signal"
 const BLOCKQUOTE_PROSE =
