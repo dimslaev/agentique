@@ -111,14 +111,13 @@ write token, invoking `/newsletter` (`.claude/skills/newsletter/SKILL.md`).
 It runs Fridays at 07:52 Europe/Zurich (`CRON_TZ=Europe/Zurich 52 7 * * 5`),
 after that morning's curation and report, and reads the 7 days before it.
 
-- It writes three drafts, one per topic, as Resend broadcasts to
-  `RESEND_AUDIENCE_ID`. A person reads them in the Resend dashboard and sends
-  one; the other two stay drafts.
+- It writes one draft, a grouped list of the week's best links, as a Resend
+  broadcast to `RESEND_AUDIENCE_ID`. A person reads it in the Resend dashboard
+  and sends it.
 - Nothing in the code sends a broadcast. Sending is only ever done by hand.
-- Each issue is also a blog post (`frontend/content/blog/`). The routine
-  saves the three posts and opens one PR with them; a person sends one draft
-  in Resend and merges the PR. The routine needs push access to this repo
-  for that.
+- The issue is also a blog post (`frontend/content/blog/`). The routine saves
+  the post and opens a PR; a person sends the draft in Resend and merges the
+  PR. The routine needs push access to this repo for that.
 
 The routine's prompt, to paste there when it changes:
 

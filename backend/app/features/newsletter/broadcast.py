@@ -1,4 +1,4 @@
-"""The weekly issue: one short essay, rendered into one template and drafted as
+"""The weekly issue: one short post, rendered into one template and drafted as
 a Resend broadcast, and saved by the agent as a blog post.
 
 The newsletter agent writes prose, never HTML. An issue is the text of a blog
@@ -10,10 +10,9 @@ everything else, so nothing the agent writes can break the layout, and renders
 it into `weekly_issue.html` and a plain-text twin.
 
 The content rules for an issue live here and nowhere else; the blog build only
-checks what a page needs to render. The agent drafts three a week, one per
-topic, and a person reads them and sends one from the Resend dashboard. Nothing
-here sends, and nothing is stored: the posts live in git, the broadcasts in
-Resend.
+checks what a page needs to render. The agent drafts one a week, and a person
+reads it and sends it from the Resend dashboard. Nothing here sends, and
+nothing is stored: the posts live in git, the broadcasts in Resend.
 """
 
 from __future__ import annotations

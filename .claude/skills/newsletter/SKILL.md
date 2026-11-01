@@ -1,171 +1,125 @@
 ---
 name: newsletter
-description: Draft three candidate weekly agentique newsletters, one per topic - find the week's most talked-about topics, read what individual writers, repos and discussions say about each, and write a short explainer in the tone of Julia Evans. Use when running the Friday newsletter session, or when asked to draft or write the weekly issue.
+description: Draft the weekly agentique issue - choose the 10-12 most useful articles of the last 7 days, with liked articles first, then score and value to builders, mix individual and company sources, group them into sections and give each one a short summary. Use when running the Friday newsletter session, or when asked to draft or write the weekly issue.
 ---
 
 # Draft the weekly issue
 
-Each week you write three drafts, one per topic, and a person picks the one
-that goes out. Each draft is also a blog post: the same file is the email and
-the page. Each draft is one short essay: what this new thing actually is,
-how it works, how people are using it and what they make of it, with links to
-the sources you read. It takes one to two minutes to read and sounds like a
-person wrote it, because a person will put their name to it.
+Each week you draft one issue: 10-12 links in 3-4 sections, each with a one-line
+summary. It is the same file for the email and the blog post. A person reads
+the draft and sends it. It takes under a minute to read.
 
 ## Tools
 
 From the `agentique` MCP server, with the curation token:
 
-- `week(days=7, limit=12)` - the week's topics, the most talked-about first:
-  `coverage` counts every publisher that carried it, including the copies
-  curation rejected as retellings (`covered_by`). Each topic's `articles`
-  carry the `summary` curation wrote after reading them.
-- `related(url, days=30, limit=12)` - what else covers a topic over the last
-  month: published articles and rejects scored 35+, with `publisher_kind`,
-  `kind`, `distance`, and a `summary` or curation's `reason`.
-- `web_fetch(url)` - read a page. `web_search(query)` - find pages.
-- `check_link(url)` - stars, last push, README for a repo; downloads and
-  weights for a model.
-- `sql_query(sql)` - read-only, for anything the tools above do not answer.
-- `draft_issue(post)` - takes the whole post file (see **Format**), checks it,
-  renders it into the site's template and creates it in Resend. Returns the
-  broadcast line and the path to save the post at. Nothing is sent: a person
-  reads the three drafts there and sends one. If it refuses, the message says
-  why: fix the post and call it again.
+- `week(days=7, limit=40)` - the week's topics. Each article has `publisher`,
+  `publisher_kind`, `kind`, `score`, `likes` and `summary`. `covered_by` lists
+  the retellings curation rejected.
+- `sql_query(sql)` - read-only. The `user` table is blocked.
+- `related(url)` - what else covers a story, to find the original.
+- `web_fetch(url)`, `web_search(query)`, `check_link(url)` - find and check an
+  original source.
+- `draft_issue(post)` - checks the post and creates a Resend draft. Nothing is
+  sent.
+
+If a tool answers "This tool needs the curation token", stop and say so.
 
 ## Rounds
 
-1. **`week()` once.** Read every topic before choosing.
-2. **Choose three topics.** See **Choosing**.
-3. **For each topic, research it.** See **Reading**.
-4. **For each topic, write the post** and call `draft_issue(post)`. See
-   **Writing** and **Format**. On a refusal, fix what it names and call again.
-5. **Save the post** at the path `draft_issue` returned, with exactly the text
-   you passed it.
-6. **After three topics, open one PR** with the three posts. See **Finish**.
-7. **Report.** See **Finish**.
+1. **Collect.** Call `week()`, then find the articles liked in the last 7 days.
+   A liked article can be older than the week:
 
-Work one topic to its saved post before starting the next, so a long session
-still leaves drafts behind.
+   ```sql
+   select a.title, a.url, a.score, a.published_at, a.summary, p.name, p.kind,
+          count(*) as likes
+   from article_like l
+   join article a on a.id = l.article_id
+   join publisher p on p.id = a.publisher_id
+   where l.created_at >= now() - interval '7 days'
+     and a.marked_for_deletion_at is null
+   group by a.id, p.id
+   order by likes desc, a.score desc
+   ```
 
-## Choosing
+2. **Rank.** Liked articles come first, then the rest by `score`. Prefer articles
+   published in the last two weeks. An older liked article needs a clear reason
+   to stay.
+3. **Check builder value.** For each one, name what a builder would do or decide
+   after reading it. If you can't, drop it, whatever its score or likes. Drop
+   funding, availability and pricing notices, benchmarks with no method, and
+   impressive results nobody can use.
+4. **Use the original.** If a pick retells someone else's work, read `related`
+   or search for the maker's post, repo or paper, and link that instead. Say in
+   the report when the original isn't in the database yet.
+5. **Merge duplicates.** Keep one article per story.
+6. **Mix sources.** Include at least 3 from individuals or communities, and no
+   more than 2 from one publisher. Unknown writers are often filed as `media`,
+   so also count personal domains, Substacks and github.io pages as individual.
+   Swap the lowest-ranked pick to reach the mix, but never add an article that
+   failed step 3. If the week can't reach it, say so.
+7. **Group.** Put the picks into 3-4 sections named after what the articles have
+   in common, like `Code review`, `Running agents` or `Models`. Find the
+   week's themes from the picks, and don't reuse last week's names by habit.
+   Each section needs at least 2 articles. Put the strongest section first and
+   the strongest article first in each section.
+8. **Summarize.** Read `.claude/skills/summary/SKILL.md` and write one summary
+   per article from its stored `summary`. If the stored summary doesn't support
+   a clear point, `web_fetch` the article.
+9. **Draft.** Build the post (see **Format**) and call `draft_issue(post)`. On a
+   refusal, fix what it names and call it again.
+10. **Save, open a PR and report.** See **Finish**.
 
-- Start from the top of `week()`: coverage, then likes. The most talked-about
-  topic a builder can do something with is the first draft.
-- Pass over a topic with nothing to explain: an availability or pricing
-  notice, a funding round, a benchmark number with no method. Take the next.
-- Two topics that are one subject (a release and a post about the same
-  release) are one topic. Merge them.
-- Three different subjects. If the week has fewer than three worth writing,
-  draft what there is and say why.
-
-## Reading
-
-For each topic, read before you write. Nothing goes in the essay that you did
-not read on a page this session.
-
-1. **The thing itself.** `web_fetch` the first-party article (the maker's post,
-   the repo, the paper). If `week()` only has a retelling, search for the
-   original first.
-2. **`related(url)`** on the topic's lead article. It reaches back a month,
-   so it finds the post that came out after the release.
-3. **The people who tried it.** `web_fetch` 2-4 of these, in order:
-   - individual writers who tested, measured or built with it
-     (`publisher_kind = individual`, or a personal domain, a Substack, a
-     github.io page: the pipeline files unknown publishers as `media`)
-   - repos that use or extend it: `check_link`, then fetch the README if the
-     repo is live
-   - a paper or doc that explains how it works
-4. **How it is being taken.** `web_search` for what `related` did not have:
-   "<thing> hacker news", "<thing> review", "<thing> benchmark", "github
-   <thing>". Fetch the one or two best: a Hacker News thread, a writer's post,
-   an issue on the repo. This is where "how people perceive it" comes from.
-
-Per topic: at most 4 searches and 8 fetches. Skip a page that is a retelling
-of the announcement; you already have that.
-
-## Writing
-
-Write in the tone of Julia Evans's blog posts (jvns.ca): curious, plain, and
-concrete. Her voice, not her words: never copy her text or say she wrote it.
-What that means here:
-
-- **Start from the question.** What would a builder wonder when they first see
-  this? "I kept seeing X this week and couldn't tell what it actually does."
-- **Explain it simply first.** Say what the thing is in plain words before
-  anything about why it matters. Define a term the first time you use it.
-- **One mechanism, concretely.** The one idea that makes it work, with an
-  example: a command, a number, a before and after.
-- **What people found.** Who tried it and what they saw, by name and linked.
-  Where people disagree, say so. "Some people on Hacker News pointed out..."
-- **Be honest about gaps.** "I'm not sure yet whether...", "nobody I read has
-  tested..." is better than smoothing over what is unknown.
-- **End with something to do**, or the open question. Never a summary.
-- Short paragraphs, short sentences, simple words. Real enthusiasm when
-  something is clever ("the part I think is really cool is..."), and only
-  then.
-
-The "I" is the newsletter's voice: someone who read all of this and is
-explaining it. It can wonder, read and notice. It never claims to have run,
-installed or measured anything: those experiences belong to the people you
-link, and saying otherwise is making things up.
-
-Never: "delve", "landscape", "game-changer", "revolutionize", "it's worth
-noting", "in conclusion", "in today's fast-paced world", em dashes, lists of
-three adjectives, a closing paragraph that restates the essay.
-
-**Format.** A post is one file, `frontend/content/blog/<date>-<slug>.md`,
-which `draft_issue` names for you. It is the email and the blog page:
+## Format
 
 ```
 ---
-title: What does Ollama's MLX backend actually do?
-description: One line that makes someone open it.
-topic: local-ai
+title: The most interesting stuff this week
+description: Agents reviewing code, swarms picking leaders by list order, and a 1-trillion-parameter open model.
+topic: most-interesting-this-week
 ---
-The essay.
+Code review
+
+- [Article title](https://example.com/post). The summary.
+- [Title that ends in a question?](https://example.com/other) The summary.
+
+Models
+
+- [Article title](https://example.com/post). The summary.
 ```
 
-- **`title`:** the email subject and the page headline. A question or a plain
-  statement a person would write, 55 characters at most. "What does Ollama's
-  MLX backend actually do?", not "This week in AI". The slug is made from it.
-- **`description`:** the line an inbox shows after the subject and the page's
-  lede: one line that makes someone open it, 160 characters at most.
-- **`topic`:** a kebab slug for the subject, like `local-ai`. It names the
-  draft in Resend.
-- Only these three keys. Date and slug come from the filename. Put a value in
-  double quotes if it holds ": " or starts with a quote or a symbol.
-- **Body:** plain text: a blank line between paragraphs, `- ` at the start of
-  each list line, `[link text](url)` for links, backticks for a command or a
-  name in code. Nothing else renders; no headings, no bold.
-- **Length:** 250-450 words. The tool refuses under 150 or over 600.
-- **Links:** 4-8, inline, on the words they support ("[Simon Willison ran
-  it](...) on..."), never "here" or "this link". The first-party page once.
-  Every URL is one you fetched or one a tool returned, never from memory. The
-  page lists them as its sources, in order.
-
-Before each `draft_issue`, reread the body once as the reader: does every
-sentence say something a builder did not know? Cut the ones that do not.
+- **`title`:** always `The most interesting stuff this week`.
+- **`description`:** names the week's three biggest themes, 160 characters at
+  most.
+- **Section names:** a plain line of text. The email renders no headings or bold.
+- **Link text:** the article's title, without "(7 minute read)".
+- **No intro, no closing, no first person.**
+- **Length:** `draft_issue` refuses under 150 words. If it does, add a link
+  rather than padding the summaries.
+- Every URL comes from a tool, never from memory.
 
 ## Finish
 
-Three `draft_issue` calls and three saved posts. Then:
+`draft_issue` returns a path, but don't use it: this title is the same every
+week. Save the post at:
 
-- Commit the three posts on a new branch, `feat/weekly-issues-<YYYY-MM-DD>`,
-  one commit, subject `feat: weekly issues <YYYY-MM-DD>` (today's date).
-  Commit nothing else.
-- Push it and open one PR titled `feat: weekly issues <YYYY-MM-DD>`. The PR
-  is the blog's review: a person sends one draft in Resend and merges the PR.
+```
+frontend/content/blog/<YYYY-MM-DD>-most-interesting-stuff-this-week-<YYYY-MM-DD>.md
+```
+
+Add `sources: false` to the frontmatter of the saved file, below `topic`. The
+blog would otherwise repeat every link in a sources list. Pass `draft_issue` the
+post without it, because `draft_issue` refuses any other key.
+
+Commit the post on a new branch, `feat/weekly-issue-<YYYY-MM-DD>`, one commit,
+subject `feat: weekly issue <YYYY-MM-DD>`. Commit nothing else. Push it and open
+one PR with the same title. A person sends the draft in Resend and merges the PR.
 
 Then report:
 
-- the three topics, in draft order, and why each was chosen over the next one
-  in `week()`
-- for each draft, the sources you read and linked, and where each came from
-  (`week`, `related`, search)
-- how many searches, fetches and `check_link` calls you made
-- the three lines `draft_issue` returned
-- the PR link
-
-If a tool answers "This tool needs the curation
-token", stop and say so: the session has the read token, not the write token.
+- each pick, with its section, publisher, whether it was liked, and what a
+  builder would do with it
+- what you dropped from the liked articles and the top scores, and why
+- originals you swapped in, and any that aren't in the database
+- how many picks came from individuals and communities
+- the line `draft_issue` returned, and the PR link

@@ -53,9 +53,9 @@ from app.features.newsletter.model import (
     WeekTopic,
 )
 
-# The agent drafts three issues a week; the rest are there so it can pass over a
-# topic it finds nothing to say about.
-WEEK_LIMIT = 12
+# The skill asks for more than the 10-12 links it picks, so it can pass over
+# what has no value for builders.
+WEEK_LIMIT = 40
 # Long enough to reach the review that came out two weeks after a release.
 RELATED_DAYS = 30
 RELATED_LIMIT = 12

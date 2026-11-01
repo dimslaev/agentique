@@ -37,7 +37,7 @@ cd backend && uv run --env-file ../.env python -m app.entry.cli.report
 with the read token the session can list candidates and settle none.
 
 The weekly newsletter is the same shape: `claude "/newsletter"` reads the week
-through the MCP server and drafts three issues as Resend broadcasts. It sends
+through the MCP server and drafts one issue as a Resend broadcast. It sends
 nothing.
 
 ## Pre-commit and linting
