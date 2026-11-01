@@ -223,6 +223,22 @@ function renderBody(p: PostMeta, md: Marked): string {
 // alongside SPA ones.
 const ANALYTICS_SCRIPT = `try{var k="analytics_visitor_id";var id=localStorage.getItem(k);if(!id){id=crypto.randomUUID();localStorage.setItem(k,id)}fetch("${API_URL}/api/v1/analytics/collect",{method:"POST",headers:{"Content-Type":"application/json"},keepalive:true,body:JSON.stringify({event:"pageview",path:location.pathname,referrer:document.referrer||undefined,visitor_id:id})}).catch(function(){})}catch(e){}`
 
+// Same endpoint as the feed's SignupPanel: it creates the account, subscribes
+// the address to the newsletter and emails the sign-in link.
+const SIGNUP_SCRIPT = `(function(){var f=document.getElementById("signup-form"),s=document.getElementById("signup-status"),b=f.querySelector("button");f.addEventListener("submit",function(e){e.preventDefault();b.disabled=true;fetch("${API_URL}/api/v1/login/link",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.elements.email.value,utm_source:"blog"})}).then(function(r){if(!r.ok)throw r;f.hidden=true;s.textContent="Check your inbox"}).catch(function(){b.disabled=false;s.textContent="That didn't work, try again"})})})()`
+
+const SIGNUP_SECTION = `
+      <section aria-labelledby="signup" class="mt-16 border border-wire p-5 sm:p-7">
+        <h2 id="signup" class="font-display text-[21px] font-semibold leading-[1.3] tracking-[-0.01em] text-paper">Get this in your inbox</h2>
+        <p class="mt-1.5 text-[15px] leading-[1.55] text-[#a9ab95]">AI news for builders, once a week.</p>
+        <form id="signup-form" class="mt-4 flex h-11 items-stretch border border-wire">
+          <input type="email" name="email" required maxlength="255" placeholder="name@company.com" autocomplete="email" aria-label="Email address" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" data-form-type="other" class="min-w-0 flex-1 bg-transparent px-3 font-wire text-base text-paper outline-none placeholder:text-dim">
+          <button type="submit" class="flex shrink-0 items-center bg-signal px-4 font-wire text-[11px] font-bold uppercase tracking-[0.1em] text-ink transition-colors hover:bg-signal/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:opacity-70">Sign up</button>
+        </form>
+        <p id="signup-status" role="status" class="mt-3 font-wire text-[11px] uppercase tracking-[0.1em] text-paper empty:hidden"></p>
+        <script>${SIGNUP_SCRIPT}</script>
+      </section>`
+
 const MONTHS = [
   "January",
   "February",
@@ -424,7 +440,7 @@ ${moreItems}
         <div class="text-[18px] leading-[1.72] text-[#cfccbd]">
 ${renderBody(p, md)}
         </div>
-      </article>${sourcesSection}${moreSection}
+      </article>${sourcesSection}${SIGNUP_SECTION}${moreSection}
     </main>`
 
   return shell({
