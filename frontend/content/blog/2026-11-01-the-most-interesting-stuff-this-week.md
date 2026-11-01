@@ -1,5 +1,5 @@
 ---
-title: The most interesting stuff this week
+title: Agent swarms invented bureaucracy, and other good reads
 description: Agents reviewing code, swarms forming bureaucracies, and a 1-trillion-parameter open model.
 topic: most-interesting-this-week
 sources: false
