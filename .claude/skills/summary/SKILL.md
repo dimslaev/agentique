@@ -24,6 +24,7 @@ The reader knows the main topics in AI but has no idea what this article says.
 - Keep a number only if it is the point.
 - Say what the source supports. Don't round up or add a claim.
 - One sentence. No list, no colon, no em dash.
+- Summary should not be vague
 
 ## Examples
 

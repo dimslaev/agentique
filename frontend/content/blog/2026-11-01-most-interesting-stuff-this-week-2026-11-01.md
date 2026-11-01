@@ -26,4 +26,4 @@ Models
 
 - [Le Chonk: Built for Coders, Trusted by Defenders](https://mistral.ai/news/mistral-large-4-oss/). Mistral released a trillion-parameter model you can download.
 - [Introducing Flint](https://recursive.com/updates/introducing-recursive-flint). A strong coding model that runs on laptops.
-- [Apple's 20B On-Device Model Uses Just 2GB of Memory](https://www.airealist.ai/p/exploring-apple-on-device-model). Apple's model fits in 2GB but scored last.
+- [Apple's 20B On-Device Model Uses Just 2GB of Memory](https://www.airealist.ai/p/exploring-apple-on-device-model). It uses far less power, but solves fewer problems.
