@@ -93,6 +93,7 @@ required-imports = ["from __future__ import annotations"]
 # systemd/journald captures it.
 "app/features/collect/**" = ["T201"]
 "app/entry/cli/**" = ["T201"]
+"scripts/**" = ["T201"]
 
 [tool.pytest.ini_options]
 # Each test sits beside the module it tests (ADR 4).
@@ -157,5 +158,5 @@ ignore_imports = [
     "app.entry.** -> app.features.*.service",
     "app.entry.** -> app.features.*.model",
     # The search tests stub the query embedding where it is computed.
-    "app.entry.api.test_articles -> app.features.catalog.semantic_search",
+    "app.entry.api.test_articles -> app.features.catalog.search",
 ]

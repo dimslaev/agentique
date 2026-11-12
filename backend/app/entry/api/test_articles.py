@@ -24,7 +24,7 @@ from app.core.db.factories import (
 from app.core.db.publisher import PublisherKind
 from app.core.security import create_access_token
 from app.core.settings import settings
-from app.features.catalog import semantic_search
+from app.features.catalog import search
 from app.features.catalog.model import Origin, Voice
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
@@ -296,7 +296,7 @@ def test_search_is_unbounded_for_anonymous(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
+    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
     now = datetime.now(UTC)
     # identical embedding to the query -> cosine distance 0 -> ranks first
     old = create_random_article(
@@ -343,9 +343,10 @@ def test_search_articles(
     auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
+    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
 
-    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
+    # No article holds this word, so the order is the embedding's alone.
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": _needle(), "limit": 5})
     assert r.status_code == 200
     data = r.json()
     assert len(data["data"]) <= 5
@@ -361,6 +362,116 @@ def test_search_articles(
         .limit(5)
     ).all()
     assert [a["id"] for a in data["data"]] == list(expected_ids)
+
+
+def _needle() -> str:
+    """A word no other article holds."""
+    return f"vllm{uuid.uuid4().hex[:10]}"
+
+
+def test_search_ranks_a_keyword_only_hit_first(
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The word is deep in the content and the article has no embedding, so
+    only the full-text index can find it."""
+    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
+    needle = _needle()
+    hit = create_random_article(
+        db, content=f"{'filler ' * 500}we moved inference to {needle} last week"
+    )
+    create_random_article(db, embedding=[0.05] * 256)
+
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": needle})
+    assert r.status_code == 200
+    data = r.json()["data"]
+    assert data[0]["id"] == hit.id
+    assert len(data) > 1
+
+
+def test_search_matches_a_stop_word_in_the_title(
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The English stemmer drops "them", so only the title's unstemmed index
+    holds it."""
+    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
+    hit = create_random_article(db, title="Them")
+
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "them"})
+    assert r.status_code == 200
+    assert hit.id in [a["id"] for a in r.json()["data"]]
+
+
+def test_search_filters_narrow_before_ranking(
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fake_vec = [0.05] * 256
+    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
+    needle = _needle()
+    now = datetime.now(UTC)
+    tag = create_random_tag(db)
+    publisher = create_random_publisher(db)
+    wanted = create_random_article(
+        db,
+        title=needle,
+        publisher_id=publisher.id,
+        kind=ArticleKind.repo,
+        published_at=now,
+        embedding=fake_vec,
+    )
+    tag_article(db, wanted, tag)
+    other = create_random_article(
+        db,
+        title=needle,
+        published_at=now - timedelta(days=30),
+        embedding=fake_vec,
+    )
+
+    def ids(**filters: str) -> list[int]:
+        r = auth_client.get(
+            f"{ARTICLES_URL}/search", params={"q": needle, "limit": 100, **filters}
+        )
+        assert r.status_code == 200
+        return [a["id"] for a in r.json()["data"]]
+
+    assert {wanted.id, other.id} <= set(ids())
+    # One article is left by each filter, so neither ranking can add another.
+    assert ids(tag=tag.slug) == [wanted.id]
+    assert ids(publisher=publisher.slug) == [wanted.id]
+    assert other.id not in ids(kind="repo")
+    assert other.id not in ids(since=RECENT_SINCE)
+    assert wanted.id in ids(kind="repo", since=RECENT_SINCE)
+
+
+def test_search_malformed_since_returns_422(auth_client: TestClient) -> None:
+    r = auth_client.get(
+        f"{ARTICLES_URL}/search", params={"q": "agents", "since": "not-a-date"}
+    )
+    assert r.status_code == 422
+
+
+def test_search_limit_is_capped_at_100(auth_client: TestClient) -> None:
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 101})
+    assert r.status_code == 422
+
+
+def test_search_excerpt_is_short_and_around_the_keyword(
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
+    needle = _needle()
+    opening = create_random_article(db, title=needle, content="word " * 2000)
+    around = create_random_article(
+        db, content=f"{'before ' * 1000}{needle}{' after' * 1000}"
+    )
+    empty = create_random_article(db, title=needle, content=None)
+
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": needle})
+    assert r.status_code == 200
+    excerpts = {a["id"]: a["excerpt"] for a in r.json()["data"]}
+    assert needle in excerpts[around.id]
+    assert excerpts[opening.id].startswith("word word")
+    assert excerpts[empty.id] is None
+    assert all(len(e) <= 300 for e in excerpts.values() if e)
 
 
 def test_article_facets(auth_client: TestClient) -> None:
@@ -502,7 +613,7 @@ def test_search_articles_has_like_count_and_liked_by_me(
     auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake_vec = [0.05] * 256
-    monkeypatch.setattr(semantic_search, "embed", lambda text: fake_vec)
+    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200

@@ -69,13 +69,25 @@ export function ApiReference() {
         <EndpointCard
           method="GET"
           path="/api/v1/articles/search"
-          description="Semantic search over articles using natural language."
+          description="Search articles by keyword and by meaning, best match first. Each result has an excerpt of the article around the keywords."
           params={[
             {
               name: "q",
-              description: "string · required · natural language query",
+              description:
+                'string · required · keywords or natural language · "quoted phrase", or, -exclude',
             },
-            { name: "limit", description: "integer · 1-50 · default 20" },
+            { name: "limit", description: "integer · 1-100 · default 20" },
+            { name: "tag", description: "tag slug · optional · repeatable" },
+            {
+              name: "kind",
+              description:
+                "post | repo | paper | model · optional · repeatable",
+            },
+            {
+              name: "since",
+              description: "ISO date · optional · omit for all-time",
+            },
+            { name: "publisher", description: "publisher slug · optional" },
           ]}
         />
       </div>

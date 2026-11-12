@@ -21,7 +21,7 @@ export function FeedFilters() {
       className="flex flex-col gap-3.5 border-b pb-5"
     >
       <SearchInput />
-      {/* A search ranks by meaning alone; these don't apply to it. */}
+      {/* A search has its own ranking; these don't apply to it. */}
       <div
         inert={!!filters.search}
         className={cn("flex flex-col gap-2", filters.search && "opacity-40")}

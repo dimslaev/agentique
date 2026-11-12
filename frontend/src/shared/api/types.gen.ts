@@ -42,6 +42,7 @@ export type ArticlePublic = {
     tags?: Array<TagPublic>;
     like_count?: number;
     liked_by_me?: boolean;
+    excerpt?: (string | null);
 };
 
 export type ArticlesPublic = {
@@ -245,8 +246,12 @@ export type ArticlesReadArticlesData = {
 export type ArticlesReadArticlesResponse = (ArticlesPublic);
 
 export type ArticlesSearchArticlesData = {
+    kind?: (Array<(string)> | null);
     limit?: number;
+    publisher?: (string | null);
     q: string;
+    since?: (string | null);
+    tag?: (Array<(string)> | null);
 };
 
 export type ArticlesSearchArticlesResponse = (ArticlesPublic);

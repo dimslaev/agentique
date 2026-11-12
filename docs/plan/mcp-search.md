@@ -58,20 +58,29 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
 
 ### Phase 1: Hybrid search (website first, no auth needed)
 
-- [ ] Task 1: Full-text column on article
+- [x] Task 1: Full-text column on article
   - Criteria: migration adds generated `search_tsv` (english over title, summary, content; simple over title) and a GIN index. Additive only. Existing rows get it with no backfill script.
   - Verify: `alembic upgrade head` on the local db; `EXPLAIN` of a `@@` query uses the GIN index.
   - Deps: none. Files: `backend/migrations/versions/<new>.py`, `backend/app/core/db/article.py`. Size: S.
 
-- [ ] Task 2: Hybrid `search()` with filters and excerpt
+- [x] Task 2: Hybrid `search()` with filters and excerpt
   - Criteria: RRF (k=60) over full-text rank and vector rank. Filters tags, kind, since, publisher apply before ranking. Each row carries a `ts_headline` excerpt of about 300 chars. `limit` defaults to 20, max 100. `/articles/search` takes the new params. Client regenerated.
   - Verify: tests for keyword-only hit (e.g. `vLLM`), filter narrowing, limit cap, excerpt length. Manual: website search for "MCP" and "gpt-4o".
   - Deps: 1. Files: `backend/app/features/catalog/semantic_search.py` (rename to `search.py` if it reads better), `backend/app/features/catalog/model.py`, `backend/app/entry/api/articles.py`, its test, `frontend/src/client/*.gen.ts`. Size: M.
+  - Built:
+    - Module renamed to `search.py`.
+    - Full-text rank is `ts_rank`, title weighted over summary over content.
+    - The vector ranking scans every filtered row. The HNSW index picks its rows first and filters after, so a narrow filter would return almost nothing.
+    - Search reads each ranking 100 deep before it fuses them.
+    - On equal fused scores the keyword match goes first.
+    - Excerpts are plain text, no highlight markup.
+    - On 6000 synthetic articles a search took 25-135 ms.
 
 - [ ] Task 3: Eval set, old vs hybrid
   - Criteria: 20-30 real queries (from `analytics_event` if search is logged, else hand-written) in a small script that prints the old and hybrid top-10 side by side.
   - Verify: run it on the local db and read through the results; note the result in this plan.
   - Deps: 2. Files: `backend/scripts/search_eval.py`. Size: S.
+  - Status: script written, run only with a stubbed embedding on synthetic rows. The cloud session had no prod dump and could not download the embedding model. Run it on a restored dump and note the result here.
 
 ### Checkpoint: Search
 

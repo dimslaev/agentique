@@ -58,6 +58,9 @@ class ArticlePublic(SQLModel):
     tags: list[TagPublic] = Field(default_factory=list)
     like_count: int = 0
     liked_by_me: bool = False
+    # Search only: up to 300 characters of the content around the keywords, or
+    # its opening words when no keyword is in the content.
+    excerpt: str | None = None
 
 
 class ArticlesPublic(SQLModel):

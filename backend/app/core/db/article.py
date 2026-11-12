@@ -6,7 +6,8 @@ from datetime import datetime
 from enum import StrEnum
 
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-from sqlalchemy import JSON, Column, DateTime, Index
+from sqlalchemy import JSON, Column, Computed, DateTime, Index
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlmodel import Field, SQLModel
 
 from app.core.dates import get_datetime_utc
@@ -29,6 +30,23 @@ class Category(StrEnum):
     dev = "dev"
     models = "models"
     research = "research"
+
+
+# The full-text index, kept by Postgres from the title, summary and content.
+# The title is indexed a second time unstemmed, so a word the English
+# dictionary drops or rewrites still matches as typed. A query names the column
+# through this constant, because `Article` does not map it.
+SEARCH_TSV: Column[str] = Column(
+    "search_tsv",
+    TSVECTOR,
+    Computed(
+        "setweight(to_tsvector('english', coalesce(title, '')), 'A')"
+        " || setweight(to_tsvector('simple', coalesce(title, '')), 'A')"
+        " || setweight(to_tsvector('english', coalesce(summary, '')), 'B')"
+        " || setweight(to_tsvector('english', coalesce(content, '')), 'D')",
+        persisted=True,
+    ),
+)
 
 
 class ArticleBase(SQLModel):
@@ -58,7 +76,11 @@ class Article(ArticleBase, table=True):
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
         ),
+        SEARCH_TSV,
+        Index("ix_article_search_tsv", "search_tsv", postgresql_using="gin"),
     )
+    # Not loaded with every article: it is as large as the content.
+    __mapper_args__ = {"exclude_properties": ["search_tsv"]}
     id: int | None = Field(default=None, primary_key=True)
     # 256-dim model2vec vectors; nullable until the import script runs
     embedding: list[float] | None = Field(

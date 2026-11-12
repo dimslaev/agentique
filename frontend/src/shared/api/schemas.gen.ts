@@ -228,6 +228,17 @@ export const ArticlePublicSchema = {
             type: 'boolean',
             title: 'Liked By Me',
             default: false
+        },
+        excerpt: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Excerpt'
         }
     },
     type: 'object',
