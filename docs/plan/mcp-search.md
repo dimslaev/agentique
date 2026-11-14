@@ -31,6 +31,7 @@
 
 ### Search
 - Generated `tsvector` column over title, summary, content, with GIN index. Title also indexed with the `simple` config so tokens like `gpt-4o` match.
+- Tag names and slugs are searched too, at query time, weighted like the title. The query's words must all be in the text or all in one tag.
 - Ranking: plain reciprocal rank fusion of the full-text rank and vector rank, k=60. No score or like boost.
 - Filters (tags, kind, since, publisher) apply before ranking.
 - Tool: `search(q, tags?, kind?, since?, publisher?, limit=20)`, limit max 100.
@@ -73,6 +74,7 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
     - The vector ranking scans every filtered row. The HNSW index picks its rows first and filters after, so a narrow filter would return almost nothing.
     - Search reads each ranking 100 deep before it fuses them.
     - On equal fused scores the keyword match goes first.
+    - A tag whose name or slug matches counts as a keyword match (added after review).
     - Excerpts are plain text, no highlight markup.
     - On 6000 synthetic articles a search took 25-135 ms.
 

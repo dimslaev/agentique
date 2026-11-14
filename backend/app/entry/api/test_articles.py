@@ -401,6 +401,28 @@ def test_search_matches_a_stop_word_in_the_title(
     assert hit.id in [a["id"] for a in r.json()["data"]]
 
 
+def test_search_matches_a_tag_the_text_never_names(
+    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
+    needle = _needle()
+    by_name = create_random_article(db)
+    tag_article(db, by_name, create_random_tag(db, name=f"{needle} tooling"))
+    by_slug = create_random_article(db)
+    tag_article(db, by_slug, create_random_tag(db, slug=f"{needle}-ops"))
+    create_random_article(db, embedding=[0.05] * 256)
+
+    def ids(q: str) -> list[int]:
+        r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": q})
+        assert r.status_code == 200
+        return [a["id"] for a in r.json()["data"]]
+
+    assert ids(f"{needle} tooling")[0] == by_name.id
+    assert ids(f"{needle} ops")[0] == by_slug.id
+    # Both tags hold the word, and each article outranks one found by meaning.
+    assert set(ids(needle)[:3]) >= {by_name.id, by_slug.id}
+
+
 def test_search_filters_narrow_before_ranking(
     auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:

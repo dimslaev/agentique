@@ -1,8 +1,8 @@
 """Article search: by keyword and by meaning, fused into one ranking.
 
-What stays hidden is the mechanism: Postgres full-text over the title, summary
-and content, a pgvector distance to the query's embedding, and the reciprocal
-rank fusion that merges the two rankings.
+What stays hidden is the mechanism: Postgres full-text over the title, summary,
+content and tag names, a pgvector distance to the query's embedding, and the
+reciprocal rank fusion that merges the two rankings.
 """
 
 from __future__ import annotations
@@ -12,12 +12,13 @@ from datetime import datetime
 
 from model2vec import StaticModel
 from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-from sqlalchemy import CTE, ColumnElement, cast, func
+from sqlalchemy import CTE, Subquery, cast, func, literal_column, union_all
 from sqlmodel import Session, col, select
 
 from app.core.db.article import SEARCH_TSV, Article
 from app.core.db.like import like_counts_subquery
 from app.core.db.publisher import Publisher
+from app.core.db.tag import ArticleTag, Tag
 from app.features.catalog.model import ArticlesPublic
 from app.features.catalog.rows import build_rows, filter_conditions, liked_article_ids
 
@@ -55,16 +56,11 @@ def embed(text: str) -> list[float]:  # pragma: no cover
     return [float(x) for x in vec]
 
 
-def _ranked(name: str, rank: ColumnElement[float], *where: ColumnElement[bool]) -> CTE:
-    """The `_POOL` articles with the most `rank` among those passing `where`,
-    numbered from 1."""
-    order = (rank.desc(), col(Article.id).desc())
+def _ranked(name: str, scored: Subquery) -> CTE:
+    """The `_POOL` rows of `scored` (id, rank) with the most rank, numbered from 1."""
+    order = (scored.c.rank.desc(), scored.c.id.desc())
     return (
-        select(
-            col(Article.id).label("id"),
-            func.row_number().over(order_by=order).label("position"),
-        )
-        .where(*where)
+        select(scored.c.id, func.row_number().over(order_by=order).label("position"))
         .order_by(*order)
         .limit(_POOL)
         .cte(name)
@@ -88,6 +84,10 @@ def search(
 ) -> ArticlesPublic:
     """Articles matching `q` by keyword, by meaning, or both, best first.
 
+    It looks for the keywords in the title, summary and content, and in the
+    names of the article's tags. They all have to be in the text, or all in
+    one tag.
+
     The filters narrow the articles before they are ranked. `tags` and `kinds`
     each match any of their values.
 
@@ -102,12 +102,40 @@ def search(
     tsquery = func.websearch_to_tsquery("english", q).op("||")(
         func.websearch_to_tsquery("simple", q)
     )
+    # A tag is the curator's word for what the article is about, so it weighs
+    # like the title. The slug is read too: `rag` is named "Retrieval &
+    # Embeddings".
+    tag_tsv = func.setweight(
+        func.to_tsvector(
+            "english", col(Tag.name) + " " + func.replace(col(Tag.slug), "-", " ")
+        ),
+        literal_column("'A'"),
+    )
+    tagged = (
+        select(
+            col(ArticleTag.article_id).label("id"),
+            func.ts_rank(tag_tsv, tsquery).label("rank"),
+        )
+        .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
+        .where(tag_tsv.op("@@")(tsquery))
+        .subquery()
+    )
+    matches = union_all(
+        select(
+            col(Article.id).label("id"),
+            func.ts_rank(SEARCH_TSV, tsquery).label("rank"),
+        ).where(*conditions, SEARCH_TSV.op("@@")(tsquery)),
+        select(col(Article.id).label("id"), tagged.c.rank)
+        .join(tagged, tagged.c.id == col(Article.id))
+        .where(*conditions),
+    ).subquery()
     by_keyword = _ranked(
         "by_keyword",
-        func.ts_rank(SEARCH_TSV, tsquery),
-        *conditions,
-        SEARCH_TSV.op("@@")(tsquery),
+        select(matches.c.id, func.sum(matches.c.rank).label("rank"))
+        .group_by(matches.c.id)
+        .subquery(),
     )
+
     distance = cast(Article.embedding, Vector(_EMBEDDING_DIMS)).cosine_distance(
         embed(q)
     )
@@ -115,7 +143,10 @@ def search(
     # serve that order, which is wanted: it returns `hnsw.ef_search` rows at
     # most and filters them afterwards, so a narrow filter would leave few.
     by_meaning = _ranked(
-        "by_meaning", -distance, *conditions, col(Article.embedding).is_not(None)
+        "by_meaning",
+        select(col(Article.id).label("id"), (-distance).label("rank"))
+        .where(*conditions, col(Article.embedding).is_not(None))
+        .subquery(),
     )
 
     article_id = func.coalesce(by_keyword.c.id, by_meaning.c.id)

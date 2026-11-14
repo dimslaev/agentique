@@ -69,7 +69,7 @@ export function ApiReference() {
         <EndpointCard
           method="GET"
           path="/api/v1/articles/search"
-          description="Search articles by keyword and by meaning, best match first. Each result has an excerpt of the article around the keywords."
+          description="Search articles by keyword and by meaning, best match first. Keywords match the title, summary, content and tag names. Each result has an excerpt of the article around the keywords."
           params={[
             {
               name: "q",
