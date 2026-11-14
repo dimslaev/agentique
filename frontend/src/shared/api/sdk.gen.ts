@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesArticleOriginsData, ArticlesArticleOriginsResponse, ArticlesArticleVoicesData, ArticlesArticleVoicesResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginRefreshTokenResponse, LoginTestTokenResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AnalyticsCollectEventData, AnalyticsCollectEventResponse, AnalyticsReadReportData, AnalyticsReadReportResponse, ArticlesReadArticlesData, ArticlesReadArticlesResponse, ArticlesSearchArticlesData, ArticlesSearchArticlesResponse, ArticlesArticleFacetsData, ArticlesArticleFacetsResponse, ArticlesArticleOriginsData, ArticlesArticleOriginsResponse, ArticlesArticleVoicesData, ArticlesArticleVoicesResponse, ArticlesSearchPublishersData, ArticlesSearchPublishersResponse, ArticlesSearchTagsData, ArticlesSearchTagsResponse, ArticlesArticleStatsResponse, LikesLikeArticleData, LikesLikeArticleResponse, LikesUnlikeArticleData, LikesUnlikeArticleResponse, LikesReadLikedArticlesResponse, LoginRequestSignInLinkData, LoginRequestSignInLinkResponse, LoginLoginWithLinkData, LoginLoginWithLinkResponse, LoginRefreshTokenResponse, LoginTestTokenResponse, StoriesReadStoriesData, StoriesReadStoriesResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersReadMcpTokenResponse, UsersCreateMcpTokenResponse, UsersRevokeMcpTokenResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AnalyticsService {
     /**
@@ -428,6 +428,45 @@ export class UsersService {
             errors: {
                 422: 'Validation Error'
             }
+        });
+    }
+    
+    /**
+     * Read Mcp Token
+     * Whether the user has an MCP token. Never the token.
+     * @returns McpTokenStatus Successful Response
+     * @throws ApiError
+     */
+    public static readMcpToken(): CancelablePromise<UsersReadMcpTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/users/me/mcp-token'
+        });
+    }
+    
+    /**
+     * Create Mcp Token
+     * Create the user's MCP token, replacing any earlier one. Returned once.
+     * @returns McpTokenCreated Successful Response
+     * @throws ApiError
+     */
+    public static createMcpToken(): CancelablePromise<UsersCreateMcpTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/users/me/mcp-token'
+        });
+    }
+    
+    /**
+     * Revoke Mcp Token
+     * Revoke the user's MCP token.
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static revokeMcpToken(): CancelablePromise<UsersRevokeMcpTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/users/me/mcp-token'
         });
     }
 }

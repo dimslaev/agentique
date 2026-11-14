@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ApiReference, UpgradeButton } from "@/features/developer-api"
+import { ApiReference, McpToken, UpgradeButton } from "@/features/developer-api"
 
 export const Route = createFileRoute("/_layout/developers")({
   component: DevelopersPage,
@@ -23,6 +23,8 @@ function DevelopersPage() {
           <UpgradeButton />
         </div>
       </div>
+
+      <McpToken />
 
       <ApiReference />
     </div>

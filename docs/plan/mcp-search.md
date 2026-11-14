@@ -90,47 +90,78 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
 
 ### Phase 2: Per-user MCP tokens
 
-- [ ] Task 4: Token model and API
+- [x] Task 4: Token model and API
   - Criteria: `mcp_token` table (user_id unique, token hash, created_at). `POST /users/me/mcp-token` creates or replaces and returns the raw token once. `DELETE` revokes it. `GET` says whether one exists, never the token.
   - Verify: tests for create, replace, revoke, and that the hash is never returned.
   - Deps: none. Files: `backend/app/core/db/<mcp_token>.py`, migration, `backend/app/features/audience/service.py`, `backend/app/entry/api/users.py`, tests. Size: M.
+  - Built:
+    - Tokens are free for every signed-in user. The user table has no Pro flag.
+    - `user_id` is the primary key, and the row is deleted with the account.
+    - The token is `agq_` plus 43 random characters, stored as a SHA-256 hash.
+    - The token of an inactive account is refused.
+    - `GET` also returns `created_at`.
 
-- [ ] Task 5: Token UI on the developers page
+- [x] Task 5: Token UI on the developers page
   - Criteria: signed-in users see create, copy (shown once), and revoke, plus the MCP config snippet for Claude Code. Signed-out users see a sign-in prompt.
   - Verify: frontend builds and lints. Manual: create, copy, revoke in the browser.
   - Deps: 4. Files: `frontend/src/features/developer-api/ui/*`, `frontend/src/routes/_layout/developers.tsx`, generated client. Size: M.
+  - Built:
+    - The snippet is the `claude mcp add` command with the token filled in.
+    - Create, copy and revoke checked in headless Chromium against a local app.
 
-- [ ] Task 6: `user` scope in auth, internal tools hidden
+- [x] Task 6: `user` scope in auth, internal tools hidden
   - Criteria: `SharedSecret` checks the shared tokens first, then hashes the token and looks it up in `mcp_token`. A match gets scope `user`. The tool list for `user` holds only `search`, `tags` and `sql_query`. Internal tools are not listed and are refused if called anyway.
   - Verify: tests that list tools and call one under each scope.
   - Deps: 4. Files: `backend/app/entry/mcp/auth.py`, `backend/app/entry/mcp/server.py`, `test_auth.py`, `test_server.py`. Size: M.
+  - Built:
+    - FastMCP can filter per token. Its `AuthMiddleware` hides tools from the list and refuses the call, with our check behind it.
+    - The check is an allowlist, `USER_TOOLS` in `auth.py`, so a new tool is closed to `user` tokens until someone names it there.
+    - `USER_TOOLS` was empty until Tasks 8 and 9 added `search`, `tags` and `sql_query`.
+    - A test calls every other registered tool with a `user` token and expects a refusal.
 
-- [ ] Task 7: Rate limit per token
+- [x] Task 7: Rate limit per token
   - Criteria: 20 calls/min and 500/day per `user` token, in memory, with a ToolError that says when to retry. Internal tokens are not limited. Code comment for multi-worker.
   - Verify: tests with a fake clock.
   - Deps: 6. Files: `backend/app/entry/mcp/auth.py` or a new `rate_limit.py`, its test. Size: S.
+  - Built:
+    - Middleware in `rate_limit.py`. It counts per account, so replacing a token does not reset the count.
+    - It counts calls the scope gate refuses too. Refused-for-limit calls are not counted.
+    - Each of the 2 workers allows half the limit, so 20 a minute and 500 a day is the most a user gets and half of that the least.
 
 ### Phase 3: Public MCP tools
 
-- [ ] Task 8: `search` and `tags` tools
+- [x] Task 8: `search` and `tags` tools
   - Criteria: `search` wraps Task 2's function and returns links with excerpts. `tags` returns slugs with counts. Docstrings explain the filters and how to chain `tags` into `search`.
   - Verify: tests through the MCP client.
   - Deps: 2, 6. Files: `backend/app/entry/mcp/search.py`, `tags.py`, `server.py`, tests. Size: S.
+  - Built:
+    - `search` also returns `id`, and `publisher` is a slug and a name, so a result can feed the `publisher` filter and `sql_query`.
+    - `tags` also returns each tag's name.
+    - The shared tokens reach both tools too.
 
-- [ ] Task 9: `public_api` views and public `sql_query`
+- [x] Task 9: `public_api` views and public `sql_query`
   - Criteria: migration creates schema `public_api` with the views from the Spec. `deploy/sql-roles.sql` adds role `mcp_public` (USAGE plus SELECT on `public_api` only, read-only, 3s timeout, 5 connections). `sql_query` under `user` scope connects as `mcp_public`, and its docstring lists the views and columns.
   - Verify: tests that `content`, `score_reason`, `user` and the ledger are unreachable under `user` scope. Manual: run the role script on the local db.
   - Deps: 6. Files: migration, `deploy/sql-roles.sql`, `backend/app/core/settings.py`, `backend/app/entry/mcp/sql_query.py`, `.env.dev`, test. Size: M.
+  - Built:
+    - The role is in its own file, `deploy/sql-roles-public.sql`. `sql-roles.sql` cannot run twice, and this one can.
+    - `publisher` has `slug` and no `url`. The table has no url column. `tag` also has `name`.
+    - `kind` is text in both views.
+    - Under `user` scope the tool refuses to run if its role can read `public.article`, so a wrong `MCP_PUBLIC_DB_USER` fails closed.
+    - The tests create `mcp_public` from the script and try every table in `public`.
+    - Role script run on the local db, twice.
 
 ### Checkpoint: Complete
 
 - [ ] All tests pass, frontend builds.
 - [ ] End to end: create a token in the browser, add it to Claude Code, then run `tags`, `search` and a `sql_query` join.
+  - Done locally with a FastMCP client in place of Claude Code. Not done against prod.
 - [ ] Prod: run `sql-roles.sql` on the box and set the `mcp_public` password in `/opt/agentique/.env`.
 
-- [ ] Task 10: Docs
+- [x] Task 10: Docs
   - Criteria: ADR for user MCP access (scopes, public views, excerpt-only content). Glossary entries for MCP token and `public_api`. The `server.py` instructions mention the user tools.
   - Deps: 8, 9. Files: `docs/adr/0020-*.md`, `docs/glossary.md`, `server.py`. Size: S.
+  - Built: also a row in `deploy/README.md` and the tool list on the developers page.
 
 ### Risks and Mitigations
 

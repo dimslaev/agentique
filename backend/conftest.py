@@ -4,7 +4,9 @@ MCP write scope."""
 from __future__ import annotations
 
 from collections.abc import Generator
+from pathlib import Path
 
+import psycopg
 import pytest
 from fastapi.testclient import TestClient
 from fastmcp.server.auth import AccessToken
@@ -25,7 +27,7 @@ from app.core.db.publisher import Publisher, PublisherKind
 from app.core.db.story import Story, StoryArticle
 from app.core.db.user import User
 from app.core.settings import settings
-from app.entry.mcp import auth
+from app.entry.mcp import auth, sql_query
 from app.features.audience.service import init_db
 from app.main import app
 
@@ -120,3 +122,31 @@ def candidate(db: Session) -> Generator[Reject]:
     db.exec(delete(Reject).where(col(Reject.url) == row.url))
     db.exec(delete(Publisher).where(col(Publisher.id) == publisher.id))
     db.commit()
+
+
+PUBLIC_ROLE_SQL = Path(__file__).parent.parent / "deploy/sql-roles-public.sql"
+
+
+@pytest.fixture(scope="session")
+def public_dsn() -> str:
+    """The DSN of a real `mcp_public` role, made by the script the box runs.
+
+    The grants are what is under test, so the role cannot be stood in for by
+    the test credentials. It keeps whatever password it had, or gets one.
+    """
+    password = settings.MCP_PUBLIC_DB_PASSWORD or "test-mcp-public"
+    admin = str(settings.SQLALCHEMY_DATABASE_URI).replace("+psycopg", "")
+    with psycopg.connect(admin, autocommit=True) as conn:
+        conn.execute(PUBLIC_ROLE_SQL.read_bytes())
+        conn.execute(
+            psycopg.sql.SQL("ALTER ROLE mcp_public PASSWORD {}").format(password)
+        )
+    return settings.model_copy(
+        update={"MCP_PUBLIC_DB_PASSWORD": password}
+    ).MCP_PUBLIC_DATABASE_URI
+
+
+@pytest.fixture
+def reader_sql(monkeypatch: pytest.MonkeyPatch, public_dsn: str) -> None:
+    """Point `sql_query`'s personal-token connection at the test `mcp_public`."""
+    monkeypatch.setattr(sql_query, "PUBLIC_DSN", public_dsn)

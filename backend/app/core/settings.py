@@ -85,6 +85,28 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     MCP_DB_USER: str = "agentique_ro"
     MCP_DB_PASSWORD: str = ""
 
+    # `sql_query` under a reader's own token logs in as a third role, which
+    # reads only the `public_api` views (deploy/sql-roles-public.sql).
+    MCP_PUBLIC_DB_USER: str = "mcp_public"
+    MCP_PUBLIC_DB_PASSWORD: str = ""
+
+    def _read_only_dsn(self, user: str, password: str, options: str) -> str:
+        dsn = PostgresDsn.build(
+            scheme="postgresql",
+            username=quote(user, safe=""),
+            password=quote(password, safe="") or None,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        )
+        # quote, not the default quote_plus: libpq percent-decodes a URI query
+        # and leaves `+` as a literal plus, so spaces have to be %20.
+        query = urlencode(
+            {"options": f"-c default_transaction_read_only=on {options}"},
+            quote_via=quote,
+        )
+        return f"{dsn}?{query}"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def MCP_DATABASE_URI(self) -> str:
@@ -97,21 +119,24 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
         The statement timeout is tighter than the role's own (30s) so a
         runaway query cannot hold a backend worker for long.
         """
-        dsn = PostgresDsn.build(
-            scheme="postgresql",
-            username=quote(self.MCP_DB_USER, safe=""),
-            password=quote(self.MCP_DB_PASSWORD, safe="") or None,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
+        return self._read_only_dsn(
+            self.MCP_DB_USER, self.MCP_DB_PASSWORD, "-c statement_timeout=10s"
         )
-        # quote, not the default quote_plus: libpq percent-decodes a URI query
-        # and leaves `+` as a literal plus, so spaces have to be %20.
-        options = urlencode(
-            {"options": "-c default_transaction_read_only=on -c statement_timeout=10s"},
-            quote_via=quote,
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def MCP_PUBLIC_DATABASE_URI(self) -> str:
+        """DSN for `sql_query` under a reader's own token.
+
+        The role's grants are the boundary here too: SELECT on the
+        `public_api` views and nothing else. The search path lets a query say
+        `article` and get the view.
+        """
+        return self._read_only_dsn(
+            self.MCP_PUBLIC_DB_USER,
+            self.MCP_PUBLIC_DB_PASSWORD,
+            "-c statement_timeout=3s -c search_path=public_api",
         )
-        return f"{dsn}?{options}"
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

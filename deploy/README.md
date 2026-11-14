@@ -14,6 +14,7 @@ How agentique runs in production. Docker runs only the database
 | `agentique-backup.service` + `.timer` | nightly DB dump to off-box storage at 03:30 |
 | `agentique-sql` | run SQL against the prod DB from stdin, inside the `db` container |
 | `sql-roles.sql` | one-time: creates the read-only and read/write login roles `agentique-sql` uses |
+| `sql-roles-public.sql` | creates `mcp_public`, the role a signed-in user's MCP `sql_query` logs in as. Run it after the deploy that adds the `public_api` views, then set its password to `MCP_PUBLIC_DB_PASSWORD` in `/opt/agentique/.env`. Safe to run again |
 | `rsync-filter` | what the deploy copies to `/opt/agentique`, and what it never deletes there |
 
 ## Shape

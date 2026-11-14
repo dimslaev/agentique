@@ -10,8 +10,13 @@ from sqlmodel import Session, col, select
 from app.core.dates import get_datetime_utc
 from app.core.db.article import Article
 from app.core.db.like import ArticleLike
+from app.core.db.mcp_token import McpToken
 from app.core.db.user import User
-from app.core.security import generate_login_token
+from app.core.security import (
+    generate_login_token,
+    generate_mcp_token,
+    hash_mcp_token,
+)
 from app.core.settings import settings
 from app.features.audience.email import generate_sign_in_email as generate_sign_in_email
 from app.features.audience.email import generate_welcome_email as generate_welcome_email
@@ -86,6 +91,40 @@ def unlike_article(*, session: Session, user_id: uuid.UUID, article_id: int) -> 
     if existing:
         session.delete(existing)
         session.commit()
+
+
+def issue_mcp_token(*, session: Session, user_id: uuid.UUID) -> tuple[str, McpToken]:
+    """A fresh MCP token and its stored row. Any token issued before stops working."""
+    token = generate_mcp_token()
+    row = session.get(McpToken, user_id) or McpToken(user_id=user_id, token_hash="")
+    row.token_hash = hash_mcp_token(token)
+    row.created_at = get_datetime_utc()
+    session.add(row)
+    session.commit()
+    session.refresh(row)
+    return token, row
+
+
+def get_mcp_token(*, session: Session, user_id: uuid.UUID) -> McpToken | None:
+    return session.get(McpToken, user_id)
+
+
+def revoke_mcp_token(*, session: Session, user_id: uuid.UUID) -> None:
+    """Delete the token. Revoking when there is none is a no-op, not an error."""
+    row = session.get(McpToken, user_id)
+    if row:
+        session.delete(row)
+        session.commit()
+
+
+def get_mcp_token_owner(*, session: Session, token: str) -> uuid.UUID | None:
+    """The active account an MCP token belongs to, if it is a live token."""
+    statement = (
+        select(McpToken.user_id)
+        .join(User, col(User.id) == col(McpToken.user_id))
+        .where(McpToken.token_hash == hash_mcp_token(token), col(User.is_active))
+    )
+    return session.exec(statement).first()
 
 
 def init_db(session: Session) -> None:

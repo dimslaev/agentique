@@ -315,6 +315,48 @@ export const MagicLoginSchema = {
     title: 'MagicLogin'
 } as const;
 
+export const McpTokenCreatedSchema = {
+    properties: {
+        token: {
+            type: 'string',
+            title: 'Token'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['token', 'created_at'],
+    title: 'McpTokenCreated',
+    description: 'The only response that carries the token. It cannot be read again.'
+} as const;
+
+export const McpTokenStatusSchema = {
+    properties: {
+        exists: {
+            type: 'boolean',
+            title: 'Exists'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['exists'],
+    title: 'McpTokenStatus'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
