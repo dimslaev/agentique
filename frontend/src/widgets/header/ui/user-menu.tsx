@@ -1,5 +1,5 @@
 import { Link as RouterLink } from "@tanstack/react-router"
-import { ChartColumn, LogOut, User as UserIcon } from "lucide-react"
+import { ChartColumn, LogOut, Plug, User as UserIcon } from "lucide-react"
 import { useAuth } from "@/shared/auth"
 import { trackEvent } from "@/shared/lib/analytics"
 import { Avatar, AvatarFallback } from "@/shared/ui/avatar"
@@ -73,6 +73,12 @@ export function UserMenu() {
           <RouterLink to="/profile">
             <UserIcon />
             Profile
+          </RouterLink>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <RouterLink to="/connect">
+            <Plug />
+            MCP
           </RouterLink>
         </DropdownMenuItem>
         {user.is_superuser && (
