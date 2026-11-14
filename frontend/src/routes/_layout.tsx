@@ -5,6 +5,7 @@ import {
   useMatches,
   useRouterState,
 } from "@tanstack/react-router"
+import { isLoggedIn } from "@/shared/auth"
 import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Footer } from "@/widgets/footer"
@@ -82,13 +83,23 @@ function SiteHeader() {
             <a href="/blog/" className={cn(NAV_LINK, "text-dim")}>
               Blog
             </a>
-            <Link
-              to="/connect"
-              className={cn(NAV_LINK, onMcp ? NAV_CURRENT : "text-dim")}
-              aria-current={onMcp ? "page" : undefined}
-            >
-              MCP
-            </Link>
+            {isLoggedIn() ? (
+              <Link
+                to="/connect"
+                className={cn(NAV_LINK, onMcp ? NAV_CURRENT : "text-dim")}
+                aria-current={onMcp ? "page" : undefined}
+              >
+                MCP
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                search={{ redirect: "/connect" }}
+                className={cn(NAV_LINK, "text-dim")}
+              >
+                MCP
+              </Link>
+            )}
           </nav>
           <RailToggles />
           <UserMenu />
