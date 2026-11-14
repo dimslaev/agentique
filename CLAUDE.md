@@ -34,6 +34,7 @@
 - `scripts/restore-db.sh` starts the `db` container and restores the newest dump in `.ignored/dumps/`. Always use the latest dump, never an older one.
 - Credentials are in committed `.env.dev` (local throwaway only), copied to `.env` when missing. `POSTGRES_USER` must stay `postgres`.
 - Read and mutate freely. It's a local copy, not prod.
+- Cloud sessions have no Docker and no dump. The `agentique` environment's setup script installs Postgres 16 with pgvector and creates a migrated `app` db with the sample articles. Start it with `pg_ctlcluster 16 main start`.
 
 ## MCP tools
 - `.mcp.json` connects to the `agentique` MCP server (`backend/app/entry/mcp/`), exposing `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.

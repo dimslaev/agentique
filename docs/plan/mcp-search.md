@@ -80,7 +80,7 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
   - Criteria: 20-30 real queries (from `analytics_event` if search is logged, else hand-written) in a small script that prints the old and hybrid top-10 side by side.
   - Verify: run it on the local db and read through the results; note the result in this plan.
   - Deps: 2. Files: `backend/scripts/search_eval.py`. Size: S.
-  - Status: script written, run only with a stubbed embedding on synthetic rows. The cloud session had no prod dump and could not download the embedding model. Run it on a restored dump and note the result here.
+  - Status: script written and run on the seeded sample rows only. The cloud session had no prod dump. Run it on a restored dump and note the result here.
 
 ### Checkpoint: Search
 
