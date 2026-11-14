@@ -63,6 +63,19 @@ export type MagicLogin = {
     token: string;
 };
 
+/**
+ * The only response that carries the token. It cannot be read again.
+ */
+export type McpTokenCreated = {
+    token: string;
+    created_at: string;
+};
+
+export type McpTokenStatus = {
+    exists: boolean;
+    created_at?: (string | null);
+};
+
 export type Message = {
     message: string;
 };
@@ -343,5 +356,11 @@ export type UsersUpdateUserMeData = {
 };
 
 export type UsersUpdateUserMeResponse = (UserPublic);
+
+export type UsersReadMcpTokenResponse = (McpTokenStatus);
+
+export type UsersCreateMcpTokenResponse = (McpTokenCreated);
+
+export type UsersRevokeMcpTokenResponse = (Message);
 
 export type UtilsHealthCheckResponse = (boolean);

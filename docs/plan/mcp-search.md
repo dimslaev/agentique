@@ -90,25 +90,42 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
 
 ### Phase 2: Per-user MCP tokens
 
-- [ ] Task 4: Token model and API
+- [x] Task 4: Token model and API
   - Criteria: `mcp_token` table (user_id unique, token hash, created_at). `POST /users/me/mcp-token` creates or replaces and returns the raw token once. `DELETE` revokes it. `GET` says whether one exists, never the token.
   - Verify: tests for create, replace, revoke, and that the hash is never returned.
   - Deps: none. Files: `backend/app/core/db/<mcp_token>.py`, migration, `backend/app/features/audience/service.py`, `backend/app/entry/api/users.py`, tests. Size: M.
+  - Built:
+    - Tokens are free for every signed-in user. The user table has no Pro flag.
+    - `user_id` is the primary key, and the row is deleted with the account.
+    - The token is `agq_` plus 43 random characters, stored as a SHA-256 hash.
+    - The token of an inactive account is refused.
+    - `GET` also returns `created_at`.
 
-- [ ] Task 5: Token UI on the developers page
+- [x] Task 5: Token UI on the developers page
   - Criteria: signed-in users see create, copy (shown once), and revoke, plus the MCP config snippet for Claude Code. Signed-out users see a sign-in prompt.
   - Verify: frontend builds and lints. Manual: create, copy, revoke in the browser.
   - Deps: 4. Files: `frontend/src/features/developer-api/ui/*`, `frontend/src/routes/_layout/developers.tsx`, generated client. Size: M.
+  - Built:
+    - The snippet is the `claude mcp add` command with the token filled in.
+    - Create, copy and revoke checked in headless Chromium against a local app.
 
-- [ ] Task 6: `user` scope in auth, internal tools hidden
+- [x] Task 6: `user` scope in auth, internal tools hidden
   - Criteria: `SharedSecret` checks the shared tokens first, then hashes the token and looks it up in `mcp_token`. A match gets scope `user`. The tool list for `user` holds only `search`, `tags` and `sql_query`. Internal tools are not listed and are refused if called anyway.
   - Verify: tests that list tools and call one under each scope.
   - Deps: 4. Files: `backend/app/entry/mcp/auth.py`, `backend/app/entry/mcp/server.py`, `test_auth.py`, `test_server.py`. Size: M.
+  - Built:
+    - FastMCP can filter per token. Its `AuthMiddleware` hides tools from the list and refuses the call, with our check behind it.
+    - The check is an allowlist, `USER_TOOLS` in `auth.py`, so a new tool is closed to `user` tokens until someone names it there.
+    - Differs from the criteria: `USER_TOOLS` is empty. `sql_query` still reads internal tables until Task 9, so a `user` token lists and reaches no tool. Tasks 8 and 9 add `search`, `tags` and `sql_query` to it.
+    - A test calls every registered tool with a `user` token and expects a refusal.
 
-- [ ] Task 7: Rate limit per token
+- [x] Task 7: Rate limit per token
   - Criteria: 20 calls/min and 500/day per `user` token, in memory, with a ToolError that says when to retry. Internal tokens are not limited. Code comment for multi-worker.
   - Verify: tests with a fake clock.
   - Deps: 6. Files: `backend/app/entry/mcp/auth.py` or a new `rate_limit.py`, its test. Size: S.
+  - Built:
+    - Middleware in `rate_limit.py`. It counts per account, so replacing a token does not reset the count.
+    - It counts calls the scope gate refuses too. Refused-for-limit calls are not counted.
 
 ### Phase 3: Public MCP tools
 

@@ -60,3 +60,18 @@ class SignInRequest(SQLModel):
 
 class MagicLogin(SQLModel):
     token: str = Field(max_length=64)
+
+
+# ─── MCP token ───────────────────────────────────────────────────────────────
+
+
+class McpTokenStatus(SQLModel):
+    exists: bool
+    created_at: datetime | None = None
+
+
+class McpTokenCreated(SQLModel):
+    """The only response that carries the token. It cannot be read again."""
+
+    token: str
+    created_at: datetime

@@ -5,12 +5,13 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from app.entry.mcp.approve import approve
-from app.entry.mcp.auth import SharedSecret
+from app.entry.mcp.auth import SharedSecret, user_scope_gate
 from app.entry.mcp.check_link import check_link
 from app.entry.mcp.close_story import close_story
 from app.entry.mcp.draft_issue import draft_issue
 from app.entry.mcp.get_content import get_content
 from app.entry.mcp.list_candidates import list_candidates
+from app.entry.mcp.rate_limit import UserRateLimit
 from app.entry.mcp.reject import reject
 from app.entry.mcp.reject_many import reject_many
 from app.entry.mcp.related import related
@@ -43,6 +44,8 @@ mcp = FastMCP(
         "extends one, `close_story` closes one."
     ),
     auth=SharedSecret(),
+    # The limit is outermost, so a call the gate refuses is counted too.
+    middleware=[UserRateLimit(), user_scope_gate],
     tools=[
         sql_query,
         web_fetch,
