@@ -90,18 +90,11 @@ def both_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
 def _request(
     client: TestClient, token: str, method: str, params: dict[str, object]
 ) -> str:
-    """Open a session with ``token`` and send one request, as an MCP client would.
+    """Send one request with ``token``. The server keeps no session, so there
+    is nothing to open first.
 
     Returns the JSON of the response message."""
     headers = {**HEADERS, "Authorization": f"Bearer {token}"}
-    opened = client.post(MCP_URL, json=INITIALIZE, headers=headers)
-    assert opened.status_code == 200
-    headers["mcp-session-id"] = opened.headers["mcp-session-id"]
-    client.post(
-        MCP_URL,
-        json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-        headers=headers,
-    )
     response = client.post(
         MCP_URL,
         json={"jsonrpc": "2.0", "id": 2, "method": method, "params": params},
@@ -319,3 +312,15 @@ def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
             client, READ_TOKEN, "get_content", {"url": "https://x.example"}
         )
         assert "curation token" in text
+
+
+def test_no_session_is_kept_between_requests(client: TestClient, token: str) -> None:
+    """The backend runs more than one worker and each has its own memory, so a
+    session one worker opened is unknown to the next."""
+    response = client.post(
+        MCP_URL,
+        json=INITIALIZE,
+        headers={**HEADERS, "Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 200
+    assert "mcp-session-id" not in response.headers

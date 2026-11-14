@@ -79,4 +79,6 @@ mcp = FastMCP(
 # Mounted at /mcp by `app.main`, so the route inside this app is the bare root.
 # Its lifespan starts the streamable-HTTP session manager and has to be handed
 # to the parent app -- a mounted ASGI app never gets a lifespan of its own.
-mcp_app = mcp.http_app(path="/")
+# Stateless: the backend runs several workers and a session lives in one
+# worker's memory, so a client's next request would get a 404 from another.
+mcp_app = mcp.http_app(path="/", stateless_http=True)
