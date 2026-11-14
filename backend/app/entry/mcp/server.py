@@ -29,25 +29,14 @@ from app.entry.mcp.week import week
 
 mcp = FastMCP(
     name="agentique",
+    # Every caller reads this, a reader's own agent included, so it names
+    # only the tools a personal token reaches. The pipeline's agents learn
+    # theirs from each tool's description and from their skills.
     instructions=(
-        "Tools for agentique, a curated archive of AI articles. With a "
-        "personal token: `tags` lists the topics, `search` finds articles by "
-        "keyword and by meaning, and `sql_query` runs read-only SQL over the "
-        "public views. The rest is for the article pipeline. Reading, with a "
-        "shared token: `sql_query` reads the Postgres database (publishers, "
-        "articles, scores, pipeline runs), `web_fetch` reads one page, "
-        "`web_search` finds pages. Curation, with "
-        "the write token only: `list_candidates` lists what is waiting on a "
-        "verdict, `get_content` pages through the stored text for one of them, "
-        "`similar` and `stories` compare candidates with the feed, "
-        "`check_link` looks up a repo or model, `vocabulary` lists the labels, "
-        "and `approve`, `reject` and `reject_many` settle them. Weekly "
-        "newsletter, with the write token only: `week` ranks the week's "
-        "topics, `related` finds what else covers one, and `draft_issue` "
-        "drafts an issue for a person to send and says where to save it as a "
-        "blog post. Stories, with the write token only: `story_candidates` "
-        "lists open stories and unassigned clusters, `save_story` creates or "
-        "extends one, `close_story` closes one."
+        "agentique is a curated archive of articles for people building with "
+        "AI. `tags` lists the topics with article counts, `search` finds "
+        "articles by keyword and by meaning, and `sql_query` runs read-only "
+        "SQL over the archive. Start with `tags`, then pass slugs to `search`."
     ),
     auth=SharedSecret(),
     # The limit is outermost, so a call the gate refuses is counted too.

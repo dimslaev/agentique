@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -324,3 +325,17 @@ def test_no_session_is_kept_between_requests(client: TestClient, token: str) -> 
     )
     assert response.status_code == 200
     assert "mcp-session-id" not in response.headers
+
+
+def test_the_text_shown_to_a_user_agent_names_no_internal_tool() -> None:
+    """The instructions and the descriptions of the user tools are the text a
+    reader's agent is shown. A tool it cannot call has no place in them."""
+    tools = {tool.name: tool for tool in asyncio.run(mcp.list_tools())}
+    shown = [mcp.instructions or ""] + [
+        tools[name].description or "" for name in auth.USER_TOOLS
+    ]
+    internal = set(tools) - auth.USER_TOOLS
+
+    for text in shown:
+        words = set(re.findall(r"[a-z_]+", text))
+        assert not words & internal

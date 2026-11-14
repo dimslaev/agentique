@@ -139,10 +139,7 @@ def sql_query(sql: str) -> str:
     Article text is not readable here. Use `search` to find articles by what
     they say.
 
-    With the shared read token it reads the internal tables instead. The
-    connection is a read-only transaction held by a role with SELECT grants
-    only, and statements are cancelled after 10 seconds. The `user` table is
-    not readable, directly or through a join.
+    A shared token reads the database tables instead, with a 10 second limit.
 
     Returns JSON: `columns` (in select order), `rows` (a list of objects), and
     `truncated` (true when the result hit the 1000-row cap and rows are
