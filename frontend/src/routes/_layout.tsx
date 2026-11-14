@@ -64,7 +64,7 @@ function SiteHeader() {
   )
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const onFeed = pathname === "/"
-  const onMcp = pathname === "/connect"
+  const onMcp = pathname === "/connect-mcp"
   return (
     <Header
       wide={wide}
@@ -85,7 +85,7 @@ function SiteHeader() {
             </a>
             {isLoggedIn() ? (
               <Link
-                to="/connect"
+                to="/connect-mcp"
                 className={cn(NAV_LINK, onMcp ? NAV_CURRENT : "text-dim")}
                 aria-current={onMcp ? "page" : undefined}
               >
@@ -94,7 +94,7 @@ function SiteHeader() {
             ) : (
               <Link
                 to="/login"
-                search={{ redirect: "/connect" }}
+                search={{ redirect: "/connect-mcp" }}
                 className={cn(NAV_LINK, "text-dim")}
               >
                 MCP

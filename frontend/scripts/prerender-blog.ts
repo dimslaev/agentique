@@ -304,7 +304,7 @@ function header(current: "index" | "post"): string {
         <nav aria-label="Site" class="ml-auto flex items-center gap-5 font-wire text-[11px] uppercase tracking-[0.08em]">
           <a href="/" class="${NAV_LINK} text-dim">Feed</a>
           <a href="/blog/"${aria} class="${NAV_LINK} text-paper shadow-[inset_0_-2px_0_var(--signal)]">Blog</a>
-          <a href="/connect" class="${NAV_LINK} text-dim">MCP</a>
+          <a href="/connect-mcp" class="${NAV_LINK} text-dim">MCP</a>
         </nav>
       </div>
     </header>`
@@ -541,7 +541,7 @@ ${groups}
 // Real, indexable SPA routes. Everything else (login, settings, admin,
 // profile) sits behind the login guard and bounces anonymous visitors (and
 // crawlers) to "/", so there's nothing there for Google to rank.
-const STATIC_ROUTES = ["/", "/connect"]
+const STATIC_ROUTES = ["/", "/connect-mcp"]
 
 function renderSitemap(posts: PostMeta[]): string {
   const today = new Date().toISOString().slice(0, 10)

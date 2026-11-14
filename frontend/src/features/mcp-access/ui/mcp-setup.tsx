@@ -102,7 +102,7 @@ export function McpSetup() {
       <Step number={1} title="Get a token">
         {!signedIn && (
           <Button asChild>
-            <Link to="/login" search={{ redirect: "/connect" }}>
+            <Link to="/login" search={{ redirect: "/connect-mcp" }}>
               Sign up for MCP access
             </Link>
           </Button>

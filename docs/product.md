@@ -48,7 +48,7 @@ does not show.
 publishers, tags, stats) are open and unauthenticated, with no date window or rate
 limit; a token is optional and only fills in `liked_by_me`. Liking an article, the
 profile page and an MCP token are the only things that need an account. The MCP page
-(`/connect`, linked in the header) is where a signed-in reader makes a token and
+(`/connect-mcp`, linked in the header) is where a signed-in reader makes a token and
 copies the config for their coding agent: Claude Code, OpenCode, Cursor, Codex CLI
 or VS Code (docs/adr/0020). `/developers` redirects there.
 

@@ -45,6 +45,6 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
   - **Persisted** - a scored article now stored as an `Article` row: has an `id`, sanitized title and content.
   - Each stage extends the one before, so a step's signature says where in the funnel it belongs. Enrichment narrows a `Persisted` to a `ProcessedArticle`: just the fields the embedding text is built from.
 
-- **MCP token** (`McpToken` in `app/core/db/mcp_token.py`) - a signed-in reader's own bearer token for `/mcp`, made on the MCP page (`/connect`) and shown once. One per account, stored as a hash. It carries the `user` scope, which reaches `search`, `tags` and `sql_query` and no other tool (ADR 20). Not `MCP_TOKEN` or `MCP_WRITE_TOKEN`, the two shared tokens in `.env` that our own agents use.
+- **MCP token** (`McpToken` in `app/core/db/mcp_token.py`) - a signed-in reader's own bearer token for `/mcp`, made on the MCP page (`/connect-mcp`) and shown once. One per account, stored as a hash. It carries the `user` scope, which reaches `search`, `tags` and `sql_query` and no other tool (ADR 20). Not `MCP_TOKEN` or `MCP_WRITE_TOKEN`, the two shared tokens in `.env` that our own agents use.
 
 - **`public_api`** - the Postgres schema of views a reader's `sql_query` reads: `article`, `publisher`, `tag`, `article_tag`, with the columns the site already shows and no article text. The role `mcp_public` (`deploy/sql-roles-public.sql`) has SELECT on it and on nothing else.

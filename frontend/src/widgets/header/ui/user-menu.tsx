@@ -76,7 +76,7 @@ export function UserMenu() {
           </RouterLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <RouterLink to="/connect">
+          <RouterLink to="/connect-mcp">
             <Plug />
             MCP
           </RouterLink>
