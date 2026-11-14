@@ -19,7 +19,7 @@ P /.git/
 + /.python-version
 # backup_db.py runs `docker compose -f <repo>/compose.yml`.
 + /compose.yml
-# The units, agentique-sql, the Caddyfile and sql-roles.sql, for installing
+# The units, agentique-sql, the Caddyfile and the sql-roles files, for installing
 # by hand.
 + /deploy/***
 + /backend/

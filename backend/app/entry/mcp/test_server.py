@@ -7,9 +7,16 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, col, delete
 
-from app.core.db.factories import create_random_user
+from app.core.db.factories import (
+    create_random_article,
+    create_random_tag,
+    create_random_user,
+    random_lower_string,
+    tag_article,
+)
+from app.core.db.tag import ArticleTag
 from app.core.settings import settings
 from app.entry.mcp import auth
 from app.entry.mcp.server import mcp
@@ -183,15 +190,16 @@ def test_the_server_has_tools_to_refuse() -> None:
 
 
 @pytest.mark.usefixtures("both_tokens")
-def test_a_user_token_gets_a_session_and_lists_no_tool(
+def test_a_user_token_lists_only_its_own_tools(
     client: TestClient, user_token: str
 ) -> None:
-    assert _list_tools(client, user_token) == set()
+    assert _list_tools(client, user_token) == {"search", "tags", "sql_query"}
+    assert auth.USER_TOOLS == {"search", "tags", "sql_query"}
 
 
 @pytest.mark.usefixtures("both_tokens")
-@pytest.mark.parametrize("name", REGISTERED_TOOLS)
-def test_a_user_token_is_refused_by_every_tool(
+@pytest.mark.parametrize("name", sorted(set(REGISTERED_TOOLS) - auth.USER_TOOLS))
+def test_a_user_token_is_refused_by_every_other_tool(
     client: TestClient, user_token: str, name: str
 ) -> None:
     """Refused by the gate before the arguments are read, so none are sent. A
@@ -199,6 +207,60 @@ def test_a_user_token_is_refused_by_every_tool(
     is_error, text = _call_tool(client, user_token, name, {})
     assert is_error
     assert "Authorization failed" in text
+
+
+@pytest.mark.usefixtures("both_tokens", "reader_sql")
+def test_a_user_token_chains_tags_into_search_and_sql(
+    client: TestClient,
+    user_token: str,
+    db: Session,
+    made: dict[str, list[int]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("app.features.catalog.search.embed", lambda _text: [0.05] * 256)
+    word = random_lower_string()
+    article = create_random_article(
+        db, title=f"About {word}", content=f"Private body mentioning {word}."
+    )
+    assert article.id is not None
+    made["articles"].append(article.id)
+    made["publishers"].append(article.publisher_id)
+    tag = create_random_tag(db)
+    tag_article(db, article, tag)
+
+    try:
+        is_error, text = _call_tool(client, user_token, "tags", {})
+        assert not is_error
+        assert tag.slug in text
+
+        is_error, text = _call_tool(
+            client, user_token, "search", {"q": word, "tags": [tag.slug]}
+        )
+        assert not is_error
+        assert article.url in text
+
+        is_error, text = _call_tool(
+            client,
+            user_token,
+            "sql_query",
+            {
+                "sql": "SELECT a.url FROM article a "
+                "JOIN article_tag x ON x.article_id = a.id "
+                f"JOIN tag t ON t.id = x.tag_id WHERE t.slug = '{tag.slug}'"
+            },
+        )
+        assert not is_error
+        assert json.loads(text)["rows"] == [{"url": article.url}]
+
+        is_error, text = _call_tool(
+            client, user_token, "sql_query", {"sql": 'SELECT email FROM public."user"'}
+        )
+        assert is_error
+        assert "permission denied" in text
+    finally:
+        db.exec(delete(ArticleTag).where(col(ArticleTag.tag_id) == tag.id))
+        db.delete(tag)
+        db.commit()
 
 
 @pytest.mark.usefixtures("both_tokens")
@@ -221,7 +283,7 @@ def test_a_user_token_reaches_only_the_tools_it_is_allowed(
     )
     assert is_error
     assert "curation token" in text
-    is_error, text = _call_tool(client, user_token, "sql_query", {})
+    is_error, text = _call_tool(client, user_token, "search", {"q": "x"})
     assert is_error
     assert "Authorization failed" in text
 
@@ -245,9 +307,9 @@ def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
     client: TestClient, user_token: str
 ) -> None:
     for _ in range(20):
-        _, text = _call_tool(client, user_token, "sql_query", {})
+        _, text = _call_tool(client, user_token, "web_fetch", {})
         assert "Authorization failed" in text
-    is_error, text = _call_tool(client, user_token, "sql_query", {})
+    is_error, text = _call_tool(client, user_token, "tags", {})
     assert is_error
     assert "Rate limit reached: 20 calls a minute" in text
 

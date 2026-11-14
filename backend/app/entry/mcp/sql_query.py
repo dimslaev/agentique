@@ -3,6 +3,9 @@
 Reachable with the read token. What keeps it read-only is the role it logs in
 as, a read-only transaction, a prepared statement, and a plan check that
 refuses the tables no question needs.
+
+A reader's own token logs in as a narrower role that reads only the
+`public_api` views.
 """
 
 from __future__ import annotations
@@ -13,8 +16,10 @@ from datetime import date, datetime
 
 import psycopg
 from fastmcp.exceptions import ToolError
+from fastmcp.server.dependencies import get_access_token
 
 from app.core.settings import settings
+from app.entry.mcp.auth import USER_SCOPE
 
 # A cap, not a page size: an agent that wants more should narrow the query or
 # add its own LIMIT. Anything larger is context an agent cannot read anyway.
@@ -30,6 +35,8 @@ BLOCKED_TABLES = frozenset({"user"})
 # and would happily run a DELETE. One per call rather than a pool: the cost is
 # nothing at this call rate, and no session state survives a query.
 DSN = settings.MCP_DATABASE_URI
+# What a `user` token connects with instead.
+PUBLIC_DSN = settings.MCP_PUBLIC_DATABASE_URI
 
 
 def _json_safe(value: object) -> str:
@@ -88,15 +95,48 @@ def _reject_blocked_tables(
         raise ToolError(f"Not readable through this tool: {', '.join(sorted(blocked))}")
 
 
+def _is_reader() -> bool:
+    token = get_access_token()
+    return token is not None and USER_SCOPE in token.scopes
+
+
+def _reject_a_role_that_reads_tables(
+    cursor: psycopg.Cursor[tuple[object, ...]],
+) -> None:
+    """Refuse to run a reader's SQL as a role that can read the tables.
+
+    The role's grants are the only thing between a reader and the internal
+    tables. A deploy that points `MCP_PUBLIC_DB_USER` at a wider role would
+    hand them over without an error, so check before running anything.
+    """
+    cursor.execute("SELECT has_table_privilege('public.article', 'SELECT')")
+    row = cursor.fetchone()
+    if row is None or row[0]:
+        raise ToolError("sql_query is not set up for personal tokens on this server.")
+
+
 def sql_query(sql: str) -> str:
     """Run a read-only SQL query against the agentique Postgres database.
 
-    Accepts one statement, and only one Postgres can plan as a query. The
+    Accepts one statement, and only one Postgres can plan as a query. Writes
+    and DDL fail. A rejected statement comes back as Postgres's own error
+    message.
+
+    With a personal token it reads these views, and statements are cancelled
+    after 3 seconds:
+    - `article`: id, title, url, publisher_id, published_at, score (1-100),
+      kind (post, repo, paper, model), summary, like_count
+    - `publisher`: id, slug, name, kind (lab, company, individual, media,
+      community, unknown)
+    - `tag`: id, slug, name
+    - `article_tag`: article_id, tag_id
+    Article text is not readable here. Use `search` to find articles by what
+    they say.
+
+    With the shared read token it reads the internal tables instead. The
     connection is a read-only transaction held by a role with SELECT grants
-    only, so writes and DDL fail rather than being filtered out beforehand, and
-    statements are cancelled after 10 seconds. The `user` table is not
-    readable, directly or through a join. A rejected statement comes back as
-    Postgres's own error message.
+    only, and statements are cancelled after 10 seconds. The `user` table is
+    not readable, directly or through a join.
 
     Returns JSON: `columns` (in select order), `rows` (a list of objects), and
     `truncated` (true when the result hit the 1000-row cap and rows are
@@ -104,7 +144,11 @@ def sql_query(sql: str) -> str:
     vectors are stringified.
     """
     try:
-        with psycopg.connect(DSN) as conn, conn.cursor() as cursor:
+        reader = _is_reader()
+        dsn = PUBLIC_DSN if reader else DSN
+        with psycopg.connect(dsn) as conn, conn.cursor() as cursor:
+            if reader:
+                _reject_a_role_that_reads_tables(cursor)
             _reject_blocked_tables(cursor, sql)
 
             cursor.execute(sql, prepare=True)  # ty: ignore[no-matching-overload]

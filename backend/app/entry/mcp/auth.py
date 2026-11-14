@@ -34,9 +34,9 @@ WRITE_SCOPE = "curate"
 USER_SCOPE = "user"
 
 # The tools a `user` token may list and call. An allowlist, so a tool added to
-# the server is closed to readers until it is named here. Empty for now:
-# `sql_query` still logs in as the internal role and reads internal tables.
-USER_TOOLS: frozenset[str] = frozenset()
+# the server is closed to readers until it is named here. `sql_query` is on it
+# because it logs in as a narrower role for this scope.
+USER_TOOLS = frozenset({"search", "tags", "sql_query"})
 
 
 def _matches(token: str, expected: str | None) -> bool:

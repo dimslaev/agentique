@@ -16,10 +16,12 @@ from app.entry.mcp.reject import reject
 from app.entry.mcp.reject_many import reject_many
 from app.entry.mcp.related import related
 from app.entry.mcp.save_story import save_story
+from app.entry.mcp.search import search
 from app.entry.mcp.similar import similar
 from app.entry.mcp.sql_query import sql_query
 from app.entry.mcp.stories import stories
 from app.entry.mcp.story_candidates import story_candidates
+from app.entry.mcp.tags import tags
 from app.entry.mcp.vocabulary import vocabulary
 from app.entry.mcp.web_fetch import web_fetch
 from app.entry.mcp.web_search import web_search
@@ -28,9 +30,13 @@ from app.entry.mcp.week import week
 mcp = FastMCP(
     name="agentique",
     instructions=(
-        "Tools for the agentique article pipeline. Reading: `sql_query` reads "
-        "the Postgres database (publishers, articles, scores, pipeline runs), "
-        "`web_fetch` reads one page, `web_search` finds pages. Curation, with "
+        "Tools for agentique, a curated archive of AI articles. With a "
+        "personal token: `tags` lists the topics, `search` finds articles by "
+        "keyword and by meaning, and `sql_query` runs read-only SQL over the "
+        "public views. The rest is for the article pipeline. Reading, with a "
+        "shared token: `sql_query` reads the Postgres database (publishers, "
+        "articles, scores, pipeline runs), `web_fetch` reads one page, "
+        "`web_search` finds pages. Curation, with "
         "the write token only: `list_candidates` lists what is waiting on a "
         "verdict, `get_content` pages through the stored text for one of them, "
         "`similar` and `stories` compare candidates with the feed, "
@@ -47,6 +53,8 @@ mcp = FastMCP(
     # The limit is outermost, so a call the gate refuses is counted too.
     middleware=[UserRateLimit(), user_scope_gate],
     tools=[
+        search,
+        tags,
         sql_query,
         web_fetch,
         web_search,

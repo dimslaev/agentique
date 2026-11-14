@@ -12,6 +12,20 @@ import { CodeBlock } from "./code-block"
 const MCP_URL = `${import.meta.env.VITE_API_URL}/mcp/`
 const QUERY_KEY = ["mcpToken"]
 
+const TOOLS = [
+  { name: "tags", description: "Every tag, with how many articles carry it." },
+  {
+    name: "search",
+    description:
+      "Articles by keyword and by meaning, filtered by tag, kind, date or publisher. Returns links and excerpts.",
+  },
+  {
+    name: "sql_query",
+    description:
+      "Read-only SQL over article, publisher, tag and article_tag. 20 calls a minute, 500 a day across all three.",
+  },
+]
+
 const claudeCodeCommand = (token: string) =>
   `claude mcp add --transport http agentique ${MCP_URL} \\
   --header "Authorization: Bearer ${token}"`
@@ -52,10 +66,19 @@ export function McpToken() {
       <div>
         <h2 className="font-display text-xl font-bold tracking-tight">MCP</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Connect your agent to agentique over MCP with a personal token. Free
-          with an account.
+          Search the archive from your own agent over MCP with a personal token.
+          Free with an account.
         </p>
       </div>
+
+      <dl className="space-y-2">
+        {TOOLS.map(({ name, description }) => (
+          <div key={name} className="flex gap-4 text-xs">
+            <dt className="font-wire text-foreground w-28 shrink-0">{name}</dt>
+            <dd className="text-muted-foreground">{description}</dd>
+          </div>
+        ))}
+      </dl>
 
       {!signedIn && (
         <Button asChild>

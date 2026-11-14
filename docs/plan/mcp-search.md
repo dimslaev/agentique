@@ -116,8 +116,8 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
   - Built:
     - FastMCP can filter per token. Its `AuthMiddleware` hides tools from the list and refuses the call, with our check behind it.
     - The check is an allowlist, `USER_TOOLS` in `auth.py`, so a new tool is closed to `user` tokens until someone names it there.
-    - Differs from the criteria: `USER_TOOLS` is empty. `sql_query` still reads internal tables until Task 9, so a `user` token lists and reaches no tool. Tasks 8 and 9 add `search`, `tags` and `sql_query` to it.
-    - A test calls every registered tool with a `user` token and expects a refusal.
+    - `USER_TOOLS` was empty until Tasks 8 and 9 added `search`, `tags` and `sql_query`.
+    - A test calls every other registered tool with a `user` token and expects a refusal.
 
 - [x] Task 7: Rate limit per token
   - Criteria: 20 calls/min and 500/day per `user` token, in memory, with a ToolError that says when to retry. Internal tokens are not limited. Code comment for multi-worker.
@@ -129,25 +129,38 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
 
 ### Phase 3: Public MCP tools
 
-- [ ] Task 8: `search` and `tags` tools
+- [x] Task 8: `search` and `tags` tools
   - Criteria: `search` wraps Task 2's function and returns links with excerpts. `tags` returns slugs with counts. Docstrings explain the filters and how to chain `tags` into `search`.
   - Verify: tests through the MCP client.
   - Deps: 2, 6. Files: `backend/app/entry/mcp/search.py`, `tags.py`, `server.py`, tests. Size: S.
+  - Built:
+    - `search` also returns `id`, and `publisher` is a slug and a name, so a result can feed the `publisher` filter and `sql_query`.
+    - `tags` also returns each tag's name.
+    - The shared tokens reach both tools too.
 
-- [ ] Task 9: `public_api` views and public `sql_query`
+- [x] Task 9: `public_api` views and public `sql_query`
   - Criteria: migration creates schema `public_api` with the views from the Spec. `deploy/sql-roles.sql` adds role `mcp_public` (USAGE plus SELECT on `public_api` only, read-only, 3s timeout, 5 connections). `sql_query` under `user` scope connects as `mcp_public`, and its docstring lists the views and columns.
   - Verify: tests that `content`, `score_reason`, `user` and the ledger are unreachable under `user` scope. Manual: run the role script on the local db.
   - Deps: 6. Files: migration, `deploy/sql-roles.sql`, `backend/app/core/settings.py`, `backend/app/entry/mcp/sql_query.py`, `.env.dev`, test. Size: M.
+  - Built:
+    - The role is in its own file, `deploy/sql-roles-public.sql`. `sql-roles.sql` cannot run twice, and this one can.
+    - `publisher` has `slug` and no `url`. The table has no url column. `tag` also has `name`.
+    - `kind` is text in both views.
+    - Under `user` scope the tool refuses to run if its role can read `public.article`, so a wrong `MCP_PUBLIC_DB_USER` fails closed.
+    - The tests create `mcp_public` from the script and try every table in `public`.
+    - Role script run on the local db, twice.
 
 ### Checkpoint: Complete
 
 - [ ] All tests pass, frontend builds.
 - [ ] End to end: create a token in the browser, add it to Claude Code, then run `tags`, `search` and a `sql_query` join.
+  - Done locally with a FastMCP client in place of Claude Code. Not done against prod.
 - [ ] Prod: run `sql-roles.sql` on the box and set the `mcp_public` password in `/opt/agentique/.env`.
 
-- [ ] Task 10: Docs
+- [x] Task 10: Docs
   - Criteria: ADR for user MCP access (scopes, public views, excerpt-only content). Glossary entries for MCP token and `public_api`. The `server.py` instructions mention the user tools.
   - Deps: 8, 9. Files: `docs/adr/0020-*.md`, `docs/glossary.md`, `server.py`. Size: S.
+  - Built: also a row in `deploy/README.md` and the tool list on the developers page.
 
 ### Risks and Mitigations
 
