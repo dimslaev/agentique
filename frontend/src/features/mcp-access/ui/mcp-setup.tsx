@@ -15,7 +15,7 @@ const QUERY_KEY = ["mcpToken"]
 const TOKEN_PLACEHOLDER = "YOUR_TOKEN"
 
 const EXAMPLE_PROMPT =
-  "Using the agentique MCP (search, tags and sql_query together), find the most practical ways to sandbox local AI coding agents that work today. Use engineering blogs and individual writers, not vendor marketing. Refine your own queries until coverage is good, without asking me anything. Return one ranked list: link, one-line takeaway, and what to do on a dev machine."
+  "Using the agentique MCP (search, sql_query, tags — batched, iterate until coverage is good, don't ask me anything), return a ranked list of the most practical tools and strategies for sandboxing local AI coding agents, from engineering blogs and individual writers (no vendor marketing, no cloud products). Tools need a link, one-line takeaway, and install command; strategies need a link, takeaway, and what to do on a dev machine. Flag anything beta."
 
 const TOOLS = [
   {
