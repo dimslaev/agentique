@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 
 import pytest
 from fastmcp.exceptions import ToolError
@@ -204,6 +205,24 @@ def test_a_reader_cannot_select_an_internal_article_column(column: str) -> None:
 def test_a_reader_cannot_read_any_table(table: str) -> None:
     with pytest.raises(ToolError, match="permission denied"):
         tool.sql_query(f'SELECT 1 FROM public."{table}" LIMIT 1')
+
+
+@pytest.fixture
+def no_usage_on_public() -> Iterator[None]:
+    """The box's grants: no role but the owner may look inside `public`."""
+    with engine.begin() as conn:
+        conn.execute(text("REVOKE USAGE ON SCHEMA public FROM PUBLIC"))
+    yield
+    with engine.begin() as conn:
+        conn.execute(text("GRANT USAGE ON SCHEMA public TO PUBLIC"))
+
+
+@pytest.mark.usefixtures("reader", "no_usage_on_public")
+def test_a_reader_reads_the_views_without_usage_on_public() -> None:
+    result = json.loads(tool.sql_query("SELECT count(*) AS n FROM article"))
+    assert result["columns"] == ["n"]
+    with pytest.raises(ToolError, match="permission denied for schema public"):
+        tool.sql_query("SELECT 1 FROM public.article")
 
 
 @pytest.mark.usefixtures("reader")
