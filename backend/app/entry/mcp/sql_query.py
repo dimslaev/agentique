@@ -109,7 +109,13 @@ def _reject_a_role_that_reads_tables(
     tables. A deploy that points `MCP_PUBLIC_DB_USER` at a wider role would
     hand them over without an error, so check before running anything.
     """
-    cursor.execute("SELECT has_table_privilege('public.article', 'SELECT')")
+    # By oid, not by name: where the role has no USAGE on `public`, as on the
+    # box, looking the name up is itself refused.
+    cursor.execute(
+        "SELECT has_table_privilege(c.oid, 'SELECT') FROM pg_class c "
+        "JOIN pg_namespace n ON n.oid = c.relnamespace "
+        "WHERE n.nspname = 'public' AND c.relname = 'article'"
+    )
     row = cursor.fetchone()
     if row is None or row[0]:
         raise ToolError("sql_query is not set up for personal tokens on this server.")
