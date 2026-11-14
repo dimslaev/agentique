@@ -21,9 +21,11 @@ A Voices panel there lists the writers, labs and companies with the most article
 
 Below it, Reader picks lists the articles readers liked most in the last 30 days, with their like counts beside the agent's score.
 
-**Semantic search.** Typing a query searches by meaning, not keyword — it embeds your
-query and finds the nearest articles in vector space, so "how do I run a model locally"
-surfaces relevant pieces even if none of them use that exact phrase.
+**Search.** Typing a query searches by keyword and by meaning. Postgres full-text finds
+the articles that hold the words in their title, summary, body or tag names, so a name
+like "vLLM" matches exactly. The query's embedding finds the nearest articles in vector space, so
+"how do I run a model locally" surfaces relevant pieces even if none of them use that
+exact phrase. Search merges the two rankings into one list.
 
 **Accounts and newsletter.** Signing up takes only an email: it creates the account,
 adds the address to the newsletter (synced to a Resend audience), and emails a sign-in

@@ -1,7 +1,7 @@
 """The public feed's read verbs: the feed query, the liked list, search, facets and stats.
 
-Search and the facet counts live in their own modules (`semantic_search`,
-`facets`) and are exposed here, so entry imports one module per feature.
+Search and the facet counts live in their own modules (`search`, `facets`)
+and are exposed here, so entry imports one module per feature.
 """
 
 from __future__ import annotations
@@ -15,15 +15,19 @@ from sqlmodel import Session, col, select
 from app.core.db.article import Article
 from app.core.db.like import ArticleLike, like_counts_subquery
 from app.core.db.publisher import Publisher
-from app.core.db.tag import ArticleTag, Tag
 from app.features.catalog.facets import all_facets as all_facets
 from app.features.catalog.facets import origin_counts as origin_counts
 from app.features.catalog.facets import publisher_facets as publisher_facets
 from app.features.catalog.facets import tag_facets as tag_facets
 from app.features.catalog.facets import voices as voices
 from app.features.catalog.model import ArticlesPublic, Origin
-from app.features.catalog.rows import build_rows, liked_article_ids, origin_condition
-from app.features.catalog.semantic_search import search as search
+from app.features.catalog.rows import (
+    build_rows,
+    filter_conditions,
+    liked_article_ids,
+    origin_condition,
+)
+from app.features.catalog.search import search as search
 
 
 def _filters(
@@ -35,37 +39,21 @@ def _filters(
     tags: list[str] | None,
     publisher: str | None,
 ) -> list[ColumnElement[bool]]:
-    conditions: list[ColumnElement[bool]] = []
     # A text search is all-time. `since` is a browsing window the reader left
     # on from scrolling the feed, not a constraint they chose for this search,
     # and silently hiding the one article they typed the words of is worse than
     # ignoring it.
-    if since is not None and not q:
-        conditions.append(col(Article.published_at) >= since)
+    conditions = filter_conditions(
+        since=None if q else since, kinds=kinds, tags=tags, publisher=publisher
+    )
     if q:
         conditions.append(
             col(Article.title).ilike(f"%{q}%") | col(Article.content).ilike(f"%{q}%")
         )
     if min_score is not None:
         conditions.append(col(Article.score) >= min_score)
-    if kinds:
-        conditions.append(col(Article.kind).in_(kinds))
     if origin is not None:
         conditions.append(origin_condition(origin))
-    if tags:
-        conditions.append(
-            col(Article.id).in_(
-                select(ArticleTag.article_id)
-                .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
-                .where(col(Tag.slug).in_(tags))
-            )
-        )
-    if publisher is not None:
-        conditions.append(
-            col(Article.publisher_id).in_(
-                select(Publisher.id).where(Publisher.slug == publisher)
-            )
-        )
     return conditions
 
 

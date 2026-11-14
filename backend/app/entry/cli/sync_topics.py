@@ -11,7 +11,7 @@ from __future__ import annotations
 import sys
 
 from app.features.newsletter.model import IssueError
-from app.features.newsletter.topics import TOPICS, create_missing
+from app.features.newsletter.service import TOPICS, create_missing
 
 
 def main() -> None:

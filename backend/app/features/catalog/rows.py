@@ -1,15 +1,16 @@
-"""The ArticlePublic assembly and the origin filter that the feed, search and facets share.
+"""The ArticlePublic assembly and the filters that the feed, search and facets share.
 
 `ArticlePublic` nests the publisher and the article's tags, so every endpoint
 that returns articles (feed, search, liked) needs the same joins and the same
-assembly. It lives apart from `service` so `semantic_search` and `facets` can
-use it while `service` exposes them.
+assembly. It lives apart from `service` so `search` and `facets` can use it
+while `service` exposes them.
 """
 
 from __future__ import annotations
 
 import uuid
 from collections import defaultdict
+from datetime import datetime
 
 from sqlalchemy import ColumnElement
 from sqlmodel import Session, col, select
@@ -116,3 +117,34 @@ def origin_condition(origin: Origin) -> ColumnElement[bool]:
     return (col(Article.kind) == ArticleKind.post) & col(Article.publisher_id).in_(
         select(Publisher.id).where(col(Publisher.kind).in_(kinds))
     )
+
+
+def filter_conditions(
+    *,
+    since: datetime | None,
+    kinds: list[str] | None,
+    tags: list[str] | None,
+    publisher: str | None,
+) -> list[ColumnElement[bool]]:
+    """The filters the feed and search share. `kinds` and `tags` each match
+    any of their values; `publisher` is a slug."""
+    conditions: list[ColumnElement[bool]] = []
+    if since is not None:
+        conditions.append(col(Article.published_at) >= since)
+    if kinds:
+        conditions.append(col(Article.kind).in_(kinds))
+    if tags:
+        conditions.append(
+            col(Article.id).in_(
+                select(ArticleTag.article_id)
+                .join(Tag, col(Tag.id) == col(ArticleTag.tag_id))
+                .where(col(Tag.slug).in_(tags))
+            )
+        )
+    if publisher is not None:
+        conditions.append(
+            col(Article.publisher_id).in_(
+                select(Publisher.id).where(Publisher.slug == publisher)
+            )
+        )
+    return conditions

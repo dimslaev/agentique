@@ -27,8 +27,8 @@ export function ArticlesList() {
 
   const since = cutoffIso(PUBLISHED_DAYS[dateRange] ?? 7)
 
-  // A search ranks by meaning across all time, so the date, sort and filters
-  // don't apply to it; they are greyed out while it is active.
+  // A search ranks by keyword and meaning across all time, so the date, sort
+  // and filters don't apply to it; they are greyed out while it is active.
   const { data, isLoading, isFetching, isError } = useQuery({
     queryKey: search
       ? ["articles", "search", search]

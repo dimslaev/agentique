@@ -93,6 +93,10 @@ export class ArticlesService {
      * @param data The data for the request.
      * @param data.q
      * @param data.limit
+     * @param data.tag
+     * @param data.kind
+     * @param data.since
+     * @param data.publisher
      * @returns ArticlesPublic Successful Response
      * @throws ApiError
      */
@@ -102,7 +106,11 @@ export class ArticlesService {
             url: '/api/v1/articles/search',
             query: {
                 q: data.q,
-                limit: data.limit
+                limit: data.limit,
+                tag: data.tag,
+                kind: data.kind,
+                since: data.since,
+                publisher: data.publisher
             },
             errors: {
                 422: 'Validation Error'
