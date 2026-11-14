@@ -5,6 +5,7 @@ import {
   useMatches,
   useRouterState,
 } from "@tanstack/react-router"
+import { isLoggedIn } from "@/shared/auth"
 import { cn } from "@/shared/lib/utils"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Footer } from "@/widgets/footer"
@@ -19,7 +20,7 @@ declare module "@tanstack/react-router" {
   }
 }
 
-// The site nav, the same pair the blog's static header shows (see
+// The site nav, the same links the blog's static header shows (see
 // frontend/scripts/prerender-blog.ts), so moving between the two feels like
 // one site.
 const NAV_LINK =
@@ -61,9 +62,9 @@ function SiteHeader() {
       s.mode === "wide" &&
       (hasPanels(s, "left") || hasPanels(s, "right")),
   )
-  const onFeed = useRouterState({
-    select: (s) => s.location.pathname === "/",
-  })
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const onFeed = pathname === "/"
+  const onMcp = pathname === "/connect-mcp"
   return (
     <Header
       wide={wide}
@@ -82,6 +83,23 @@ function SiteHeader() {
             <a href="/blog/" className={cn(NAV_LINK, "text-dim")}>
               Blog
             </a>
+            {isLoggedIn() ? (
+              <Link
+                to="/connect-mcp"
+                className={cn(NAV_LINK, onMcp ? NAV_CURRENT : "text-dim")}
+                aria-current={onMcp ? "page" : undefined}
+              >
+                MCP
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                search={{ redirect: "/connect-mcp" }}
+                className={cn(NAV_LINK, "text-dim")}
+              >
+                MCP
+              </Link>
+            )}
           </nav>
           <RailToggles />
           <UserMenu />

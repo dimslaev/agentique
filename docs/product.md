@@ -44,13 +44,13 @@ stories, starts a story when three articles from two publishers share a theme,
 and closes one after 21 quiet days (docs/adr/0016). With no stories the rail
 does not show.
 
-**A developer API — public, paid tier not live yet.** The article endpoints (list,
-search, facets, publishers, tags, stats) are open and unauthenticated, with no date
-window or rate limit; a token is optional and only fills in `liked_by_me`. Liking an
-article and the profile page are the only things that need an account. The
-`/developers` page still pitches a $10/mo Pro tier for programmatic access — the
-upgrade button fires an analytics event and shows a "coming soon" dialog; no real
-Stripe integration exists yet.
+**A public API and MCP access.** The article endpoints (list, search, facets,
+publishers, tags, stats) are open and unauthenticated, with no date window or rate
+limit; a token is optional and only fills in `liked_by_me`. Liking an article, the
+profile page and an MCP token are the only things that need an account. The MCP page
+(`/connect-mcp`, linked in the header) is where a signed-in reader makes a token and
+copies the config for their coding agent: Claude Code, OpenCode, Cursor, Codex CLI
+or VS Code (docs/adr/0020). `/developers` redirects there.
 
 **Admin analytics (`/admin`, superusers only).** The site logs its own pageviews and
 clicks, with no third party. The page reports visitors, pageviews, returning visitors,

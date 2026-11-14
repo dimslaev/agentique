@@ -1,32 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { ApiReference, McpToken, UpgradeButton } from "@/features/developer-api"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
+// The page moved to /connect-mcp. Old links still land.
 export const Route = createFileRoute("/_layout/developers")({
-  component: DevelopersPage,
-  head: () => ({
-    meta: [{ title: "Developers API - Agentique" }],
-  }),
+  beforeLoad: () => {
+    throw redirect({ to: "/connect-mcp", replace: true })
+  },
 })
-
-function DevelopersPage() {
-  return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">
-          Pro plan
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Programmatic access to curated AI news. $10/mo.
-        </p>
-
-        <div className="mt-6">
-          <UpgradeButton />
-        </div>
-      </div>
-
-      <McpToken />
-
-      <ApiReference />
-    </div>
-  )
-}

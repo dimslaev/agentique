@@ -16,6 +16,7 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutProfileRouteImport } from './routes/_layout/profile'
 import { Route as LayoutFeedRouteImport } from './routes/_layout/feed'
 import { Route as LayoutDevelopersRouteImport } from './routes/_layout/developers'
+import { Route as LayoutConnectMcpRouteImport } from './routes/_layout/connect-mcp'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as AuthAuthRouteImport } from './routes/_auth/auth'
@@ -53,6 +54,11 @@ const LayoutDevelopersRoute = LayoutDevelopersRouteImport.update({
   path: '/developers',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutConnectMcpRoute = LayoutConnectMcpRouteImport.update({
+  id: '/connect-mcp',
+  path: '/connect-mcp',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthAuthRoute
   '/login': typeof AuthLoginRoute
   '/admin': typeof LayoutAdminRoute
+  '/connect-mcp': typeof LayoutConnectMcpRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthAuthRoute
   '/login': typeof AuthLoginRoute
   '/admin': typeof LayoutAdminRoute
+  '/connect-mcp': typeof LayoutConnectMcpRoute
   '/developers': typeof LayoutDevelopersRoute
   '/feed': typeof LayoutFeedRoute
   '/profile': typeof LayoutProfileRoute
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/_auth/auth': typeof AuthAuthRoute
   '/_auth/login': typeof AuthLoginRoute
   '/_layout/admin': typeof LayoutAdminRoute
+  '/_layout/connect-mcp': typeof LayoutConnectMcpRoute
   '/_layout/developers': typeof LayoutDevelopersRoute
   '/_layout/feed': typeof LayoutFeedRoute
   '/_layout/profile': typeof LayoutProfileRoute
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/login'
     | '/admin'
+    | '/connect-mcp'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/login'
     | '/admin'
+    | '/connect-mcp'
     | '/developers'
     | '/feed'
     | '/profile'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/_auth/auth'
     | '/_auth/login'
     | '/_layout/admin'
+    | '/_layout/connect-mcp'
     | '/_layout/developers'
     | '/_layout/feed'
     | '/_layout/profile'
@@ -193,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDevelopersRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/connect-mcp': {
+      id: '/_layout/connect-mcp'
+      path: '/connect-mcp'
+      fullPath: '/connect-mcp'
+      preLoaderRoute: typeof LayoutConnectMcpRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
@@ -231,6 +250,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
+  LayoutConnectMcpRoute: typeof LayoutConnectMcpRoute
   LayoutDevelopersRoute: typeof LayoutDevelopersRoute
   LayoutFeedRoute: typeof LayoutFeedRoute
   LayoutProfileRoute: typeof LayoutProfileRoute
@@ -240,6 +260,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
+  LayoutConnectMcpRoute: LayoutConnectMcpRoute,
   LayoutDevelopersRoute: LayoutDevelopersRoute,
   LayoutFeedRoute: LayoutFeedRoute,
   LayoutProfileRoute: LayoutProfileRoute,
