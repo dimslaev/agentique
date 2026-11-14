@@ -126,6 +126,7 @@ Backend tests: `cd backend && uv run pytest <path>`. Frontend: `bun run lint && 
   - Built:
     - Middleware in `rate_limit.py`. It counts per account, so replacing a token does not reset the count.
     - It counts calls the scope gate refuses too. Refused-for-limit calls are not counted.
+    - Each of the 2 workers allows half the limit, so 20 a minute and 500 a day is the most a user gets and half of that the least.
 
 ### Phase 3: Public MCP tools
 

@@ -22,7 +22,7 @@ const TOOLS = [
   {
     name: "sql_query",
     description:
-      "Read-only SQL over article, publisher, tag and article_tag. 20 calls a minute, 500 a day across all three.",
+      "Read-only SQL over article, publisher, tag and article_tag. Up to 20 calls a minute and 500 a day across all three.",
   },
 ]
 

@@ -43,8 +43,10 @@ internal tables, and `web_fetch` and `web_search` spend our keys.
   `deploy/sql-roles-public.sql`, run by hand on the box, so no password lands
   in git. Until the role exists a user's `sql_query` fails to connect. `search`
   and `tags` work without it.
-- The backend runs 2 workers and each keeps its own count, so a user can make
-  up to twice the limit. Move the count to Postgres if that matters.
+- The backend runs 2 workers and each keeps its own count, so each allows half
+  the limit: 10 a minute and 250 a day. A user gets between half the limit and
+  all of it, by how their calls spread over the workers. Move the count to
+  Postgres to make it exact.
 - A column added to a table stays private until a migration adds it to a view.
 - `sql_query` has one description for both callers, so users read one line
   about the internal tables they cannot reach.

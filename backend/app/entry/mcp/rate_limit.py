@@ -14,20 +14,27 @@ from fastmcp.tools.base import ToolResult
 
 from app.entry.mcp.auth import USER_SCOPE
 
-PER_MINUTE = 20
-PER_DAY = 500
+# What a reader is told: the most they can get.
+LIMIT_PER_MINUTE = 20
+LIMIT_PER_DAY = 500
+# The backend runs this many processes (deploy/agentique-backend.service) and
+# each counts on its own, so each allows its share. A reader whose calls all
+# land on one worker gets half the limit.
+WORKERS = 2
+PER_MINUTE = LIMIT_PER_MINUTE // WORKERS
+PER_DAY = LIMIT_PER_DAY // WORKERS
 MINUTE = 60
 DAY = 24 * 60 * 60
 
 
 class UserRateLimit(Middleware):
-    """20 tool calls a minute and 500 a day for each `user` token.
+    """At most 20 tool calls a minute and 500 a day for each `user` token.
 
     Counted per account, so replacing a token does not reset the count. The
     shared tokens are ours and are not limited.
 
-    The counts live in this process. Move them to Postgres if the app ever
-    runs more than one worker: each worker would allow the full limit.
+    The counts live in this process. Move them to Postgres to make the limit
+    exact, and change `WORKERS` if the number of workers changes.
     """
 
     def __init__(self, clock: Callable[[], float] = time.monotonic) -> None:
@@ -46,10 +53,10 @@ class UserRateLimit(Middleware):
         while calls and calls[0] <= now - DAY:
             calls.popleft()
         if len(calls) >= PER_DAY:
-            raise _over(f"{PER_DAY} calls a day", calls[0] + DAY - now)
+            raise _over(f"{LIMIT_PER_DAY} calls a day", calls[0] + DAY - now)
         if len(calls) >= PER_MINUTE and calls[-PER_MINUTE] > now - MINUTE:
             raise _over(
-                f"{PER_MINUTE} calls a minute", calls[-PER_MINUTE] + MINUTE - now
+                f"{LIMIT_PER_MINUTE} calls a minute", calls[-PER_MINUTE] + MINUTE - now
             )
         calls.append(now)
 

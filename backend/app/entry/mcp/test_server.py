@@ -19,6 +19,7 @@ from app.core.db.factories import (
 from app.core.db.tag import ArticleTag
 from app.core.settings import settings
 from app.entry.mcp import auth
+from app.entry.mcp.rate_limit import PER_MINUTE
 from app.entry.mcp.server import mcp
 from app.features.audience import service as audience
 
@@ -306,14 +307,14 @@ def test_a_revoked_user_token_is_rejected(client: TestClient, db: Session) -> No
 def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
     client: TestClient, user_token: str
 ) -> None:
-    for _ in range(20):
+    for _ in range(PER_MINUTE):
         _, text = _call_tool(client, user_token, "web_fetch", {})
         assert "Authorization failed" in text
     is_error, text = _call_tool(client, user_token, "tags", {})
     assert is_error
     assert "Rate limit reached: 20 calls a minute" in text
 
-    for _ in range(21):
+    for _ in range(PER_MINUTE + 1):
         _, text = _call_tool(
             client, READ_TOKEN, "get_content", {"url": "https://x.example"}
         )

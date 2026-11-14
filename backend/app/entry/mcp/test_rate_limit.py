@@ -5,7 +5,14 @@ from __future__ import annotations
 import pytest
 from fastmcp.exceptions import ToolError
 
-from app.entry.mcp.rate_limit import DAY, MINUTE, PER_DAY, PER_MINUTE, UserRateLimit
+from app.entry.mcp.rate_limit import (
+    DAY,
+    MINUTE,
+    PER_DAY,
+    PER_MINUTE,
+    WORKERS,
+    UserRateLimit,
+)
 
 
 class Clock:
@@ -29,7 +36,7 @@ def test_the_minute_limit_refuses_the_call_after_the_last_allowed(
         limit.check("a")
         clock.now += 1
 
-    with pytest.raises(ToolError, match="20 calls a minute. Retry in 40 seconds"):
+    with pytest.raises(ToolError, match="20 calls a minute. Retry in 50 seconds"):
         limit.check("a")
 
 
@@ -71,9 +78,14 @@ def test_the_day_limit_holds_under_the_minute_limit(clock: Clock) -> None:
     for _ in range(PER_DAY):
         limit.check("a")
         clock.now += MINUTE
-    # 500 minutes in, the first call is still inside the day.
-    with pytest.raises(ToolError, match="500 calls a day. Retry in 56400 seconds"):
+    # 250 minutes in, the first call is still inside the day.
+    with pytest.raises(ToolError, match="500 calls a day. Retry in 71400 seconds"):
         limit.check("a")
 
     clock.now = start + DAY
     limit.check("a")
+
+
+def test_the_workers_together_allow_the_stated_limit() -> None:
+    assert PER_MINUTE * WORKERS == 20
+    assert PER_DAY * WORKERS == 500
