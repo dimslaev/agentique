@@ -52,6 +52,8 @@ from app.features.newsletter.model import (
     WeekArticle,
     WeekTopic,
 )
+from app.features.newsletter.topics import TOPICS as TOPICS
+from app.features.newsletter.topics import create_missing as create_missing
 
 # The skill asks for more than the 10-12 links it picks, so it can pass over
 # what has no value for builders.
