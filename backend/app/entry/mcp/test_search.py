@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 from fastmcp.exceptions import ToolError
+from fastmcp.tools import Tool
 from sqlmodel import Session, col, delete
 
 from app.core.db.factories import (
@@ -101,9 +102,52 @@ def test_search_filters_narrow_the_results(
 
 
 def test_search_names_the_bad_argument() -> None:
-    with pytest.raises(ToolError, match="kind must be one of: post, repo, paper"):
-        search("anything", kind="video")
     with pytest.raises(ToolError, match="since must be an ISO date"):
         search("anything", since="last week")
-    with pytest.raises(ToolError, match="limit must be at least 1"):
-        search("anything", limit=0)
+    with pytest.raises(ToolError, match="Unknown tag slugs: no-such-tag"):
+        search("anything", tags=["no-such-tag"])
+    with pytest.raises(ToolError, match="Unknown publisher slug: No Such"):
+        search("anything", publisher="No Such")
+
+
+def test_kind_and_limit_are_constrained_in_the_schema() -> None:
+    params = Tool.from_function(search).parameters["properties"]
+    assert all(k in str(params["kind"]) for k in ("post", "repo", "paper", "model"))
+    assert params["limit"]["maximum"] == 100
+    assert params["limit"]["minimum"] == 1
+
+
+def test_sort_and_an_empty_q_browse_by_score_or_date(
+    db: Session, made: dict[str, list[int]]
+) -> None:
+    word = random_lower_string()
+    older_better = create_random_article(
+        db,
+        title=f"{word} one",
+        score=90,
+        published_at=datetime(2030, 1, 1, tzinfo=UTC),
+    )
+    newer_worse = create_random_article(
+        db,
+        title=f"{word} two",
+        score=10,
+        published_at=datetime(2030, 1, 2, tzinfo=UTC),
+    )
+    for article in (older_better, newer_worse):
+        assert article.id is not None
+        made["articles"].append(article.id)
+        made["publishers"].append(article.publisher_id)
+
+    def urls(found: list[dict[str, object]]) -> list[object]:
+        return [row["url"] for row in found]
+
+    since = "2029-12-31"
+    assert urls(search(since=since)) == [older_better.url, newer_worse.url]
+    assert urls(search(since=since, sort="recent")) == [
+        newer_worse.url,
+        older_better.url,
+    ]
+    by_date = urls(search(word, since=since, sort="recent"))
+    assert by_date[:2] == [newer_worse.url, older_better.url]
+    by_score = urls(search(word, since=since, sort="score"))
+    assert by_score[:2] == [older_better.url, newer_worse.url]

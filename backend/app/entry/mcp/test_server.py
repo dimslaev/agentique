@@ -306,7 +306,7 @@ def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
         assert "Authorization failed" in text
     is_error, text = _call_tool(client, user_token, "tags", {})
     assert is_error
-    assert "Rate limit reached: 20 calls a minute" in text
+    assert "Rate limit reached: 60 calls a minute" in text
 
     for _ in range(PER_MINUTE + 1):
         _, text = _call_tool(

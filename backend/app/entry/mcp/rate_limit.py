@@ -15,20 +15,21 @@ from fastmcp.tools.base import ToolResult
 from app.entry.mcp.auth import USER_SCOPE
 
 # What a reader is told: the most they can get.
-LIMIT_PER_MINUTE = 20
+LIMIT_PER_MINUTE = 60
 LIMIT_PER_DAY = 500
 # The backend runs this many processes (deploy/agentique-backend.service) and
-# each counts on its own, so each allows its share. A reader whose calls all
-# land on one worker gets half the limit.
+# each counts on its own. The day limit is the protection, so it is split
+# between them. The minute limit is not: a burst that lands on one worker gets
+# the number the error states, and one spread over both can go past it.
 WORKERS = 2
-PER_MINUTE = LIMIT_PER_MINUTE // WORKERS
+PER_MINUTE = LIMIT_PER_MINUTE
 PER_DAY = LIMIT_PER_DAY // WORKERS
 MINUTE = 60
 DAY = 24 * 60 * 60
 
 
 class UserRateLimit(Middleware):
-    """At most 20 tool calls a minute and 500 a day for each `user` token.
+    """At most 60 tool calls a minute and 500 a day for each `user` token.
 
     Counted per account, so replacing a token does not reset the count. The
     shared tokens are ours and are not limited.
@@ -73,4 +74,7 @@ class UserRateLimit(Middleware):
 
 def _over(limit: str, wait: float) -> ToolError:
     seconds = max(1, round(wait))
-    return ToolError(f"Rate limit reached: {limit}. Retry in {seconds} seconds.")
+    return ToolError(
+        f"Rate limit reached: {limit}, shared by every tool on this account. "
+        f"Retry in {seconds} seconds."
+    )

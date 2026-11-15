@@ -34,9 +34,9 @@ def test_the_minute_limit_refuses_the_call_after_the_last_allowed(
     limit = UserRateLimit(clock)
     for _ in range(PER_MINUTE):
         limit.check("a")
-        clock.now += 1
+        clock.now += 0.5
 
-    with pytest.raises(ToolError, match="20 calls a minute. Retry in 50 seconds"):
+    with pytest.raises(ToolError, match="60 calls a minute, .* Retry in 30 seconds"):
         limit.check("a")
 
 
@@ -79,13 +79,12 @@ def test_the_day_limit_holds_under_the_minute_limit(clock: Clock) -> None:
         limit.check("a")
         clock.now += MINUTE
     # 250 minutes in, the first call is still inside the day.
-    with pytest.raises(ToolError, match="500 calls a day. Retry in 71400 seconds"):
+    with pytest.raises(ToolError, match="500 calls a day, .* Retry in 71400 seconds"):
         limit.check("a")
 
     clock.now = start + DAY
     limit.check("a")
 
 
-def test_the_workers_together_allow_the_stated_limit() -> None:
-    assert PER_MINUTE * WORKERS == 20
+def test_the_workers_together_allow_the_stated_day_limit() -> None:
     assert PER_DAY * WORKERS == 500

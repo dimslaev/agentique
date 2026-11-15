@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 
 import pytest
@@ -38,7 +37,7 @@ def _test_dsn(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_select_returns_columns_and_rows() -> None:
-    result = json.loads(tool.sql_query("SELECT 1 AS n, 'a' AS label"))
+    result = tool.sql_query("SELECT 1 AS n, 'a' AS label")
     assert result == {
         "columns": ["n", "label"],
         "rows": [{"n": 1, "label": "a"}],
@@ -47,26 +46,22 @@ def test_select_returns_columns_and_rows() -> None:
 
 
 def test_rows_are_capped_and_flagged() -> None:
-    result = json.loads(
-        tool.sql_query(f"SELECT i FROM generate_series(1, {tool.MAX_ROWS + 5}) AS i")
+    result = tool.sql_query(
+        f"SELECT i FROM generate_series(1, {tool.MAX_ROWS + 5}) AS i"
     )
     assert len(result["rows"]) == tool.MAX_ROWS
     assert result["truncated"] is True
 
 
 def test_a_result_that_exactly_fills_the_cap_is_not_truncated() -> None:
-    result = json.loads(
-        tool.sql_query(f"SELECT i FROM generate_series(1, {tool.MAX_ROWS}) AS i")
-    )
+    result = tool.sql_query(f"SELECT i FROM generate_series(1, {tool.MAX_ROWS}) AS i")
     assert len(result["rows"]) == tool.MAX_ROWS
     assert result["truncated"] is False
 
 
 def test_timestamps_and_numerics_survive_serialisation() -> None:
-    result = json.loads(
-        tool.sql_query(
-            "SELECT TIMESTAMP '2026-01-02 03:04:05' AS ts, 1.5::numeric AS amount"
-        )
+    result = tool.sql_query(
+        "SELECT TIMESTAMP '2026-01-02 03:04:05' AS ts, 1.5::numeric AS amount"
     )
     assert result["rows"] == [{"ts": "2026-01-02T03:04:05", "amount": "1.5"}]
 
@@ -148,11 +143,9 @@ def test_a_reader_joins_the_public_views(
     made["articles"].append(article.id)
     made["publishers"].append(article.publisher_id)
 
-    result = json.loads(
-        tool.sql_query(
-            "SELECT a.title, a.kind, a.like_count, p.slug FROM article a "
-            f"JOIN publisher p ON p.id = a.publisher_id WHERE a.id = {article.id}"
-        )
+    result = tool.sql_query(
+        "SELECT a.title, a.kind, a.like_count, p.slug FROM article a "
+        f"JOIN publisher p ON p.id = a.publisher_id WHERE a.id = {article.id}"
     )
 
     assert result["columns"] == ["title", "kind", "like_count", "slug"]
@@ -163,13 +156,11 @@ def test_a_reader_joins_the_public_views(
 
 @pytest.mark.usefixtures("reader")
 def test_the_public_views_hold_only_the_public_columns() -> None:
-    result = json.loads(
-        tool.sql_query(
-            "SELECT table_name, column_name FROM information_schema.columns "
-            "WHERE table_schema = 'public_api' ORDER BY 1, ordinal_position"
-        )
+    result = tool.sql_query(
+        "SELECT table_name, column_name FROM information_schema.columns "
+        "WHERE table_schema = 'public_api' ORDER BY 1, ordinal_position"
     )
-    columns: dict[str, list[str]] = {}
+    columns: dict[object, list[object]] = {}
     for row in result["rows"]:
         columns.setdefault(row["table_name"], []).append(row["column_name"])
 
@@ -219,7 +210,7 @@ def no_usage_on_public() -> Iterator[None]:
 
 @pytest.mark.usefixtures("reader", "no_usage_on_public")
 def test_a_reader_reads_the_views_without_usage_on_public() -> None:
-    result = json.loads(tool.sql_query("SELECT count(*) AS n FROM article"))
+    result = tool.sql_query("SELECT count(*) AS n FROM article")
     assert result["columns"] == ["n"]
     with pytest.raises(ToolError, match="permission denied for schema public"):
         tool.sql_query("SELECT 1 FROM public.article")
@@ -263,5 +254,5 @@ def test_a_shared_token_does_not_use_the_public_role(
         "get_access_token",
         lambda: AccessToken(token="t", client_id="c", scopes=[]),
     )
-    result = json.loads(tool.sql_query("SELECT count(*) AS n FROM article"))
+    result = tool.sql_query("SELECT count(*) AS n FROM article")
     assert result["columns"] == ["n"]

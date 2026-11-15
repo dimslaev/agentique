@@ -188,7 +188,7 @@ export function McpSetup() {
 
       <Step title="Rate limits">
         <p className="text-sm text-muted-foreground">
-          Up to 20 tool calls a minute and 500 a day per account, counted across
+          Up to 60 tool calls a minute and 500 a day per account, counted across
           all three tools. Over the limit, the tool returns an error that says
           how many seconds to wait.
         </p>

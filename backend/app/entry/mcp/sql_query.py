@@ -10,9 +10,9 @@ A reader's own token logs in as a narrower role that reads only the
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from datetime import date, datetime
+from typing import TypedDict
 
 import psycopg
 from fastmcp.exceptions import ToolError
@@ -39,13 +39,21 @@ DSN = settings.MCP_DATABASE_URI
 PUBLIC_DSN = settings.MCP_PUBLIC_DATABASE_URI
 
 
-def _json_safe(value: object) -> str:
-    """Fallback for the column types `json.dumps` has no encoding for.
+class QueryResult(TypedDict):
+    columns: list[str]
+    rows: list[dict[str, object]]
+    truncated: bool
+
+
+def _cell(value: object) -> object:
+    """A column value as JSON can carry it: as is, or as a string.
 
     Timestamps get ISO-8601; Decimal, UUID and pgvector embeddings get `str`,
     which is lossless for all three and keeps one unreadable column from
     failing the whole query.
     """
+    if value is None or isinstance(value, str | int | float | bool | list | dict):
+        return value
     if isinstance(value, datetime | date):
         return value.isoformat()
     return str(value)
@@ -121,7 +129,7 @@ def _reject_a_role_that_reads_tables(
         raise ToolError("sql_query is not set up for personal tokens on this server.")
 
 
-def sql_query(sql: str) -> str:
+def sql_query(sql: str) -> QueryResult:
     """Run a read-only SQL query against the agentique Postgres database.
 
     Accepts one statement, and only one Postgres can plan as a query. Writes
@@ -137,11 +145,19 @@ def sql_query(sql: str) -> str:
     - `tag`: id, slug, name
     - `article_tag`: article_id, tag_id
     Article text is not readable here. Use `search` to find articles by what
-    they say.
+    they say. Tags are not a column: join `article_tag` and `tag`. The views
+    have no primary key, so `GROUP BY a.id` does not cover the other columns:
+    group by every selected column, or aggregate in a subquery, as in
+        SELECT a.title, a.score,
+          (SELECT string_agg(t.slug, ',') FROM article_tag at
+           JOIN tag t ON t.id = at.tag_id WHERE at.article_id = a.id) AS tags
+        FROM article a
+        WHERE a.published_at >= now() - interval '14 days'
+        ORDER BY a.score DESC LIMIT 20
 
     A shared token reads the database tables instead, with a 10 second limit.
 
-    Returns JSON: `columns` (in select order), `rows` (a list of objects), and
+    Returns `columns` (in select order), `rows` (a list of objects), and
     `truncated` (true when the result hit the 1000-row cap and rows are
     missing). Timestamps are ISO-8601 strings; numerics, UUIDs and embedding
     vectors are stringified.
@@ -163,16 +179,21 @@ def sql_query(sql: str) -> str:
             columns = [column.name for column in cursor.description]
             # One past the cap, so a full page can be told from an exact fit.
             rows = cursor.fetchmany(MAX_ROWS + 1)
-            return json.dumps(
-                {
-                    "columns": columns,
-                    "rows": [
-                        dict(zip(columns, row, strict=True)) for row in rows[:MAX_ROWS]
-                    ],
-                    "truncated": len(rows) > MAX_ROWS,
-                },
-                default=_json_safe,
-            )
+            return {
+                "columns": columns,
+                "rows": [
+                    {
+                        name: _cell(value)
+                        for name, value in zip(columns, row, strict=True)
+                    }
+                    for row in rows[:MAX_ROWS]
+                ],
+                "truncated": len(rows) > MAX_ROWS,
+            }
+    except psycopg.errors.QueryCanceled as exc:
+        raise ToolError(
+            f"{exc}. Narrow it: filter on published_at, or add a LIMIT."
+        ) from exc
     except psycopg.Error as exc:
         # The agent wrote this SQL and can fix it, but only if it sees what
         # Postgres actually said; anything but a ToolError reaches the client
