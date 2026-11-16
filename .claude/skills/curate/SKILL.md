@@ -16,7 +16,7 @@ before approving anything.**
 
 ## Tools
 
-From the `agentique` MCP server, with the curation token:
+From the `agentique-admin` MCP server, with the curation token:
 
 - `list_candidates(offset=0)` — one page of up to 50 candidates waiting on a
   verdict: URL, title, source, publisher, `publisher_kind` (`unknown` for a
@@ -339,6 +339,17 @@ already set cannot be changed from here. From the page you read and its site:
 `publisher_name` is how a reader should see it, when the host is not that:
 "Dan Luu" for `danluu.com`, "Goodfire" for `goodfire.ai`. Leave it out when the
 host already reads well. A rejected candidate needs neither.
+
+## Finish
+
+Do not stop partway: a candidate left pending waits another day.
+
+Report, short: how many approved, how many rejected, how many web searches,
+fetches and `check_link` calls you made, and anything that blocked you.
+
+Do not edit files or commit anything; this session reads and curates, nothing
+else. If `list_candidates` answers "This tool needs the curation token", stop
+and say so: the session has the read token, not the write token.
 
 ## Before this runs unattended
 

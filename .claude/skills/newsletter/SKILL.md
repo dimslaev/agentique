@@ -11,7 +11,7 @@ the draft and sends it. It takes under a minute to read.
 
 ## Tools
 
-From the `agentique` MCP server, with the curation token:
+From the `agentique-admin` MCP server, with the curation token:
 
 - `week(days=7, limit=40)` - the week's topics. Each article has `publisher`,
   `publisher_kind`, `kind`, `score`, `likes` and `summary`. `covered_by` lists

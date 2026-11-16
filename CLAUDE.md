@@ -37,7 +37,7 @@
 - Cloud sessions have no Docker and no dump. The `agentique` environment's setup script installs Postgres 16 with pgvector and creates a migrated `app` db with the sample articles. Start it with `pg_ctlcluster 16 main start`.
 
 ## MCP tools
-- `.mcp.json` connects to the `agentique` MCP server (`backend/app/entry/mcp/`), exposing `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
+- `.mcp.json` connects to the `agentique-admin` MCP server (`backend/app/entry/mcp/`), named apart from the `agentique` entry the /connect page has users add, so a user-scope one isn't shadowed here. It exposes `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
 - With the write token it also exposes `list_candidates`, `get_content`, `similar`, `stories`, `check_link`, `vocabulary`, `approve`, `reject`, `reject_many` - the curation agent's tools. They publish to prod. Don't call them outside a curation session.
 - The write token also reaches `week`, `related`, `draft_issue` - the newsletter agent's tools (`.claude/skills/newsletter/SKILL.md`). `draft_issue` creates a Resend draft addressed to every subscriber; sending is done by hand in Resend.
 - And `story_candidates`, `save_story`, `close_story` - the stories agent's tools (`.claude/skills/stories/SKILL.md`). They write the right rail's stories in prod.

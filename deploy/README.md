@@ -83,25 +83,10 @@ It reads pending candidates through the MCP server this same box serves.
   closed-by-default posture as `MCP_TOKEN`.
 
 The routine's prompt lives on claude.ai, not here; this is its text, to paste
-there when it changes. Keep the steps in step with `SKILL.md`.
+there when it changes. Everything else is in the skill.
 
 ```text
-Run the agentique nightly curation session.
-
-Invoke the `curate` skill (`.claude/skills/curate/SKILL.md` in this repo) and follow it end to end:
-
-1. `list_candidates()` on the agentique MCP server for everything the 04:00 pipeline queued, passing `next_offset` back as `offset` until it is null — read every page before settling any candidate. `vocabulary()` once for the labels.
-2. Triage on title and snippet. Reject what triage settles in one `reject_many`.
-3. Call `stories()` once, to see which candidates are one story and which the feed already carries.
-4. Read page one of `get_content(url)` for everything past triage; read on to the end for anything you approve. `check_link` the repo or model an approval rests on. Use `web_fetch` only when the stored text is empty, a teaser or cut short, and the web tools otherwise only where the skill's "Looking further" section says to.
-5. Call `similar(url)` before each approval, so a retelling of a story we already carry is caught.
-6. Settle every candidate with `approve(url, score, reason, summary, categories, kind, tags)`, `reject(url, score, reason)` or `reject_many`. Apply the daily caps at the end, over the whole night.
-
-Do not stop partway — a candidate left pending waits another day. Do not edit files or commit anything; this session reads and curates, nothing else.
-
-If `list_candidates` comes back with "This tool needs the curation token", the environment's AGENTIQUE_MCP_TOKEN is the read token rather than MCP_WRITE_TOKEN. Stop and say so plainly — do not try to work around it.
-
-Finish with a short report: how many approved, how many rejected, how many web searches, fetches and check_link calls you made, and anything that blocked you.
+Run the `curate` skill (`.claude/skills/curate/SKILL.md`).
 ```
 
 ## Newsletter
@@ -145,20 +130,7 @@ curation and report.
 The routine's prompt, to paste there when it changes:
 
 ```text
-Run the agentique stories session.
-
-Invoke the `stories` skill (`.claude/skills/stories/SKILL.md` in this repo) and follow it end to end:
-
-1. `story_candidates()` on the agentique MCP server, once. Read every open story and every cluster before saving anything.
-2. Add articles that belong to an open story with `save_story`, keeping its slug, name and blurb unless the skill gives a cause to change them.
-3. Start a story with `save_story` only for 3+ articles from 2+ publishers on one theme a builder can act on: not a single launch, not one vendor's product line.
-4. `close_story` every open story with `quiet_days` of 21 or more.
-
-Do not edit files or commit anything; this session reads and writes stories, nothing else.
-
-If a tool comes back with "This tool needs the curation token", the environment's AGENTIQUE_MCP_TOKEN is the read token rather than MCP_WRITE_TOKEN. Stop and say so plainly - do not try to work around it.
-
-Finish with a short report: stories created, extended and closed, and anything a tool refused.
+Run the `stories` skill (`.claude/skills/stories/SKILL.md`).
 ```
 
 ## Newsletter environment

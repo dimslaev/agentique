@@ -17,7 +17,7 @@ take a week later.
 
 ## Tools
 
-From the `agentique` MCP server, with the curation token:
+From the `agentique-admin` MCP server, with the curation token:
 
 - `story_candidates(days=14)` - `open`: every open story with its newest 5
   articles and `quiet_days` (since its newest article was published).
