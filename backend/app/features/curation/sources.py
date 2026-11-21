@@ -22,12 +22,17 @@ from sqlmodel import Session, col, func, select
 
 from app.core.db.article import Article
 from app.core.db.ledger import Reject
-from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind, PublisherType
+from app.core.db.publisher import (
+    AGGREGATOR_TYPES,
+    LinkPlatform,
+    Publisher,
+    PublisherKind,
+    PublisherType,
+)
 from app.core.http import BROWSER_HEADERS, RESIDENTIAL_PROXY_URL, fetch_with_timeout
 from app.core.llm_text import enum_value
 from app.core.logging import log
 from app.core.urls import hostname, is_shared_host
-from app.features.collect.publishers import AGGREGATOR_TYPES
 from app.features.curation.model import SourceError
 
 # How many of a site's newest posts a probe reads at most.

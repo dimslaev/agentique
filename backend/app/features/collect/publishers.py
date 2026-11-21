@@ -27,6 +27,7 @@ from urllib.parse import urlparse
 from sqlmodel import Session, select
 
 from app.core.db.publisher import (
+    AGGREGATOR_TYPES,
     LinkPlatform,
     Publisher,
     PublisherKind,
@@ -40,12 +41,6 @@ from app.core.llm_text import enum_value
 from app.core.logging import log
 from app.core.urls import SHARED_HOSTS, feed_url, hostname, is_shared_host
 from app.features.collect.model import FeedSource
-
-# Publishers whose items link to other people's posts. An item one of them
-# found is credited to the site it links to, never to them.
-AGGREGATOR_TYPES = frozenset(
-    {PublisherType.hn, PublisherType.email, PublisherType.ainews, PublisherType.reddit}
-)
 
 # ─── per-run publisher resolution ───────────────────────────────────────────
 

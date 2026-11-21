@@ -53,6 +53,13 @@ class PublisherType(StrEnum):
     other = "other"
 
 
+# Publishers whose items link to other people's posts. An item one of them
+# found is credited to the site it links to, never to them.
+AGGREGATOR_TYPES = frozenset(
+    {PublisherType.hn, PublisherType.email, PublisherType.ainews, PublisherType.reddit}
+)
+
+
 class TrustLevel(StrEnum):
     low = "low"
     medium = "medium"
