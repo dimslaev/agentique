@@ -18,18 +18,12 @@ import re
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 
-import numpy as np
 from sqlmodel import Session, col, func, select
 
 from app.core.db.article import Article
 from app.core.db.publisher import Publisher
 from app.core.db.story import Story, StoryArticle
-from app.core.embedding import cosine_distances, story_groups
 from app.features.stories.model import (
-    CandidateArticle,
-    Candidates,
-    Cluster,
-    OpenStory,
     SavedStory,
     StoryArticlePublic,
     StoryError,
@@ -44,14 +38,6 @@ MIN_PUBLISHERS = 2
 STORY_ARTICLES = 30
 GREW_WINDOW = timedelta(hours=24)
 
-# Looser than `find_duplicates` (0.30) and than `find_similar`'s related cut (0.45 lists, it
-# does not group): a story's articles share a theme, not an event. A first
-# value, to tune against what the routine actually groups.
-STORY_DIST = 0.40
-# What `list_story_candidates` shows of each open story.
-CANDIDATE_TAIL = 5
-# Groups per `list_story_candidates` call, the most publishers first.
-CANDIDATE_CLUSTERS = 30
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 SLUG_MAX = 60
@@ -278,100 +264,3 @@ def close_story(session: Session, slug: str, now: datetime | None = None) -> Non
     story.updated_at = story.closed_at
     session.add(story)
     session.commit()
-
-
-# ─── Agent reads ─────────────────────────────────────────────────────────────
-
-
-def _candidate(article: Article, publisher: str) -> CandidateArticle:
-    return {
-        "url": article.url,
-        "title": article.title,
-        "publisher": publisher,
-        "published_at": _published(article.published_at, article.created_at)
-        .date()
-        .isoformat(),
-        "score": article.score,
-        "summary": article.summary or "",
-    }
-
-
-def list_story_candidates(
-    session: Session, days: int = 14, now: datetime | None = None
-) -> Candidates:
-    """Open stories with their newest articles, and the last ``days`` of
-    articles in no open story grouped at `STORY_DIST`.
-
-    Grouped with curation's `story_groups`, the open stories' articles taking
-    the place its feed rows do: an edge needs a free article at one end, so
-    two stories never merge through each other, and a cluster that reaches a
-    story's article names that story in `near`.
-    """
-    now = now or datetime.now(UTC)
-    since = now - timedelta(days=days)
-
-    stories = session.exec(
-        select(Story)
-        .where(col(Story.closed_at).is_(None))
-        .order_by(col(Story.last_article_at).desc().nulls_last(), col(Story.id))
-    ).all()
-    members = _members(session, [s.id for s in stories if s.id is not None])
-    held: set[int] = set()
-    by_story: dict[int, list[CandidateArticle]] = defaultdict(list)
-    # (slug, publisher, vector) for each open story's article that has one.
-    anchored: list[tuple[str, str, list[float]]] = []
-    slug_of = {s.id: s.slug for s in stories}
-    for story_id, article, publisher in members:
-        held.add(article.id or 0)
-        by_story[story_id].append(_candidate(article, publisher))
-        # pgvector hands back a numpy array, and bool(array) raises.
-        if article.embedding is not None:
-            anchored.append((slug_of[story_id], publisher, list(article.embedding)))
-
-    open_stories: list[OpenStory] = [
-        {
-            "slug": s.slug,
-            "name": s.name,
-            "blurb": s.blurb,
-            "article_count": len(by_story[s.id or 0]),
-            "quiet_days": (now - s.last_article_at).days if s.last_article_at else 0,
-            "articles": by_story[s.id or 0][:CANDIDATE_TAIL],
-        }
-        for s in stories
-    ]
-
-    free: list[tuple[Article, str, list[float]]] = [
-        (a, p, list(a.embedding))
-        for a, p in session.exec(
-            select(Article, Publisher.name)
-            .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
-            .where(
-                func.coalesce(Article.published_at, Article.created_at) >= since,
-                col(Article.embedding).is_not(None),
-            )
-        ).all()
-        if a.id not in held and a.embedding is not None
-    ]
-    if not free:
-        return {"open": open_stories, "groups": []}
-
-    vecs = np.array(
-        [v for _, _, v in free] + [v for _, _, v in anchored], dtype=np.float32
-    )
-    anchors = [True] * len(free) + [False] * len(anchored)
-    groups = story_groups(cosine_distances(vecs, vecs), anchors, STORY_DIST)
-
-    clusters: list[Cluster] = []
-    for group in groups:
-        articles = [_candidate(free[i][0], free[i][1]) for i in group if i < len(free)]
-        reached = [anchored[i - len(free)] for i in group if i >= len(free)]
-        near = sorted({slug for slug, _, _ in reached})
-        publishers = {a["publisher"] for a in articles} | {p for _, p, _ in reached}
-        articles.sort(key=lambda a: a["published_at"])
-        clusters.append(
-            {"near": near, "publishers": sorted(publishers), "articles": articles}
-        )
-    clusters.sort(
-        key=lambda c: (len(c["publishers"]), len(c["articles"])), reverse=True
-    )
-    return {"open": open_stories, "groups": clusters[:CANDIDATE_CLUSTERS]}

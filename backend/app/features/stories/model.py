@@ -42,36 +42,3 @@ class SavedStory(TypedDict):
     # URLs this call added; ones already in the story are not counted again.
     added: int
     article_count: int
-
-
-class CandidateArticle(TypedDict):
-    url: str
-    title: str
-    publisher: str
-    published_at: str
-    score: int
-    summary: str
-
-
-class OpenStory(TypedDict):
-    slug: str
-    name: str
-    blurb: str
-    article_count: int
-    # Days since its newest article was published.
-    quiet_days: int
-    # The newest `CANDIDATE_TAIL`, newest first.
-    articles: list[CandidateArticle]
-
-
-class Cluster(TypedDict):
-    # Open stories one of these articles sits close to: add to one of them
-    # before starting a new story.
-    near: list[str]
-    publishers: list[str]
-    articles: list[CandidateArticle]
-
-
-class Candidates(TypedDict):
-    open: list[OpenStory]
-    groups: list[Cluster]

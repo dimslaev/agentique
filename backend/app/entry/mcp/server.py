@@ -17,7 +17,6 @@ from app.entry.mcp.find_similar import find_similar
 from app.entry.mcp.get_last_week_articles import get_last_week_articles
 from app.entry.mcp.list_candidates import list_candidates
 from app.entry.mcp.list_labels import list_labels
-from app.entry.mcp.list_story_candidates import list_story_candidates
 from app.entry.mcp.list_tags import list_tags
 from app.entry.mcp.rate_limit import UserRateLimit
 from app.entry.mcp.read_article import read_article
@@ -59,7 +58,6 @@ mcp = FastMCP(
         reject_articles,
         get_last_week_articles,
         draft_newsletter,
-        list_story_candidates,
         save_story,
         close_story,
         review_publishers,

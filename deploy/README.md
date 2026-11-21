@@ -115,12 +115,13 @@ Run the `draft-newsletter` skill (`.claude/skills/draft-newsletter/SKILL.md`).
 The right rail's stories are kept by a third off-box routine, the same way as
 curation and the newsletter: a scheduled task on claude.ai/code against this
 repo, with the same write token, invoking `/update-stories`
-(`.claude/skills/update-stories/SKILL.md`, ADR 16). It runs daily at 06:17
+(`.claude/skills/update-stories/SKILL.md`, ADRs 16 and 22). It runs daily at 06:17
 Europe/Zurich (`CRON_TZ=Europe/Zurich 17 6 * * *`), after that morning's
 curation and report.
 
-- It reads `list_story_candidates`, extends open stories, starts new ones and
-  closes the ones quiet for 21 days, through `save_story` and `close_story`.
+- It reads the open stories and the last 14 days through `sql_query`, searches
+  by keyword over 30 days, extends open stories, starts new ones and closes
+  the ones quiet for 21 days, through `save_story` and `close_story`.
 - It writes nothing else and commits nothing. A saved story is public at once
   once it has 3 articles from 2 publishers.
 - A night it does not run, the rail stays as it was; the next run catches up

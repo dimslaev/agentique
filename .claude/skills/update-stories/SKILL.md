@@ -5,84 +5,84 @@ description: Keep the right rail's stories - name the threads that run over days
 
 # Keep the stories
 
-A story is a theme a builder follows over days or weeks: "Codemode",
-"Decision models". The right rail shows each one with a two-sentence blurb and
-its articles in order. You decide what is a story, name it, and keep it up to
-date. Nothing else writes stories.
-
-A story is wider than a duplicate group. A duplicate group is one event reported by several publishers
-(curation's `find_similar` and `find_duplicates`, at 0.30). A story is several events on
-one theme: a launch, a repo built on it, a writer who measured it, a rival's
-take a week later.
+A story is a theme builders follow over days or weeks, like "Codemode" or "Decision models".
 
 ## Tools
 
-From the `agentique-admin` MCP server: `list_story_candidates`, `save_story`,
-`close_story`, and `sql_query` for anything they do not answer. Each tool's
-description says what it returns.
+`agentique-admin` MCP: `sql_query` to read, `save_story` and `close_story` to write.
 
-## Rounds
+Open stories:
 
-1. **`list_story_candidates()` once.** Read every open story and every group
-   before saving anything.
-2. **Extend.** For each group with a story in `near`: add the articles that
-   belong to that story's theme. Pass the story's current name and blurb
-   unless one is now wrong (see **Keeping them stable**).
-3. **Start.** For each group left that is a story (see **What is a story**),
-   create one. Before you do, check the open stories again: an article that
-   fits an open story goes there, even when `near` did not name it.
-4. **Close.** Close every open story with `quiet_days` of 21 or more.
-5. **Report.** See **Finish**.
+```sql
+select s.slug, s.name, s.blurb, now()::date - s.last_article_at::date as quiet_days,
+  a.url, a.title, p.name as publisher, coalesce(a.published_at, a.created_at)::date as published
+from story s
+join story_article sa on sa.story_id = s.id
+join article a on a.id = sa.article_id
+join publisher p on p.id = a.publisher_id
+where s.closed_at is null
+order by s.last_article_at desc, published desc
+```
+
+Last 14 days, not in an open story:
+
+```sql
+select a.url, a.title, p.name as publisher, coalesce(a.published_at, a.created_at)::date as published, a.summary
+from article a
+join publisher p on p.id = a.publisher_id
+where coalesce(a.published_at, a.created_at) >= now() - interval '14 days'
+  and not exists (select 1 from story_article sa join story s on s.id = sa.story_id
+                  where sa.article_id = a.id and s.closed_at is null)
+order by published
+```
+
+Keyword search, last 30 days (`or`, `"phrase"`, `-word` work):
+
+```sql
+select a.url, a.title, p.name as publisher, coalesce(a.published_at, a.created_at)::date as published, a.summary,
+  (select s.slug from story_article sa join story s on s.id = sa.story_id
+   where sa.article_id = a.id and s.closed_at is null) as story
+from article a
+join publisher p on p.id = a.publisher_id,
+  websearch_to_tsquery('english', 'mlx or ollama or "llama.cpp"') q
+where a.search_tsv @@ q
+  and coalesce(a.published_at, a.created_at) >= now() - interval '30 days'
+order by ts_rank(a.search_tsv, q) desc
+limit 30
+```
+
+## Steps
+
+1. Read the open stories and the last 14 days.
+2. For each open story, search 2-4 times with different words and add what fits.
+3. Group the rest by theme. Search each theme the same way, then start the ones that are stories.
+4. Close stories quiet for 21+ days.
 
 ## What is a story
 
-All of these:
+- 3+ articles from 2+ publishers.
+- Something a builder can try or adopt: a technique, protocol, kind of model, way of working.
+- More than one event. One launch or paper and its reposts is not a story.
+- Not one vendor's product line.
+- Add an article only if it's on the theme, not because it shares a word.
 
-- 3 or more articles from 2 or more publishers, on one theme.
-- A theme a builder can act on: a technique, a protocol, a kind of model, a
-  way of working. Something they could try, adopt or decide against.
-- More than one event. A single launch and its reposts are duplicates, not a
-  story, however many publishers carried it.
-- Not one vendor's product line. "Claude releases" is a feed filter; "Computer
-  use" is a story when several creators and writers are working on it.
+## Names
 
-A group is a hint, not a verdict. Split one that holds two themes, and leave
-out an article that is only near by wording. A group of two can start a story
-when a third article in the window plainly belongs to it.
+- Name: 1-3 words, the term people use.
+- Slug: the name in kebab-case. It never changes.
+- Blurb: two plain sentences, under 280 characters. What it is, then why it matters now.
 
-## Naming
+## Keep stable
 
-- **Name:** 1-3 words, the term people use. "Codemode", not "Code execution
-  with MCP tools". "Decision models", not "Small models for agent routing".
-  If the articles use one name for it, use that name.
-- **Slug:** the name in lowercase with hyphens: `codemode`,
-  `decision-models`. It never changes, so pick it with the name.
-- **Blurb:** two plain sentences. The first says what it is, the second why it
-  matters now. Under 280 characters. The newsletter's plain tone without the
-  "I": no hype words, no em dashes, no "game-changer", no "landscape".
-  "The agent writes a short program against your tools instead of calling them
-  one at a time. Tool definitions stay out of the context; only the result
-  comes back."
+- Add to an open story before starting a new one.
+- Rename or rewrite a blurb only when it's wrong.
+- A closed story stays closed. Start a new slug if the theme returns.
 
-## Keeping them stable
+## Report
 
-- Add to an open story before starting a new one. Two open stories on one
-  theme split the rail.
-- Never rename a story without cause. Cause is: the field settled on another
-  name for the thing, or the name was wrong. A new article is not a cause.
-- Rewrite a blurb only when "why it matters now" is no longer true.
-- A closed story stays closed. If its theme comes back, start a new story
-  under a new slug.
+- Created, extended (with search words used) and closed stories.
+- Close calls you passed on, and why.
+- Two open stories on one theme.
+- Tool errors.
 
-## Finish
-
-Report, short:
-
-- created: slug, name, article count, and the line that decided it is a story
-- extended: slug and how many articles added
-- closed: slug and its quiet days
-- groups passed over that came close, and why
-- anything a tool refused and what you did
-
-Do not edit files or commit. If `list_story_candidates` is missing or answers
-"Authorization failed", the session has the read token: stop and say so.
+Don't edit files or commit. If `save_story` is missing or says "Authorization failed", stop and say so.

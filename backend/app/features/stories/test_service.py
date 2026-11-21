@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import numpy as np
 import pytest
 from sqlalchemy import inspect
 from sqlmodel import Session, select
@@ -29,9 +28,6 @@ RUN = random_lower_string()[:6]
 
 def S(slug: str) -> str:
     return f"{slug}-{RUN}"
-
-
-DIM = 256
 
 
 def _publisher(db: Session, made: dict[str, list[int]]) -> Publisher:
@@ -304,40 +300,3 @@ def test_a_closed_story_cannot_be_saved_or_closed_again(
         stories.close_story(db, S("done"), now=NOW)
     with pytest.raises(StoryError, match="No story"):
         stories.close_story(db, S("never-was"), now=NOW)
-
-
-# ─── list_story_candidates ──────────────────────────────────────────────────
-
-
-def _near(axis: int, wobble: float = 0.0) -> list[float]:
-    """A vector on one high axis, far from the seeded random ones."""
-    v = np.zeros(DIM, dtype=np.float32)
-    v[220 + axis] = 1.0
-    v[255] = wobble
-    return v.tolist()
-
-
-def test_candidates_cluster_free_articles_and_name_the_story_they_reach(
-    db: Session, made: dict[str, list[int]]
-) -> None:
-    p1, p2 = _publisher(db, made), _publisher(db, made)
-    held = _article(db, made, p1, embedding=_near(0))
-    _save(db, S("held"), [held.url])
-    joins = _article(db, made, p2, embedding=_near(0, 0.1))
-    a = _article(db, made, p1, embedding=_near(1))
-    b = _article(db, made, p2, embedding=_near(1, 0.2))
-    alone = _article(db, made, p1, embedding=_near(2))
-
-    found = stories.list_story_candidates(db, days=14, now=NOW)
-
-    mine = [s for s in found["open"] if s["slug"] == S("held")]
-    assert [s["articles"][0]["url"] for s in mine] == [held.url]
-    ours = {held.url, joins.url, a.url, b.url, alone.url}
-    clusters = [c for c in found["groups"] if {x["url"] for x in c["articles"]} & ours]
-    by_urls = {frozenset(x["url"] for x in c["articles"]): c for c in clusters}
-    assert set(by_urls) == {frozenset({joins.url}), frozenset({a.url, b.url})}
-    assert by_urls[frozenset({joins.url})]["near"] == [S("held")]
-    assert by_urls[frozenset({a.url, b.url})]["near"] == []
-    assert by_urls[frozenset({a.url, b.url})]["publishers"] == sorted(
-        [p1.name, p2.name]
-    )
