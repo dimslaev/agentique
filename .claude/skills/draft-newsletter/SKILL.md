@@ -5,50 +5,23 @@ description: Draft the weekly agentique issue - choose the 10-12 most useful art
 
 # Draft the weekly issue
 
-Each week you draft one issue: 10-12 links in 3-4 sections, each with a one-line
-summary. It is the same file for the email and the blog post. A person reads
-the draft and sends it. It takes under a minute to read.
+One issue a week: 10-12 links in 3-4 sections, one-line summary each. Same file for the email and the blog. A person reads and sends it.
 
 ## Tools
 
-From the `agentique-admin` MCP server: `get_last_week_articles`, `find_similar`, `web_fetch`,
-`web_search`, `check_repo`, `sql_query` and `draft_newsletter`. Each tool's
-description says what it returns. `draft_newsletter` sends nothing.
+`agentique-admin` MCP: `get_last_week_articles`, `sql_query`, `web_fetch`, `web_search`, `check_repo`, `draft_newsletter`. `draft_newsletter` sends nothing.
 
-If `get_last_week_articles` is missing or answers "Authorization failed", the session has the
-read token: stop and say so.
+## Steps
 
-## Rounds
-
-1. **Collect.** Call `get_last_week_articles()` once. `topics` is the week's material, `liked`
-   the articles readers liked this week, which can be older than the week.
-2. **Rank.** Liked articles come first, then the rest by `score`. Prefer articles
-   published in the last two weeks. An older liked article needs a clear reason
-   to stay.
-3. **Check builder value.** For each one, name what a builder would do or decide
-   after reading it. If you can't, drop it, whatever its score or likes. Drop
-   funding, availability and pricing notices, benchmarks with no method, and
-   impressive results nobody can use.
-4. **Use the original.** If a pick reposts someone else's work, call
-   `find_similar(url, days=30)` or search for the creator's post, repo or paper, and link that instead. Say in
-   the report when the original isn't in the database yet.
-5. **Merge duplicates.** Keep one article per story.
-6. **Mix sources.** Include at least 3 from individuals or communities, and no
-   more than 2 from one publisher. Unknown writers are often filed as `media`,
-   so also count personal domains, Substacks and github.io pages as individual.
-   Swap the lowest-ranked pick to reach the mix, but never add an article that
-   failed step 3. If the week can't reach it, say so.
-7. **Group.** Put the picks into 3-4 sections named after what the articles have
-   in common, like `Code review`, `Running agents` or `Models`. Find the
-   week's themes from the picks, and don't reuse last week's names by habit.
-   Each section needs at least 2 articles. Put the strongest section first and
-   the strongest article first in each section.
-8. **Summarize.** Read `.claude/skills/write-summary/SKILL.md` and write one summary
-   per article from its stored `summary`. If the stored summary doesn't support
-   a clear point, `web_fetch` the article.
-9. **Draft.** Build the post (see **Format**) and call `draft_newsletter(post)`. On a
-   refusal, fix what it names and call it again.
-10. **Save, open a PR and report.** See **Finish**.
+1. Call `get_last_week_articles()` once. `liked` can be older than the week.
+2. Rank liked first, then by score. An article older than two weeks needs a clear reason.
+3. Keep only articles where you can name what a builder would do after reading. Drop funding, pricing and availability news, benchmarks with no method, and results nobody can use.
+4. If a pick reposts someone else's work, link the original. Find it with web search or a keyword search in `sql_query` (`article.search_tsv`, `websearch_to_tsquery`). Say in the report if it's not in the database.
+5. One article per story.
+6. At least 3 from individuals or communities, at most 2 per publisher. Personal domains, Substacks and github.io count as individual even when filed as `media`. Swap the lowest pick to get there, never with one that failed step 3. Say so if the week can't reach it.
+7. Group into 3-4 sections named for what the articles share, like `Code review` or `Models`. 2+ articles per section. Strongest section and article first. Don't reuse last week's names by habit.
+8. Write summaries with `.claude/skills/write-summary/SKILL.md`, from the stored `summary`. `web_fetch` the article if that's not enough.
+9. Call `draft_newsletter(post)`. Fix what it refuses and call again.
 
 ## Format
 
@@ -68,38 +41,26 @@ Models
 - [Article title](https://example.com/post). The summary.
 ```
 
-- **`title`:** always `The most interesting stuff this week`.
-- **`description`:** names the week's three biggest themes, 160 characters at
-  most.
-- **Section names:** a plain line of text. The email renders no headings or bold.
-- **Link text:** the article's title, without "(7 minute read)".
-- **No intro, no closing, no first person.**
-- **Length:** `draft_newsletter` refuses under 150 words. If it does, add a link
-  rather than padding the summaries.
-- Every URL comes from a tool, never from memory.
+- Title is always the same.
+- Description names the three biggest themes, 160 characters max.
+- Section names are plain lines. The email has no headings or bold.
+- Link text is the article title, without "(7 minute read)".
+- No intro, closing or first person.
+- Under 150 words is refused. Add a link, don't pad.
+- Every URL comes from a tool.
 
 ## Finish
 
-`draft_newsletter` returns a path, but don't use it: this title is the same every
-week. Save the post at:
+Save to `frontend/content/blog/<YYYY-MM-DD>-most-interesting-stuff-this-week-<YYYY-MM-DD>.md`, not the path `draft_newsletter` returns. Add `sources: false` below `topic` in the saved file only; `draft_newsletter` refuses it.
 
-```
-frontend/content/blog/<YYYY-MM-DD>-most-interesting-stuff-this-week-<YYYY-MM-DD>.md
-```
+Branch `feat/weekly-issue-<YYYY-MM-DD>`, one commit `feat: weekly issue <YYYY-MM-DD>`, only that file. Push and open a PR with the same title.
 
-Add `sources: false` to the frontmatter of the saved file, below `topic`. The
-blog would otherwise repeat every link in a sources list. Pass `draft_newsletter` the
-post without it, because `draft_newsletter` refuses any other key.
+Report:
 
-Commit the post on a new branch, `feat/weekly-issue-<YYYY-MM-DD>`, one commit,
-subject `feat: weekly issue <YYYY-MM-DD>`. Commit nothing else. Push it and open
-one PR with the same title. A person sends the draft in Resend and merges the PR.
+- each pick: section, publisher, liked or not, what a builder would do with it
+- dropped liked and top-score articles, and why
+- originals swapped in, and any not in the database
+- count from individuals and communities
+- what `draft_newsletter` returned, and the PR link
 
-Then report:
-
-- each pick, with its section, publisher, whether it was liked, and what a
-  builder would do with it
-- what you dropped from the liked articles and the top scores, and why
-- originals you swapped in, and any that aren't in the database
-- how many picks came from individuals and communities
-- the line `draft_newsletter` returned, and the PR link
+If `get_last_week_articles` is missing or says "Authorization failed", stop and say so.

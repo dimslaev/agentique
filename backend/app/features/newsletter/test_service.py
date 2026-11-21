@@ -1,300 +1,88 @@
-"""The newsletter's reads against the real schema, with the embedding stubbed.
-
-The grouping maths is curation's and pinned there. This pins what the
-newsletter adds: that `get_last_week_articles` ranks topics by how many publishers carried them,
-counting the copies curation rejected, and that `liked` reaches an article
-older than the week.
-"""
+"""The newsletter's reads against the real schema: the week's articles, most
+liked first, and `liked` reaching an article older than the week."""
 
 from __future__ import annotations
 
-import hashlib
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 
-import numpy as np
 import pytest
 from sqlmodel import Session, col, delete
 
-from app.core.db.article import Article, ArticleKind
+from app.core.db.article import Article
 from app.core.db.factories import create_random_user, random_lower_string
-from app.core.db.ledger import Reject, RejectStage
 from app.core.db.like import ArticleLike
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType
 from app.features.newsletter import service as digest
-from app.features.newsletter.model import WeekTopic
 
-DIM = 256
 TAG = random_lower_string()[:8]
 
 
-def _axis(i: int, wobble: float = 0.0) -> list[float]:
-    """A vector along one of the high axes, far from anything real.
-
-    Against ``_axis(i)``, a wobble of 0.05 or -0.5 is the same story (distance
-    under 0.30) and 1.2 is the same subject, a different story (~0.36). Rows on
-    opposite sides of the axis stay apart, so no row sits between two articles
-    and joins them into one topic.
-    """
-    v = np.zeros(DIM, dtype=np.float32)
-    v[200 + i] = 1.0
-    v[250] = wobble
-    return v.tolist()
-
-
-def _noise(text: str) -> list[float]:
-    seed = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16)
-    return [float(x) for x in np.random.default_rng(seed).standard_normal(DIM)]
-
-
-# Title -> vector, for the ledger rows (embedded on the fly).
-VECTORS = {
-    f"{TAG} Kernels, again": _axis(1, 0.05),
-    f"{TAG} Kernels, once more": _axis(1, 0.08),
-    f"{TAG} My weekend with Ollama MLX": _axis(0, 1.3),
-    f"{TAG} What Ollama MLX means": _axis(0, 1.25),
-    f"{TAG} Ollama MLX is bad, a hot take": _axis(0, -0.5),
-    f"{TAG} Ollama MLX, still waiting": _axis(0, -0.5),
-}
-
-
-def _fake_embed(texts: list[str]) -> list[list[float]]:
-    return [VECTORS.get(t.split("\n\n")[0], _noise(t)) for t in texts]
-
-
-def _url(host: str, path: str) -> str:
-    return f"https://{host}/{TAG}/{path}"
-
-
 @pytest.fixture
-def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict[str, str]]:
-    monkeypatch.setattr(digest, "embed_batch", _fake_embed)
-
-    publishers = {
-        name: Publisher(
-            name=f"{TAG} {name}",
-            slug=f"{TAG}-{name.lower()}",
-            kind=kind,
-            type=PublisherType.rss,
-        )
-        for name, kind in (
-            ("Ollama", PublisherKind.company),
-            ("Verge", PublisherKind.media),
-            ("Writer", PublisherKind.individual),
-            ("Maker", PublisherKind.individual),
-            ("Blog", PublisherKind.media),
-            ("Wired", PublisherKind.media),
-            ("Register", PublisherKind.media),
-        )
-    }
-    db.add_all(publishers.values())
+def world(db: Session) -> Generator[dict[str, str]]:
+    publisher = Publisher(
+        name=f"{TAG} Ollama",
+        slug=f"{TAG}-ollama",
+        kind=PublisherKind.company,
+        type=PublisherType.rss,
+    )
+    db.add(publisher)
     db.commit()
     now = datetime.now(UTC)
 
     def article(
-        pub: str,
-        url: str,
+        name: str,
         score: int,
-        vec: list[float],
-        kind: ArticleKind = ArticleKind.post,
         created_at: datetime = now,
         marked_for_deletion_at: datetime | None = None,
     ) -> Article:
+        url = f"https://ollama.example/{TAG}/{name}"
         return Article(
-            title=f"{TAG} {url}",
+            title=f"{TAG} {name}",
             url=url,
-            publisher_id=publishers[pub].id or 0,
+            publisher_id=publisher.id or 0,
             score=score,
-            embedding=vec,
             summary=f"summary of {url}",
-            kind=kind,
             created_at=created_at,
             marked_for_deletion_at=marked_for_deletion_at,
         )
 
-    def reject(
-        url: str,
-        title: str,
-        score: int,
-        pub: str | None = None,
-        stage: RejectStage = RejectStage.below_threshold,
-        reason: str | None = None,
-    ) -> Reject:
-        return Reject(
-            url=url,
-            stage=stage,
-            title=f"{TAG} {title}",
-            publisher_id=publishers[pub].id if pub else None,
-            score=score,
-            reason=reason,
-        )
-
-    release = article("Ollama", _url("ollama.example", "mlx"), 92, _axis(0))
-    retelling = article("Verge", _url("verge.example", "mlx"), 75, _axis(0, 0.05))
-    review = article("Writer", _url("writer.example", "mlx"), 84, _axis(0, 1.2))
-    repo = article(
-        "Maker",
-        f"https://github.com/{TAG}/ollama-ci",
-        72,
-        _axis(0, 1.0),
-        kind=ArticleKind.repo,
-        created_at=now - timedelta(days=20),
-    )
-    kernels = article("Blog", _url("blog.example", "kernels"), 80, _axis(1))
-    minor = article("Blog", _url("blog.example", "minor"), 60, _axis(2))
-    ancient = article(
-        "Blog",
-        _url("blog.example", "ancient"),
-        90,
-        _axis(0),
-        created_at=now - timedelta(days=40),
-    )
-    marked = article(
-        "Blog",
-        _url("blog.example", "marked"),
-        90,
-        _axis(0),
-        marked_for_deletion_at=now,
-    )
-    rejects = {
-        "wired": reject(
-            _url("wired.example", "kernels"),
-            "Kernels, again",
-            40,
-            "Wired",
-            reason="Retelling of the kernel post.",
-        ),
-        "register": reject(
-            _url("register.example", "kernels"), "Kernels, once more", 38, "Register"
-        ),
-        "weekend": reject(
-            _url("reader.example", "weekend"),
-            "My weekend with Ollama MLX",
-            70,
-            "Writer",
-            reason="Retelling of a release the feed already carries.",
-        ),
-        "take": reject(
-            _url("reader.example", "take"),
-            "What Ollama MLX means",
-            40,
-            reason="Commentary with nothing to check.",
-        ),
-        "hot_take": reject(
-            _url("reader.example", "hot-take"), "Ollama MLX is bad, a hot take", 30
-        ),
-        "pending": reject(
-            _url("reader.example", "pending"),
-            "Ollama MLX, still waiting",
-            0,
-            stage=RejectStage.pending,
-        ),
+    made = {
+        "liked": article("liked", 60),
+        "top": article("top", 92),
+        "low": article("low", 40),
+        "ancient": article("ancient", 90, created_at=now - timedelta(days=40)),
+        "marked": article("marked", 95, marked_for_deletion_at=now),
     }
-    db.add_all([release, retelling, review, repo, kernels, minor, ancient, marked])
-    db.add_all(rejects.values())
+    db.add_all(made.values())
     db.commit()
     user = create_random_user(db)
-    db.add(ArticleLike(user_id=user.id, article_id=release.id or 0))
-    db.add(ArticleLike(user_id=user.id, article_id=ancient.id or 0))
+    for name in ("liked", "ancient"):
+        db.add(ArticleLike(user_id=user.id, article_id=made[name].id or 0))
     db.commit()
 
-    yield {
-        "release": release.url,
-        "retelling": retelling.url,
-        "review": review.url,
-        "repo": repo.url,
-        "kernels": kernels.url,
-        "minor": minor.url,
-        "ancient": ancient.url,
-        "marked": marked.url,
-        **{name: r.url for name, r in rejects.items()},
-    }
+    yield {name: a.url for name, a in made.items()}
 
     db.exec(delete(ArticleLike).where(col(ArticleLike.user_id) == user.id))
-    db.exec(delete(Reject).where(col(Reject.url).contains(TAG)))
     db.exec(delete(Article).where(col(Article.url).contains(TAG)))
-    db.exec(delete(Publisher).where(col(Publisher.slug).startswith(TAG)))
+    db.delete(publisher)
     db.delete(user)
     db.commit()
 
 
-def _ours(db: Session) -> list[WeekTopic]:
-    # A high limit: the local db carries other articles from this week.
-    return [
-        t
-        for t in digest.get_last_week_articles(db, limit=1000)
-        if any(TAG in a["url"] for a in t["articles"])
-    ]
-
-
-def _topic(db: Session, url: str) -> WeekTopic:
-    [topic] = [t for t in _ours(db) if t["articles"][0]["url"] == url]
-    return topic
-
-
-def test_week_ranks_topics_by_how_many_publishers_carried_them(
+def test_week_lists_this_weeks_articles_most_liked_first(
     db: Session, world: dict[str, str]
 ) -> None:
-    """The kernel post scores lowest of the three, and two outlets whose copies
-    curation rejected carried it too: it is the week's most talked-about."""
-    assert [t["articles"][0]["url"] for t in _ours(db)] == [
-        world["kernels"],
-        world["release"],
-        world["review"],
-        world["minor"],
-    ]
-
-
-def test_week_counts_the_rejected_copies_as_coverage(
-    db: Session, world: dict[str, str]
-) -> None:
-    topic = _topic(db, world["kernels"])
-    assert topic["publisher_count"] == 3
-    assert topic["publishers"] == [f"{TAG} Blog", f"{TAG} Register", f"{TAG} Wired"]
-    assert {c["url"] for c in topic["covered_by"]} == {
-        world["wired"],
-        world["register"],
-    }
-    [wired] = [c for c in topic["covered_by"] if c["url"] == world["wired"]]
-    assert wired["reason"] == "Retelling of the kernel post."
-
-
-def test_a_week_topic_carries_its_articles_likes_and_summaries(
-    db: Session, world: dict[str, str]
-) -> None:
-    topic = _topic(db, world["release"])
-    assert [a["url"] for a in topic["articles"]] == [
-        world["release"],
-        world["retelling"],
-    ]
-    # Rows with no publisher join the topic without counting toward the publisher count.
-    assert topic["publisher_count"] == 2
-    assert {world["hot_take"], world["pending"]} <= {
-        c["url"] for c in topic["covered_by"]
-    }
-    assert topic["likes"] == 1
-    assert topic["top_score"] == 92
-    lead = topic["articles"][0]
-    assert lead["publisher_kind"] == "company"
-    assert lead["summary"] == f"summary of {world['release']}"
-
-
-def test_week_leaves_out_what_is_not_this_weeks(
-    db: Session, world: dict[str, str]
-) -> None:
-    urls = {a["url"] for t in _ours(db) for a in t["articles"]}
-    for name in ("repo", "ancient", "marked"):
-        assert world[name] not in urls
-
-
-def test_week_returns_at_most_limit_topics(db: Session, world: dict[str, str]) -> None:
-    assert world
-    assert len(digest.get_last_week_articles(db, limit=1)) == 1
+    week = [a for a in digest.get_last_week_articles(db) if TAG in a["url"]]
+    assert [a["url"] for a in week] == [world["liked"], world["top"], world["low"]]
+    assert week[0]["likes"] == 1
+    assert week[0]["publisher_kind"] == "company"
+    assert week[0]["summary"] == f"summary of {world['liked']}"
 
 
 def test_liked_reaches_an_article_older_than_the_week(
     db: Session, world: dict[str, str]
 ) -> None:
     liked = {a["url"]: a for a in digest.liked(db) if TAG in a["url"]}
-    assert set(liked) == {world["release"], world["ancient"]}
+    assert set(liked) == {world["liked"], world["ancient"]}
     assert liked[world["ancient"]]["likes"] == 1

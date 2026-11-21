@@ -31,6 +31,7 @@ select a.url, a.title, p.name as publisher, coalesce(a.published_at, a.created_a
 from article a
 join publisher p on p.id = a.publisher_id
 where coalesce(a.published_at, a.created_at) >= now() - interval '14 days'
+  and a.marked_for_deletion_at is null
   and not exists (select 1 from story_article sa join story s on s.id = sa.story_id
                   where sa.article_id = a.id and s.closed_at is null)
 order by published
@@ -47,6 +48,7 @@ join publisher p on p.id = a.publisher_id,
   websearch_to_tsquery('english', 'mlx or ollama or "llama.cpp"') q
 where a.search_tsv @@ q
   and coalesce(a.published_at, a.created_at) >= now() - interval '30 days'
+  and a.marked_for_deletion_at is null
 order by ts_rank(a.search_tsv, q) desc
 limit 30
 ```

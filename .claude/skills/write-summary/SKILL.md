@@ -5,26 +5,16 @@ description: Write a reader-facing article summary as one plain sentence of 5-10
 
 # Write an article summary
 
-A summary is one very simple sentence of 5-10 words in plain language. It
-gives the single most meaningful point of the article.
-
-The reader knows the main topics in AI but has no idea what this article says.
-
-## How to write one
-
-1. Read the whole article or its full stored summary.
-2. Find the one thing a builder would want to know.
-3. Say that thing in 5-10 plain words.
+One plain sentence of 5-10 words with the article's main point. The reader knows AI but hasn't read the article.
 
 ## Rules
 
 - Name the finding, not the topic.
-- Use the point that matters, not the funniest or biggest detail.
-- Don't repeat the title. Add what the title leaves out.
+- The point that matters, not the funniest or biggest detail.
+- Don't repeat the title.
 - Keep a number only if it is the point.
-- Say what the source supports. Don't round up or add a claim.
-- One sentence. No list, no colon, no em dash.
-- Summary should not be vague
+- Only what the source supports.
+- One sentence. No list, colon or em dash.
 
 ## Examples
 
@@ -36,9 +26,6 @@ Good:
 
 Bad:
 
-- "YC gave 50 agents three hours to build a civilization and got a 'sole
-  fertilizer operator'." This is a funny detail, not the finding, and it is too
-  long.
-- "A plugin that remembers repo facts between sessions and reports 18.4-30.9%
-  lower mean cost." This is too dense.
-- "An interesting look at agent swarms." This names the topic and says nothing.
+- "YC gave 50 agents three hours to build a civilization and got a 'sole fertilizer operator'." Funny detail, too long.
+- "A plugin that remembers repo facts between sessions and reports 18.4-30.9% lower mean cost." Too dense.
+- "An interesting look at agent swarms." Names the topic, says nothing.
