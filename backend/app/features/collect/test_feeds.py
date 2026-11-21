@@ -16,7 +16,7 @@ import pytest
 from app.core.extract import Page
 from app.core.urls import feed_url
 from app.features.collect import fetch as fetch_step
-from app.features.collect.feeds import Entry, _entry_item
+from app.features.collect.feeds import Entry, _entry_item, linked_items
 from app.features.collect.fetch import MIN_CONTENT_CHARS, MIN_SUMMARIZABLE_CHARS
 from app.features.collect.model import RawItem
 
@@ -217,3 +217,21 @@ def test_an_item_that_already_has_full_content_is_not_refetched(
     kept = fetch_step._with_content([_fetched("u1", _FULL_TEXT)], "Feeds")
     assert asked == []
     assert kept[0]["content"] == _FULL_TEXT
+
+
+def test_an_aggregator_post_becomes_its_first_outside_link() -> None:
+    post: RawItem = {
+        "title": "Qwen ships Qwen4-Max",
+        "url": "https://www.marktechpost.com/2026/11/18/qwen4-max/",
+        "content": "retelling",
+        "published_date": "2026-11-18",
+        "source": "MarkTechPost",
+        "links": {
+            "docs": ["https://minicon.marktechpost.com/x", "https://qwen.ai/blog"],
+            "model": ["https://huggingface.co/google/gemma-4-31B-it"],
+        },
+    }
+    [item] = linked_items(post)
+    assert item["url"] == "https://qwen.ai/blog"
+    assert item["content"] == "" and item["source"] == "MarkTechPost"
+    assert linked_items({**post, "links": {}}) == []

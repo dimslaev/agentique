@@ -341,6 +341,7 @@ def feed_sources_from_db(session: Session) -> list[FeedSource]:
                         "rssUrl": feed_url(
                             url, is_substack=platform == LinkPlatform.substack.value
                         ),
+                        "aggregator": pub.type in AGGREGATOR_TYPES,
                     }
                 )
                 break

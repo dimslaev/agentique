@@ -60,7 +60,7 @@ all a reader sees. So write it for them, in plain short lines:
 - **For each item read**, one line once it is decided: verdict, score, title
   and the fact that decided it. "Approve 82 'Why Antigravity eats weekly
   quota': measured the 5-minute cache cliff with token counts." "Reject 64
-  Qwen pi-adapted LoRA (MarkTechPost): retelling; the model card is not in
+  Qwen pi-adapted LoRA (a news site): retelling; the model card is not in
   the feed, searched, not found."
 - **A surprise** (a tool error, a duplicate the filter missed, a rule that
   pulled two ways), one line saying so as it happens.
@@ -257,7 +257,6 @@ Out, and over-scored by the old scorer — reject these even when they read well
 
 - cloud vendor how-tos where the substance is console steps for their service
 - an aggregator's tutorial or reimplementation of someone else's work
-  (MarkTechPost scored 0 loves in 5 hand-labelled items)
 - docs, help centres, dashboards, pricing, "our stack" pages
 - availability and pricing notices
 - funding, policy, lawsuits, corporate drama

@@ -243,8 +243,16 @@ def polled(db: Session) -> Generator[dict[str, Publisher]]:
 def test_feeds_come_from_active_publishers_preferring_rss(db: Session) -> None:
     feeds = [f for f in feed_sources_from_db(db) if f["name"].startswith(TAG)]
     assert sorted(feeds, key=lambda f: f["name"]) == [
-        {"name": f"{TAG} both", "rssUrl": f"https://{TAG}-both.com/feed.xml"},
-        {"name": f"{TAG} substack", "rssUrl": f"https://{TAG}stack.substack.com/feed"},
+        {
+            "name": f"{TAG} both",
+            "rssUrl": f"https://{TAG}-both.com/feed.xml",
+            "aggregator": False,
+        },
+        {
+            "name": f"{TAG} substack",
+            "rssUrl": f"https://{TAG}stack.substack.com/feed",
+            "aggregator": False,
+        },
     ]
 
 

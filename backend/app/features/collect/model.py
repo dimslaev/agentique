@@ -50,6 +50,8 @@ class FeedSource(TypedDict):
 
     name: str
     rssUrl: str
+    # The publisher is an aggregator: queue the links in its posts, not the posts.
+    aggregator: bool
 
 
 class Candidate(RawItem):

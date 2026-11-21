@@ -16,7 +16,7 @@ from app.core.http import (
     fetch_with_timeout,
 )
 from app.core.logging import log
-from app.core.urls import feed_url
+from app.core.urls import feed_url, hostname
 from app.features.collect.freshness import is_within_window
 from app.features.collect.model import FeedSource, RawItem
 from app.features.collect.titles import clean_title
@@ -95,6 +95,34 @@ def _entry_item(entry: Entry, name: str) -> RawItem:
     return item
 
 
+def linked_items(post: RawItem) -> list[RawItem]:
+    """An aggregator's post as the first repo, paper, model or docs link it
+    makes off its own site, or nothing (ADR 22).
+
+    Only the first: the rest are mostly what the post compares against, and
+    would be queued under a title about something else. It keeps the post's
+    title, the way a newsletter link keeps its anchor text, and no content, so
+    the fetch step reads the page itself.
+    """
+    site = hostname(post["url"])
+    outside = [
+        url
+        for urls in post.get("links", {}).values()
+        for url in urls
+        if not (hostname(url) == site or hostname(url).endswith(f".{site}"))
+    ]
+    return [
+        {
+            "title": post["title"],
+            "url": url,
+            "content": "",
+            "published_date": post["published_date"],
+            "source": post["source"],
+        }
+        for url in outside[:1]
+    ]
+
+
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     for attempt in range(retries + 1):
         use_proxy = attempt > 0 and bool(_PROXY_URL)
@@ -136,7 +164,10 @@ def _fetch_source(source: FeedSource) -> tuple[list[RawItem], str | None]:
             if is_within_window(_text(it, "published", "updated") or None)
         ]
         log(f"  {name}: {len(within)} in window")
-        return [_entry_item(it, name) for it in within], None
+        posts = [_entry_item(it, name) for it in within]
+        if source["aggregator"]:
+            return [link for post in posts for link in linked_items(post)], None
+        return posts, None
     except Exception as e:
         log(f"  FAILED {name}: {e}")
         return [], f"{type(e).__name__}: {e}"

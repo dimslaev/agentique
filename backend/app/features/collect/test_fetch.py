@@ -162,7 +162,9 @@ def test_lab_watch_reports_its_targets_as_publishers(
 
 
 def test_feeds_reports_its_publishers(monkeypatch: pytest.MonkeyPatch) -> None:
-    _stub_db_sources(monkeypatch, [{"name": "Cloudflare", "rssUrl": "x"}], [])
+    _stub_db_sources(
+        monkeypatch, [{"name": "Cloudflare", "rssUrl": "x", "aggregator": False}], []
+    )
     feeds = next(s for s in fetch_step.build_sources(NO_SESSION) if s.label == "Feeds")
     assert feeds.publisher_names == ("Cloudflare",)
 
