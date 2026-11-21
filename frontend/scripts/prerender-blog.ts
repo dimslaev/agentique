@@ -226,6 +226,9 @@ const ANALYTICS_SCRIPT = `try{var k="analytics_visitor_id";var id=localStorage.g
 // Same endpoint as the feed's SignupPanel: it creates the account, subscribes
 // the address to the newsletter and emails the sign-in link.
 const SIGNUP_SCRIPT = `(function(){var f=document.getElementById("signup-form"),s=document.getElementById("signup-status"),b=f.querySelector("button");f.addEventListener("submit",function(e){e.preventDefault();b.disabled=true;fetch("${API_URL}/api/v1/login/link",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:f.elements.email.value,utm_source:"blog"})}).then(function(r){if(!r.ok)throw r;f.hidden=true;s.textContent="Check your inbox"}).catch(function(){b.disabled=false;s.textContent="That didn't work, try again"})})})()`
+// Same localStorage key the SPA uses (shared/auth), same origin in prod and
+// dev, so the header's user button matches the app's login state.
+const AUTH_SCRIPT = `(function(){if(localStorage.getItem("access_token")){document.getElementById("auth-link").href="/profile"}})()`
 
 const SIGNUP_SECTION = `
       <section aria-labelledby="signup" class="mt-16 border border-wire p-5 sm:p-7">
@@ -294,18 +297,25 @@ const ARROW_LEFT =
 const META = "font-wire text-[11px] uppercase tracking-[0.08em] text-dim"
 const SECTION_HEAD =
   "flex items-baseline justify-between border-b border-wire pb-3 font-wire text-[11px] uppercase tracking-[0.12em] text-dim"
-const NAV_LINK = "inline-flex h-11 items-center hover:text-paper"
+const NAV_LINK = "inline-flex h-12 items-center hover:text-paper"
 
 function header(current: "index" | "post"): string {
   const aria = current === "index" ? ' aria-current="page"' : ""
+  // Mirrors the SPA header (widgets/header/): logo, then nav + user button in
+  // an ml-auto gap-3 group, so nothing moves when crossing between the two.
   return `    <header class="border-b border-wire bg-ink">
       <div class="mx-auto flex h-12 max-w-[768px] items-center gap-4 px-4">
-        <a href="/" class="inline-flex h-11 items-center font-display text-[17px] font-extrabold tracking-[-0.01em] text-paper hover:text-paper">${SITE_NAME}</a>
-        <nav aria-label="Site" class="ml-auto flex items-center gap-5 font-wire text-[11px] uppercase tracking-[0.08em]">
-          <a href="/" class="${NAV_LINK} text-dim">Feed</a>
-          <a href="/blog/"${aria} class="${NAV_LINK} text-paper shadow-[inset_0_-2px_0_var(--signal)]">Blog</a>
-          <a href="/connect-mcp" class="${NAV_LINK} text-dim">MCP</a>
-        </nav>
+        <a href="/" class="-ml-2 inline-flex h-11 items-center px-2 font-display text-[16px] font-extrabold lowercase tracking-[-0.01em] text-paper hover:text-paper">${SITE_NAME}</a>
+        <div class="ml-auto flex items-center gap-3">
+          <nav aria-label="Site" class="flex items-center gap-5 font-wire text-[11px] uppercase tracking-[0.08em]">
+            <a href="/" class="${NAV_LINK} text-dim">Feed</a>
+            <a href="/connect-mcp" class="${NAV_LINK} text-dim">MCP</a>
+            <a href="/blog/"${aria} class="${NAV_LINK} text-paper shadow-[inset_0_-2px_0_var(--signal)]">Blog</a>
+          </nav>
+          <a id="auth-link" href="/login" aria-label="Sign in" title="Sign in" class="flex size-8 items-center justify-center text-dim transition-colors hover:text-signal">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </a>
+        </div>
       </div>
     </header>`
 }
@@ -358,6 +368,7 @@ function shell(opts: {
   </head>
   <body class="flex min-h-screen flex-col bg-ink font-body text-[#cfccbd] antialiased">
 ${header(opts.current)}
+    <script>${AUTH_SCRIPT}</script>
 ${opts.main}
 ${FOOTER}
   </body>

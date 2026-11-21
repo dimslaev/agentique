@@ -1,16 +1,7 @@
-import {
-  createFileRoute,
-  Link,
-  Outlet,
-  useMatches,
-  useRouterState,
-} from "@tanstack/react-router"
-import { isLoggedIn } from "@/shared/auth"
-import { cn } from "@/shared/lib/utils"
+import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Footer } from "@/widgets/footer"
-import { Header, UserMenu } from "@/widgets/header"
-import { hasPanels, RailToggles, useRails } from "@/widgets/rails"
+import { SiteHeader } from "@/widgets/header"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -19,13 +10,6 @@ declare module "@tanstack/react-router" {
     wide?: boolean
   }
 }
-
-// The site nav, the same links the blog's static header shows (see
-// frontend/scripts/prerender-blog.ts), so moving between the two feels like
-// one site.
-const NAV_LINK =
-  "inline-flex h-11 items-center font-wire text-[11px] uppercase tracking-[0.08em] transition-colors hover:text-foreground"
-const NAV_CURRENT = "text-paper shadow-[inset_0_-2px_0_var(--signal)]"
 
 // Public shell: every page under it is readable logged out. Pages that need a
 // user (profile, admin) guard themselves.
@@ -51,60 +35,5 @@ function Layout() {
       </main>
       <Footer />
     </div>
-  )
-}
-
-/** On wide screens with inline rails, the header spans them too. */
-function SiteHeader() {
-  const wide = useRails(
-    (s) =>
-      s.present &&
-      s.mode === "wide" &&
-      (hasPanels(s, "left") || hasPanels(s, "right")),
-  )
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const onFeed = pathname === "/"
-  const onMcp = pathname === "/connect-mcp"
-  return (
-    <Header
-      wide={wide}
-      nav={
-        <>
-          <nav aria-label="Site" className="flex items-center gap-5">
-            <Link
-              to="/"
-              className={cn(NAV_LINK, onFeed ? NAV_CURRENT : "text-dim")}
-              aria-current={onFeed ? "page" : undefined}
-            >
-              Feed
-            </Link>
-            {/* /blog/ is prerendered outside the router: a plain anchor, and
-             *  never the current page while the router is mounted. */}
-            <a href="/blog/" className={cn(NAV_LINK, "text-dim")}>
-              Blog
-            </a>
-            {isLoggedIn() ? (
-              <Link
-                to="/connect-mcp"
-                className={cn(NAV_LINK, onMcp ? NAV_CURRENT : "text-dim")}
-                aria-current={onMcp ? "page" : undefined}
-              >
-                MCP
-              </Link>
-            ) : (
-              <Link
-                to="/login"
-                search={{ redirect: "/connect-mcp" }}
-                className={cn(NAV_LINK, "text-dim")}
-              >
-                MCP
-              </Link>
-            )}
-          </nav>
-          <RailToggles />
-          <UserMenu />
-        </>
-      }
-    />
   )
 }
