@@ -20,11 +20,6 @@ from app.entry.mcp.list_tags import list_tags
 from app.entry.mcp.search_articles import search_articles
 
 
-@pytest.fixture(autouse=True)
-def _embed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("app.features.catalog.search.embed", lambda _text: [0.05] * 256)
-
-
 def test_search_returns_a_link_and_an_excerpt_but_not_the_text(
     db: Session, made: dict[str, list[int]]
 ) -> None:
@@ -40,7 +35,6 @@ def test_search_returns_a_link_and_an_excerpt_but_not_the_text(
     made["articles"].append(article.id)
     made["publishers"].append(article.publisher_id)
 
-    # Other articles can follow by meaning. The keyword match is first.
     found = search_articles(word)[0]
 
     assert set(found) == {

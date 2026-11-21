@@ -1,4 +1,4 @@
-"""The `search_articles` tool: find articles by keyword and by meaning."""
+"""The `search_articles` tool: find articles by keyword."""
 
 from __future__ import annotations
 
@@ -35,9 +35,8 @@ def search_articles(
 ) -> list[dict[str, object]]:
     """Search agentique's archive of curated AI articles.
 
-    `q` is keywords or a plain question. Keywords match the title, summary,
-    full text and tag names; `"quoted phrase"`, `or` and `-exclude` work. The
-    meaning of `q` is matched too, so a result may hold none of the words.
+    `q` is keywords. Keywords match the title, summary,
+    full text and tag names; `"quoted phrase"`, `or` and `-exclude` work.
     Leave `q` empty to browse by the filters alone, such as the best articles
     since a date.
 

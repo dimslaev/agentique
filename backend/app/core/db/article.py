@@ -70,12 +70,6 @@ class Article(ArticleBase, table=True):
     __table_args__ = (
         Index("ix_article_score", "score"),
         Index("ix_article_published_at", "published_at"),
-        Index(
-            "ix_article_embedding_hnsw",
-            "embedding",
-            postgresql_using="hnsw",
-            postgresql_ops={"embedding": "vector_cosine_ops"},
-        ),
         SEARCH_TSV,
         Index("ix_article_search_tsv", "search_tsv", postgresql_using="gin"),
     )

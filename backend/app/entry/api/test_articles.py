@@ -8,11 +8,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from pgvector.sqlalchemy import Vector  # type: ignore[import-untyped]
-from sqlalchemy import cast
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
-from app.core.db.article import Article, ArticleKind
+from app.core.db.article import ArticleKind
 from app.core.db.factories import (
     authentication_token_from_email,
     create_random_article,
@@ -26,7 +24,6 @@ from app.core.db.like import ArticleLike
 from app.core.db.publisher import PublisherKind
 from app.core.security import create_access_token
 from app.core.settings import settings
-from app.features.catalog import search
 from app.features.catalog.model import Origin, Voice
 
 ARTICLES_URL = f"{settings.API_V1_STR}/articles"
@@ -295,18 +292,13 @@ def test_read_articles_old_since_ok_logged_in(
 def test_search_is_unbounded_for_anonymous(
     client: TestClient,
     db: Session,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake_vec = [0.05] * 256
-    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
+    needle = _needle()
     now = datetime.now(UTC)
-    # identical embedding to the query -> cosine distance 0 -> ranks first
-    old = create_random_article(
-        db, published_at=now - timedelta(days=20), embedding=fake_vec
-    )
-    recent = create_random_article(db, published_at=now, embedding=fake_vec)
+    old = create_random_article(db, title=needle, published_at=now - timedelta(days=20))
+    recent = create_random_article(db, title=needle, published_at=now)
 
-    r = client.get(f"{ARTICLES_URL}/search", params={"q": "x", "limit": 50})
+    r = client.get(f"{ARTICLES_URL}/search", params={"q": needle, "limit": 50})
     assert r.status_code == 200
     ids = {a["id"] for a in r.json()["data"]}
     assert old.id in ids
@@ -341,29 +333,18 @@ def test_read_articles_filter_unknown_publisher_returns_nothing(
     assert r.json()["count"] == 0
 
 
-def test_search_articles(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    fake_vec = [0.05] * 256
-    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
+def test_search_articles(auth_client: TestClient, db: Session) -> None:
+    needle = _needle()
+    in_title = create_random_article(db, title=needle)
+    create_random_article(db, content=f"we moved inference to {needle}")
+    create_random_article(db, content=f"{needle} again")
 
-    # No article holds this word, so the order is the embedding's alone.
-    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": _needle(), "limit": 5})
+    r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": needle, "limit": 2})
     assert r.status_code == 200
     data = r.json()
-    assert len(data["data"]) <= 5
-    assert data["count"] == len(data["data"])
-
-    expected_ids = db.exec(
-        select(Article.id)
-        .where(Article.embedding.is_not(None))  # type: ignore[union-attr]  # ty: ignore[unresolved-attribute]
-        .order_by(
-            cast(Article.embedding, Vector(256)).cosine_distance(fake_vec),
-            col(Article.id).desc(),
-        )
-        .limit(5)
-    ).all()
-    assert [a["id"] for a in data["data"]] == list(expected_ids)
+    assert data["count"] == 2
+    # The title weighs more than the content.
+    assert data["data"][0]["id"] == in_title.id
 
 
 def _needle() -> str:
@@ -371,31 +352,24 @@ def _needle() -> str:
     return f"vllm{uuid.uuid4().hex[:10]}"
 
 
-def test_search_ranks_a_keyword_only_hit_first(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+def test_search_finds_a_word_deep_in_the_content(
+    auth_client: TestClient, db: Session
 ) -> None:
-    """The word is deep in the content and the article has no embedding, so
-    only the full-text index can find it."""
-    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
     needle = _needle()
     hit = create_random_article(
         db, content=f"{'filler ' * 500}we moved inference to {needle} last week"
     )
-    create_random_article(db, embedding=[0.05] * 256)
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": needle})
     assert r.status_code == 200
-    data = r.json()["data"]
-    assert data[0]["id"] == hit.id
-    assert len(data) > 1
+    assert [a["id"] for a in r.json()["data"]] == [hit.id]
 
 
 def test_search_matches_a_stop_word_in_the_title(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, db: Session
 ) -> None:
     """The English stemmer drops "them", so only the title's unstemmed index
     holds it."""
-    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
     hit = create_random_article(db, title="Them")
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "them"})
@@ -404,15 +378,13 @@ def test_search_matches_a_stop_word_in_the_title(
 
 
 def test_search_matches_a_tag_the_text_never_names(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, db: Session
 ) -> None:
-    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
     needle = _needle()
     by_name = create_random_article(db)
     tag_article(db, by_name, create_random_tag(db, name=f"{needle} tooling"))
     by_slug = create_random_article(db)
     tag_article(db, by_slug, create_random_tag(db, slug=f"{needle}-ops"))
-    create_random_article(db, embedding=[0.05] * 256)
 
     def ids(q: str) -> list[int]:
         r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": q})
@@ -421,15 +393,12 @@ def test_search_matches_a_tag_the_text_never_names(
 
     assert ids(f"{needle} tooling")[0] == by_name.id
     assert ids(f"{needle} ops")[0] == by_slug.id
-    # Both tags hold the word, and each article outranks one found by meaning.
-    assert set(ids(needle)[:3]) >= {by_name.id, by_slug.id}
+    assert set(ids(needle)) == {by_name.id, by_slug.id}
 
 
 def test_search_filters_narrow_before_ranking(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, db: Session
 ) -> None:
-    fake_vec = [0.05] * 256
-    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
     needle = _needle()
     now = datetime.now(UTC)
     tag = create_random_tag(db)
@@ -440,14 +409,12 @@ def test_search_filters_narrow_before_ranking(
         publisher_id=publisher.id,
         kind=ArticleKind.repo,
         published_at=now,
-        embedding=fake_vec,
     )
     tag_article(db, wanted, tag)
     other = create_random_article(
         db,
         title=needle,
         published_at=now - timedelta(days=30),
-        embedding=fake_vec,
     )
 
     def ids(**filters: str) -> list[int]:
@@ -458,7 +425,7 @@ def test_search_filters_narrow_before_ranking(
         return [a["id"] for a in r.json()["data"]]
 
     assert {wanted.id, other.id} <= set(ids())
-    # One article is left by each filter, so neither ranking can add another.
+    # One article is left by each filter.
     assert ids(tag=tag.slug) == [wanted.id]
     assert ids(publisher=publisher.slug) == [wanted.id]
     assert other.id not in ids(kind="repo")
@@ -479,9 +446,8 @@ def test_search_limit_is_capped_at_100(auth_client: TestClient) -> None:
 
 
 def test_search_excerpt_is_short_and_around_the_keyword(
-    auth_client: TestClient, db: Session, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient, db: Session
 ) -> None:
-    monkeypatch.setattr(search, "embed", lambda text: [0.05] * 256)
     needle = _needle()
     opening = create_random_article(db, title=needle, content="word " * 2000)
     around = create_random_article(
@@ -678,10 +644,8 @@ def test_read_articles_sort_liked_desc(client: TestClient, db: Session) -> None:
 
 
 def test_search_articles_has_like_count_and_liked_by_me(
-    auth_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    auth_client: TestClient,
 ) -> None:
-    fake_vec = [0.05] * 256
-    monkeypatch.setattr(search, "embed", lambda text: fake_vec)
 
     r = auth_client.get(f"{ARTICLES_URL}/search", params={"q": "agents", "limit": 5})
     assert r.status_code == 200

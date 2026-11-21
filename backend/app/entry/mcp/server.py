@@ -36,7 +36,7 @@ mcp = FastMCP(
     instructions=(
         "agentique is a curated archive of articles for people building with "
         "AI. `list_tags` lists the topics with article counts, `search_articles` finds "
-        "articles by keyword and by meaning, and `sql_query` runs read-only "
+        "articles by keyword, and `sql_query` runs read-only "
         "SQL over the archive. Start with `list_tags`, then pass slugs to `search_articles`."
     ),
     auth=SharedSecret(),

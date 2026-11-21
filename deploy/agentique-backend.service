@@ -13,7 +13,7 @@ WorkingDirectory=/opt/agentique/backend
 # etc. in the process env so shell-level guards (prestart.sh) see them too.
 EnvironmentFile=/opt/agentique/.env
 # agentique is a system user (adduser --system) with home=/nonexistent. The
-# search endpoint lazy-loads a model2vec model via huggingface_hub, which
+# MCP find_similar tool lazy-loads a model2vec model via huggingface_hub, which
 # expands ~ for its cache dir and fails with EACCES against /nonexistent.
 # /var/lib/agentique is real and writable (created by vps-setup.sh) — outside
 # /opt/agentique so the deploy rsync's --delete never touches it.

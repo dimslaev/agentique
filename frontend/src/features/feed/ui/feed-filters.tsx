@@ -105,7 +105,7 @@ function SearchInput() {
       <input
         type="text"
         aria-label="Search articles"
-        placeholder="Search by meaning, e.g. run a model locally"
+        placeholder="Search, e.g. vLLM"
         value={localSearch}
         onChange={(e) => handleChange(e.target.value)}
         className="w-full min-w-0 bg-transparent py-2 text-base outline-none md:text-[13px] placeholder:text-muted-foreground"

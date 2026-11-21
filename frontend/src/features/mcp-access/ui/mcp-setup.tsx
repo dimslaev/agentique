@@ -25,7 +25,7 @@ const TOOLS = [
   {
     name: "search_articles",
     description:
-      "Articles by keyword and by meaning, filtered by tag, kind, date or publisher. Returns links and excerpts, at most 100 results.",
+      "Articles by keyword, filtered by tag, kind, date or publisher. Returns links and excerpts, at most 100 results.",
   },
   {
     name: "sql_query",

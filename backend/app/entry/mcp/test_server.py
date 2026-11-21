@@ -207,9 +207,7 @@ def test_a_user_token_chains_tags_into_search_and_sql(
     user_token: str,
     db: Session,
     made: dict[str, list[int]],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("app.features.catalog.search.embed", lambda _text: [0.05] * 256)
     word = random_lower_string()
     article = create_random_article(
         db, title=f"About {word}", content=f"Private body mentioning {word}."

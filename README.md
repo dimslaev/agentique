@@ -91,10 +91,7 @@ flowchart TD
 
 ## Search
 
-- One query box matches by keyword and by meaning at once
-- Keyword: Postgres full-text over title, summary, body and tag names, so an exact name like "vLLM" matches
-- Meaning: the query's model2vec embedding against each article's, so "run a model locally" finds pieces that never use those words
-- The two rankings are merged (reciprocal rank fusion); a keyword match wins a tie
+- One query box matches by keyword: Postgres full-text over title, summary, body and tag names, so an exact name like "vLLM" matches
 - Filters (tags, kinds, publisher, date) narrow the articles before ranking
 
 ## Newsletter
@@ -117,7 +114,7 @@ flowchart TD
 - FastAPI backend, REST API and MCP server - native via uv, systemd in production
 - Pipeline - native via uv, systemd timer
 - React + Vite + Tailwind frontend - static files served by Caddy
-- model2vec - embeddings for semantic search
+- model2vec - embeddings for spotting the same story across publishers
 
 ## Docs
 
