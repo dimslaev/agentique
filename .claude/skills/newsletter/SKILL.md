@@ -11,37 +11,17 @@ the draft and sends it. It takes under a minute to read.
 
 ## Tools
 
-From the `agentique-admin` MCP server, with the curation token:
+From the `agentique-admin` MCP server: `week`, `similar`, `web_fetch`,
+`web_search`, `check_link`, `sql_query` and `draft_issue`. Each tool's
+description says what it returns. `draft_issue` sends nothing.
 
-- `week(days=7, limit=40)` - the week's topics. Each article has `publisher`,
-  `publisher_kind`, `kind`, `score`, `likes` and `summary`. `covered_by` lists
-  the retellings curation rejected.
-- `sql_query(sql)` - read-only. The `user` table is blocked.
-- `related(url)` - what else covers a story, to find the original.
-- `web_fetch(url)`, `web_search(query)`, `check_link(url)` - find and check an
-  original source.
-- `draft_issue(post)` - checks the post and creates a Resend draft. Nothing is
-  sent.
-
-If a tool answers "This tool needs the curation token", stop and say so.
+If `week` is missing or answers "Authorization failed", the session has the
+read token: stop and say so.
 
 ## Rounds
 
-1. **Collect.** Call `week()`, then find the articles liked in the last 7 days.
-   A liked article can be older than the week:
-
-   ```sql
-   select a.title, a.url, a.score, a.published_at, a.summary, p.name, p.kind,
-          count(*) as likes
-   from article_like l
-   join article a on a.id = l.article_id
-   join publisher p on p.id = a.publisher_id
-   where l.created_at >= now() - interval '7 days'
-     and a.marked_for_deletion_at is null
-   group by a.id, p.id
-   order by likes desc, a.score desc
-   ```
-
+1. **Collect.** Call `week()` once. `topics` is the week's material, `liked`
+   the articles readers liked this week, which can be older than the week.
 2. **Rank.** Liked articles come first, then the rest by `score`. Prefer articles
    published in the last two weeks. An older liked article needs a clear reason
    to stay.
@@ -49,8 +29,8 @@ If a tool answers "This tool needs the curation token", stop and say so.
    after reading it. If you can't, drop it, whatever its score or likes. Drop
    funding, availability and pricing notices, benchmarks with no method, and
    impressive results nobody can use.
-4. **Use the original.** If a pick retells someone else's work, read `related`
-   or search for the maker's post, repo or paper, and link that instead. Say in
+4. **Use the original.** If a pick retells someone else's work, call
+   `similar(url, days=30)` or search for the maker's post, repo or paper, and link that instead. Say in
    the report when the original isn't in the database yet.
 5. **Merge duplicates.** Keep one article per story.
 6. **Mix sources.** Include at least 3 from individuals or communities, and no

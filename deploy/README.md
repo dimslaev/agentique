@@ -75,10 +75,9 @@ It reads pending candidates through the MCP server this same box serves.
   the MCP endpoint and holds the tokens it verifies, nothing more.
 - **`AGENTIQUE_MCP_TOKEN` in that session must be the write token.** The MCP
   server serves both tokens at the same URL and the one in the header is what
-  decides what the session can do: `MCP_TOKEN` reaches `sql_query`, `web_fetch`
-  and `web_search`, `MCP_WRITE_TOKEN` also reaches `approve` and `reject`. A
-  read token there gives you a session that reads every candidate and publishes
-  none.
+  decides what the session can do: `MCP_TOKEN` reaches `search`, `tags`,
+  `sql_query`, `web_fetch` and `web_search`, `MCP_WRITE_TOKEN` every tool. A
+  read token there gives you a session that does not see the curation tools.
 - `MCP_WRITE_TOKEN` unset means nothing can be published at all — the same
   closed-by-default posture as `MCP_TOKEN`.
 

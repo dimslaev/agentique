@@ -6,7 +6,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 
 
@@ -22,7 +21,6 @@ def find_feed(url: str) -> dict[str, object]:
     arXiv's do at the weekend: probe it another day. Fails when no feed
     answers.
     """
-    require_write()
     with Session(engine) as session:
         found = curation.find_feed(session, url)
     if found is None:

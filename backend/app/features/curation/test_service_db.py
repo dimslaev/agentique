@@ -1,7 +1,7 @@
 """The curation queries against the real schema, with the embedding stubbed.
 
 The pure parts are pinned in test_service.py. This pins what those cannot:
-that `similar` and `stories` read the right rows (the feed's stored vectors,
+that `similar` and `coverage` read the right rows (the feed's stored vectors,
 every ledger stage, the window), that `list_candidates` counts a publisher's
 record from the right ones, and that approving and rejecting write exactly the
 rows they say they do.
@@ -158,6 +158,16 @@ def test_a_story_nobody_else_carries_has_coverage_one(
     assert result["publishers"] == [f"{TAG} Blog"]
 
 
+def test_similar_from_a_published_article_reaches_back_with_more_days(
+    db: Session, world: dict[str, str]
+) -> None:
+    """The newsletter's use: from a published article, out to the old post."""
+    urls = [r["url"] for r in curation.similar(db, world["feed"], days=31)["rows"]]
+    assert f"https://old.example/{TAG}/rumour" in urls
+    assert world["verge"] in urls
+    assert world["feed"] not in urls
+
+
 def test_similar_on_an_unknown_url_is_a_message(
     db: Session, world: dict[str, str]
 ) -> None:
@@ -166,11 +176,13 @@ def test_similar_on_an_unknown_url_is_a_message(
     assert world
 
 
-def test_stories_groups_the_queue_with_the_feed(
+def test_coverage_groups_the_queue_with_the_feed(
     db: Session, world: dict[str, str]
 ) -> None:
     groups = [
-        g for g in curation.stories(db) if any(TAG in m["url"] for m in g["members"])
+        g
+        for g in curation.coverage_groups(db)
+        if any(TAG in m["url"] for m in g["members"])
     ]
 
     [story] = groups

@@ -10,39 +10,13 @@ what you reject is gone. **Read the article before approving anything.**
 
 ## Tools
 
-From the `agentique-admin` MCP server, with the curation token:
+From the `agentique-admin` MCP server: `list_candidates`, `get_content`,
+`coverage`, `similar`, `check_link`, `vocabulary`, `approve`, `reject_many`,
+`sql_query`, `web_fetch`, `web_search`. Each tool's description says what it
+returns. When to call which is below; `web_fetch` and `web_search` only as
+**Looking further** says.
 
-- `list_candidates(offset=0)` — one page of up to 50 candidates waiting on a
-  verdict: URL, title, source, publisher, `publisher_kind` (`unknown` for a
-  site the pipeline has not seen before), `approved` (the publisher's
-  approvals / decisions over 90 days, or "new"), traction, dates, a
-  200-character snippet. `next_offset` reads on; null means you have them all.
-  Read every page before settling anything: a verdict shifts the pages after
-  it.
-- `get_content(url, offset=0, limit=4000)` — one page of the stored article
-  text (up to 12000 characters in all). Page one also carries `links`: the
-  repo, model, paper and docs URLs the article body links. `next_offset` reads
-  on; null means you have the end.
-- `stories(days=7)` — the pending candidates that are one story, with each
-  other or with an article already published. Once a night, after triage.
-- `similar(url, days=7)` — the published articles and ledger rows closest to
-  one candidate, with `coverage`: how many publishers carry the story.
-- `check_link(url)` — stars, last push, license and README for a GitHub or
-  GitLab repo; downloads, license and whether weights exist for a Hugging Face
-  model. Refuses anything else.
-- `vocabulary()` — the kinds, publisher kinds and tags `approve` accepts.
-  Once, before the first approve.
-- `approve(url, score, reason, summary, kind, tags, publisher_kind,
-  publisher_name)` — publishes it with your labels, then embeds it. The last
-  two only for a publisher whose `publisher_kind` is `unknown`.
-- `reject(url, score, reason)` — turns one down, keeping both for the record.
-- `reject_many([{url, score, reason}, ...])` — the same for many at once, one
-  result line each.
-- `sql_query(sql)` — read-only, for anything the tools above do not answer.
-- `web_fetch(url)`, `web_search(query)` — for what the stored text and
-  `check_link` cannot tell you. See **Looking further** for when.
-
-Every candidate must end in exactly one `approve` or `reject`. A candidate you
+Every candidate must end in exactly one `approve` or `reject_many`. A candidate you
 skip stays pending and comes back tomorrow, which is a slow way of never
 deciding. If you genuinely cannot tell — the stored text is empty and the page
 is down — reject it and say so in the reason.
@@ -53,7 +27,7 @@ is down — reject it and say so in the reason.
    availability notice, a funding round, a vendor's console walkthrough, a
    post off the AI map entirely (the pipeline no longer filters by topic).
    Reject them together in one `reject_many`.
-2. **Call `stories()` once.** It shows which of what is left is one story told
+2. **Call `coverage()` once.** It shows which of what is left is one story told
    several times, and which the feed already carries. Read it before reading
    any article: it decides which copy of a story is worth reading closely.
 3. **Read page one of `get_content`** for everything past triage. A reject may
@@ -91,7 +65,7 @@ scores under 55 whatever the answer.
   with no code, a model card with no weights, or a paper that does not report
   the claimed number is a claim, not evidence.
 - **Is this the first report?** When a candidate retells a release and neither
-  `stories` nor `similar` shows the release itself, search for the original to
+  `coverage` nor `similar` shows the release itself, search for the original to
   tell a retelling from the first report, and to judge the release's own reach.
 - **What is this?** When a model, tool or term is new to you — after your
   training data — search before deciding scope or reach. Do not guess that an
@@ -265,7 +239,7 @@ Out, and over-scored by the old scorer — reject these even when they read well
 
 ### Coverage
 
-Coverage — how many publishers carry a story, from `similar` and `stories` — is
+Coverage — how many publishers carry a story, from `similar` and `coverage` — is
 REACH evidence, like traction, and nothing else. It says many people will hear
 of the thing; it never lifts thin evidence.
 
@@ -341,5 +315,5 @@ Do not stop partway: a candidate left pending waits another day.
 Report, short: how many approved, how many rejected, how many web searches,
 fetches and `check_link` calls you made, and anything that blocked you.
 
-Do not edit files or commit. If `list_candidates` answers "This tool needs the
-curation token", stop and say so.
+Do not edit files or commit. If `list_candidates` is missing or answers
+"Authorization failed", the session has the read token: stop and say so.

@@ -1,4 +1,4 @@
-"""The rows `similar` and `stories` compare a candidate against: the feed's
+"""The rows `similar` and `coverage` compare a candidate against: the feed's
 recent articles and the ledger, each with the vector or the text it embeds to.
 
 The distance maths is in `app.core.embedding`; this module loads the rows and
@@ -19,7 +19,7 @@ from app.core.db.publisher import Publisher
 from app.core.embedding import SNIPPET_CAP, embed_batch, to_embedding_text
 from app.features.curation.model import CandidateError, Neighbour
 
-# Stage `similar` and `stories` report for a row that is an Article.
+# Stage `similar` and `coverage` report for a row that is an Article.
 PUBLISHED = "published"
 
 

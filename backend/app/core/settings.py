@@ -77,7 +77,7 @@ class Settings(BaseSettings):  # type: ignore[explicit-any]  # BaseSettings itse
     # not open.
     MCP_TOKEN: str | None = None
     # A second token, for the curation agent only: it carries the write scope
-    # that the `approve` and `reject` tools demand and `MCP_TOKEN` does not.
+    # that every tool outside `READ_TOOLS` demands and `MCP_TOKEN` does not.
     # Unset means no caller can write, so a deploy that forgets it curates
     # nothing rather than letting the read token publish.
     MCP_WRITE_TOKEN: str | None = None

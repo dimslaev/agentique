@@ -6,7 +6,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import CandidateError
 
@@ -34,7 +33,6 @@ def approve(
     The candidate stops being pending in the same transaction that inserts the
     article, so nothing is ever published twice.
     """
-    require_write()
     with Session(engine) as session:
         try:
             article_id = curation.approve(

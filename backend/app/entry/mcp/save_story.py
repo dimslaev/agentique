@@ -9,7 +9,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.stories import service as story_domain
 from app.features.stories.model import StoryError
 
@@ -25,7 +24,6 @@ def save_story(slug: str, name: str, blurb: str, urls: list[str]) -> str:
     story cannot be saved to. The rail shows a story once it has 3 articles
     from 2 publishers.
     """
-    require_write()
     with Session(engine) as session:
         try:
             saved = story_domain.save_story(session, slug, name, blurb, urls)

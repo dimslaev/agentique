@@ -2,8 +2,8 @@
 
 The grouping maths is curation's and pinned there. This pins what the
 newsletter adds: that `week` ranks topics by how many publishers carried them,
-counting the copies curation rejected, and that `related` reaches the
-individual review, the repo and the commentary, and nothing outside the window.
+counting the copies curation rejected, and that `liked` reaches an article
+older than the week.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from app.core.db.ledger import Reject, RejectStage
 from app.core.db.like import ArticleLike
 from app.core.db.publisher import Publisher, PublisherKind, PublisherType
 from app.features.newsletter import service as digest
-from app.features.newsletter.model import DigestError, WeekTopic
+from app.features.newsletter.model import WeekTopic
 
 DIM = 256
 TAG = random_lower_string()[:8]
@@ -195,6 +195,7 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict[str, s
     db.commit()
     user = create_random_user(db)
     db.add(ArticleLike(user_id=user.id, article_id=release.id or 0))
+    db.add(ArticleLike(user_id=user.id, article_id=ancient.id or 0))
     db.commit()
 
     yield {
@@ -291,36 +292,9 @@ def test_week_returns_at_most_limit_topics(db: Session, world: dict[str, str]) -
     assert len(digest.week(db, limit=1)) == 1
 
 
-def test_related_reaches_the_review_the_repo_and_the_commentary(
+def test_liked_reaches_an_article_older_than_the_week(
     db: Session, world: dict[str, str]
 ) -> None:
-    result = digest.related(db, world["release"])
-    rows = {r["url"]: r for r in result["rows"]}
-
-    assert rows[world["review"]]["publisher_kind"] == "individual"
-    assert rows[world["review"]]["stage"] == digest.PUBLISHED
-    # Twenty days old: outside the week, inside the related window.
-    assert rows[world["repo"]]["kind"] == "repo"
-    weekend = rows[world["weekend"]]
-    assert weekend["stage"] == digest.REJECTED
-    assert weekend["reason"].startswith("Retelling")
-    assert weekend["publisher_kind"] == "individual"
-    # Commentary scores under the approve line and still counts.
-    assert rows[world["take"]]["score"] == 40
-    distances = [r["distance"] for r in result["rows"]]
-    assert distances == sorted(distances)
-
-
-def test_related_leaves_out_slop_the_queue_and_the_window(
-    db: Session, world: dict[str, str]
-) -> None:
-    urls = {r["url"] for r in digest.related(db, world["release"])["rows"]}
-    for name in ("release", "hot_take", "pending", "ancient", "marked", "kernels"):
-        assert world[name] not in urls
-
-
-def test_related_on_an_unknown_url_is_a_message(
-    db: Session, world: dict[str, str]
-) -> None:
-    with pytest.raises(DigestError, match="No published article"):
-        digest.related(db, world["pending"])
+    liked = {a["url"]: a for a in digest.liked(db) if TAG in a["url"]}
+    assert set(liked) == {world["release"], world["ancient"]}
+    assert liked[world["ancient"]]["likes"] == 1

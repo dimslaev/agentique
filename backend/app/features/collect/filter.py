@@ -2,7 +2,7 @@
 
 A URL that is an Article, a pending candidate or a settled reject is never
 fetched and judged again. Nothing else is filtered: the curation agent judges
-topic, reach and duplicates itself, with `similar` and `stories` to see what the
+topic, reach and duplicates itself, with `similar` and `coverage` to see what the
 feed already carries (ADR 11).
 """
 

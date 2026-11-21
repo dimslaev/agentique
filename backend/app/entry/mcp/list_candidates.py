@@ -5,7 +5,6 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import CandidatePage
 
@@ -29,6 +28,5 @@ def list_candidates(offset: int = 0, limit: int = curation.LIST_LIMIT) -> Candid
     A candidate stays listed until `approve` or `reject` is called on it, so a
     session that stops halfway leaves the rest for the next one.
     """
-    require_write()
     with Session(engine) as session:
         return curation.list_candidates(session, offset, limit)

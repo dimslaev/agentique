@@ -9,7 +9,6 @@ from pathlib import Path
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from fastmcp.server.auth import AccessToken
 from sqlmodel import Session, col, delete, func, select
 
 from app.core.db.article import Article
@@ -27,7 +26,7 @@ from app.core.db.publisher import Publisher, PublisherKind
 from app.core.db.story import Story, StoryArticle
 from app.core.db.user import User
 from app.core.settings import settings
-from app.entry.mcp import auth, sql_query
+from app.entry.mcp import sql_query
 from app.features.audience.service import init_db
 from app.main import app
 
@@ -72,16 +71,6 @@ def auth_client(db: Session) -> Generator[TestClient]:
     with TestClient(app) as c:
         c.headers.update(headers)
         yield c
-
-
-@pytest.fixture
-def curator(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Answer the MCP tools' scope check as the curation agent's write token."""
-    monkeypatch.setattr(
-        auth,
-        "get_access_token",
-        lambda: AccessToken(token="t", client_id="c", scopes=[auth.WRITE_SCOPE]),
-    )
 
 
 @pytest.fixture

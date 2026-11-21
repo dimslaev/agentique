@@ -1,12 +1,9 @@
 """The bearer-token gate: two shared tokens, per-user tokens, and their scopes.
 
-`sql_query`, `web_fetch` and `web_search` read and are reachable with
-`MCP_TOKEN`. The curation tools publish and reject articles, the newsletter
-tools draft emails addressed to every subscriber, and the story tools name what
-the right rail shows; all of them call `require_write` first.
-
-A token a signed-in reader made for themselves carries `USER_SCOPE` and reaches
-only the tools named in `USER_TOOLS`.
+The write token reaches every tool. The read token reaches only `READ_TOOLS`,
+and a token a signed-in reader made for themselves only `USER_TOOLS`. Both are
+allowlists checked server-wide in `scope_gate`, so a tool added to the server
+is write-only until it is named in one.
 """
 
 from __future__ import annotations
@@ -15,9 +12,7 @@ import secrets
 import uuid
 
 from anyio import to_thread
-from fastmcp.exceptions import ToolError
 from fastmcp.server.auth import AccessToken, AuthContext, TokenVerifier
-from fastmcp.server.dependencies import get_access_token
 from fastmcp.server.middleware import AuthMiddleware
 from sqlmodel import Session
 
@@ -37,6 +32,10 @@ USER_SCOPE = "user"
 # the server is closed to readers until it is named here. `sql_query` is on it
 # because it logs in as a narrower role for this scope.
 USER_TOOLS = frozenset({"search", "tags", "sql_query"})
+
+# The tools `MCP_TOKEN` reaches. Every other tool publishes, rejects, drafts
+# email or edits the rail, and writes as `POSTGRES_USER`.
+READ_TOOLS = USER_TOOLS | {"web_fetch", "web_search"}
 
 
 def _matches(token: str, expected: str | None) -> bool:
@@ -86,21 +85,15 @@ class SharedSecret(TokenVerifier):
         return None
 
 
-def _within_user_tools(ctx: AuthContext) -> bool:
-    if ctx.token is None or USER_SCOPE not in ctx.token.scopes:
+def _allowed(ctx: AuthContext) -> bool:
+    scopes = ctx.token.scopes if ctx.token else []
+    if WRITE_SCOPE in scopes:
         return True
-    return ctx.component.name in USER_TOOLS
+    allowed = USER_TOOLS if USER_SCOPE in scopes else READ_TOOLS
+    return ctx.component.name in allowed
 
 
-# Hides every tool outside `USER_TOOLS` from a `user` token's tool list and
-# refuses a call to one. Server-wide, so no tool has to remember to ask.
-user_scope_gate = AuthMiddleware(auth=_within_user_tools)
-
-
-def require_write() -> None:
-    """Refuse a write to a caller holding only the read token."""
-    token = get_access_token()
-    if token is None or WRITE_SCOPE not in token.scopes:
-        raise ToolError(
-            "This tool needs the curation token — the read token cannot write."
-        )
+# Hides every tool a token may not call from its tool list and refuses a call
+# to one. Server-wide, so no tool has to remember to ask. It skips stdio, which
+# has no token; the server is only served over HTTP.
+scope_gate = AuthMiddleware(auth=_allowed)

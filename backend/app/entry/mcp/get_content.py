@@ -6,7 +6,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import CandidateError, ContentPage
 
@@ -23,7 +22,6 @@ def get_content(
     article body links, grouped. Fetch the page only when this is empty, a
     teaser, or cut off before the part you need.
     """
-    require_write()
     with Session(engine) as session:
         try:
             return curation.get_content(session, url, offset, limit)

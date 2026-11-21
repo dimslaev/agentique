@@ -14,7 +14,7 @@ the only enrichment left is the embedding, which is local and best-effort.
 A candidate is never half-published: the pending row is deleted in the same
 transaction that inserts the Article.
 
-Comparing is by embedding: `similar` and `stories` put a candidate beside what
+Comparing is by embedding: `similar` and `coverage` put a candidate beside what
 the feed already carries and what else is queued, so the agent can tell a story
 that three outlets covered from one only its publisher did. The distance maths
 is pure numpy in `app.core.embedding`, and the row loading is in `coverage.py`,
@@ -221,7 +221,7 @@ def get_content(
     return page
 
 
-# ─── Similar and stories ─────────────────────────────────────────────────────
+# ─── Similar and coverage ────────────────────────────────────────────────────
 
 
 def similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Similar:
@@ -277,7 +277,7 @@ def similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Simila
     }
 
 
-def stories(session: Session, days: int = 7) -> list[Coverage]:
+def coverage_groups(session: Session, days: int = 7) -> list[Coverage]:
     """The pending candidates that are one story, with each other or with
     something the feed published in the last ``days``.
 

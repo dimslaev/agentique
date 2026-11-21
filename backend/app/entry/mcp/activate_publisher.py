@@ -6,7 +6,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import SourceError
 
@@ -25,7 +24,6 @@ def activate_publisher(
     feed is read again first and refused if it has no post in 90 days.
     `reason` states the numbers, e.g. "probe 3/5 + 2/2 prior".
     """
-    require_write()
     with Session(engine) as session:
         try:
             return curation.activate_publisher(

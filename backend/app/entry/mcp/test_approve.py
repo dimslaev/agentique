@@ -11,7 +11,6 @@ from app.entry.mcp.approve import approve
 from app.features.curation import service as curation
 
 
-@pytest.mark.usefixtures("curator")
 def test_approve_reports_the_article_it_published(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -29,7 +28,6 @@ def test_approve_reports_the_article_it_published(
     assert calls == [(url, 81, "r", "s", "post", ["agents"], "media", "Example")]
 
 
-@pytest.mark.usefixtures("curator")
 def test_a_refused_label_is_a_tool_error_and_the_candidate_stays(
     db: Session, candidate: Reject
 ) -> None:

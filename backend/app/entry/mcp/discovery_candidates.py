@@ -5,7 +5,6 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 
 
@@ -20,6 +19,5 @@ def discovery_candidates(limit: int = 30) -> dict[str, list[dict[str, str]]]:
     publishers to switch off, each with the `reason` to pass to
     `disable_publisher`.
     """
-    require_write()
     with Session(engine) as session:
         return curation.discovery_candidates(session, limit)

@@ -11,18 +11,10 @@ decide the switch. Curate judges them once the feed is on.
 
 ## Tools
 
-From the `agentique-admin` MCP server, with the curation token:
-
-- `discovery_candidates(limit=30)` - `probe`: inactive publishers to read,
-  with `approved` (approvals / decisions over 90 days) and `website`. `cull`:
-  active feeds to switch off, each with its `reason`.
-- `find_feed(url)` - the site's feed and its newest 10 entries, each with
-  `judged`: `approved`, a ledger stage such as `below_threshold`, or "" if
-  never seen.
-- `activate_publisher(slug, reason, feed_url=None, search_domain=None)`
-- `disable_publisher(slug, reason)`
-- `web_fetch(url)` - a post's text.
-- `web_search(query)` - only to find a feed `find_feed` missed.
+From the `agentique-admin` MCP server: `discovery_candidates`, `find_feed`,
+`activate_publisher`, `disable_publisher`, `web_fetch`, and `web_search` only
+to find a feed `find_feed` missed. Each tool's description says what it
+returns.
 
 ## Rounds
 
@@ -95,5 +87,5 @@ Report, short:
 - posts read, fetches and searches made
 - anything a tool refused
 
-Do not edit files or commit. If a tool answers "This tool needs the curation
-token", stop and say so.
+Do not edit files or commit. If `discovery_candidates` is missing or answers
+"Authorization failed", the session has the read token: stop and say so.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from fastmcp.exceptions import ToolError
 
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import LinkError
 
@@ -19,7 +18,6 @@ def check_link(url: str) -> dict[str, object]:
     0; `lookup: unknown` means the whole lookup failed. Any other URL is
     refused — read it with `web_fetch`.
     """
-    require_write()
     try:
         return curation.check_link(url)
     except LinkError as exc:

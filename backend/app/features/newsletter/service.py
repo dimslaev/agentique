@@ -1,21 +1,16 @@
 """The weekly newsletter: who it goes to, and what it draws on - the week's
-most talked-about topics, and what else the feed and the ledger hold on each
-one.
+most talked-about topics and the articles readers liked.
 
 The curation agent already read and scored every article, so nothing here
 judges. `week` groups the week into topics and ranks them by how many
-publishers carried them; `related` puts one topic beside everything close to it
-over a longer window, so the newsletter agent can find the individual writer
-who tried the thing, or the repo that builds on it.
+publishers carried them; `liked` lists what readers liked.
 
 Popularity counts the ledger too. Curation approves one copy of a story and
 rejects the rest as retellings, so the feed alone says every story was carried
 once; the rejects are where the other outlets are.
 
 The maths is curation's (`app.core.embedding`): one topic is rows within
-`DEDUP_DIST_THRESHOLD` of a published article, and related is out to
-`RELATED_DIST`. A review of a release sits in between: close enough to be about
-it, far enough not to be a retelling.
+`DEDUP_DIST_THRESHOLD` of a published article.
 """
 
 from __future__ import annotations
@@ -28,27 +23,23 @@ import numpy as np
 import resend
 from sqlmodel import Session, col, func, select
 
-from app.core.db.article import Article, kind_from_url
-from app.core.db.ledger import Reject, RejectStage
-from app.core.db.like import like_counts_subquery
+from app.core.db.article import Article
+from app.core.db.ledger import Reject
+from app.core.db.like import ArticleLike, like_counts_subquery
 from app.core.db.publisher import Publisher
 from app.core.db.subscriber import NewsletterSubscriber
 from app.core.embedding import (
     DEDUP_DIST_THRESHOLD,
-    RELATED_DIST,
     SNIPPET_CAP,
     cosine_distances,
     embed_batch,
-    nearest,
     story_groups,
     to_embedding_text,
 )
 from app.features.newsletter.broadcast import draft as draft
 from app.features.newsletter.model import (
     CoveredBy,
-    DigestError,
-    Related,
-    RelatedRow,
+    LikedArticle,
     WeekArticle,
     WeekTopic,
 )
@@ -58,17 +49,8 @@ from app.features.newsletter.topics import create_missing as create_missing
 # The skill asks for more than the 10-12 links it picks, so it can pass over
 # what has no value for builders.
 WEEK_LIMIT = 40
-# Long enough to reach the review that came out two weeks after a release.
-RELATED_DAYS = 30
-RELATED_LIMIT = 12
-# Under this a reject is out of scope or slop. Commentary lands above it, and
-# how people took a thing is part of what the issue explains.
-RELATED_MIN_SCORE = 35
 
 logger = logging.getLogger(__name__)
-
-PUBLISHED = "published"
-REJECTED = "rejected"
 
 
 def _vectors(articles: list[Article]) -> list[list[float]]:
@@ -185,90 +167,38 @@ def week(
     return topics[:limit]
 
 
-def related(
-    session: Session,
-    url: str,
-    days: int = RELATED_DAYS,
-    limit: int = RELATED_LIMIT,
-    now: datetime | None = None,
-) -> Related:
-    """What the feed and the ledger hold close to one published article.
-
-    Reads every article created in the last ``days`` and every reject from the
-    same window that scored ``RELATED_MIN_SCORE`` or more: a hands-on review
-    of a release the feed already carried can have been turned down as a
-    retelling and still be worth a reader's time. Up to ``limit`` rows within
-    ``RELATED_DIST``, closest first.
-    """
-    target = session.exec(select(Article).where(col(Article.url) == url)).first()
-    if target is None:
-        raise DigestError(f"No published article for {url}")
-    target_vec = np.array(_vectors([target])[0], dtype=np.float32)
+def liked(
+    session: Session, days: int = 7, now: datetime | None = None
+) -> list[LikedArticle]:
+    """Articles readers liked in the last ``days``, however old the article,
+    the most likes in the window first, then the highest score."""
     since = (now or datetime.now(UTC)) - timedelta(days=days)
-
-    feed = session.exec(
-        select(Article, Publisher)
+    likes = func.count().label("likes")
+    rows = session.exec(
+        select(Article, Publisher, likes)
+        .join(ArticleLike, col(ArticleLike.article_id) == col(Article.id))
         .join(Publisher, col(Publisher.id) == col(Article.publisher_id))
         .where(
-            col(Article.created_at) >= since,
-            col(Article.url) != url,
+            col(ArticleLike.created_at) >= since,
             col(Article.marked_for_deletion_at).is_(None),
         )
+        .group_by(col(Article.id), col(Publisher.id))
+        .order_by(likes.desc(), col(Article.score).desc())
     ).all()
-    ledger = session.exec(
-        select(Reject, Publisher)
-        .join(Publisher, col(Publisher.id) == col(Reject.publisher_id), isouter=True)
-        .where(
-            col(Reject.stage) == RejectStage.below_threshold,
-            col(Reject.score) >= RELATED_MIN_SCORE,
-            col(Reject.created_at) >= since,
-        )
-    ).all()
-
-    rows: list[RelatedRow] = []
-    for a, p in feed:
-        rows.append(
-            {
-                "url": a.url,
-                "title": a.title,
-                "publisher": p.name,
-                "publisher_kind": str(p.kind),
-                "kind": str(a.kind),
-                "stage": PUBLISHED,
-                "score": a.score,
-                "distance": 0.0,
-                "summary": a.summary or "",
-            }
-        )
-    for r, p in ledger:
-        rows.append(
-            {
-                "url": r.url,
-                "title": r.title or "",
-                "publisher": p.name if p else "",
-                "publisher_kind": str(p.kind) if p else "",
-                "kind": str(kind_from_url(r.url) or ""),
-                "stage": REJECTED,
-                "score": r.score,
-                "distance": 0.0,
-                "reason": r.reason or "",
-            }
-        )
-    if not rows:
-        return {"url": url, "title": target.title, "rows": []}
-
-    vecs = _vectors([a for a, _ in feed]) + embed_batch(
-        [_ledger_text(r) for r, _ in ledger]
-    )
-    distances = cosine_distances(target_vec[None, :], np.array(vecs, dtype=np.float32))[
-        0
+    return [
+        {
+            "url": a.url,
+            "title": a.title,
+            "publisher": p.name,
+            "publisher_kind": str(p.kind),
+            "kind": str(a.kind),
+            "score": a.score,
+            "likes": int(n),
+            "summary": a.summary or "",
+            "published_at": a.published_at.date().isoformat() if a.published_at else "",
+        }
+        for a, p, n in rows
     ]
-    listed: list[RelatedRow] = []
-    for i in nearest(distances, RELATED_DIST, limit):
-        row = rows[i]
-        row["distance"] = round(float(distances[i]), 3)
-        listed.append(row)
-    return {"url": url, "title": target.title, "rows": listed}
 
 
 def subscribe(*, session: Session, email: str, utm_source: str | None = None) -> None:

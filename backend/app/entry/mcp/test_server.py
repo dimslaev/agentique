@@ -114,8 +114,8 @@ def _call_tool(
 ) -> tuple[bool, str]:
     """Call one tool and return the result's ``isError`` and its text.
 
-    A refused tool call is still a 200: the gate inside the tool answers, not
-    the HTTP layer.
+    A refused tool call is still a 200: the scope gate answers, not the HTTP
+    layer.
     """
     message = _request(
         client, token, "tools/call", {"name": name, "arguments": arguments}
@@ -127,15 +127,6 @@ def _call_tool(
 def _list_tools(client: TestClient, token: str) -> set[str]:
     message = _request(client, token, "tools/list", {})
     return {tool["name"] for tool in json.loads(message)["result"]["tools"]}
-
-
-@pytest.mark.usefixtures("both_tokens")
-def test_the_read_token_is_refused_by_a_write_tool(client: TestClient) -> None:
-    is_error, text = _call_tool(
-        client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
-    )
-    assert is_error
-    assert "curation token" in text
 
 
 @pytest.mark.usefixtures("both_tokens")
@@ -165,12 +156,14 @@ def test_an_unset_write_token_opens_no_write_tool(
         client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
     )
     assert is_error
-    assert "curation token" in text
+    assert "Authorization failed" in text
 
 
 # Read from the server, not typed out here, so a tool added later is covered
 # without anyone remembering to add it.
-REGISTERED_TOOLS = sorted(tool.name for tool in asyncio.run(mcp.list_tools()))
+REGISTERED_TOOLS = sorted(
+    tool.name for tool in asyncio.run(mcp.list_tools(run_middleware=False))
+)
 
 
 @pytest.fixture
@@ -181,7 +174,7 @@ def user_token(db: Session) -> str:
 
 
 def test_the_server_has_tools_to_refuse() -> None:
-    assert {"sql_query", "web_fetch", "web_search", "approve"} <= set(REGISTERED_TOOLS)
+    assert auth.READ_TOOLS | {"approve"} <= set(REGISTERED_TOOLS)
 
 
 @pytest.mark.usefixtures("both_tokens")
@@ -259,26 +252,19 @@ def test_a_user_token_chains_tags_into_search_and_sql(
 
 
 @pytest.mark.usefixtures("both_tokens")
-def test_the_shared_tokens_still_list_every_tool(client: TestClient) -> None:
-    assert _list_tools(client, READ_TOKEN) == set(REGISTERED_TOOLS)
+def test_each_shared_token_lists_its_own_tools(client: TestClient) -> None:
+    assert _list_tools(client, READ_TOKEN) == auth.READ_TOOLS
     assert _list_tools(client, WRITE_TOKEN) == set(REGISTERED_TOOLS)
 
 
 @pytest.mark.usefixtures("both_tokens")
-def test_a_user_token_reaches_only_the_tools_it_is_allowed(
-    client: TestClient, user_token: str, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize("name", sorted(set(REGISTERED_TOOLS) - auth.READ_TOOLS))
+def test_the_read_token_is_refused_by_every_write_tool(
+    client: TestClient, name: str
 ) -> None:
-    """Being on the list lifts the user gate and nothing else: a curation tool
-    still asks for the write scope."""
-    monkeypatch.setattr(auth, "USER_TOOLS", frozenset({"get_content"}))
-
-    assert _list_tools(client, user_token) == {"get_content"}
-    is_error, text = _call_tool(
-        client, user_token, "get_content", {"url": "https://never-queued.example"}
-    )
-    assert is_error
-    assert "curation token" in text
-    is_error, text = _call_tool(client, user_token, "search", {"q": "x"})
+    """The write tools write as `POSTGRES_USER`, so nothing but the gate stands
+    between a leaked read token and a published article."""
+    is_error, text = _call_tool(client, READ_TOKEN, name, {})
     assert is_error
     assert "Authorization failed" in text
 
@@ -312,7 +298,7 @@ def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
         _, text = _call_tool(
             client, READ_TOKEN, "get_content", {"url": "https://x.example"}
         )
-        assert "curation token" in text
+        assert "Authorization failed" in text
 
 
 def test_no_session_is_kept_between_requests(client: TestClient, token: str) -> None:
@@ -330,7 +316,9 @@ def test_no_session_is_kept_between_requests(client: TestClient, token: str) -> 
 def test_the_text_shown_to_a_user_agent_names_no_internal_tool() -> None:
     """The instructions and the descriptions of the user tools are the text a
     reader's agent is shown. A tool it cannot call has no place in them."""
-    tools = {tool.name: tool for tool in asyncio.run(mcp.list_tools())}
+    tools = {
+        tool.name: tool for tool in asyncio.run(mcp.list_tools(run_middleware=False))
+    }
     shown = [mcp.instructions or ""] + [
         tools[name].description or "" for name in auth.USER_TOOLS
     ]

@@ -1,13 +1,9 @@
-"""The newsletter's shapes: the week's topics, what relates to one, and the
+"""The newsletter's shapes: the week's topics, what readers liked, and the
 errors the agent gets back as a message."""
 
 from __future__ import annotations
 
-from typing import NotRequired, TypedDict
-
-
-class DigestError(ValueError):
-    """A request the agent can correct, returned as a message."""
+from typing import TypedDict
 
 
 class WeekArticle(TypedDict):
@@ -33,6 +29,10 @@ class CoveredBy(TypedDict):
     reason: str
 
 
+class LikedArticle(WeekArticle):
+    published_at: str
+
+
 class WeekTopic(TypedDict):
     # Distinct publishers carrying it this week, the ledger's included.
     coverage: int
@@ -43,25 +43,9 @@ class WeekTopic(TypedDict):
     covered_by: list[CoveredBy]
 
 
-class RelatedRow(TypedDict):
-    url: str
-    title: str
-    publisher: str
-    publisher_kind: str
-    kind: str
-    stage: str
-    score: int | None
-    distance: float
-    # Published rows: what a reader sees under the title.
-    summary: NotRequired[str]
-    # Rejected rows: why curation turned it down, e.g. as a retelling.
-    reason: NotRequired[str]
-
-
-class Related(TypedDict):
-    url: str
-    title: str
-    rows: list[RelatedRow]
+class Week(TypedDict):
+    topics: list[WeekTopic]
+    liked: list[LikedArticle]
 
 
 class IssueError(ValueError):

@@ -11,26 +11,15 @@ its articles in order. You decide what is a story, name it, and keep it up to
 date. Nothing else writes stories.
 
 A story is wider than coverage. Coverage is one event told by several outlets
-(curation's `similar` and `stories`, at 0.30). A story is several events on
+(curation's `similar` and `coverage`, at 0.30). A story is several events on
 one theme: a launch, a repo built on it, a writer who measured it, a rival's
 take a week later.
 
 ## Tools
 
-From the `agentique-admin` MCP server, with the curation token:
-
-- `story_candidates(days=14)` - `open`: every open story with its newest 5
-  articles and `quiet_days` (since its newest article was published).
-  `clusters`: the last `days` of articles in no open story, grouped by
-  embedding, the most publishers first. Each has `articles` (with the
-  `summary` curation wrote), `publishers`, and `near`: open stories one of its
-  articles sits close to. A single article close to a story comes back as a
-  cluster of one with that story in `near`.
-- `save_story(slug, name, blurb, urls)` - create a story, or update an open
-  one: set its name and blurb, add `urls`. A refusal says what to fix.
-- `close_story(slug)` - close an open story. Its articles are free to join
-  another.
-- `sql_query(sql)` - read-only, for anything the tools do not answer.
+From the `agentique-admin` MCP server: `story_candidates`, `save_story`,
+`close_story`, and `sql_query` for anything they do not answer. Each tool's
+description says what it returns.
 
 ## Rounds
 
@@ -95,5 +84,5 @@ Report, short:
 - clusters passed over that came close, and why
 - anything a tool refused and what you did
 
-Do not edit files or commit. If a tool answers "This tool needs the curation
-token", stop and say so.
+Do not edit files or commit. If `story_candidates` is missing or answers
+"Authorization failed", the session has the read token: stop and say so.

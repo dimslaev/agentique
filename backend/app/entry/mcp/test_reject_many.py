@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
 from app.entry.mcp.reject_many import reject_many
 
 
-@pytest.mark.usefixtures("curator")
 def test_reject_many_reports_one_line_per_verdict() -> None:
     result = reject_many(
         [

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from fastmcp.exceptions import ToolError
 
-from app.entry.mcp.auth import require_write
 from app.features.newsletter import service as newsletter
 from app.features.newsletter.model import IssueError
 
@@ -35,7 +34,6 @@ def draft_issue(post: str) -> str:
     and the path to save the post at, exactly as passed. Nothing is sent: a
     person reads the drafts and sends one from the Resend dashboard.
     """
-    require_write()
     try:
         return newsletter.draft(post)
     except IssueError as exc:

@@ -6,7 +6,6 @@ from fastmcp.exceptions import ToolError
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.curation import service as curation
 from app.features.curation.model import SourceError
 
@@ -18,7 +17,6 @@ def disable_publisher(slug: str, reason: str) -> str:
     2026-11-21". The publisher stays out of `discovery_candidates` until it
     earns an approval after today.
     """
-    require_write()
     with Session(engine) as session:
         try:
             return curation.disable_publisher(session, slug, reason)

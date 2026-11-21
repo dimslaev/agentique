@@ -25,7 +25,6 @@ def _url(db: Session, made: dict[str, list[int]]) -> str:
     return article.url
 
 
-@pytest.mark.usefixtures("curator")
 def test_save_story_tool_reports_what_it_did(
     db: Session, made: dict[str, list[int]]
 ) -> None:
@@ -39,7 +38,6 @@ def test_save_story_tool_reports_what_it_did(
     assert close_story(slug) == f"Closed {slug}"
 
 
-@pytest.mark.usefixtures("curator")
 def test_save_story_refuses_an_unknown_url_as_a_tool_error() -> None:
     slug = f"tool-refused-{random_lower_string()[:6]}"
     with pytest.raises(ToolError, match="Not a published article"):
@@ -48,7 +46,6 @@ def test_save_story_refuses_an_unknown_url_as_a_tool_error() -> None:
         )
 
 
-@pytest.mark.usefixtures("curator")
 def test_close_story_refuses_an_unknown_slug_as_a_tool_error() -> None:
     with pytest.raises(ToolError, match="No story"):
         close_story(f"no-such-story-{random_lower_string()[:6]}")

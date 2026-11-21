@@ -5,7 +5,6 @@ from __future__ import annotations
 from sqlmodel import Session
 
 from app.core.db.engine import engine
-from app.entry.mcp.auth import require_write
 from app.features.stories import service as story_domain
 from app.features.stories.model import Candidates
 
@@ -23,6 +22,5 @@ def story_candidates(days: int = 14) -> Candidates:
     articles is close to. A single article close to a story comes back as a
     cluster of one with that story in `near`.
     """
-    require_write()
     with Session(engine) as session:
         return story_domain.story_candidates(session, days)
