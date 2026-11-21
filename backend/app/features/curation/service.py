@@ -374,6 +374,7 @@ def approve_article(
     tags: list[str],
     publisher_kind: str | None = None,
     publisher_name: str | None = None,
+    title: str | None = None,
 ) -> int:
     """Turn a candidate into a published Article. Returns the new article's id.
 
@@ -382,7 +383,8 @@ def approve_article(
     shape. `summary` is what a reader sees under the title; `kind` and `tags`
     come from `list_labels`. A publisher still `unknown` needs `publisher_kind`,
     and may take a `publisher_name` in place of its host; both are ignored for
-    one that already has a kind. Labels are checked before anything is written,
+    one that already has a kind. A non-blank `title` replaces the candidate's.
+    Labels are checked before anything is written,
     so a bad one is a message and the candidate stays pending.
     """
     row = _pending(session, url)
@@ -397,7 +399,7 @@ def approve_article(
 
     item: Summarized = {
         "url": url,
-        "title": row.title or "",
+        "title": (title or "").strip() or row.title or "",
         "content": row.content or "",
         "published_date": row.published_at.isoformat() if row.published_at else None,
         "source": row.source or "",

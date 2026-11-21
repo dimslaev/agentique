@@ -312,14 +312,15 @@ def test_approving_writes_one_article_and_settles_the_candidate(
         [slug, "not-a-tag"],
         publisher_kind="individual",
         publisher_name=f" {TAG} Writer ",
+        title=f" {TAG} — a harness, measured ",
     )
 
     db.expire_all()
     article = db.get(Article, article_id)
     assert article is not None
     assert (article.url, article.score, article.kind) == (queued.url, 81, "post")
-    # Sanitized on the way in, as every stored title is.
-    assert article.title == f"{TAG} - An agent harness, measured"
+    # The agent's title replaces the candidate's, sanitized like every title.
+    assert article.title == f"{TAG} - a harness, measured"
     assert article.found_via == "Hacker News"
     assert article.embedding is not None
     assert db.get(Reject, queued.url) is None

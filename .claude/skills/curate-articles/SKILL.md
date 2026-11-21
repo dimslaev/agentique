@@ -154,6 +154,7 @@ At the end, over the whole night:
 
 - **`reason`:** one sentence naming what decided it: the scope rule, the evidence shown or missing, the reach, or the cap. "Landing page with a 49% claim, no method and no repo", not "Low quality". These become labelled data.
 - **`summary`:** from the article, not the title. A hook line, then short bullets: what it shows, numbers with their method, what a reader would do with it. No marketing adjectives, no "this article discusses".
+- **`title`:** pass one only when the candidate's title doesn't say what the article is: a bare name ("Doop"), a stray word ("Improve"), a label like "Beta:" or "(3 minute read)". Write `Name: what it is` from the article, plain, under 80 characters: "Doop: a multiplayer design canvas for people and AI agents". Leave a working title alone.
 - **`kind`, `tags`:** from `list_labels()`, based on the article. Kind: `repo`, `paper`, `model`, or `post` for everything else; github, huggingface and arxiv URLs set their own. Up to 3 tags, only where the tag fits the subject. No tag beats a wrong one. Lab tags (`anthropic`, `openai`, `google`, `meta`, `microsoft`, `nvidia`, `xai`, `qwen`, `deepseek`, `kimi`, `glm`, `mistral`) come on top when the subject is that lab's model or product, not a passing mention. An unknown kind is refused and the candidate stays pending.
 - **`publisher_kind`, `publisher_name`:** only when `publisher_kind` is `unknown`. Set once, later articles inherit it.
   - `lab`: trains and releases its own models

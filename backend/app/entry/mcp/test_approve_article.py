@@ -23,9 +23,9 @@ def test_approve_reports_the_article_it_published(
     monkeypatch.setattr(curation, "approve_article", fake)
     url = "https://example.com/post"
     assert approve_article(
-        url, 81, "r", "s", "post", ["agents"], "media", "Example"
+        url, 81, "r", "s", "post", ["agents"], "media", "Example", "T"
     ) == (f"Published article #42: {url}")
-    assert calls == [(url, 81, "r", "s", "post", ["agents"], "media", "Example")]
+    assert calls == [(url, 81, "r", "s", "post", ["agents"], "media", "Example", "T")]
 
 
 def test_a_refused_label_is_a_tool_error_and_the_candidate_stays(

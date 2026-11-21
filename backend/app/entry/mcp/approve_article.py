@@ -19,6 +19,7 @@ def approve_article(
     tags: list[str],
     publisher_kind: str | None = None,
     publisher_name: str | None = None,
+    title: str | None = None,
 ) -> str:
     """Publish a candidate with the labels you chose, then embed it.
 
@@ -30,6 +31,8 @@ def approve_article(
     `list_labels`'s `publisher_kinds`) and, if its host is not a readable name,
     `publisher_name`; both are ignored for a publisher that has a kind. A label
     that is not in the vocabulary is refused and the candidate stays pending.
+    Pass `title` only to replace a candidate title that doesn't say what the
+    article is.
     The candidate stops being pending in the same transaction that inserts the
     article, so nothing is ever published twice.
     """
@@ -45,6 +48,7 @@ def approve_article(
                 tags,
                 publisher_kind,
                 publisher_name,
+                title,
             )
         except CandidateError as exc:
             raise ToolError(str(exc))
