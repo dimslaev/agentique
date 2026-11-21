@@ -21,7 +21,9 @@ def filter_known_urls[T: RawItem](
 ) -> list[T]:
     if not articles:
         return []
-    all_urls = [a["url"] for a in articles]
+    # The same post arrives with and without a trailing slash, from different
+    # sources (kernel.dev came back as a new candidate on 2026-11-20).
+    all_urls = [u for a in articles for u in _slash_variants(a["url"])]
 
     existing_urls = set(
         session.exec(select(Article.url).where(col(Article.url).in_(all_urls))).all()
@@ -30,10 +32,9 @@ def filter_known_urls[T: RawItem](
         session.exec(select(Reject.url).where(col(Reject.url).in_(all_urls))).all()
     )
 
+    known = existing_urls | scored_urls
     fresh = [
-        a
-        for a in articles
-        if a["url"] not in existing_urls and a["url"] not in scored_urls
+        a for a in articles if not any(u in known for u in _slash_variants(a["url"]))
     ]
 
     if existing_urls or scored_urls:
@@ -45,3 +46,9 @@ def filter_known_urls[T: RawItem](
         return []
     log(f"  {len(fresh)} new articles to process")
     return fresh
+
+
+def _slash_variants(url: str) -> tuple[str, str]:
+    """``url`` with and without its trailing slash. Pure."""
+    bare = url.rstrip("/")
+    return bare, f"{bare}/"

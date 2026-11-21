@@ -60,3 +60,10 @@ def test_nothing_new_is_an_empty_list(db: Session) -> None:
 
 def test_no_items_reads_nothing(db: Session) -> None:
     assert filter_known_urls(db, [], "HN") == []
+
+
+@pytest.mark.usefixtures("known")
+def test_a_trailing_slash_is_the_same_url(db: Session) -> None:
+    items = [_item("published/"), _item("pending/"), _item("new/")]
+    fresh = filter_known_urls(db, items, "HN")
+    assert [a["title"] for a in fresh] == ["new/"]

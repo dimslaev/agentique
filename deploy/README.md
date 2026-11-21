@@ -137,8 +137,9 @@ Run the `stories` skill (`.claude/skills/stories/SKILL.md`).
 Which publishers the nightly run polls is decided by a fourth off-box routine,
 the same way as the others: a scheduled task on claude.ai/code against this
 repo, with the same write token, invoking `/discover`
-(`.claude/skills/discover/SKILL.md`, ADR 21). It runs daily after that
-morning's curation.
+(`.claude/skills/discover/SKILL.md`, ADR 21). It runs daily at 06:47
+Europe/Zurich (`CRON_TZ=Europe/Zurich 47 6 * * *`), after that morning's
+curation and the stories routine.
 
 - It switches off the feeds `discovery_candidates` lists to cull, and probes
   up to 30 inactive publishers, switching each one on or marking it off with

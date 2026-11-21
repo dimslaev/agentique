@@ -79,7 +79,16 @@ def test_the_pool_takes_proven_reopened_sites_and_culls_dead_feeds(
         links={"rss": "https://f.dev/feed"},
         switched_at=NOW - timedelta(days=1),
     )
+    aggregator = _publisher(
+        db,
+        made,
+        is_active=True,
+        type=PublisherType.ainews,
+        links={"rss": "https://a.dev/feed"},
+        last_new_at=NOW,
+    )
     counts = {
+        aggregator.id: (0, 40),
         strong.id: (4, 1),
         weak.id: (1, 0),
         firehose.id: (20, 60),
@@ -99,6 +108,7 @@ def test_the_pool_takes_proven_reopened_sites_and_culls_dead_feeds(
     assert culled[noisy.slug].startswith("culled 0/12 90d")
     assert culled[quiet.slug].startswith("culled silent since")
     assert fresh.slug not in culled
+    assert aggregator.slug not in culled
 
 
 def test_find_feed_marks_what_agentique_already_decided(

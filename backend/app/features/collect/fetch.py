@@ -22,6 +22,7 @@ from app.features.collect.publishers import (
     lab_watch_targets_from_db,
     newsletter_senders_from_db,
 )
+from app.features.collect.redirects import unwrap_redirects
 from app.features.collect.tweets import unwrap_tweets
 
 # Below this, content is a teaser/blurb rather than an article, and the
@@ -44,7 +45,14 @@ EVENT_HOSTS = {"luma.com", "lu.ma", "partiful.com", "eventbrite.com"}
 # added, so the agent pays to read and reject the same shape forever. AI Hero's
 # AI coding dictionary cost 71 identical rejects in a month - 15% of every
 # reject the feed's individual writers drew - before this gate existed.
-NOISE_URL_PATTERNS = (re.compile(r"/[a-z0-9-]*(glossary|dictionary)(/|$)"),)
+#
+# A docs page is the same shape: a launch drags its model and API pages into
+# the queue beside the announcement (two for Gemini 4 Neon on 2026-11-19), and
+# the agent rejects every one as a duplicate of the post.
+NOISE_URL_PATTERNS = (
+    re.compile(r"/[a-z0-9-]*(glossary|dictionary)(/|$)"),
+    re.compile(r"/docs/"),
+)
 
 
 @dataclass(frozen=True)
@@ -117,7 +125,7 @@ def fetch_source(source: Source) -> tuple[list[RawItem], dict[str, str]]:
     if not articles:
         log(f"No articles from {source.label}")
         return articles, errors
-    articles = _without_noise(unwrap_tweets(articles), source.label)
+    articles = _without_noise(unwrap_redirects(unwrap_tweets(articles)), source.label)
     return _with_content(articles, source.label), errors
 
 

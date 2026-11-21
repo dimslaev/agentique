@@ -27,6 +27,7 @@ from app.core.http import BROWSER_HEADERS, RESIDENTIAL_PROXY_URL, fetch_with_tim
 from app.core.llm_text import enum_value
 from app.core.logging import log
 from app.core.urls import hostname, is_shared_host
+from app.features.collect.publishers import AGGREGATOR_TYPES
 from app.features.curation.model import SourceError
 
 # How many of a site's newest posts a probe reads at most.
@@ -35,6 +36,10 @@ ACTIVATE_MIN_RATE = 0.4
 # A feed with no post this recent is dead; switching it on would poll nothing.
 RECENT_POST_DAYS = 90
 CULL_MIN_DECISIONS = 10
+# One lucky approval kept a firehose polled for months (aifeed.dev at 1/366):
+# under this rate, over enough decisions, a feed goes off too.
+CULL_MAX_RATE = 0.05
+CULL_RATE_MIN_DECISIONS = 30
 CULL_SILENT_DAYS = 120
 FEED_PATHS = ("/feed", "/rss.xml", "/atom.xml", "/index.xml", "/feed.xml", "/rss")
 _FEED_TYPES = ("application/rss+xml", "application/atom+xml")
@@ -69,8 +74,11 @@ def cull_reason(
     approved: int, rejected: int, silent_since: datetime, now: datetime
 ) -> str | None:
     """Why an active feed should go off, or None to keep it. Pure."""
+    decisions = approved + rejected
     if approved == 0 and rejected >= CULL_MIN_DECISIONS:
         return f"culled 0/{rejected} 90d {now.date()}"
+    if decisions >= CULL_RATE_MIN_DECISIONS and approved < CULL_MAX_RATE * decisions:
+        return f"culled {approved}/{decisions} 90d {now.date()}"
     if silent_since < now - timedelta(days=CULL_SILENT_DAYS):
         return f"culled silent since {silent_since.date()} {now.date()}"
     return None
@@ -115,7 +123,11 @@ def discovery_candidates(
             "approved": _rate(approved, rejected),
         }
         if p.is_active:
-            if not (links.get("rss") or links.get("substack")):
+            # An aggregator's approvals are credited to the sites it links
+            # to, so its own count says nothing about what it is worth.
+            if p.type in AGGREGATOR_TYPES or not (
+                links.get("rss") or links.get("substack")
+            ):
                 continue
             # Silent since its last new post, or since it was switched on.
             marks = [d for d in (p.last_new_at, p.switched_at) if d]

@@ -102,6 +102,12 @@ def test_an_event_page_is_dropped(url: str) -> None:
     assert _urls([url]) == []
 
 
+def test_a_docs_page_is_dropped() -> None:
+    assert _urls(["https://ai.google.dev/gemini-api/docs/models/gemini-4-neon"]) == []
+    kept = "https://example.com/blog/how-we-write-docs"
+    assert _urls([kept]) == [kept]
+
+
 def test_an_article_that_only_mentions_a_glossary_survives() -> None:
     kept = "https://example.com/blog/a-glossary-of-agent-terms-explained"
     assert _urls([kept]) == [kept]

@@ -34,11 +34,14 @@ def test_only_an_approval_after_the_switch_reopens() -> None:
     assert reopened(off, off + timedelta(days=1))
 
 
-def test_cull_on_zero_approvals_or_silence() -> None:
+def test_cull_on_zero_approvals_a_trickle_or_silence() -> None:
     recent = NOW - timedelta(days=5)
     assert cull_reason(0, 14, recent, NOW) == "culled 0/14 90d 2026-11-21"
     assert cull_reason(0, 9, recent, NOW) is None
-    assert cull_reason(1, 30, recent, NOW) is None
+    assert cull_reason(1, 365, recent, NOW) == "culled 1/366 90d 2026-11-21"
+    assert cull_reason(3, 90, recent, NOW) == "culled 3/93 90d 2026-11-21"
+    assert cull_reason(1, 25, recent, NOW) is None  # too few to judge a rate
+    assert cull_reason(16, 224, recent, NOW) is None  # 6.7%, kept
     old = NOW - timedelta(days=121)
     assert cull_reason(5, 1, old, NOW) == (
         f"culled silent since {old.date()} 2026-11-21"
