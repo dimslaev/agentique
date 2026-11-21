@@ -128,6 +128,31 @@ Every one of these should be approved.
 The profile, in one line: someone else's working code, a number with a method
 behind it, or weights you can pull.
 
+## Liked, scored low
+
+Added 2026-11-21 with the coding-agent tool reach rule. The reader liked these;
+the rubric scored them 60-72 for narrow reach. Each should now score 70+.
+
+| was | article |
+|---|---|
+| 60 | [Exo AI agent harness for recursive self-improvement](https://github.com/exoharness/exo) |
+| 66 | [Doop: a multiplayer design canvas for people and AI agents](https://github.com/kgoedecke/doop) |
+| 68 | [Klad, a paint app your coding agent can drive](https://github.com/klad-app/klad) |
+| 70 | [The Home Repo Pattern](https://www.aihero.dev/the-home-repo-pattern) |
+| 72 | [Deslop skill based on corpus-linguistics research](https://github.com/etodanik/deslop) |
+| 72 | [Sx - an open-source package manager for AI skills, MCPs, and commands](https://github.com/sleuth-io/sx) |
+| 72 | [Octomind - open-source AI harness that saves your tokens](https://github.com/Muvon/octomind) |
+
+Rejected look-alikes. A working tool with install steps should move to 70+; a
+demo or a walkthrough of the author's own product should stay under.
+
+| was | expect | article |
+|---|---|---|
+| 68 | 70+ | [Agent Skills - design and build skills for coding agents](https://github.com/MengTo/Skills) |
+| 66 | 70+ | [nanocode - minimal Claude Code alternative in Python](https://github.com/1rgs/nanocode) |
+| 64 | under 70 | [Cyberviber - a $15 touch screen to show which Claude session needs you](https://cyberviber.de/) |
+| 67 | under 70 | [Postman Plugin for Claude Code: A Hands-On Guide](https://blog.postman.com/postman-plugin-for-claude-code-a-hands-on-guide/) |
+
 ## Publisher count cases
 
 Added 2026-09-23 with the collector/judge split (ADR 11). The pipeline no

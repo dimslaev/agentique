@@ -22,8 +22,7 @@ Copy URLs exactly as `list_candidates` gives them.
 3. Read page one of `read_article` for the rest. Read to the end (or 12000 characters, `limit=12000`) before approving. `check_repo` when the score rests on a repo or model. `web_fetch` the URL only when the stored text is empty, a teaser, or cut off before the part that decides it. A fetch cut at `max_length` is our limit: fetch further, don't treat it as paywalled.
 4. Call `find_similar(url)` before each approval. A `published` row under 0.30 means it's a repost.
 5. Look further where **Looking further** says.
-6. Apply daily caps at the end, over the whole night.
-7. Write the verdicts.
+6. Write the verdicts.
 
 ## Say what you do
 
@@ -66,7 +65,7 @@ Out, score 1-14 and stop reading:
 ### Two axes
 
 - **Evidence:** runnable code, downloadable weights, a measured result with its method, or steps a reader can copy. A number with no method is a claim, discounted more the bigger it is. Exact steps or a design clear enough to copy count without numbers. Advice and lessons-learned lists with nothing to run or check are commentary.
-- **Reach:** how many AI builders it changes something for. Frontier releases and widely used runtimes are high. Weekend projects, demos and niche integrations are low.
+- **Reach:** how many AI builders it changes something for. Frontier releases and widely used runtimes are high. Demos and integrations for one niche product are low. A tool any coding-agent user can install (skill, plugin, harness, MCP server, sandbox, CLI) is not niche because it is small or solo. Narrow means a narrow audience, not a small author.
 
 ### Score tiers
 
@@ -99,6 +98,7 @@ Absolute, never relative to the night.
 - Out of scope (1-14) or release from the creator (70+): pick one rule. A score between fits neither.
 - **Repost** of someone else's announcement: about 10 below the release, never above 80; about 20 below if it only restates it. Testing, benchmarking or building with the thing is not a repost.
 - **Write-up with a mechanism or measurements from running something real**, applicable on another stack: 80+, on any blog, even if it pitches a product. The most under-scored kind.
+- **Working coding-agent tool:** a repo with docs and install steps for coding agents (skill, plugin, harness, MCP server, sandbox, CLI): 70+, no measurements needed. A demo or a README with no install path stays 55-69.
 - **Paper** showing why something works or fails, enough to change how you build: 78+. Only reporting a good score: 70-79.
 - **Explainer** laying out a real builder decision with trade-offs and when each choice is wrong: 70+, no code needed. Advice with nothing to weigh is commentary.
 - **Security piece** teaching a method, attack or defence, incident reports included: judged like any write-up. Only reporting an incident happened: 55 max.
@@ -130,7 +130,7 @@ Absolute, never relative to the night.
 
 ### Tie-breaks
 
-- Topic is never a bonus. Local inference, quantization, privacy, on-device and token cost are common, not merit.
+- Topic is never a bonus. Local inference, quantization, privacy, on-device and token cost are common, not merit. Coding-agent tools get the reach rule above, not extra points.
 - Approval rate, after the tier is chosen, never moving tiers: +3 for mostly approvals (5+ decisions, 3 in 4 approved), -3 for mostly rejections (5+, 1 in 4 or fewer), else 0.
 - Traction is reach evidence only. Single-digit points and no comments: 45 max, 35 for Show-HN-style self-promotion. Strong numbers never lift a thin item past 70.
 - Empty snippet and unfetchable page: judging a title alone, cap 70.
@@ -148,7 +148,7 @@ From `find_similar` and `find_duplicates`. Reach evidence only, never lifts thin
 
 At the end, over the whole night:
 
-- At most two Claude Code items. Approve the two strongest, reject the rest: `"Third-best Claude Code item tonight; daily cap of 2."`
+- At most two Claude Code items. Approve the two strongest, reject the rest: `"Third-best Claude Code item tonight; daily cap of 3."`
 
 ## Verdicts
 
