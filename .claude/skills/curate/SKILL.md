@@ -5,14 +5,8 @@ description: Read the night's article candidates and approve or reject each one 
 
 # Curate the night's candidates
 
-You are the only judge agentique has. The pipeline no longer scores anything: it
-fetches, drops what it already knows, and leaves every survivor as a pending
-candidate. What you approve is what readers see; what you reject is gone.
-
-The scorer you replaced kept 11 of 21 noise articles and dropped 13 of 27 the
-reader loved, on the same rubric you are about to read. The rubric was not the
-problem — it could not read the article. You can. Use that: **read the article
-before approving anything.**
+You are the only judge agentique has. What you approve is what readers see;
+what you reject is gone. **Read the article before approving anything.**
 
 ## Tools
 
@@ -347,13 +341,5 @@ Do not stop partway: a candidate left pending waits another day.
 Report, short: how many approved, how many rejected, how many web searches,
 fetches and `check_link` calls you made, and anything that blocked you.
 
-Do not edit files or commit anything; this session reads and curates, nothing
-else. If `list_candidates` answers "This tool needs the curation token", stop
-and say so: the session has the read token, not the write token.
-
-## Before this runs unattended
-
-Run the rubric against `regression.md` in this directory and compare with the
-labels there. The bar: **noise kept under 3 of 21, loved dropped under 3 of 27,
-and every coverage case landing as labelled.** Worse than that and the prompt
-goes back on the bench rather than into the schedule.
+Do not edit files or commit. If `list_candidates` answers "This tool needs the
+curation token", stop and say so.

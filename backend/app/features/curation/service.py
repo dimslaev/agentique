@@ -41,7 +41,7 @@ from app.core.embedding import (
     story_groups,
 )
 from app.core.logging import log
-from app.features.curation import coverage
+from app.features.curation import coverage, sources
 from app.features.curation.links import check_link as check_link
 from app.features.curation.model import (
     CandidateError,
@@ -480,3 +480,35 @@ def reject_many(session: Session, verdicts: list[Verdict]) -> list[str]:
         else:
             lines.append(f"Rejected [{v['score']}/100] {v['url']}")
     return lines
+
+
+def discovery_candidates(
+    session: Session, limit: int = 30
+) -> dict[str, list[dict[str, str]]]:
+    """What the discovery agent works from: publishers to probe and feeds to
+    cull, with each publisher's approval rate over `APPROVAL_WINDOW_DAYS`."""
+    now = datetime.now(UTC)
+    ids = [i for i in session.exec(select(Publisher.id)).all() if i is not None]
+    since = now - timedelta(days=APPROVAL_WINDOW_DAYS)
+    counts = approval_counts(session, ids, since)
+    return sources.discovery_candidates(session, counts, limit, now)
+
+
+def find_feed(session: Session, url: str) -> dict[str, object] | None:
+    return sources.find_feed(session, url)
+
+
+def activate_publisher(
+    session: Session,
+    slug: str,
+    reason: str,
+    feed_url: str | None = None,
+    search_domain: str | None = None,
+) -> str:
+    return sources.activate_publisher(
+        session, slug, feed_url, search_domain, reason, datetime.now(UTC)
+    )
+
+
+def disable_publisher(session: Session, slug: str, reason: str) -> str:
+    return sources.disable_publisher(session, slug, reason, datetime.now(UTC))

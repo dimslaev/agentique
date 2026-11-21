@@ -38,7 +38,7 @@ from app.core.github import NON_REPO_OWNERS, account_type
 from app.core.http import fetch_with_timeout
 from app.core.llm_text import enum_value
 from app.core.logging import log
-from app.core.urls import feed_url, hostname
+from app.core.urls import SHARED_HOSTS, feed_url, hostname, is_shared_host
 from app.features.collect.model import FeedSource
 
 # Publishers whose items link to other people's posts. An item one of them
@@ -175,31 +175,6 @@ class PublisherResolver:
 
 # ─── crediting by URL ────────────────────────────────────────────────────────
 
-# Hosts many unrelated authors publish under: the host alone says nothing about
-# who wrote it, so no publisher is credited from it. On the ones in
-# OWNER_HOSTS the first path segment does name the author (``owner_key``).
-# huggingface.co is here because "Hugging Face Blog" would otherwise claim
-# every model card.
-SHARED_HOSTS = frozenset(
-    {
-        "github.com",
-        "huggingface.co",
-        "linkedin.com",
-        "medium.com",
-        "reddit.com",
-        "substack.com",
-        "twitter.com",
-        "x.com",
-        "youtu.be",
-        "youtube.com",
-    }
-)
-# Shared hosts whose subdomains are one author's site (writer.substack.com).
-# Any other shared host's subdomain is the platform itself (old.reddit.com,
-# m.youtube.com), unless a publisher's own link names it
-# (engineering.linkedin.com, see `hosts_to_publishers`).
-PERSONAL_SUBDOMAIN_HOSTS = frozenset({"medium.com", "substack.com"})
-
 _HOST_PLATFORMS = (
     LinkPlatform.website.value,
     LinkPlatform.rss.value,
@@ -216,15 +191,6 @@ HF_NOT_OWNERS = frozenset({"models", "docs", "api", "papers", "learn", "join"})
 MEDIUM_NOT_OWNERS = frozenset({"tag", "topic", "m", "p", "search", "me"})
 # Hosts where every site is one person's.
 PERSONAL_HOST_SUFFIXES = (".github.io", ".substack.com", ".bearblog.dev")
-
-
-def is_shared_host(host: str) -> bool:
-    """A host many unrelated authors publish under. Pure."""
-    return any(
-        host == shared
-        or (host.endswith(f".{shared}") and shared not in PERSONAL_SUBDOMAIN_HOSTS)
-        for shared in SHARED_HOSTS
-    )
 
 
 def owner_key(url: str) -> str | None:

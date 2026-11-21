@@ -4,11 +4,15 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
+from app.entry.mcp.activate_publisher import activate_publisher
 from app.entry.mcp.approve import approve
 from app.entry.mcp.auth import SharedSecret, user_scope_gate
 from app.entry.mcp.check_link import check_link
 from app.entry.mcp.close_story import close_story
+from app.entry.mcp.disable_publisher import disable_publisher
+from app.entry.mcp.discovery_candidates import discovery_candidates
 from app.entry.mcp.draft_issue import draft_issue
+from app.entry.mcp.find_feed import find_feed
 from app.entry.mcp.get_content import get_content
 from app.entry.mcp.list_candidates import list_candidates
 from app.entry.mcp.rate_limit import UserRateLimit
@@ -62,6 +66,10 @@ mcp = FastMCP(
         story_candidates,
         save_story,
         close_story,
+        discovery_candidates,
+        find_feed,
+        activate_publisher,
+        disable_publisher,
     ],
 )
 

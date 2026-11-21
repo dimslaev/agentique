@@ -41,6 +41,7 @@
 - With the write token it also exposes `list_candidates`, `get_content`, `similar`, `stories`, `check_link`, `vocabulary`, `approve`, `reject`, `reject_many` - the curation agent's tools. They publish to prod. Don't call them outside a curation session.
 - The write token also reaches `week`, `related`, `draft_issue` - the newsletter agent's tools (`.claude/skills/newsletter/SKILL.md`). `draft_issue` creates a Resend draft addressed to every subscriber; sending is done by hand in Resend.
 - And `story_candidates`, `save_story`, `close_story` - the stories agent's tools (`.claude/skills/stories/SKILL.md`). They write the right rail's stories in prod.
+- And `discovery_candidates`, `find_feed`, `activate_publisher`, `disable_publisher` - the discovery agent's tools (`.claude/skills/discover/SKILL.md`). They switch which publishers prod polls.
 - Don't use any of these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
 
 ## Curation

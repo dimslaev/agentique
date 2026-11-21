@@ -27,15 +27,10 @@ From the `agentique-admin` MCP server, with the curation token:
   articles sits close to. A single article close to a story comes back as a
   cluster of one with that story in `near`.
 - `save_story(slug, name, blurb, urls)` - create a story, or update an open
-  one: set its name and blurb, add `urls` (ones already in it are skipped).
-  Refuses the whole call, saying why, on an unknown URL, an article already in
-  another open story, a bad slug, a name over 4 words, or a blurb over 2
-  sentences or 280 characters.
-- `close_story(slug)` - close an open story. It leaves the rail and its
-  articles are free to join another.
+  one: set its name and blurb, add `urls`. A refusal says what to fix.
+- `close_story(slug)` - close an open story. Its articles are free to join
+  another.
 - `sql_query(sql)` - read-only, for anything the tools do not answer.
-
-The rail shows an open story once it has 3 articles from 2 publishers.
 
 ## Rounds
 
@@ -100,6 +95,5 @@ Report, short:
 - clusters passed over that came close, and why
 - anything a tool refused and what you did
 
-Do not edit files or commit anything; this session reads and writes stories,
-nothing else. If a tool answers "This tool needs the curation token", stop and
-say so: the session has the read token, not the write token.
+Do not edit files or commit. If a tool answers "This tool needs the curation
+token", stop and say so.

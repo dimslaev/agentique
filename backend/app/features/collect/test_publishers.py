@@ -6,11 +6,11 @@ import httpx
 import pytest
 
 from app.core.db.publisher import LinkPlatform, Publisher, PublisherKind
+from app.core.urls import is_shared_host
 from app.features.collect import publishers
 from app.features.collect.publishers import (
     host_kind,
     hosts_to_publishers,
-    is_shared_host,
     match_publisher,
     owner_key,
     owner_kind,

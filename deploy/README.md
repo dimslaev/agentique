@@ -133,6 +133,26 @@ The routine's prompt, to paste there when it changes:
 Run the `stories` skill (`.claude/skills/stories/SKILL.md`).
 ```
 
+## Discovery
+
+Which publishers the nightly run polls is decided by a fourth off-box routine,
+the same way as the others: a scheduled task on claude.ai/code against this
+repo, with the same write token, invoking `/discover`
+(`.claude/skills/discover/SKILL.md`, ADR 21). It runs daily after that
+morning's curation.
+
+- It switches off the feeds `discovery_candidates` lists to cull, and probes
+  up to 30 inactive publishers, switching each one on or marking it off with
+  a reason.
+- It writes only `publisher` rows and commits nothing. A switched-on publisher
+  is polled from the next nightly run.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `discover` skill (`.claude/skills/discover/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that

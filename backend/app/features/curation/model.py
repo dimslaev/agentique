@@ -115,3 +115,7 @@ class ProcessedArticle(TypedDict):
     title: str
     score: int
     snippet: str
+
+
+class SourceError(ValueError):
+    """A publisher switch the discovery agent can correct, returned as a message."""

@@ -110,6 +110,16 @@ class Publisher(PublisherBase, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     last_error: str | None = None
+    # Why an inactive publisher is off ("culled 0/14 90d"). Set by the
+    # discovery agent or by hand; a set reason keeps it out of the probe pool
+    # until an approval lands after `switched_at`.
+    disabled_reason: str | None = None
+    # When the discovery agent last switched it on or off. Also where a newly
+    # activated feed's silence clock starts.
+    switched_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore

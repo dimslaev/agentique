@@ -81,3 +81,38 @@ def is_first_party(url: str) -> bool:
     if host in ("huggingface.co", "hf.co"):
         return urlparse(url).path.startswith("/blog")
     return any(host == h or host.endswith(f".{h}") for h in FIRST_PARTY_HOSTS)
+
+
+# Hosts many unrelated authors publish under: the host alone says nothing about
+# who wrote it, so no publisher is credited from it. On the ones in
+# collect's OWNER_HOSTS the first path segment does name the author.
+# huggingface.co is here because "Hugging Face Blog" would otherwise claim
+# every model card.
+SHARED_HOSTS = frozenset(
+    {
+        "github.com",
+        "huggingface.co",
+        "linkedin.com",
+        "medium.com",
+        "reddit.com",
+        "substack.com",
+        "twitter.com",
+        "x.com",
+        "youtu.be",
+        "youtube.com",
+    }
+)
+# Shared hosts whose subdomains are one author's site (writer.substack.com).
+# Any other shared host's subdomain is the platform itself (old.reddit.com,
+# m.youtube.com), unless a publisher's own link names it
+# (engineering.linkedin.com, see `hosts_to_publishers`).
+PERSONAL_SUBDOMAIN_HOSTS = frozenset({"medium.com", "substack.com"})
+
+
+def is_shared_host(host: str) -> bool:
+    """A host many unrelated authors publish under. Pure."""
+    return any(
+        host == shared
+        or (host.endswith(f".{shared}") and shared not in PERSONAL_SUBDOMAIN_HOSTS)
+        for shared in SHARED_HOSTS
+    )
