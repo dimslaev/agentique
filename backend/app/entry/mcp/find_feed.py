@@ -18,7 +18,9 @@ def find_feed(url: str) -> dict[str, object]:
     and `entries`: `title`, `link`, `published` (date, or "" when the feed
     gives none) and `judged`: `approved`, a ledger stage such as
     `below_threshold` or `pending`, or "" when agentique has never seen it.
-    Fails when no feed answers.
+    `entries` is empty when the feed is real but lists nothing today, as
+    arXiv's do at the weekend: probe it another day. Fails when no feed
+    answers.
     """
     require_write()
     with Session(engine) as session:

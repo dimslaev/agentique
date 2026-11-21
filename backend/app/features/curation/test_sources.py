@@ -5,6 +5,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import httpx
+import pytest
+
+from app.features.curation import sources
 from app.features.curation.sources import (
     can_reach_rate,
     cull_reason,
@@ -54,3 +58,21 @@ def test_declared_feeds_come_before_the_common_paths() -> None:
         "https://x.dev/rss.xml",
     ]
     assert len(links) == len(set(links))
+
+
+def test_only_a_blocked_fetch_goes_through_the_proxy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str | None] = []
+
+    def fetch(url: str, proxy: str | None = None, **_: object) -> httpx.Response:
+        calls.append(proxy)
+        return httpx.Response(404 if url.endswith("/missing") else 403)
+
+    monkeypatch.setattr(sources, "RESIDENTIAL_PROXY_URL", "http://proxy")
+    monkeypatch.setattr(sources, "fetch_with_timeout", fetch)
+    assert sources._get("https://x.dev/missing") == b""
+    assert calls == [None]
+    calls.clear()
+    assert sources._get("https://x.dev/blocked") == b""
+    assert calls == [None, "http://proxy"]

@@ -138,6 +138,9 @@ def test_find_feed_marks_what_agentique_already_decided(
     ]
     monkeypatch.setattr(sources, "_get", lambda u: b"")
     assert sources.find_feed(db, site) is None
+    empty = b'<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>'
+    monkeypatch.setattr(sources, "_get", lambda u: empty if u == site else b"")
+    assert sources.find_feed(db, site) == {"feed_url": site, "entries": []}
 
 
 def test_activate_checks_the_feed_and_disable_records_why(

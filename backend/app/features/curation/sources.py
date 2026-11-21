@@ -12,6 +12,7 @@ a sloppy session cannot switch on a dead or noisy feed.
 from __future__ import annotations
 
 import calendar
+import time
 from datetime import UTC, datetime, timedelta
 from html.parser import HTMLParser
 from urllib.parse import urljoin
@@ -37,6 +38,10 @@ CULL_MIN_DECISIONS = 10
 CULL_SILENT_DAYS = 120
 FEED_PATHS = ("/feed", "/rss.xml", "/atom.xml", "/index.xml", "/feed.xml", "/rss")
 _FEED_TYPES = ("application/rss+xml", "application/atom+xml")
+_BLOCKED = (401, 403, 429)
+# Stop trying candidate paths here: the MCP client gives a tool 120s, and a
+# site that hangs costs two 15s timeouts per path.
+FIND_FEED_SECS = 75
 _SEARCH_KINDS = (PublisherKind.lab, PublisherKind.company)
 
 
@@ -166,8 +171,9 @@ def feed_links(html: str, base: str) -> list[str]:
 
 
 def _get(url: str) -> bytes:
-    """The body at `url`, retried through the residential proxy (Substack
-    blocks the box's IP), or b"" if neither answers."""
+    """The body at `url`, retried through the residential proxy when the
+    direct fetch fails or is blocked (Substack blocks the box's IP), or b"" if
+    neither answers. A plain 404 is not retried."""
     for proxy in dict.fromkeys((None, RESIDENTIAL_PROXY_URL)):
         try:
             resp = fetch_with_timeout(url, proxy=proxy, headers=BROWSER_HEADERS)
@@ -175,6 +181,8 @@ def _get(url: str) -> bytes:
             continue
         if resp.is_success:
             return resp.content
+        if resp.status_code not in _BLOCKED:
+            break
     return b""
 
 
@@ -188,7 +196,10 @@ def _published(entry: dict[str, object]) -> datetime | None:
 def read_feed(url: str) -> list[dict[str, object]]:
     """A feed's entries, newest first: `title`, `link`, `published` (or None).
     Empty when `url` is not a feed."""
-    parsed = feedparser.parse(_get(url))
+    return _entries(feedparser.parse(_get(url)))
+
+
+def _entries(parsed: feedparser.FeedParserDict) -> list[dict[str, object]]:
     entries = [
         {
             "title": e.get("title", ""),
@@ -206,13 +217,22 @@ def read_feed(url: str) -> list[dict[str, object]]:
 def find_feed(session: Session, url: str) -> dict[str, object] | None:
     """The first feed at `url` (itself a feed, a declared alternate, or a
     common path) with its newest `PROBE_POSTS` entries, each marked with what
-    agentique already decided about it. None if no feed answers."""
+    agentique already decided about it. A feed that parses but lists nothing
+    today (arXiv at the weekend) comes back with no entries. None if no feed
+    answers within `FIND_FEED_SECS`."""
+    deadline = time.monotonic() + FIND_FEED_SECS
     candidates = [url, *feed_links(_get(url).decode("utf-8", "replace"), url)]
+    empty = None
     for candidate in dict.fromkeys(candidates):
-        entries = read_feed(candidate)[:PROBE_POSTS]
+        if time.monotonic() > deadline:
+            break
+        parsed = feedparser.parse(_get(candidate))
+        entries = _entries(parsed)[:PROBE_POSTS]
         if entries:
             return {"feed_url": candidate, "entries": _judged(session, entries)}
-    return None
+        if empty is None and parsed.get("version"):
+            empty = candidate
+    return {"feed_url": empty, "entries": []} if empty else None
 
 
 def _judged(session: Session, entries: list[dict[str, object]]) -> list[dict[str, str]]:
