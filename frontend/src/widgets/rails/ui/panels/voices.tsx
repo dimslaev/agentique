@@ -13,9 +13,9 @@ import { ScoreBars } from "../score-marks"
 const WINDOW_DAYS = 30
 
 const TABS: { value: VoiceKind; label: string }[] = [
-  { value: "individual", label: "Writers" },
-  { value: "lab", label: "Labs" },
   { value: "company", label: "Companies" },
+  { value: "lab", label: "Labs" },
+  { value: "individual", label: "Writers" },
 ]
 
 /** Who writes the wire: each name with a bar per article, oldest to newest,
@@ -23,7 +23,7 @@ const TABS: { value: VoiceKind; label: string }[] = [
 export function Voices() {
   const { filters, setFilter } = useFilters()
   const { publisher, search } = filters
-  const [kind, setKind] = useState<VoiceKind>("individual")
+  const [kind, setKind] = useState<VoiceKind>("company")
 
   const { data, isError } = useQuery({
     queryKey: ["articles", "voices", kind],

@@ -85,27 +85,34 @@ function panel(page: Page) {
   return page.locator('[data-panel="voices"]')
 }
 
+function openWriters(page: Page) {
+  return panel(page)
+    .getByRole("group", { name: "Voices" })
+    .getByRole("button", { name: "Writers" })
+    .click()
+}
+
 test("tabs switch the list", async ({ page }) => {
   await serveVoices(page)
   await page.goto("/")
   const tabs = panel(page).getByRole("group", { name: "Voices" })
   const names = panel(page).getByTestId("voice-name")
 
-  await expect(tabs.getByRole("button", { name: "Writers" })).toHaveAttribute(
+  await expect(tabs.getByRole("button", { name: "Companies" })).toHaveAttribute(
     "aria-pressed",
     "true",
   )
-  await expect(names).toHaveText(["Simon Willison", "Hamel Husain"])
-  await expect(panel(page).getByTestId("voice").first()).toContainText(
-    "Best of Simon Willison",
-  )
+  await expect(names).toHaveCount(0)
+  await expect(panel(page)).toContainText("Nobody here")
 
   await tabs.getByRole("button", { name: "Labs" }).click()
   await expect(names).toHaveText(["Anthropic"])
 
-  await tabs.getByRole("button", { name: "Companies" }).click()
-  await expect(names).toHaveCount(0)
-  await expect(panel(page)).toContainText("Nobody here")
+  await tabs.getByRole("button", { name: "Writers" }).click()
+  await expect(names).toHaveText(["Simon Willison", "Hamel Husain"])
+  await expect(panel(page).getByTestId("voice").first()).toContainText(
+    "Best of Simon Willison",
+  )
 })
 
 test("clicking a name narrows the feed to that publisher, and the chip clears it", async ({
@@ -115,6 +122,7 @@ test("clicking a name narrows the feed to that publisher, and the chip clears it
   await servePublisherFeed(page)
   await page.goto("/")
   await expect(page.getByTestId("article-row").first()).toBeVisible()
+  await openWriters(page)
 
   const row = panel(page)
     .getByTestId("voice")
@@ -151,6 +159,7 @@ test("clicking the active name clears the filter", async ({ page }) => {
   await serveVoices(page)
   await servePublisherFeed(page)
   await page.goto("/")
+  await openWriters(page)
 
   const row = panel(page)
     .getByTestId("voice")
