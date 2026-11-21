@@ -67,7 +67,7 @@ function Profile() {
       </div>
 
       <Tabs defaultValue="liked">
-        <TabsList>
+        <TabsList className="w-full">
           <TabsTrigger value="liked">Liked</TabsTrigger>
           <TabsTrigger value="my-profile">My profile</TabsTrigger>
           <TabsTrigger value="danger-zone">Danger zone</TabsTrigger>

@@ -43,19 +43,6 @@ export const AGENTS: Agent[] = [
       }),
   },
   {
-    id: "cursor",
-    name: "Cursor",
-    where:
-      "Add to .cursor/mcp.json in your project, or ~/.cursor/mcp.json for every project.",
-    label: ".cursor/mcp.json",
-    snippet: (url, token) =>
-      json({
-        mcpServers: {
-          agentique: { url, headers: { Authorization: bearer(token) } },
-        },
-      }),
-  },
-  {
     id: "codex",
     name: "Codex CLI",
     where: "Add to ~/.codex/config.toml.",
@@ -66,19 +53,15 @@ url = "${url}"
 http_headers = { "Authorization" = "${bearer(token)}" }`,
   },
   {
-    id: "vscode",
-    name: "VS Code",
+    id: "cursor",
+    name: "Cursor",
     where:
-      "Add to .vscode/mcp.json in your workspace, or run MCP: Open User Configuration for every workspace.",
-    label: ".vscode/mcp.json",
+      "Add to .cursor/mcp.json in your project, or ~/.cursor/mcp.json for every project.",
+    label: ".cursor/mcp.json",
     snippet: (url, token) =>
       json({
-        servers: {
-          agentique: {
-            type: "http",
-            url,
-            headers: { Authorization: bearer(token) },
-          },
+        mcpServers: {
+          agentique: { url, headers: { Authorization: bearer(token) } },
         },
       }),
   },

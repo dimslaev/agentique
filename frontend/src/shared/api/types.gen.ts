@@ -193,12 +193,14 @@ export type UserPublic = {
     is_active?: boolean;
     is_superuser?: boolean;
     full_name?: (string | null);
+    company?: (string | null);
     id: string;
     created_at?: (string | null);
 };
 
 export type UserUpdateMe = {
     full_name?: (string | null);
+    company?: (string | null);
     email?: (string | null);
 };
 

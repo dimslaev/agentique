@@ -34,7 +34,7 @@ async function servePicks(page: Page, data: ReturnType<typeof article>[]) {
   await page.route(
     (url) =>
       url.pathname === "/api/v1/articles/" &&
-      url.searchParams.get("sort") === "likes-desc",
+      url.searchParams.get("sort") === "liked-desc",
     (route) =>
       route.fulfill({
         contentType: "application/json",
@@ -43,17 +43,11 @@ async function servePicks(page: Page, data: ReturnType<typeof article>[]) {
   )
 }
 
-test("reader picks lists liked articles with their counts, most liked first", async ({
+test("reader picks lists liked articles with their counts, most recently liked first", async ({
   page,
 }) => {
-  // In like order, as the backend sorts them; the unliked tail is dropped.
-  await servePicks(page, [
-    article(1, 5),
-    article(2, 3),
-    article(3, 1),
-    article(4, 0),
-    article(5, 0),
-  ])
+  // In liked-date order, as the backend sorts them.
+  await servePicks(page, [article(1, 5), article(2, 3), article(3, 1)])
   await page.goto("/")
 
   const rows = page.getByTestId("reader-pick")

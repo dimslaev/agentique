@@ -101,6 +101,14 @@ def list_articles(
         statement = statement.order_by(
             like_count_expr.desc(), col(Article.score).desc(), col(Article.id).desc()
         )
+    elif sort == "liked-desc":
+        # only liked articles, most recently liked first
+        statement = statement.where(
+            col(like_counts_subq.c.like_count).is_not(None)
+        ).order_by(
+            col(like_counts_subq.c.last_liked_at).desc(),
+            col(Article.id).desc(),
+        )
     else:
         statement = statement.order_by(
             col(Article.score).desc(), col(Article.id).desc()

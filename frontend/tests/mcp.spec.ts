@@ -11,17 +11,17 @@ test("the MCP page shows a config per agent and copies it", async ({
   await page.getByRole("tab", { name: "Codex CLI" }).click()
   await expect(page.getByText("[mcp_servers.agentique]")).toBeVisible()
 
-  await page.getByRole("tab", { name: "VS Code" }).click()
-  await page.getByRole("button", { name: "Copy .vscode/mcp.json" }).click()
+  await page.getByRole("tab", { name: "Cursor" }).click()
+  await page.getByRole("button", { name: "Copy .cursor/mcp.json" }).click()
   const copied = await page.evaluate(() => navigator.clipboard.readText())
-  expect(JSON.parse(copied).servers.agentique.type).toBe("http")
+  expect(JSON.parse(copied).mcpServers.agentique.url).toContain("/mcp/")
 })
 
 test("the example prompt copies", async ({ page }) => {
   await page.goto("/connect-mcp")
   await page.getByRole("button", { name: "Copy prompt" }).click()
   const copied = await page.evaluate(() => navigator.clipboard.readText())
-  expect(copied).toContain("Using the agentique MCP")
+  expect(copied).toContain("sandboxing local AI coding agents")
 })
 
 test("a new token fills the agent configs", async ({ page }) => {

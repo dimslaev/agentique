@@ -25,16 +25,14 @@ export function ReaderPicks() {
     queryKey: ["articles", "reader-picks"],
     queryFn: () =>
       ArticlesService.readArticles({
-        sort: "likes-desc",
+        sort: "liked-desc",
         since: cutoffIso(WINDOW_DAYS),
-        limit: 20,
+        limit: SHOWN,
       }),
     staleTime: 5 * 60 * 1000,
   })
 
-  const rows = (data?.data ?? [])
-    .filter((a) => (a.like_count ?? 0) > 0)
-    .slice(0, SHOWN)
+  const rows = data?.data ?? []
   if (rows.length === 0) return null
 
   return (

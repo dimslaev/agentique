@@ -25,8 +25,13 @@ class ArticleLike(SQLModel, table=True):
 
 
 def like_counts_subquery() -> Subquery:
+    """Per article: how many likes, and when the latest one landed."""
     return (
-        select(ArticleLike.article_id, func.count().label("like_count"))
+        select(
+            ArticleLike.article_id,
+            func.count().label("like_count"),
+            func.max(ArticleLike.created_at).label("last_liked_at"),
+        )
         .group_by(ArticleLike.article_id)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
         .subquery()
     )

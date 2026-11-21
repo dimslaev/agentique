@@ -42,8 +42,9 @@ def test_update_user_me(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     full_name = "Updated Name"
+    company = "Updated Company"
     email = random_email()
-    data = {"full_name": full_name, "email": email}
+    data = {"full_name": full_name, "company": company, "email": email}
     r = client.patch(
         f"{settings.API_V1_STR}/users/me",
         headers=normal_user_token_headers,
@@ -53,12 +54,14 @@ def test_update_user_me(
     updated_user = r.json()
     assert updated_user["email"] == email
     assert updated_user["full_name"] == full_name
+    assert updated_user["company"] == company
 
     user_query = select(User).where(User.email == email)
     user_db = db.exec(user_query).first()
     assert user_db
     assert user_db.email == email
     assert user_db.full_name == full_name
+    assert user_db.company == company
 
 
 def test_update_user_me_email_exists(

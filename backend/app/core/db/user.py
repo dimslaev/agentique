@@ -18,6 +18,7 @@ class UserBase(SQLModel):
     is_active: bool = True
     is_superuser: bool = False
     full_name: str | None = Field(default=None, max_length=255)
+    company: str | None = Field(default=None, max_length=255)
 
 
 # Database model, database table inferred from class name

@@ -2,7 +2,7 @@ import DeleteConfirmation from "./delete-confirmation"
 
 const DeleteAccount = () => {
   return (
-    <div className="max-w-md mt-4 rounded-lg border border-destructive/50 p-4">
+    <div className="max-w-md mt-4 rounded-lg border border-destructive/20 bg-destructive/5 p-4">
       <h3 className="font-display font-bold text-destructive">
         Delete Account
       </h3>

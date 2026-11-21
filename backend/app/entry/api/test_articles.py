@@ -18,9 +18,11 @@ from app.core.db.factories import (
     create_random_article,
     create_random_publisher,
     create_random_tag,
+    create_random_user,
     random_email,
     tag_article,
 )
+from app.core.db.like import ArticleLike
 from app.core.db.publisher import PublisherKind
 from app.core.security import create_access_token
 from app.core.settings import settings
@@ -629,6 +631,50 @@ def test_read_articles_sort_likes_desc(client: TestClient, db: Session) -> None:
     assert ids.index(high_score_no_likes.id) < ids.index(tied_score_b.id)
     # tied_score_a has 1 like, tied_score_b has 0 -> a before b despite equal score
     assert ids.index(tied_score_a.id) < ids.index(tied_score_b.id)
+
+
+def test_read_articles_sort_liked_desc(client: TestClient, db: Session) -> None:
+    now = datetime.now(UTC)
+    liked_recent = create_random_article(db, published_at=now)
+    liked_old = create_random_article(db, published_at=now)
+    liked_tie_a = create_random_article(db, published_at=now)
+    liked_tie_b = create_random_article(db, published_at=now)
+    never_liked = create_random_article(db, published_at=now)
+
+    user = create_random_user(db)
+    db.add(
+        ArticleLike(
+            user_id=user.id, article_id=liked_old.id, created_at=now - timedelta(days=3)
+        )
+    )
+    db.add(
+        ArticleLike(
+            user_id=user.id,
+            article_id=liked_recent.id,
+            created_at=now - timedelta(days=1),
+        )
+    )
+    # same instant for both, so the id tiebreak decides
+    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_a.id, created_at=now))
+    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_b.id, created_at=now))
+    db.commit()
+
+    r = client.get(
+        f"{ARTICLES_URL}/",
+        params={"sort": "liked-desc", "limit": 50, "since": RECENT_SINCE},
+    )
+    data = r.json()["data"]
+    ids = [a["id"] for a in data]
+
+    # most recently liked first, ties broken by id desc
+    assert ids == [
+        liked_tie_b.id,
+        liked_tie_a.id,
+        liked_recent.id,
+        liked_old.id,
+    ]
+    # never-liked articles are excluded entirely
+    assert never_liked.id not in ids
 
 
 def test_search_articles_has_like_count_and_liked_by_me(

@@ -812,6 +812,18 @@ export const UserPublicSchema = {
             ],
             title: 'Full Name'
         },
+        company: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Company'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -848,6 +860,18 @@ export const UserUpdateMeSchema = {
                 }
             ],
             title: 'Full Name'
+        },
+        company: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Company'
         },
         email: {
             anyOf: [

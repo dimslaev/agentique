@@ -15,7 +15,7 @@ const QUERY_KEY = ["mcpToken"]
 const TOKEN_PLACEHOLDER = "YOUR_TOKEN"
 
 const EXAMPLE_PROMPT =
-  "Using the agentique MCP (search_articles, sql_query, list_tags — batched, iterate until coverage is good, don't ask me anything), return a ranked list of the most practical tools and strategies for sandboxing local AI coding agents, from engineering blogs and individual writers (no vendor marketing, no cloud products). Tools need a link, one-line takeaway, and install command; strategies need a link, takeaway, and what to do on a dev machine. Flag anything beta."
+  "return a ranked list of the most practical tools and strategies for sandboxing local AI coding agents"
 
 const TOOLS = [
   {
@@ -177,7 +177,7 @@ export function McpSetup() {
         <dl className="space-y-3">
           {TOOLS.map(({ name, description }) => (
             <div key={name} className="gap-4 text-sm sm:flex">
-              <dt className="w-24 shrink-0 font-wire text-xs leading-5 text-foreground">
+              <dt className="w-28 shrink-0 font-wire text-xs leading-5 text-foreground">
                 {name}
               </dt>
               <dd className="text-muted-foreground">{description}</dd>
