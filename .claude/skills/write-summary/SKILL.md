@@ -1,5 +1,5 @@
 ---
-name: summary
+name: write-summary
 description: Write a reader-facing article summary as one plain sentence of 5-10 words carrying the article's most important point. Use when writing or rewriting summaries for the weekly issue, a blog list or any list of links, or when asked to summarize articles for readers.
 ---
 

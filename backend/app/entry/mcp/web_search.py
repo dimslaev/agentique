@@ -12,7 +12,7 @@ def web_search(
 
     Each result has `title`, `url`, `description` and `published_date`
     (null unless the source dated the page). `include_domains` restricts hits
-    to those hosts, e.g. `["openai.com"]` for first-party announcements only.
+    to those hosts, e.g. `["openai.com"]` for announcements from the creator only.
     """
     return tavily_search(
         query, max_results=max_results, include_domains=include_domains

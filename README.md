@@ -43,7 +43,7 @@ A Claude Code session after the pipeline. Decides every candidate.
 ```mermaid
 flowchart TD
     D[Pending candidate] --> E[Claude curation session]
-    E --> F{Triage on title}
+    E --> F{Pre-filter on title}
     F -- clearly off --> R[Reject + reason]
     F -- maybe --> G[Group duplicates]
     G -- feed already has it --> R
@@ -54,7 +54,7 @@ flowchart TD
     J -- good enough --> P[Approve: publish with summary + tags]
 
     P --> M[Daily mail, newsletter, stories]
-    R --> L[(Ledger: never judged again)]
+    R --> L[(Past decisions: never judged again)]
     P --> S[Discover: feeds that earn approvals stay on]
     R --> S
 ```
@@ -64,7 +64,7 @@ flowchart TD
 A daily Claude Code session. Decides which sites the pipeline polls; publishes nothing.
 
 - Hacker News and newsletters surface new sites; each becomes an inactive publisher
-- Turn off polled feeds that stopped earning approvals: none in 10+ decisions, under 5% over 30+, or silent for 120 days (aggregators are never culled)
+- Turn off polled feeds that stopped earning approvals: none in 10+ decisions, under 5% over 30+, or silent for 120 days (aggregators are never deactivated)
 - Probe inactive publishers that have earned an approval: find their feed, check it is their own posts and still alive
 - Read their recent posts and judge each against the curation rubric (passes at 70+)
 - Activate at 3+ passes and a 40%+ pass rate; otherwise switch off with the reason
@@ -108,7 +108,7 @@ flowchart TD
 
 - The article endpoints (list, search, facets, publishers, tags, stats) are public: no account, no rate limit, no date window
 - A token is optional and only fills in `liked_by_me`
-- An MCP server at `/mcp` gives coding agents `search`, `tags` and read-only `sql_query` over the archive
+- An MCP server at `/mcp` gives coding agents `search_articles`, `list_tags` and read-only `sql_query` over the archive
 - A signed-in reader makes an MCP token at `/connect-mcp` and copies the config for Claude Code, OpenCode, Cursor, Codex CLI or VS Code
 
 ## Stack

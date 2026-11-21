@@ -71,11 +71,11 @@ The judge is a Claude Code session, not an LLM call inside the pipeline (ADR 9).
 It reads pending candidates through the MCP server this same box serves.
 
 - The session runs off-box, as a scheduled task on claude.ai/code against this
-  repo, invoking `/curate`. Nothing about it is installed here: the box serves
+  repo, invoking `/curate-articles`. Nothing about it is installed here: the box serves
   the MCP endpoint and holds the tokens it verifies, nothing more.
 - **`AGENTIQUE_MCP_TOKEN` in that session must be the write token.** The MCP
   server serves both tokens at the same URL and the one in the header is what
-  decides what the session can do: `MCP_TOKEN` reaches `search`, `tags`,
+  decides what the session can do: `MCP_TOKEN` reaches `search_articles`, `list_tags`,
   `sql_query`, `web_fetch` and `web_search`, `MCP_WRITE_TOKEN` every tool. A
   read token there gives you a session that does not see the curation tools.
 - `MCP_WRITE_TOKEN` unset means nothing can be published at all — the same
@@ -85,14 +85,14 @@ The routine's prompt lives on claude.ai, not here; this is its text, to paste
 there when it changes. Everything else is in the skill.
 
 ```text
-Run the `curate` skill (`.claude/skills/curate/SKILL.md`).
+Run the `curate-articles` skill (`.claude/skills/curate-articles/SKILL.md`).
 ```
 
 ## Newsletter
 
 The weekly issue is drafted by a second off-box routine, the same way as
 curation: a scheduled task on claude.ai/code against this repo, with the same
-write token, invoking `/newsletter` (`.claude/skills/newsletter/SKILL.md`).
+write token, invoking `/draft-newsletter` (`.claude/skills/draft-newsletter/SKILL.md`).
 It runs Fridays at 07:52 Europe/Zurich (`CRON_TZ=Europe/Zurich 52 7 * * 5`),
 after that morning's curation and report, and reads the 7 days before it.
 
@@ -107,19 +107,19 @@ after that morning's curation and report, and reads the 7 days before it.
 The routine's prompt, to paste there when it changes:
 
 ```text
-Run the `newsletter` skill (`.claude/skills/newsletter/SKILL.md`).
+Run the `draft-newsletter` skill (`.claude/skills/draft-newsletter/SKILL.md`).
 ```
 
 ## Stories
 
 The right rail's stories are kept by a third off-box routine, the same way as
 curation and the newsletter: a scheduled task on claude.ai/code against this
-repo, with the same write token, invoking `/stories`
-(`.claude/skills/stories/SKILL.md`, ADR 16). It runs daily at 06:17
+repo, with the same write token, invoking `/update-stories`
+(`.claude/skills/update-stories/SKILL.md`, ADR 16). It runs daily at 06:17
 Europe/Zurich (`CRON_TZ=Europe/Zurich 17 6 * * *`), after that morning's
 curation and report.
 
-- It reads `story_candidates`, extends open stories, starts new ones and
+- It reads `list_story_candidates`, extends open stories, starts new ones and
   closes the ones quiet for 21 days, through `save_story` and `close_story`.
 - It writes nothing else and commits nothing. A saved story is public at once
   once it has 3 articles from 2 publishers.
@@ -129,19 +129,19 @@ curation and report.
 The routine's prompt, to paste there when it changes:
 
 ```text
-Run the `stories` skill (`.claude/skills/stories/SKILL.md`).
+Run the `update-stories` skill (`.claude/skills/update-stories/SKILL.md`).
 ```
 
 ## Discovery
 
 Which publishers the nightly run polls is decided by a fourth off-box routine,
 the same way as the others: a scheduled task on claude.ai/code against this
-repo, with the same write token, invoking `/discover`
-(`.claude/skills/discover/SKILL.md`, ADR 21). It runs daily at 06:47
+repo, with the same write token, invoking `/discover-publishers`
+(`.claude/skills/discover-publishers/SKILL.md`, ADR 21). It runs daily at 06:47
 Europe/Zurich (`CRON_TZ=Europe/Zurich 47 6 * * *`), after that morning's
 curation and the stories routine.
 
-- It switches off the feeds `discovery_candidates` lists to cull, and probes
+- It switches off the feeds `review_publishers` lists to deactivate, and probes
   up to 30 inactive publishers, switching each one on or marking it off with
   a reason.
 - It writes only `publisher` rows and commits nothing. A switched-on publisher
@@ -150,7 +150,7 @@ curation and the stories routine.
 The routine's prompt, to paste there when it changes:
 
 ```text
-Run the `discover` skill (`.claude/skills/discover/SKILL.md`).
+Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
 ## Newsletter environment
@@ -163,7 +163,7 @@ read `os.environ`: `subscribe` (`app/features/newsletter/service.py`) reads
 
 | Variable | Read by | Effect |
 | --- | --- | --- |
-| `RESEND_API_KEY` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py`, `app/core/email.py` | Unset: `draft_issue` refuses, naming it, signups are not synced to Resend, and the daily mail is only logged. |
+| `RESEND_API_KEY` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py`, `app/core/email.py` | Unset: `draft_newsletter` refuses, naming it, signups are not synced to Resend, and the daily mail is only logged. |
 | `RESEND_AUDIENCE_ID` | `app/features/newsletter/broadcast.py`, `app/features/newsletter/service.py` | The audience signups are synced to and the issue is broadcast to. |
 | `EMAILS_FROM_EMAIL`, `EMAILS_FROM_NAME` | `app/features/newsletter/broadcast.py`, `app/core/email.py` (email only) | The issue's sender, and the daily mail's. |
 
@@ -177,7 +177,7 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | `OPENROUTER_API_KEY` | `app/core/jev.py` | Jev, which classifies each newsletter link (sponsor, plumbing, on-topic, kind). Unset fails every link, so the newsletter channel yields nothing. |
 | `PIPELINE_ALERT_EMAIL` | `app/core/email.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
 | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_PORT` | `app/features/collect/newsletters.py` | The inbox the newsletter source reads. The first three are required by that source; the port defaults to 993. |
-| `HN_MIN_POINTS`, `HN_MIN_COMMENTS`, `HN_GRACE_HOURS` | `app/features/collect/hn.py` | The HN traction gate: 10 points or 5 comments. A story under 6 hours old is held back for the next run. A first-party URL skips the gate, and `HN_MIN_POINTS=0` turns it off. |
+| `HN_MIN_POINTS`, `HN_MIN_COMMENTS`, `HN_GRACE_HOURS` | `app/features/collect/hn.py` | The HN traction gate: 10 points or 5 comments. A story under 6 hours old is held back for the next run. A URL from the creator skips the gate, and `HN_MIN_POINTS=0` turns it off. |
 | `TAVILY_API_KEY` | `app/core/web_search.py` | Search for the lab-watch source, the newsletter source and the `web_search` tool. |
 | `GITHUB_TOKEN` | `app/core/github.py` | Optional. Raises the GitHub API rate limit for repo lookups. |
 | `RESIDENTIAL_PROXY_URL` | `app/core/http.py` | Optional. A metered proxy, tried when a feed fetch or a page extraction is blocked direct. |

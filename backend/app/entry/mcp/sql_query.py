@@ -144,7 +144,7 @@ def sql_query(sql: str) -> QueryResult:
       community, unknown)
     - `tag`: id, slug, name
     - `article_tag`: article_id, tag_id
-    Article text is not readable here. Use `search` to find articles by what
+    Article text is not readable here. Use `search_articles` to find articles by what
     they say. Tags are not a column: join `article_tag` and `tag`. The views
     have no primary key, so `GROUP BY a.id` does not cover the other columns:
     group by every selected column, or aggregate in a subquery, as in

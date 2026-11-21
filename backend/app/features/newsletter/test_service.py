@@ -1,7 +1,7 @@
 """The newsletter's reads against the real schema, with the embedding stubbed.
 
 The grouping maths is curation's and pinned there. This pins what the
-newsletter adds: that `week` ranks topics by how many publishers carried them,
+newsletter adds: that `get_last_week_articles` ranks topics by how many publishers carried them,
 counting the copies curation rejected, and that `liked` reaches an article
 older than the week.
 """
@@ -222,7 +222,7 @@ def _ours(db: Session) -> list[WeekTopic]:
     # A high limit: the local db carries other articles from this week.
     return [
         t
-        for t in digest.week(db, limit=1000)
+        for t in digest.get_last_week_articles(db, limit=1000)
         if any(TAG in a["url"] for a in t["articles"])
     ]
 
@@ -249,7 +249,7 @@ def test_week_counts_the_rejected_copies_as_coverage(
     db: Session, world: dict[str, str]
 ) -> None:
     topic = _topic(db, world["kernels"])
-    assert topic["coverage"] == 3
+    assert topic["publisher_count"] == 3
     assert topic["publishers"] == [f"{TAG} Blog", f"{TAG} Register", f"{TAG} Wired"]
     assert {c["url"] for c in topic["covered_by"]} == {
         world["wired"],
@@ -267,8 +267,8 @@ def test_a_week_topic_carries_its_articles_likes_and_summaries(
         world["release"],
         world["retelling"],
     ]
-    # Rows with no publisher join the topic without counting as coverage.
-    assert topic["coverage"] == 2
+    # Rows with no publisher join the topic without counting toward the publisher count.
+    assert topic["publisher_count"] == 2
     assert {world["hot_take"], world["pending"]} <= {
         c["url"] for c in topic["covered_by"]
     }
@@ -289,7 +289,7 @@ def test_week_leaves_out_what_is_not_this_weeks(
 
 def test_week_returns_at_most_limit_topics(db: Session, world: dict[str, str]) -> None:
     assert world
-    assert len(digest.week(db, limit=1)) == 1
+    assert len(digest.get_last_week_articles(db, limit=1)) == 1
 
 
 def test_liked_reaches_an_article_older_than_the_week(

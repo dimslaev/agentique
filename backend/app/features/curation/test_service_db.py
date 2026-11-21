@@ -1,7 +1,7 @@
 """The curation queries against the real schema, with the embedding stubbed.
 
 The pure parts are pinned in test_service.py. This pins what those cannot:
-that `similar` and `coverage` read the right rows (the feed's stored vectors,
+that `find_similar` and `find_duplicates` read the right rows (the feed's stored vectors,
 every ledger stage, the window), that `list_candidates` counts a publisher's
 record from the right ones, and that approving and rejecting write exactly the
 rows they say they do.
@@ -126,10 +126,10 @@ def world(db: Session, monkeypatch: pytest.MonkeyPatch) -> Generator[dict[str, s
     db.commit()
 
 
-def test_similar_lists_the_feed_and_every_ledger_stage(
+def test_find_similar_lists_the_feed_and_every_ledger_stage(
     db: Session, world: dict[str, str]
 ) -> None:
-    result = curation.similar(db, world["verge"])
+    result = curation.find_similar(db, world["verge"])
 
     urls = [r["url"] for r in result["rows"]]
     assert urls[:2] == [world["feed"], f"https://wired.example/{TAG}/astra"]
@@ -145,16 +145,16 @@ def test_similar_lists_the_feed_and_every_ledger_stage(
 def test_similar_counts_coverage_by_publisher(
     db: Session, world: dict[str, str]
 ) -> None:
-    result = curation.similar(db, world["verge"])
+    result = curation.find_similar(db, world["verge"])
     assert result["publishers"] == [f"{TAG} OpenAI", f"{TAG} Verge", f"{TAG} Wired"]
-    assert result["coverage"] == 3
+    assert result["publisher_count"] == 3
 
 
 def test_a_story_nobody_else_carries_has_coverage_one(
     db: Session, world: dict[str, str]
 ) -> None:
-    result = curation.similar(db, world["lone"])
-    assert result["coverage"] == 1
+    result = curation.find_similar(db, world["lone"])
+    assert result["publisher_count"] == 1
     assert result["publishers"] == [f"{TAG} Blog"]
 
 
@@ -162,7 +162,7 @@ def test_similar_from_a_published_article_reaches_back_with_more_days(
     db: Session, world: dict[str, str]
 ) -> None:
     """The newsletter's use: from a published article, out to the old post."""
-    urls = [r["url"] for r in curation.similar(db, world["feed"], days=31)["rows"]]
+    urls = [r["url"] for r in curation.find_similar(db, world["feed"], days=31)["rows"]]
     assert f"https://old.example/{TAG}/rumour" in urls
     assert world["verge"] in urls
     assert world["feed"] not in urls
@@ -172,7 +172,7 @@ def test_similar_on_an_unknown_url_is_a_message(
     db: Session, world: dict[str, str]
 ) -> None:
     with pytest.raises(CandidateError, match="No candidate or article"):
-        curation.similar(db, f"https://nowhere.example/{TAG}")
+        curation.find_similar(db, f"https://nowhere.example/{TAG}")
     assert world
 
 
@@ -181,13 +181,13 @@ def test_coverage_groups_the_queue_with_the_feed(
 ) -> None:
     groups = [
         g
-        for g in curation.coverage_groups(db)
+        for g in curation.find_duplicates(db)
         if any(TAG in m["url"] for m in g["members"])
     ]
 
     [story] = groups
     assert {m["url"] for m in story["members"]} == {world["verge"], world["feed"]}
-    assert story["coverage"] == 2
+    assert story["publisher_count"] == 2
 
 
 def _all_candidates(
@@ -209,7 +209,7 @@ def test_list_candidates_shows_each_publishers_approval_rate(
     # Verge: nothing published, nothing turned down yet.
     assert rows[world["verge"]]["approved"] == "new"
     assert "trust" not in rows[world["verge"]]
-    # Blog's one article is 30 days old: outside `similar`'s week, inside the
+    # Blog's one article is 30 days old: outside `find_similar`'s week, inside the
     # 90 days a record reaches.
     assert rows[world["lone"]]["approved"] == "1/1"
 
@@ -302,7 +302,7 @@ def test_approving_writes_one_article_and_settles_the_candidate(
     db: Session, queued: Reject
 ) -> None:
     slug = _a_tag(db)
-    article_id = curation.approve(
+    article_id = curation.approve_article(
         db,
         queued.url,
         81,
@@ -339,7 +339,9 @@ def test_approving_writes_one_article_and_settles_the_candidate(
 
 def test_a_candidate_is_published_once(db: Session, queued: Reject) -> None:
     def approve() -> int:
-        return curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+        return curation.approve_article(
+            db, queued.url, 81, "r", "s", "post", [], "media"
+        )
 
     approve()
     with pytest.raises(CandidateError, match="No candidate"):
@@ -353,7 +355,7 @@ def test_a_candidate_is_published_once(db: Session, queued: Reject) -> None:
 def test_a_refused_approval_writes_nothing(db: Session, queued: Reject) -> None:
     """approve checks the labels before it touches the candidate."""
     with pytest.raises(CandidateError, match="publisher_kind"):
-        curation.approve(db, queued.url, 81, "r", "s", "post", [])
+        curation.approve_article(db, queued.url, 81, "r", "s", "post", [])
 
     db.expire_all()
     row = db.get(Reject, queued.url)
@@ -369,7 +371,9 @@ def test_a_failed_embedding_still_publishes(
 
     monkeypatch.setattr(publish, "embed_batch", broken)
 
-    article_id = curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+    article_id = curation.approve_article(
+        db, queued.url, 81, "r", "s", "post", [], "media"
+    )
 
     db.expire_all()
     article = db.get(Article, article_id)
@@ -382,7 +386,7 @@ def test_a_rejected_candidate_cannot_then_be_approved(
     curation.reject(db, queued.url, 22, "A vendor tutorial.")
 
     with pytest.raises(CandidateError, match="already below_threshold"):
-        curation.approve(db, queued.url, 81, "r", "s", "post", [], "media")
+        curation.approve_article(db, queued.url, 81, "r", "s", "post", [], "media")
     db.expire_all()
     row = db.get(Reject, queued.url)
     assert row is not None
@@ -395,7 +399,7 @@ def test_a_rejected_candidate_cannot_then_be_approved(
 
 
 def test_a_url_twice_in_one_batch_is_rejected_once(db: Session, queued: Reject) -> None:
-    lines = curation.reject_many(
+    lines = curation.reject_articles(
         db,
         [
             {"url": queued.url, "score": 20, "reason": "first"},

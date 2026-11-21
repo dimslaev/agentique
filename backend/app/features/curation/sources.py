@@ -65,7 +65,7 @@ def can_reach_rate(approved: int, rejected: int) -> bool:
 
 
 def reopened(switched_at: datetime | None, last_approval: datetime | None) -> bool:
-    """Whether a disabled publisher is back in the pool: only on an approval
+    """Whether a deactivated publisher is back in the pool: only on an approval
     after the agent switched it off. One a person switched off has no
     `switched_at` and stays off. Pure."""
     return (
@@ -75,7 +75,7 @@ def reopened(switched_at: datetime | None, last_approval: datetime | None) -> bo
     )
 
 
-def cull_reason(
+def deactivate_reason(
     approved: int, rejected: int, silent_since: datetime, now: datetime
 ) -> str | None:
     """Why an active feed should go off, or None to keep it. Pure."""
@@ -97,7 +97,7 @@ def _rate(approved: int, rejected: int) -> str:
     return f"{approved}/{approved + rejected}"
 
 
-def discovery_candidates(
+def review_publishers(
     session: Session,
     approval_counts: dict[int, tuple[int, int]],
     limit: int,
@@ -105,8 +105,8 @@ def discovery_candidates(
 ) -> dict[str, list[dict[str, str]]]:
     """`probe`: up to `limit` inactive publishers with an approval in the
     window, a website, a rate a probe can still lift, and no standing
-    disabled reason; the most approvals first. `cull`: every active feed
-    publisher that `cull_reason` turns down, with the reason to write."""
+    deactivation reason; the most approvals first. `deactivate`: every active feed
+    publisher that `deactivate_reason` turns down, with the reason to write."""
     publishers = session.exec(select(Publisher)).all()
     last_approval = dict(
         session.exec(
@@ -116,7 +116,7 @@ def discovery_candidates(
         ).all()
     )
     probe: list[tuple[int, float, dict[str, str]]] = []
-    cull: list[dict[str, str]] = []
+    deactivate: list[dict[str, str]] = []
     for p in publishers:
         assert p.id is not None
         approved, rejected = approval_counts.get(p.id, (0, 0))
@@ -137,9 +137,9 @@ def discovery_candidates(
             # Silent since its last new post, or since it was switched on.
             marks = [d for d in (p.last_new_at, p.switched_at) if d]
             silent = max(marks) if marks else p.created_at
-            reason = cull_reason(approved, rejected, silent, now)
+            reason = deactivate_reason(approved, rejected, silent, now)
             if reason:
-                cull.append({**row, "reason": reason})
+                deactivate.append({**row, "reason": reason})
             continue
         website = links.get(LinkPlatform.website.value)
         last = last_approval.get(p.id)
@@ -157,7 +157,7 @@ def discovery_candidates(
             }
             probe.append((approved, approved / (approved + rejected), row))
     probe.sort(key=lambda t: (-t[0], -t[1], t[2]["slug"]))
-    return {"probe": [row for *_, row in probe[:limit]], "cull": cull}
+    return {"probe": [row for *_, row in probe[:limit]], "deactivate": deactivate}
 
 
 class _Alternates(HTMLParser):
@@ -340,7 +340,9 @@ def activate_publisher(
     return f"Activated {slug} as {p.type.value}"
 
 
-def disable_publisher(session: Session, slug: str, reason: str, now: datetime) -> str:
+def deactivate_publisher(
+    session: Session, slug: str, reason: str, now: datetime
+) -> str:
     """Switch a publisher off, or mark an inactive one as probed and failed, so
     it stays out of the pool until a newer approval."""
     if not reason.strip():
@@ -351,5 +353,5 @@ def disable_publisher(session: Session, slug: str, reason: str, now: datetime) -
     p.switched_at = now
     session.add(p)
     session.commit()
-    log(f"  Disabled {slug}: {reason}")
-    return f"Disabled {slug}"
+    log(f"  Deactivated {slug}: {reason}")
+    return f"Deactivated {slug}"

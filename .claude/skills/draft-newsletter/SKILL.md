@@ -1,5 +1,5 @@
 ---
-name: newsletter
+name: draft-newsletter
 description: Draft the weekly agentique issue - choose the 10-12 most useful articles of the last 7 days, with liked articles first, then score and value to builders, mix individual and company sources, group them into sections and give each one a short summary. Use when running the Friday newsletter session, or when asked to draft or write the weekly issue.
 ---
 
@@ -11,16 +11,16 @@ the draft and sends it. It takes under a minute to read.
 
 ## Tools
 
-From the `agentique-admin` MCP server: `week`, `similar`, `web_fetch`,
-`web_search`, `check_link`, `sql_query` and `draft_issue`. Each tool's
-description says what it returns. `draft_issue` sends nothing.
+From the `agentique-admin` MCP server: `get_last_week_articles`, `find_similar`, `web_fetch`,
+`web_search`, `check_repo`, `sql_query` and `draft_newsletter`. Each tool's
+description says what it returns. `draft_newsletter` sends nothing.
 
-If `week` is missing or answers "Authorization failed", the session has the
+If `get_last_week_articles` is missing or answers "Authorization failed", the session has the
 read token: stop and say so.
 
 ## Rounds
 
-1. **Collect.** Call `week()` once. `topics` is the week's material, `liked`
+1. **Collect.** Call `get_last_week_articles()` once. `topics` is the week's material, `liked`
    the articles readers liked this week, which can be older than the week.
 2. **Rank.** Liked articles come first, then the rest by `score`. Prefer articles
    published in the last two weeks. An older liked article needs a clear reason
@@ -29,8 +29,8 @@ read token: stop and say so.
    after reading it. If you can't, drop it, whatever its score or likes. Drop
    funding, availability and pricing notices, benchmarks with no method, and
    impressive results nobody can use.
-4. **Use the original.** If a pick retells someone else's work, call
-   `similar(url, days=30)` or search for the maker's post, repo or paper, and link that instead. Say in
+4. **Use the original.** If a pick reposts someone else's work, call
+   `find_similar(url, days=30)` or search for the creator's post, repo or paper, and link that instead. Say in
    the report when the original isn't in the database yet.
 5. **Merge duplicates.** Keep one article per story.
 6. **Mix sources.** Include at least 3 from individuals or communities, and no
@@ -43,10 +43,10 @@ read token: stop and say so.
    week's themes from the picks, and don't reuse last week's names by habit.
    Each section needs at least 2 articles. Put the strongest section first and
    the strongest article first in each section.
-8. **Summarize.** Read `.claude/skills/summary/SKILL.md` and write one summary
+8. **Summarize.** Read `.claude/skills/write-summary/SKILL.md` and write one summary
    per article from its stored `summary`. If the stored summary doesn't support
    a clear point, `web_fetch` the article.
-9. **Draft.** Build the post (see **Format**) and call `draft_issue(post)`. On a
+9. **Draft.** Build the post (see **Format**) and call `draft_newsletter(post)`. On a
    refusal, fix what it names and call it again.
 10. **Save, open a PR and report.** See **Finish**.
 
@@ -74,13 +74,13 @@ Models
 - **Section names:** a plain line of text. The email renders no headings or bold.
 - **Link text:** the article's title, without "(7 minute read)".
 - **No intro, no closing, no first person.**
-- **Length:** `draft_issue` refuses under 150 words. If it does, add a link
+- **Length:** `draft_newsletter` refuses under 150 words. If it does, add a link
   rather than padding the summaries.
 - Every URL comes from a tool, never from memory.
 
 ## Finish
 
-`draft_issue` returns a path, but don't use it: this title is the same every
+`draft_newsletter` returns a path, but don't use it: this title is the same every
 week. Save the post at:
 
 ```
@@ -88,8 +88,8 @@ frontend/content/blog/<YYYY-MM-DD>-most-interesting-stuff-this-week-<YYYY-MM-DD>
 ```
 
 Add `sources: false` to the frontmatter of the saved file, below `topic`. The
-blog would otherwise repeat every link in a sources list. Pass `draft_issue` the
-post without it, because `draft_issue` refuses any other key.
+blog would otherwise repeat every link in a sources list. Pass `draft_newsletter` the
+post without it, because `draft_newsletter` refuses any other key.
 
 Commit the post on a new branch, `feat/weekly-issue-<YYYY-MM-DD>`, one commit,
 subject `feat: weekly issue <YYYY-MM-DD>`. Commit nothing else. Push it and open
@@ -102,4 +102,4 @@ Then report:
 - what you dropped from the liked articles and the top scores, and why
 - originals you swapped in, and any that aren't in the database
 - how many picks came from individuals and communities
-- the line `draft_issue` returned, and the PR link
+- the line `draft_newsletter` returned, and the PR link

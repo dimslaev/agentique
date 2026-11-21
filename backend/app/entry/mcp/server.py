@@ -5,29 +5,29 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from app.entry.mcp.activate_publisher import activate_publisher
-from app.entry.mcp.approve import approve
+from app.entry.mcp.approve_article import approve_article
 from app.entry.mcp.auth import SharedSecret, scope_gate
-from app.entry.mcp.check_link import check_link
+from app.entry.mcp.check_repo import check_repo
 from app.entry.mcp.close_story import close_story
-from app.entry.mcp.coverage import coverage
-from app.entry.mcp.disable_publisher import disable_publisher
-from app.entry.mcp.discovery_candidates import discovery_candidates
-from app.entry.mcp.draft_issue import draft_issue
+from app.entry.mcp.deactivate_publisher import deactivate_publisher
+from app.entry.mcp.draft_newsletter import draft_newsletter
+from app.entry.mcp.find_duplicates import find_duplicates
 from app.entry.mcp.find_feed import find_feed
-from app.entry.mcp.get_content import get_content
+from app.entry.mcp.find_similar import find_similar
+from app.entry.mcp.get_last_week_articles import get_last_week_articles
 from app.entry.mcp.list_candidates import list_candidates
+from app.entry.mcp.list_labels import list_labels
+from app.entry.mcp.list_story_candidates import list_story_candidates
+from app.entry.mcp.list_tags import list_tags
 from app.entry.mcp.rate_limit import UserRateLimit
-from app.entry.mcp.reject_many import reject_many
+from app.entry.mcp.read_article import read_article
+from app.entry.mcp.reject_articles import reject_articles
+from app.entry.mcp.review_publishers import review_publishers
 from app.entry.mcp.save_story import save_story
-from app.entry.mcp.search import search
-from app.entry.mcp.similar import similar
+from app.entry.mcp.search_articles import search_articles
 from app.entry.mcp.sql_query import sql_query
-from app.entry.mcp.story_candidates import story_candidates
-from app.entry.mcp.tags import tags
-from app.entry.mcp.vocabulary import vocabulary
 from app.entry.mcp.web_fetch import web_fetch
 from app.entry.mcp.web_search import web_search
-from app.entry.mcp.week import week
 
 mcp = FastMCP(
     name="agentique",
@@ -36,36 +36,36 @@ mcp = FastMCP(
     # theirs from each tool's description and from their skills.
     instructions=(
         "agentique is a curated archive of articles for people building with "
-        "AI. `tags` lists the topics with article counts, `search` finds "
+        "AI. `list_tags` lists the topics with article counts, `search_articles` finds "
         "articles by keyword and by meaning, and `sql_query` runs read-only "
-        "SQL over the archive. Start with `tags`, then pass slugs to `search`."
+        "SQL over the archive. Start with `list_tags`, then pass slugs to `search_articles`."
     ),
     auth=SharedSecret(),
     # The limit is outermost, so a call the gate refuses is counted too.
     middleware=[UserRateLimit(), scope_gate],
     tools=[
-        search,
-        tags,
+        search_articles,
+        list_tags,
         sql_query,
         web_fetch,
         web_search,
         list_candidates,
-        get_content,
-        similar,
-        coverage,
-        check_link,
-        vocabulary,
-        approve,
-        reject_many,
-        week,
-        draft_issue,
-        story_candidates,
+        read_article,
+        find_similar,
+        find_duplicates,
+        check_repo,
+        list_labels,
+        approve_article,
+        reject_articles,
+        get_last_week_articles,
+        draft_newsletter,
+        list_story_candidates,
         save_story,
         close_story,
-        discovery_candidates,
+        review_publishers,
         find_feed,
         activate_publisher,
-        disable_publisher,
+        deactivate_publisher,
     ],
 )
 

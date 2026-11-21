@@ -15,15 +15,15 @@ const QUERY_KEY = ["mcpToken"]
 const TOKEN_PLACEHOLDER = "YOUR_TOKEN"
 
 const EXAMPLE_PROMPT =
-  "Using the agentique MCP (search, sql_query, tags — batched, iterate until coverage is good, don't ask me anything), return a ranked list of the most practical tools and strategies for sandboxing local AI coding agents, from engineering blogs and individual writers (no vendor marketing, no cloud products). Tools need a link, one-line takeaway, and install command; strategies need a link, takeaway, and what to do on a dev machine. Flag anything beta."
+  "Using the agentique MCP (search_articles, sql_query, list_tags — batched, iterate until coverage is good, don't ask me anything), return a ranked list of the most practical tools and strategies for sandboxing local AI coding agents, from engineering blogs and individual writers (no vendor marketing, no cloud products). Tools need a link, one-line takeaway, and install command; strategies need a link, takeaway, and what to do on a dev machine. Flag anything beta."
 
 const TOOLS = [
   {
-    name: "tags",
+    name: "list_tags",
     description: "Every tag, with the number of articles that carry it.",
   },
   {
-    name: "search",
+    name: "search_articles",
     description:
       "Articles by keyword and by meaning, filtered by tag, kind, date or publisher. Returns links and excerpts, at most 100 results.",
   },

@@ -15,7 +15,7 @@ def find_feed(url: str) -> dict[str, object]:
     Tries `url` itself, then the feeds the page declares, then /feed,
     /rss.xml, /atom.xml, /index.xml, /feed.xml and /rss. Returns `feed_url`
     and `entries`: `title`, `link`, `published` (date, or "" when the feed
-    gives none) and `judged`: `approved`, a ledger stage such as
+    gives none) and `judged`: `approved`, a past-decision stage such as
     `below_threshold` or `pending`, or "" when agentique has never seen it.
     `entries` is empty when the feed is real but lists nothing today, as
     arXiv's do at the weekend: probe it another day. Fails when no feed

@@ -1,4 +1,4 @@
-"""The `get_content` tool: one page of a candidate's stored text."""
+"""The `read_article` tool: one page of a candidate's stored text."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from app.features.curation import service as curation
 from app.features.curation.model import CandidateError, ContentPage
 
 
-def get_content(
+def read_article(
     url: str, offset: int = 0, limit: int = curation.PAGE_LIMIT
 ) -> ContentPage:
     """Return one page of the article text the pipeline extracted for a candidate.
@@ -24,6 +24,6 @@ def get_content(
     """
     with Session(engine) as session:
         try:
-            return curation.get_content(session, url, offset, limit)
+            return curation.read_article(session, url, offset, limit)
         except CandidateError as exc:
             raise ToolError(str(exc))

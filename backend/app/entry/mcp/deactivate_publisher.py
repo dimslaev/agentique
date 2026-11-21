@@ -1,4 +1,4 @@
-"""The `disable_publisher` tool: switch a publisher off, with the reason."""
+"""The `deactivate_publisher` tool: switch a publisher off, with the reason."""
 
 from __future__ import annotations
 
@@ -10,15 +10,15 @@ from app.features.curation import service as curation
 from app.features.curation.model import SourceError
 
 
-def disable_publisher(slug: str, reason: str) -> str:
+def deactivate_publisher(slug: str, reason: str) -> str:
     """Switch a publisher off, or mark an inactive one whose probe failed.
 
     `reason` states the numbers, e.g. "probe 1/10 2026-11-21" or "no feed
-    2026-11-21". The publisher stays out of `discovery_candidates` until it
+    2026-11-21". The publisher stays out of `review_publishers` until it
     earns an approval after today.
     """
     with Session(engine) as session:
         try:
-            return curation.disable_publisher(session, slug, reason)
+            return curation.deactivate_publisher(session, slug, reason)
         except SourceError as exc:
             raise ToolError(str(exc))

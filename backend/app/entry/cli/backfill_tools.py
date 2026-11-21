@@ -148,7 +148,7 @@ def next_batch(session: Session, tools: list[Tool], n: int) -> str:
     if not batch:
         return ""
 
-    vocab = curation.vocabulary(session)["tags"]
+    vocab = curation.list_labels(session)["tags"]
     assert isinstance(vocab, dict)
     tags = "\n".join(f"{slug}: {desc}" for slug, desc in vocab.items())
     repos = "\n\n".join(
@@ -181,7 +181,7 @@ def apply(session: Session, tools: list[Tool], verdicts: list[Verdict]) -> None:
         try:
             # The model sometimes says keep on a score its own rubric rejects.
             if v.get("keep") and v["score"] >= KEEP_SCORE:
-                article_id = curation.approve(
+                article_id = curation.approve_article(
                     session,
                     item["url"],
                     v["score"],

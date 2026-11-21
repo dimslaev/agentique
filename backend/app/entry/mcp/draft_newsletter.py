@@ -1,4 +1,4 @@
-"""The `draft_issue` tool: one weekly issue as a Resend broadcast draft.
+"""The `draft_newsletter` tool: one weekly issue as a Resend broadcast draft.
 
 Behind the write scope because a draft lands in the audience subscribers are
 mailed from. Sending is a person's, from the Resend dashboard.
@@ -12,7 +12,7 @@ from app.features.newsletter import service as newsletter
 from app.features.newsletter.model import IssueError
 
 
-def draft_issue(post: str) -> str:
+def draft_newsletter(post: str) -> str:
     """Draft one weekly issue as a Resend broadcast.
 
     `post` is the whole blog post file: a frontmatter block, then the body.

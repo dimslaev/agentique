@@ -2,12 +2,12 @@
 most talked-about topics and the articles readers liked.
 
 The curation agent already read and scored every article, so nothing here
-judges. `week` groups the week into topics and ranks them by how many
+judges. `get_last_week_articles` groups the week into topics and ranks them by how many
 publishers carried them; `liked` lists what readers liked.
 
-Popularity counts the ledger too. Curation approves one copy of a story and
-rejects the rest as retellings, so the feed alone says every story was carried
-once; the rejects are where the other outlets are.
+Popularity counts past decisions too. Curation approves one copy of a story and
+rejects the rest as reposts, so the feed alone says every story was carried
+once; the rejects are where the other publishers are.
 
 The maths is curation's (`app.core.embedding`): one topic is rows within
 `DEDUP_DIST_THRESHOLD` of a published article.
@@ -74,7 +74,7 @@ def _ledger_text(row: Reject) -> str:
     return to_embedding_text(row.title or "", (row.content or "")[:SNIPPET_CAP])
 
 
-def week(
+def get_last_week_articles(
     session: Session,
     days: int = 7,
     limit: int = WEEK_LIMIT,
@@ -155,7 +155,7 @@ def week(
         )
         topics.append(
             {
-                "coverage": len(publishers),
+                "publisher_count": len(publishers),
                 "publishers": publishers,
                 "likes": sum(a["likes"] for a in articles),
                 "top_score": articles[0]["score"],
@@ -163,7 +163,9 @@ def week(
                 "covered_by": covered_by,
             }
         )
-    topics.sort(key=lambda t: (t["coverage"], t["likes"], t["top_score"]), reverse=True)
+    topics.sort(
+        key=lambda t: (t["publisher_count"], t["likes"], t["top_score"]), reverse=True
+    )
     return topics[:limit]
 
 

@@ -29,14 +29,14 @@ The run ends at pending candidates and publishes nothing — the curation agent
 does that (ADR 9). Judge them, then send the night's report:
 
 ```bash
-claude "/curate"                                        # from the repo root
+claude "/curate-articles"                                  # from the repo root
 cd backend && uv run --env-file ../.env python -m app.entry.cli.report
 ```
 
-`AGENTIQUE_MCP_TOKEN` must be the write token for `/curate` to publish anything;
+`AGENTIQUE_MCP_TOKEN` must be the write token for `/curate-articles` to publish anything;
 with the read token the session can list candidates and settle none.
 
-The weekly newsletter is the same shape: `claude "/newsletter"` reads the week
+The weekly newsletter is the same shape: `claude "/draft-newsletter"` reads the week
 through the MCP server and drafts one issue as a Resend broadcast. It sends
 nothing.
 

@@ -1,4 +1,4 @@
-"""``check_link`` looks a repo or model up where it lives.
+"""``check_repo`` looks a repo or model up where it lives.
 
 It returns the facts a page cannot fake: stars, downloads, the last push,
 whether there are weights at all. The curation agent judges an article partly
@@ -67,7 +67,7 @@ def _nested(data: dict[str, object], *keys: str) -> object:
 
 
 def github_facts(owner: str, repo: str, data: dict[str, object] | None) -> Facts:
-    """What the GitHub repo object says, in check_link's shape. Pure."""
+    """What the GitHub repo object says, in check_repo's shape. Pure."""
     facts: Facts = {"url": f"https://github.com/{owner}/{repo}", "kind": "repo"}
     if data is None:
         return {**facts, "lookup": UNKNOWN}
@@ -83,7 +83,7 @@ def github_facts(owner: str, repo: str, data: dict[str, object] | None) -> Facts
 
 
 def gitlab_facts(path: str, data: dict[str, object] | None) -> Facts:
-    """What the GitLab project object says, in check_link's shape. Pure."""
+    """What the GitLab project object says, in check_repo's shape. Pure."""
     facts: Facts = {"url": f"https://gitlab.com/{path}", "kind": "repo"}
     if data is None:
         return {**facts, "lookup": UNKNOWN}
@@ -140,7 +140,7 @@ def huggingface_facts(repo_id: str, kind: str, data: dict[str, object] | None) -
     return facts
 
 
-def check_link(url: str) -> Facts:
+def check_repo(url: str) -> Facts:
     """Look up the GitHub or GitLab repo, or the Hugging Face model or dataset,
     a URL names.
 
@@ -181,6 +181,6 @@ def check_link(url: str) -> Facts:
             return huggingface_facts(repo_id, "model", data)
 
     raise LinkError(
-        f"check_link reads GitHub and GitLab repos and Hugging Face models and "
+        f"check_repo reads GitHub and GitLab repos and Hugging Face models and "
         f"datasets; {url} is none of those. Read it with web_fetch."
     )

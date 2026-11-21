@@ -70,7 +70,7 @@ def _headers() -> dict[str, str]:
 def repo_for(owner: str, repo: str) -> dict[str, object] | None:
     """The repo object the REST API returns, or None when it cannot be read.
 
-    Uncached: the curation agent's ``check_link`` calls this from the long-lived
+    Uncached: the curation agent's ``check_repo`` calls this from the long-lived
     API process, where a cached answer would go stale across nights.
     """
     try:

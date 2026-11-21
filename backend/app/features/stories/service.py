@@ -1,6 +1,7 @@
 """Stories: named threads that run over days or weeks, for the right rail.
 
-A story is wider than coverage. Coverage is one event told by several outlets,
+A story is wider than a duplicate group. A duplicate group is one event reported
+by several publishers,
 within `DEDUP_DIST_THRESHOLD`; a story is a theme a builder follows, which
 takes judgment, so an agent names and keeps them (ADR 16). This module is what
 that agent drives through the MCP tools in `app/entry/mcp/`, and what the
@@ -35,7 +36,7 @@ from app.features.stories.model import (
     StoryPublic,
 )
 
-# What the rail shows: a story carried by fewer is coverage, or not yet a story.
+# What the rail shows: a story carried by fewer is a duplicate group, or not yet a story.
 MIN_ARTICLES = 3
 MIN_PUBLISHERS = 2
 # Articles per story on the rail, newest first. The panel shows six and
@@ -43,13 +44,13 @@ MIN_PUBLISHERS = 2
 STORY_ARTICLES = 30
 GREW_WINDOW = timedelta(hours=24)
 
-# Looser than coverage (0.30) and than `similar`'s related cut (0.45 lists, it
+# Looser than `find_duplicates` (0.30) and than `find_similar`'s related cut (0.45 lists, it
 # does not group): a story's articles share a theme, not an event. A first
 # value, to tune against what the routine actually groups.
 STORY_DIST = 0.40
-# What `story_candidates` shows of each open story.
+# What `list_story_candidates` shows of each open story.
 CANDIDATE_TAIL = 5
-# Clusters per `story_candidates` call, the most publishers first.
+# Groups per `list_story_candidates` call, the most publishers first.
 CANDIDATE_CLUSTERS = 30
 
 SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -295,7 +296,7 @@ def _candidate(article: Article, publisher: str) -> CandidateArticle:
     }
 
 
-def story_candidates(
+def list_story_candidates(
     session: Session, days: int = 14, now: datetime | None = None
 ) -> Candidates:
     """Open stories with their newest articles, and the last ``days`` of
@@ -352,7 +353,7 @@ def story_candidates(
         if a.id not in held and a.embedding is not None
     ]
     if not free:
-        return {"open": open_stories, "clusters": []}
+        return {"open": open_stories, "groups": []}
 
     vecs = np.array(
         [v for _, _, v in free] + [v for _, _, v in anchored], dtype=np.float32
@@ -373,4 +374,4 @@ def story_candidates(
     clusters.sort(
         key=lambda c: (len(c["publishers"]), len(c["articles"])), reverse=True
     )
-    return {"open": open_stories, "clusters": clusters[:CANDIDATE_CLUSTERS]}
+    return {"open": open_stories, "groups": clusters[:CANDIDATE_CLUSTERS]}

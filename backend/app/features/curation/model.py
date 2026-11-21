@@ -19,7 +19,7 @@ class CandidateError(Exception):
 
 
 class LinkError(Exception):
-    """A URL ``check_link`` does not read. The message names the tool that does."""
+    """A URL ``check_repo`` does not read. The message names the tool that does."""
 
 
 class CandidatePage(TypedDict):
@@ -56,19 +56,19 @@ class Neighbour(TypedDict):
 class Similar(TypedDict):
     url: str
     # Distinct publishers carrying this story, the candidate's own included.
-    coverage: int
+    publisher_count: int
     publishers: list[str]
     rows: list[Neighbour]
 
 
 class Coverage(TypedDict):
-    coverage: int
+    publisher_count: int
     publishers: list[str]
     members: list[Neighbour]
 
 
 class Verdict(TypedDict):
-    """One rejection in a `reject_many` batch."""
+    """One rejection in a `reject_articles` batch."""
 
     url: str
     score: int

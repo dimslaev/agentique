@@ -133,7 +133,7 @@ def _list_tools(client: TestClient, token: str) -> set[str]:
 def test_the_write_token_gets_past_the_gate(client: TestClient) -> None:
     # Past the gate it is an ordinary lookup, so the refusal is the candidate's.
     is_error, text = _call_tool(
-        client, WRITE_TOKEN, "get_content", {"url": "https://never-queued.example"}
+        client, WRITE_TOKEN, "read_article", {"url": "https://never-queued.example"}
     )
     assert is_error
     assert "No candidate for" in text
@@ -153,7 +153,7 @@ def test_an_unset_write_token_opens_no_write_tool(
     assert stale.status_code == 401
 
     is_error, text = _call_tool(
-        client, READ_TOKEN, "get_content", {"url": "https://never-queued.example"}
+        client, READ_TOKEN, "read_article", {"url": "https://never-queued.example"}
     )
     assert is_error
     assert "Authorization failed" in text
@@ -174,15 +174,19 @@ def user_token(db: Session) -> str:
 
 
 def test_the_server_has_tools_to_refuse() -> None:
-    assert auth.READ_TOOLS | {"approve"} <= set(REGISTERED_TOOLS)
+    assert auth.READ_TOOLS | {"approve_article"} <= set(REGISTERED_TOOLS)
 
 
 @pytest.mark.usefixtures("both_tokens")
 def test_a_user_token_lists_only_its_own_tools(
     client: TestClient, user_token: str
 ) -> None:
-    assert _list_tools(client, user_token) == {"search", "tags", "sql_query"}
-    assert auth.USER_TOOLS == {"search", "tags", "sql_query"}
+    assert _list_tools(client, user_token) == {
+        "search_articles",
+        "list_tags",
+        "sql_query",
+    }
+    assert auth.USER_TOOLS == {"search_articles", "list_tags", "sql_query"}
 
 
 @pytest.mark.usefixtures("both_tokens")
@@ -217,12 +221,12 @@ def test_a_user_token_chains_tags_into_search_and_sql(
     tag_article(db, article, tag)
 
     try:
-        is_error, text = _call_tool(client, user_token, "tags", {})
+        is_error, text = _call_tool(client, user_token, "list_tags", {})
         assert not is_error
         assert tag.slug in text
 
         is_error, text = _call_tool(
-            client, user_token, "search", {"q": word, "tags": [tag.slug]}
+            client, user_token, "search_articles", {"q": word, "tags": [tag.slug]}
         )
         assert not is_error
         assert article.url in text
@@ -290,13 +294,13 @@ def test_a_user_token_is_rate_limited_and_a_shared_token_is_not(
     for _ in range(PER_MINUTE):
         _, text = _call_tool(client, user_token, "web_fetch", {})
         assert "Authorization failed" in text
-    is_error, text = _call_tool(client, user_token, "tags", {})
+    is_error, text = _call_tool(client, user_token, "list_tags", {})
     assert is_error
     assert "Rate limit reached: 60 calls a minute" in text
 
     for _ in range(PER_MINUTE + 1):
         _, text = _call_tool(
-            client, READ_TOKEN, "get_content", {"url": "https://x.example"}
+            client, READ_TOKEN, "read_article", {"url": "https://x.example"}
         )
         assert "Authorization failed" in text
 

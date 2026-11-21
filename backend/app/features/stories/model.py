@@ -74,4 +74,4 @@ class Cluster(TypedDict):
 
 class Candidates(TypedDict):
     open: list[OpenStory]
-    clusters: list[Cluster]
+    groups: list[Cluster]

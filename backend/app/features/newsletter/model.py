@@ -34,8 +34,8 @@ class LikedArticle(WeekArticle):
 
 
 class WeekTopic(TypedDict):
-    # Distinct publishers carrying it this week, the ledger's included.
-    coverage: int
+    # Distinct publishers carrying it this week, past decisions included.
+    publisher_count: int
     publishers: list[str]
     likes: int
     top_score: int

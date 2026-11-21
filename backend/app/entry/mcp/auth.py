@@ -31,7 +31,7 @@ USER_SCOPE = "user"
 # The tools a `user` token may list and call. An allowlist, so a tool added to
 # the server is closed to readers until it is named here. `sql_query` is on it
 # because it logs in as a narrower role for this scope.
-USER_TOOLS = frozenset({"search", "tags", "sql_query"})
+USER_TOOLS = frozenset({"search_articles", "list_tags", "sql_query"})
 
 # The tools `MCP_TOKEN` reaches. Every other tool publishes, rejects, drafts
 # email or edits the rail, and writes as `POSTGRES_USER`.

@@ -152,7 +152,7 @@ def _approve(
     publisher_kind: str | None = None,
     publisher_name: str | None = None,
 ) -> int:
-    return curation.approve(
+    return curation.approve_article(
         session.session,
         url,
         score,
@@ -360,7 +360,7 @@ def test_approval_rate(approved: int, rejected: int, expected: str) -> None:
     assert curation.approval_rate(approved, rejected) == expected
 
 
-# ─── get_content paging ──────────────────────────────────────────────────────
+# ─── read_article paging ─────────────────────────────────────────────────────
 
 
 def test_the_first_page_carries_the_text_and_the_links() -> None:
@@ -368,7 +368,7 @@ def test_the_first_page_carries_the_text_and_the_links() -> None:
     row = _pending_row(content="abcdefghij", links=links)
     session = _FakeSession(row)
 
-    page = curation.get_content(session.session, row.url, limit=4)
+    page = curation.read_article(session.session, row.url, limit=4)
 
     assert page == {
         "text": "abcd",
@@ -383,14 +383,14 @@ def test_a_later_page_reads_on_without_the_links() -> None:
     row = _pending_row(content="abcdefghij", links={"repo": ["x"]})
     session = _FakeSession(row)
 
-    page = curation.get_content(session.session, row.url, offset=8, limit=4)
+    page = curation.read_article(session.session, row.url, offset=8, limit=4)
 
     assert page == {"text": "ij", "offset": 8, "next_offset": None, "total": 10}
 
 
 def test_a_short_article_is_one_page() -> None:
     row = _pending_row()
-    page = curation.get_content(_FakeSession(row).session, row.url)
+    page = curation.read_article(_FakeSession(row).session, row.url)
     assert page["text"] == "the stored two thousand characters"
     assert page["next_offset"] is None
     assert page["links"] == {}
@@ -417,10 +417,10 @@ def test_page_bounds(
 def test_get_content_needs_a_pending_candidate() -> None:
     row = _pending_row(stage=RejectStage.below_threshold)
     with pytest.raises(CandidateError, match="already"):
-        curation.get_content(_FakeSession(row).session, row.url)
+        curation.read_article(_FakeSession(row).session, row.url)
 
 
-# ─── reject_many ─────────────────────────────────────────────────────────────
+# ─── reject_articles ───────────────────────────────────────────────────────────
 
 
 def test_reject_many_settles_each_verdict_on_its_own() -> None:
@@ -428,7 +428,7 @@ def test_reject_many_settles_each_verdict_on_its_own() -> None:
     third = _pending_row(url="https://a.example/3")
     session = _FakeSession(first, third)
 
-    lines = curation.reject_many(
+    lines = curation.reject_articles(
         session.session,
         [
             {"url": first.url, "score": 20, "reason": "Vendor tutorial."},
@@ -452,7 +452,7 @@ def test_reject_many_survives_a_failed_write() -> None:
     session = _FakeSession(first, second)
     session.fail_commits = 1
 
-    lines = curation.reject_many(
+    lines = curation.reject_articles(
         session.session,
         [
             {"url": first.url, "score": 20, "reason": "r"},
@@ -465,7 +465,7 @@ def test_reject_many_survives_a_failed_write() -> None:
     assert session.rollbacks == 1
 
 
-# ─── coverage ────────────────────────────────────────────────────────────────
+# ─── find_duplicates ─────────────────────────────────────────────────────────────
 
 
 def test_coverage_counts_distinct_publishers_under_the_cutoff_and_the_own() -> None:

@@ -1,4 +1,4 @@
-"""The `approve` tool: publish a candidate."""
+"""The `approve_article` tool: publish a candidate."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from app.features.curation import service as curation
 from app.features.curation.model import CandidateError
 
 
-def approve(
+def approve_article(
     url: str,
     score: int,
     reason: str,
@@ -24,10 +24,10 @@ def approve(
 
     `score` is 1-100 on the same scale the rubric describes, `reason` one short
     sentence naming what decided it, and `summary` the text a reader sees under
-    the title. `kind` and `tags` (up to 3) come from `vocabulary`; a github,
+    the title. `kind` and `tags` (up to 3) come from `list_labels`; a github,
     huggingface or arxiv URL sets its own kind. When the candidate's
     `publisher_kind` is `unknown`, pass `publisher_kind` (from
-    `vocabulary`'s `publisher_kinds`) and, if its host is not a readable name,
+    `list_labels`'s `publisher_kinds`) and, if its host is not a readable name,
     `publisher_name`; both are ignored for a publisher that has a kind. A label
     that is not in the vocabulary is refused and the candidate stays pending.
     The candidate stops being pending in the same transaction that inserts the
@@ -35,7 +35,7 @@ def approve(
     """
     with Session(engine) as session:
         try:
-            article_id = curation.approve(
+            article_id = curation.approve_article(
                 session,
                 url,
                 score,

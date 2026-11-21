@@ -1,4 +1,4 @@
-"""The `search` tool: find articles by keyword and by meaning."""
+"""The `search_articles` tool: find articles by keyword and by meaning."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _FEED_SORT = {
 _POOL = 100
 
 
-def search(
+def search_articles(
     q: str = "",
     tags: list[str] | None = None,
     kind: Literal["post", "repo", "paper", "model"] | None = None,
@@ -42,7 +42,7 @@ def search(
     since a date.
 
     Filters narrow the articles before they are ranked:
-    - `tags`: tag slugs, matching any of them. Call `tags` first for the slugs.
+    - `tags`: tag slugs, matching any of them. Call `list_tags` first for the slugs.
     - `kind`: one kind of article.
     - `since`: an ISO date, such as `2026-10-01`. Omit for all time.
     - `publisher`: a publisher slug, such as `anthropic`, as a result's
@@ -118,7 +118,7 @@ def _reject_unknown(
         unknown = sorted(set(tags) - known)
         if unknown:
             raise ToolError(
-                f"Unknown tag slugs: {', '.join(unknown)}. Call `tags` for the list."
+                f"Unknown tag slugs: {', '.join(unknown)}. Call `list_tags` for the list."
             )
     if (
         publisher is not None

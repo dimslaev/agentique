@@ -306,7 +306,7 @@ def test_a_closed_story_cannot_be_saved_or_closed_again(
         stories.close_story(db, S("never-was"), now=NOW)
 
 
-# ─── story_candidates ────────────────────────────────────────────────────────
+# ─── list_story_candidates ──────────────────────────────────────────────────
 
 
 def _near(axis: int, wobble: float = 0.0) -> list[float]:
@@ -328,14 +328,12 @@ def test_candidates_cluster_free_articles_and_name_the_story_they_reach(
     b = _article(db, made, p2, embedding=_near(1, 0.2))
     alone = _article(db, made, p1, embedding=_near(2))
 
-    found = stories.story_candidates(db, days=14, now=NOW)
+    found = stories.list_story_candidates(db, days=14, now=NOW)
 
     mine = [s for s in found["open"] if s["slug"] == S("held")]
     assert [s["articles"][0]["url"] for s in mine] == [held.url]
     ours = {held.url, joins.url, a.url, b.url, alone.url}
-    clusters = [
-        c for c in found["clusters"] if {x["url"] for x in c["articles"]} & ours
-    ]
+    clusters = [c for c in found["groups"] if {x["url"] for x in c["articles"]} & ours]
     by_urls = {frozenset(x["url"] for x in c["articles"]): c for c in clusters}
     assert set(by_urls) == {frozenset({joins.url}), frozenset({a.url, b.url})}
     assert by_urls[frozenset({joins.url})]["near"] == [S("held")]

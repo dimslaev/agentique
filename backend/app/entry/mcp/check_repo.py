@@ -1,4 +1,4 @@
-"""The `check_link` tool: the facts behind a repo or model URL."""
+"""The `check_repo` tool: the facts behind a repo or model URL."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from app.features.curation import service as curation
 from app.features.curation.model import LinkError
 
 
-def check_link(url: str) -> dict[str, object]:
+def check_repo(url: str) -> dict[str, object]:
     """Look up a GitHub or GitLab repo, or a Hugging Face model or dataset.
 
     Repos: `stars`, `forks`, `last_push`, `license`, `archived`, `has_readme`,
@@ -19,6 +19,6 @@ def check_link(url: str) -> dict[str, object]:
     refused — read it with `web_fetch`.
     """
     try:
-        return curation.check_link(url)
+        return curation.check_repo(url)
     except LinkError as exc:
         raise ToolError(str(exc))

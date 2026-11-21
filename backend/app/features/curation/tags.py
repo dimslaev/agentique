@@ -1,8 +1,8 @@
 """The controlled tag vocabulary, loaded from the db, and the check on the tags
-the curation agent passes to `approve`.
+the curation agent passes to `approve_article`.
 
 The vocabulary is the `tag` table: slug, display name, and the "when to apply
-this" description `vocabulary` shows the agent. Nothing is hardcoded here:
+this" description `list_labels` shows the agent. Nothing is hardcoded here:
 adding or renaming a tag is a db change. Tags the agent passes are validated
 against the loaded slug set and anything off-list is dropped; tags are never
 minted at runtime.

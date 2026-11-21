@@ -2,7 +2,7 @@
 
 The last step of the nightly run. Nothing is scored, summarized or inserted
 here: a candidate becomes a `pending` row in the reject ledger and waits to be
-read. The agent (see `.claude/skills/curate/SKILL.md`) approves or rejects it
+read. The agent (see `.claude/skills/curate-articles/SKILL.md`) approves or rejects it
 through the MCP tools in `app/entry/mcp/`, and only an approval writes an
 Article.
 

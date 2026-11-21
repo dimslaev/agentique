@@ -11,8 +11,8 @@
  * title/description/topic present, filename is YYYY-MM-DD-slug.md, date not in
  * the future, slugs unique. Any violation exits non-zero and fails the build.
  * The content rules for an issue live in backend/app/features/newsletter/broadcast.py
- * (draft_issue refuses a post that breaks them); the writing guide is
- * .claude/skills/newsletter/SKILL.md; the PR is the editorial review.
+ * (draft_newsletter refuses a post that breaks them); the writing guide is
+ * .claude/skills/draft-newsletter/SKILL.md; the PR is the editorial review.
  *
  * Run standalone: bun scripts/prerender-blog.ts (needs an existing dist/).
  * Preview: bun scripts/prerender-blog.ts --watch re-renders dist/blog/ on every

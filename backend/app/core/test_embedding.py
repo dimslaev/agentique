@@ -1,4 +1,4 @@
-"""The distance maths `similar`, `coverage`, the newsletter and the stories rail
+"""The distance maths `find_similar`, `find_duplicates`, the newsletter and the stories rail
 all group by. Pure: synthetic vectors, no model load."""
 
 from __future__ import annotations

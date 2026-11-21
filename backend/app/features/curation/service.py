@@ -14,9 +14,9 @@ the only enrichment left is the embedding, which is local and best-effort.
 A candidate is never half-published: the pending row is deleted in the same
 transaction that inserts the Article.
 
-Comparing is by embedding: `similar` and `coverage` put a candidate beside what
+Comparing is by embedding: `find_similar` and `find_duplicates` put a candidate beside what
 the feed already carries and what else is queued, so the agent can tell a story
-that three outlets covered from one only its publisher did. The distance maths
+that three publishers reported from one only its publisher did. The distance maths
 is pure numpy in `app.core.embedding`, and the row loading is in `coverage.py`,
 so the maths is tested on synthetic vectors with no model load.
 """
@@ -42,7 +42,7 @@ from app.core.embedding import (
 )
 from app.core.logging import log
 from app.features.curation import coverage, sources
-from app.features.curation.links import check_link as check_link
+from app.features.curation.links import check_repo as check_repo
 from app.features.curation.model import (
     CandidateError,
     CandidatePage,
@@ -60,9 +60,9 @@ from app.features.curation.tags import (
     write_article_tags,
 )
 
-# What the agent triages on. Deliberately not the stored text: a list of 80
+# What the agent pre-filters on. Deliberately not the stored text: a list of 80
 # candidates at full content is more than a reading pass can hold, and the
-# agent asks for `get_content` on the ones worth a second look.
+# agent asks for `read_article` on the ones worth a second look.
 LIST_SNIPPET = 200
 # How many pending rows one page of `list_candidates` returns. A night queues
 # over 150, which at ~500 characters a row is more than one tool result may
@@ -71,7 +71,7 @@ LIST_LIMIT = 50
 # How far back a publisher's approval rate reaches. Long enough that a weekly
 # blog has a record, short enough to follow a publisher that changed.
 APPROVAL_WINDOW_DAYS = 90
-# One page of `get_content`. Enough to triage on; an approval reads on to the end.
+# One page of `read_article`. Enough to pre-filter on; an approval reads on to the end.
 PAGE_LIMIT = 4000
 
 
@@ -132,7 +132,7 @@ def list_candidates(
 ) -> CandidatePage:
     """One page of the candidates waiting on a verdict, freshest first.
 
-    One row per URL with what a triage pass needs and nothing more: the
+    One row per URL with what the pre-filter needs and nothing more: the
     publisher, its kind (`unknown` for a site the pipeline has just created
     one for) and its approval rate over `APPROVAL_WINDOW_DAYS`, the traction
     the source reported, the dates, and the opening `LIST_SNIPPET` characters.
@@ -198,7 +198,7 @@ def page_bounds(total: int, offset: int, limit: int) -> tuple[int, int]:
     return start, min(start + size, total)
 
 
-def get_content(
+def read_article(
     session: Session, url: str, offset: int = 0, limit: int = PAGE_LIMIT
 ) -> ContentPage:
     """One page of the article text the pipeline extracted for a candidate.
@@ -221,15 +221,15 @@ def get_content(
     return page
 
 
-# ─── Similar and coverage ────────────────────────────────────────────────────
+# ─── Similar and duplicates ─────────────────────────────────────────────────
 
 
-def similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Similar:
-    """What the feed and the ledger hold that is close to one candidate.
+def find_similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Similar:
+    """What the feed and past decisions hold that is close to one candidate.
 
     Compares against every Article and every ledger row (any stage) created in
     the last ``days``. Rows are listed out to ``RELATED_DIST``, closest first;
-    ``coverage`` counts the distinct publishers within
+    ``publisher_count`` counts the distinct publishers within
     ``DEDUP_DIST_THRESHOLD``, the candidate's own included, over every row in
     the window rather than just the listed ones.
     """
@@ -250,7 +250,7 @@ def similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Simila
     if not rows:
         return {
             "url": url,
-            "coverage": 1,
+            "publisher_count": 1,
             "publishers": [target["publisher"]],
             "rows": [],
         }
@@ -271,13 +271,13 @@ def similar(session: Session, url: str, days: int = 7, limit: int = 8) -> Simila
         listed.append(row)
     return {
         "url": url,
-        "coverage": len(publishers),
+        "publisher_count": len(publishers),
         "publishers": publishers,
         "rows": listed,
     }
 
 
-def coverage_groups(session: Session, days: int = 7) -> list[Coverage]:
+def find_duplicates(session: Session, days: int = 7) -> list[Coverage]:
     """The pending candidates that are one story, with each other or with
     something the feed published in the last ``days``.
 
@@ -303,7 +303,11 @@ def coverage_groups(session: Session, days: int = 7) -> list[Coverage]:
         members = [rows[i] for i in group]
         publishers = sorted({m["publisher"] for m in members if m["publisher"]})
         out.append(
-            {"coverage": len(publishers), "publishers": publishers, "members": members}
+            {
+                "publisher_count": len(publishers),
+                "publishers": publishers,
+                "members": members,
+            }
         )
     return out
 
@@ -318,8 +322,8 @@ NAMEABLE_KINDS = (
 )
 
 
-def vocabulary(session: Session) -> dict[str, object]:
-    """The labels `approve` accepts: kinds, publisher kinds, and the tag list
+def list_labels(session: Session) -> dict[str, object]:
+    """The labels `approve_article` accepts: kinds, publisher kinds, and the tag list
     with each tag's description. Read from the db, so a tag added there is
     offered the same night."""
     vocab = load_vocabulary(session)
@@ -360,7 +364,7 @@ def _kind(url: str, raw: str) -> ArticleKind:
         )
 
 
-def approve(
+def approve_article(
     session: Session,
     url: str,
     score: int,
@@ -376,7 +380,7 @@ def approve(
     The agent's `score` and `reason` are stored on the Article exactly as the
     scorer's used to be, so the feed's ranking and the audit trail do not change
     shape. `summary` is what a reader sees under the title; `kind` and `tags`
-    come from `vocabulary`. A publisher still `unknown` needs `publisher_kind`,
+    come from `list_labels`. A publisher still `unknown` needs `publisher_kind`,
     and may take a `publisher_name` in place of its host; both are ignored for
     one that already has a kind. Labels are checked before anything is written,
     so a bad one is a message and the candidate stays pending.
@@ -462,7 +466,7 @@ def reject(session: Session, url: str, score: int, reason: str) -> None:
     log(f"  Rejected [{score}/100] {url}: {reason}")
 
 
-def reject_many(session: Session, verdicts: list[Verdict]) -> list[str]:
+def reject_articles(session: Session, verdicts: list[Verdict]) -> list[str]:
     """Turn down many candidates, each one settled on its own.
 
     One line back per verdict, in order. A URL that is not pending, or a write
@@ -482,16 +486,16 @@ def reject_many(session: Session, verdicts: list[Verdict]) -> list[str]:
     return lines
 
 
-def discovery_candidates(
+def review_publishers(
     session: Session, limit: int = 30
 ) -> dict[str, list[dict[str, str]]]:
     """What the discovery agent works from: publishers to probe and feeds to
-    cull, with each publisher's approval rate over `APPROVAL_WINDOW_DAYS`."""
+    deactivate, with each publisher's approval rate over `APPROVAL_WINDOW_DAYS`."""
     now = datetime.now(UTC)
     ids = [i for i in session.exec(select(Publisher.id)).all() if i is not None]
     since = now - timedelta(days=APPROVAL_WINDOW_DAYS)
     counts = approval_counts(session, ids, since)
-    return sources.discovery_candidates(session, counts, limit, now)
+    return sources.review_publishers(session, counts, limit, now)
 
 
 def find_feed(session: Session, url: str) -> dict[str, object] | None:
@@ -510,5 +514,5 @@ def activate_publisher(
     )
 
 
-def disable_publisher(session: Session, slug: str, reason: str) -> str:
-    return sources.disable_publisher(session, slug, reason, datetime.now(UTC))
+def deactivate_publisher(session: Session, slug: str, reason: str) -> str:
+    return sources.deactivate_publisher(session, slug, reason, datetime.now(UTC))

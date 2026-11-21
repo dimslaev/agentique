@@ -1,5 +1,5 @@
-"""The rows `similar` and `coverage` compare a candidate against: the feed's
-recent articles and the ledger, each with the vector or the text it embeds to.
+"""The rows `find_similar` and `find_duplicates` compare a candidate against: the
+feed's recent articles and past decisions, each with the vector or the text it embeds to.
 
 The distance maths is in `app.core.embedding`; this module loads the rows and
 counts who covers a story.
@@ -19,7 +19,7 @@ from app.core.db.publisher import Publisher
 from app.core.embedding import SNIPPET_CAP, embed_batch, to_embedding_text
 from app.features.curation.model import CandidateError, Neighbour
 
-# Stage `similar` and `coverage` report for a row that is an Article.
+# Stage `find_similar` and `find_duplicates` report for a row that is an Article.
 PUBLISHED = "published"
 
 
@@ -108,7 +108,7 @@ def ledger_rows(
 def target(
     session: Session, url: str, names: dict[int, str]
 ) -> tuple[Neighbour, npt.NDArray[np.float32]]:
-    """The row ``similar`` compares from, and its vector."""
+    """The row ``find_similar`` compares from, and its vector."""
     row = session.get(Reject, url)
     if row is not None:
         text = to_embedding_text(row.title or "", (row.content or "")[:SNIPPET_CAP])

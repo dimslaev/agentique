@@ -2,7 +2,7 @@
 the distance maths over the vectors.
 
 One process-wide instance, loaded lazily on first use. The embed step and the
-curation agent's `similar` and `coverage` must encode the same string for the
+curation agent's `find_similar` and `find_duplicates` must encode the same string for the
 same article, or an article fails to match its own stored row, so the text is
 built here rather than at each call site.
 """

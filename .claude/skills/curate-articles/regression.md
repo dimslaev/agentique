@@ -1,7 +1,7 @@
 # Curation regression set
 
 70 articles hand-labelled on 2026-09-16 from a stratified sample across six
-months of the feed: every article kind at three score bands, the loudest
+months of the feed: every article kind at three score tiers, the loudest
 publishers, 16 rejects the pipeline had dropped, and 7 articles the reader named
 as what they want. 27 love, 22 fine, 21 noise.
 
@@ -9,7 +9,7 @@ Run the rubric in `SKILL.md` against these before letting the agent run
 unattended, and after any change to the rubric.
 
 **Bar:** noise kept under 3 of 21, loved dropped under 3 of 27, and every
-coverage case (below the main table) landing as labelled. A kept article
+publisher count case (below the main table) landing as labelled. A kept article
 is one scoring 65 or above (55 for a high-trust individual publisher, which is
 the threshold the feed used); the number matters less than the ordering, so
 check that the loved articles sit above the noise rather than that any single
@@ -128,12 +128,12 @@ Every one of these should be approved.
 The profile, in one line: someone else's working code, a number with a method
 behind it, or weights you can pull.
 
-## Coverage cases
+## Publisher count cases
 
 Added 2026-09-23 with the collector/judge split (ADR 11). The pipeline no
 longer drops a second outlet's copy of a story, so the agent sees every copy and
 has to pick one. Each case is one story several publishers carried; the label
-says which item is approved and which are rejected as retellings.
+says which item is approved and which are rejected as reposts.
 
 To build a case: restore the newest dump (`scripts/restore-db.sh`), find a story
 three or more publishers carried in one week — `duplicate` rejects with the same
@@ -146,11 +146,11 @@ and write down every copy with the verdict it should get.
 | 2-5 | multi-copy stories | *to fill from the dump* | | |
 
 Each case lands right when the approved item is the labelled one (the
-first-party post where one was queued) and every other copy is rejected with a
-reason that names the retelling.
+post from the creator where one was queued) and every other copy is rejected with a
+reason that names the repost.
 
 ## Runs
 
-| date | rubric | noise kept | loved dropped | coverage cases | notes |
+| date | rubric | noise kept | loved dropped | publisher count cases | notes |
 |---|---|---|---|---|---|
 | 2026-09-23 | collector/judge split | not run | not run | not run | The cases above are not filled yet, and the session that wrote the rubric change could not reach the articles (network policy). Run before the schedule picks this rubric up. |

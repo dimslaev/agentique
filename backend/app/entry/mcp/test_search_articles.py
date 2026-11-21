@@ -1,4 +1,4 @@
-"""`search` and `tags`: what they take, and what they leave out."""
+"""`search_articles` and `list_tags`: what they take, and what they leave out."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from app.core.db.factories import (
     tag_article,
 )
 from app.core.db.tag import ArticleTag
-from app.entry.mcp.search import search
-from app.entry.mcp.tags import tags
+from app.entry.mcp.list_tags import list_tags
+from app.entry.mcp.search_articles import search_articles
 
 
 @pytest.fixture(autouse=True)
@@ -41,7 +41,7 @@ def test_search_returns_a_link_and_an_excerpt_but_not_the_text(
     made["publishers"].append(article.publisher_id)
 
     # Other articles can follow by meaning. The keyword match is first.
-    found = search(word)[0]
+    found = search_articles(word)[0]
 
     assert set(found) == {
         "id",
@@ -81,19 +81,19 @@ def test_search_filters_narrow_the_results(
     tag_article(db, new, tag)
 
     try:
-        assert {old.url, new.url} <= {row["url"] for row in search(word)}
+        assert {old.url, new.url} <= {row["url"] for row in search_articles(word)}
         for found in (
-            search(word, since="2026-06-01"),
-            search(word, kind="repo"),
-            search(word, tags=[tag.slug]),
+            search_articles(word, since="2026-06-01"),
+            search_articles(word, kind="repo"),
+            search_articles(word, tags=[tag.slug]),
         ):
             urls = [row["url"] for row in found]
             assert urls[0] == new.url
             assert old.url not in urls
-        assert len(search(word, limit=1)) == 1
-        assert search(word, tags=[tag.slug])[0]["tags"] == [tag.slug]
+        assert len(search_articles(word, limit=1)) == 1
+        assert search_articles(word, tags=[tag.slug])[0]["tags"] == [tag.slug]
 
-        counts = {row["slug"]: row["count"] for row in tags()}
+        counts = {row["slug"]: row["count"] for row in list_tags()}
         assert counts[tag.slug] == 1
     finally:
         db.exec(delete(ArticleTag).where(col(ArticleTag.tag_id) == tag.id))
@@ -103,15 +103,15 @@ def test_search_filters_narrow_the_results(
 
 def test_search_names_the_bad_argument() -> None:
     with pytest.raises(ToolError, match="since must be an ISO date"):
-        search("anything", since="last week")
+        search_articles("anything", since="last week")
     with pytest.raises(ToolError, match="Unknown tag slugs: no-such-tag"):
-        search("anything", tags=["no-such-tag"])
+        search_articles("anything", tags=["no-such-tag"])
     with pytest.raises(ToolError, match="Unknown publisher slug: No Such"):
-        search("anything", publisher="No Such")
+        search_articles("anything", publisher="No Such")
 
 
 def test_kind_and_limit_are_constrained_in_the_schema() -> None:
-    params = Tool.from_function(search).parameters["properties"]
+    params = Tool.from_function(search_articles).parameters["properties"]
     assert all(k in str(params["kind"]) for k in ("post", "repo", "paper", "model"))
     assert params["limit"]["maximum"] == 100
     assert params["limit"]["minimum"] == 1
@@ -142,12 +142,12 @@ def test_sort_and_an_empty_q_browse_by_score_or_date(
         return [row["url"] for row in found]
 
     since = "2029-12-31"
-    assert urls(search(since=since)) == [older_better.url, newer_worse.url]
-    assert urls(search(since=since, sort="recent")) == [
+    assert urls(search_articles(since=since)) == [older_better.url, newer_worse.url]
+    assert urls(search_articles(since=since, sort="recent")) == [
         newer_worse.url,
         older_better.url,
     ]
-    by_date = urls(search(word, since=since, sort="recent"))
+    by_date = urls(search_articles(word, since=since, sort="recent"))
     assert by_date[:2] == [newer_worse.url, older_better.url]
-    by_score = urls(search(word, since=since, sort="score"))
+    by_score = urls(search_articles(word, since=since, sort="score"))
     assert by_score[:2] == [older_better.url, newer_worse.url]

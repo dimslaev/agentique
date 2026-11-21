@@ -99,12 +99,12 @@ def test_the_pool_takes_proven_reopened_sites_and_culls_dead_feeds(
         fresh.id: (0, 0),
     }
 
-    found = sources.discovery_candidates(db, counts, 1000, NOW)  # type: ignore[arg-type]
+    found = sources.review_publishers(db, counts, 1000, NOW)  # type: ignore[arg-type]
 
     probe = [r["slug"] for r in found["probe"] if r["slug"].startswith(TAG)]
     assert probe == [strong.slug, back.slug, weak.slug]
     assert untried.slug not in probe
-    culled = {r["slug"]: r["reason"] for r in found["cull"]}
+    culled = {r["slug"]: r["reason"] for r in found["deactivate"]}
     assert culled[noisy.slug].startswith("culled 0/12 90d")
     assert culled[quiet.slug].startswith("culled silent since")
     assert fresh.slug not in culled
@@ -153,7 +153,7 @@ def test_find_feed_marks_what_agentique_already_decided(
     assert sources.find_feed(db, site) == {"feed_url": site, "entries": []}
 
 
-def test_activate_checks_the_feed_and_disable_records_why(
+def test_activate_checks_the_feed_and_deactivate_records_why(
     db: Session, made: dict[str, list[int]], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     p = _publisher(db, made, disabled_reason="probe 1/10")
@@ -183,7 +183,7 @@ def test_activate_checks_the_feed_and_disable_records_why(
     with pytest.raises(SourceError, match="already active"):
         sources.activate_publisher(db, p.slug, feed_url, None, "3/4", NOW)
 
-    sources.disable_publisher(db, p.slug, "culled 0/12 90d", NOW)
+    sources.deactivate_publisher(db, p.slug, "culled 0/12 90d", NOW)
     db.refresh(p)
     assert (p.is_active, p.disabled_reason) == (False, "culled 0/12 90d")
 

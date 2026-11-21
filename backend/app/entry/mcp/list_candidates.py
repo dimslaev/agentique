@@ -19,13 +19,13 @@ def list_candidates(offset: int = 0, limit: int = curation.LIST_LIMIT) -> Candid
 
     One row per candidate: `url`, `title`, `source` (where the link was found),
     `publisher`, `publisher_kind` (`unknown` for a site the pipeline has just
-    created a publisher for: `approve` then needs one), `approved` (the
+    created a publisher for: `approve_article` then needs one), `approved` (the
     publisher's approvals / decisions over the
     last 90 days, e.g. "3/10", or "new" when it has none), `traction`,
     `published_at`, `queued_at`, and a 200-character `snippet`. Deliberately not the full text — call
-    `get_content` for a candidate worth a closer look.
+    `read_article` for a candidate worth a closer look.
 
-    A candidate stays listed until `approve` or `reject` is called on it, so a
+    A candidate stays listed until `approve_article` or `reject_articles` is called on it, so a
     session that stops halfway leaves the rest for the next one.
     """
     with Session(engine) as session:

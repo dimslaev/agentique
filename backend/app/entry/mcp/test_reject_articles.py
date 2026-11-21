@@ -1,12 +1,12 @@
-"""The `reject_many` tool."""
+"""The `reject_articles` tool."""
 
 from __future__ import annotations
 
-from app.entry.mcp.reject_many import reject_many
+from app.entry.mcp.reject_articles import reject_articles
 
 
 def test_reject_many_reports_one_line_per_verdict() -> None:
-    result = reject_many(
+    result = reject_articles(
         [
             {"url": "https://never-queued.example/1", "score": 20, "reason": "r"},
             {"url": "https://never-queued.example/2", "score": 20, "reason": "r"},

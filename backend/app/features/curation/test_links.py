@@ -1,8 +1,8 @@
-"""Which links an article rests on, and what check_link says about them.
+"""Which links an article rests on, and what check_repo says about them.
 
 The agent reads the grouped links instead of fetching the page again to find
 them, so a wrong group is a wrong fact about the article; they are pinned on
-fixture HTML, through the same trafilatura pass the pipeline runs. check_link
+fixture HTML, through the same trafilatura pass the pipeline runs. check_repo
 is pinned on stubbed API answers: the mapping, and that a failed lookup reads
 "unknown" rather than zero.
 """
@@ -14,7 +14,7 @@ import pytest
 from app.core import github
 from app.core.extract import MAX_LINKS_PER_GROUP, group_links, outbound_links
 from app.features.curation import links as page_facts
-from app.features.curation.links import UNKNOWN, check_link
+from app.features.curation.links import UNKNOWN, check_repo
 from app.features.curation.model import LinkError
 
 PAGE = "https://blog.example.com/2026/09/release"
@@ -121,7 +121,7 @@ def test_each_group_is_capped() -> None:
     assert len(group_links(urls, PAGE)["paper"]) == MAX_LINKS_PER_GROUP
 
 
-# ─── check_link ──────────────────────────────────────────────────────────────
+# ─── check_repo ──────────────────────────────────────────────────────────────
 
 
 class _Response:
@@ -173,7 +173,7 @@ def test_a_github_repo_maps_to_its_facts(monkeypatch: pytest.MonkeyPatch) -> Non
         },
     )
 
-    facts = check_link("https://github.com/a/b/tree/main/src")
+    facts = check_repo("https://github.com/a/b/tree/main/src")
 
     assert facts == {
         "url": "https://github.com/a/b",
@@ -196,7 +196,7 @@ def test_a_repo_with_no_readme_says_so(monkeypatch: pytest.MonkeyPatch) -> None:
             "https://api.github.com/repos/a/b": _Response(200, GITHUB_REPO),
         },
     )
-    assert check_link("https://github.com/a/b")["has_readme"] is False
+    assert check_repo("https://github.com/a/b")["has_readme"] is False
 
 
 def test_a_rate_limited_github_lookup_is_unknown_not_zero(
@@ -207,7 +207,7 @@ def test_a_rate_limited_github_lookup_is_unknown_not_zero(
         {"https://api.github.com/": _Response(403, text="API rate limit exceeded")},
     )
 
-    facts = check_link("https://github.com/a/b")
+    facts = check_repo("https://github.com/a/b")
 
     assert facts == {"url": "https://github.com/a/b", "kind": "repo", "lookup": UNKNOWN}
 
@@ -222,7 +222,7 @@ def test_a_missing_field_is_unknown_not_zero(monkeypatch: pytest.MonkeyPatch) ->
         },
     )
 
-    facts = check_link("https://github.com/a/b")
+    facts = check_repo("https://github.com/a/b")
 
     assert (facts["license"], facts["stars"], facts["has_readme"]) == (UNKNOWN,) * 3
 
@@ -246,7 +246,7 @@ def test_a_gitlab_project_maps_to_its_facts(monkeypatch: pytest.MonkeyPatch) -> 
         },
     )
 
-    facts = check_link("https://gitlab.com/group/sub/proj/-/tree/main")
+    facts = check_repo("https://gitlab.com/group/sub/proj/-/tree/main")
 
     assert asked == [
         "https://gitlab.com/api/v4/projects/group%2Fsub%2Fproj?license=true"
@@ -287,7 +287,7 @@ def test_a_hugging_face_model_maps_to_its_facts(
         },
     )
 
-    facts = check_link("https://huggingface.co/org/Model-7B/tree/main")
+    facts = check_repo("https://huggingface.co/org/Model-7B/tree/main")
 
     assert asked == ["https://huggingface.co/api/models/org/Model-7B"]
     assert facts == {
@@ -318,7 +318,7 @@ def test_a_model_repo_with_only_a_readme_has_no_weights(
         },
     )
 
-    facts = check_link("https://huggingface.co/org/coming-soon")
+    facts = check_repo("https://huggingface.co/org/coming-soon")
 
     assert (facts["weights"], facts["license"], facts["downloads"]) == (
         False,
@@ -339,7 +339,7 @@ def test_a_hugging_face_dataset_has_no_weights_field(
         },
     )
 
-    facts = check_link("https://huggingface.co/datasets/org/evals")
+    facts = check_repo("https://huggingface.co/datasets/org/evals")
 
     assert facts["kind"] == "dataset"
     assert facts["files"] == 0
@@ -350,7 +350,7 @@ def test_a_failed_hugging_face_lookup_is_unknown(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _stub_http(monkeypatch, {})
-    facts = check_link("https://huggingface.co/org/Model-7B")
+    facts = check_repo("https://huggingface.co/org/Model-7B")
     assert facts["lookup"] == UNKNOWN
     assert "downloads" not in facts
 
@@ -370,5 +370,5 @@ def test_anything_else_is_refused_toward_web_fetch(
 ) -> None:
     asked = _stub_http(monkeypatch, {})
     with pytest.raises(LinkError, match="web_fetch"):
-        check_link(url)
+        check_repo(url)
     assert asked == []
