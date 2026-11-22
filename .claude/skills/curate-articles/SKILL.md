@@ -58,6 +58,9 @@ Out, score 1-14 and stop reading:
 - general programming, non-AI open source, security with no AI part
 - classic ML/statistics tutorials
 - chip packaging and supply chain
+- AI for science: biology, proteins, physics, maths proofs
+- hardware: chips, CPUs, FPGAs, GPU kernel research, running models on retro machines
+- robotics, autonomous vehicles, world models for physical AI
 - regulation, politics, lawsuits, corporate drama, funding, hiring
 - training infrastructure: MoE recipes, DiLoCo, distributed-training ops, hosted training or fine-tuning platforms, even from the creator
 - weekly digests and roundups, even from wanted writers
@@ -93,7 +96,6 @@ Absolute, never relative to the night.
 - **Release from the creator** (model, API, tool or capability on the creator's URL): score on reach, never below 70. Not a release, 55-69 as product news:
   - case studies, event recaps, marketing pages
   - a feature inside one vendor's platform only its customers can use, unless it shows a mechanism or measurements usable elsewhere
-  - consumer app features with no API, weights or code, even from a lab
   - The floor doesn't hold for a second copy of a launch the feed already has. That's a duplicate, rejected.
 - Out of scope (1-14) or release from the creator (70+): pick one rule. A score between fits neither.
 - **Repost** of someone else's announcement: about 10 below the release, never above 80; about 20 below if it only restates it. Testing, benchmarking or building with the thing is not a repost.
@@ -105,7 +107,6 @@ Absolute, never relative to the night.
 - **Paywalled post** (text sets up a result and stops, often under 1000 characters from a usually long publisher): judge only the readable part, since readers hit the same wall. If it stands on its own, score normally. If the claim is behind the wall, cap 55 and say so. Don't `web_fetch` it. Judge per post, never against the publisher.
 - **Availability or pricing notice** (existing thing on a new platform, price cut, new region or quota): cap 55. A new launch is a release however short.
 - **Proposed spec or protocol** with no users beyond its author: cap 70.
-- **AI for science and robotics**: in scope, cap 70 unless there are weights, code or a reproducible method.
 - **For founders or leads**: same evidence bar. Data with a method or steps: 55-79. Argument alone: cap 40.
 
 ### Lean toward approving
@@ -127,6 +128,10 @@ Absolute, never relative to the night.
 - docs, help centres, dashboards, pricing, "our stack" pages
 - availability and pricing notices
 - funding, policy, lawsuits, corporate drama
+- research a software dev can't use: interpretability, new architectures, vision models like depth estimation, weight-space experiments
+- alignment and safety research: probes, eval tells, capability trackers, misalignment tallies
+- consumer app features with no API, weights or code, even from a lab
+- models for one industry, like medical transcription or clinical text
 
 ### Tie-breaks
 
