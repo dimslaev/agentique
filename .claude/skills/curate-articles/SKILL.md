@@ -7,6 +7,8 @@ description: Read the night's article candidates and approve or reject each one 
 
 You are the only judge. What you approve readers see, what you reject is gone. Read an article before approving it.
 
+Approve means published: there is no score cut after you. Anything you would score under 65, reject.
+
 ## Tools
 
 `agentique-admin` MCP: `list_candidates`, `read_article`, `find_duplicates`, `find_similar`, `check_repo`, `list_labels`, `approve_article`, `reject_articles`, `sql_query`, `web_fetch`, `web_search`.
@@ -93,17 +95,17 @@ Absolute, never relative to the night.
 ### Reading the item
 
 - `source` is where we found the link, not who wrote it. The creator's own site, blog, docs, x.com, `huggingface.co/<creator>` or `github.com/<creator>` is from the creator.
-- **Release from the creator** (model, API, tool or capability on the creator's URL): score on reach, never below 70. Not a release, 55-69 as product news:
+- **Release from the creator** (a model, a public API, or an open-source tool, on the creator's URL): score on reach, never below 70. Not a release, reject as product news:
   - case studies, event recaps, marketing pages
-  - a feature inside one vendor's platform only its customers can use, unless it shows a mechanism or measurements usable elsewhere
+  - a feature inside one vendor's own product (console, IDE, CI, payments, hosting, workspace) only its customers can use, even with a CLI or SDK, unless it shows a mechanism or measurements usable elsewhere
   - The floor doesn't hold for a second copy of a launch the feed already has. That's a duplicate, rejected.
 - Out of scope (1-14) or release from the creator (70+): pick one rule. A score between fits neither.
 - **Repost** of someone else's announcement: about 10 below the release, never above 80; about 20 below if it only restates it. Testing, benchmarking or building with the thing is not a repost.
 - **Write-up with a mechanism or measurements from running something real**, applicable on another stack: 80+, on any blog, even if it pitches a product. The most under-scored kind.
-- **Working coding-agent tool:** a repo with docs and install steps for coding agents (skill, plugin, harness, MCP server, sandbox, CLI): 70+, no measurements needed. A demo or a README with no install path stays 55-69.
+- **Working coding-agent tool:** a repo with docs and install steps for coding agents (skill, plugin, harness, MCP server, sandbox, CLI): 70+, no measurements needed. If the author's own results show no gain over the plain agent, cap 60. A demo or a README with no install path stays 55-69.
 - **Paper** showing why something works or fails, enough to change how you build: 78+. Only reporting a good score: 70-79.
 - **Explainer** laying out a real builder decision with trade-offs and when each choice is wrong: 70+, no code needed. Advice with nothing to weigh is commentary.
-- **Security piece** teaching a method, attack or defence, incident reports included: judged like any write-up. Only reporting an incident happened: 55 max.
+- **Security piece** teaching a method, attack or defence, incident reports included: judged like any write-up. Only reporting an incident happened: 55 max. A company disclosing its own breach: unless the company is well known impacting thousands of users.
 - **Paywalled post** (text sets up a result and stops, often under 1000 characters from a usually long publisher): judge only the readable part, since readers hit the same wall. If it stands on its own, score normally. If the claim is behind the wall, cap 55 and say so. Don't `web_fetch` it. Judge per post, never against the publisher.
 - **Availability or pricing notice** (existing thing on a new platform, price cut, new region or quota): cap 55. A new launch is a release however short.
 - **Proposed spec or protocol** with no users beyond its author: cap 70.
@@ -153,7 +155,8 @@ From `find_similar` and `find_duplicates`. Reach evidence only, never lifts thin
 
 At the end, over the whole night:
 
-- At most two Claude Code items. Approve the two strongest, reject the rest: `"Third-best Claude Code item tonight; daily cap of 3."`
+- At most two Claude Code items. Approve the two strongest, reject the rest: `"Third-best Claude Code item tonight; daily cap of 2."`
+- At most two items per publisher. Approve the two strongest, reject the rest: `"Third item from this publisher tonight; daily cap of 2."`
 
 ## Verdicts
 
