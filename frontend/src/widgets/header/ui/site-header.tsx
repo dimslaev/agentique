@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router"
+import type { ReactNode } from "react"
 import { cn } from "@/shared/lib/utils"
-import { RailToggles } from "@/widgets/rails"
 import { Header } from "./header"
 import { UserMenu } from "./user-menu"
 
@@ -12,8 +12,9 @@ const NAV_LINK =
 const NAV_CURRENT = "text-paper shadow-[inset_0_-2px_0_var(--signal)]"
 
 /** The site header with nav, rail toggles and the user menu — shared by the
- *  main shell and the sign-in pages. */
-export function SiteHeader() {
+ *  main shell and the sign-in pages. `toggles` comes from the route because a
+ *  widget may not import another widget. */
+export function SiteHeader({ toggles }: { toggles: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const onFeed = pathname === "/"
   const onMcp = pathname === "/connect-mcp"
@@ -44,7 +45,7 @@ export function SiteHeader() {
               Blog
             </a>
           </nav>
-          <RailToggles />
+          {toggles}
           <UserMenu />
         </>
       }

@@ -207,7 +207,7 @@ def _published(entry: dict[str, object]) -> datetime | None:
     parsed = entry.get("published_parsed") or entry.get("updated_parsed")
     if not parsed:
         return None
-    return datetime.fromtimestamp(calendar.timegm(parsed), UTC)  # type: ignore[arg-type]
+    return datetime.fromtimestamp(calendar.timegm(parsed), UTC)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
 
 def read_feed(url: str) -> list[dict[str, object]]:
@@ -273,8 +273,8 @@ def _judged(session: Session, entries: list[dict[str, object]]) -> list[dict[str
             {
                 "title": str(e["title"]),
                 "link": link,
-                "published": published.date().isoformat()  # type: ignore[attr-defined]
-                if published
+                "published": published.date().isoformat()
+                if isinstance(published, datetime)
                 else "",
                 "judged": judged,
             }

@@ -610,27 +610,31 @@ def test_read_articles_sort_liked_desc(client: TestClient, db: Session) -> None:
     user = create_random_user(db)
     db.add(
         ArticleLike(
-            user_id=user.id, article_id=liked_old.id, created_at=now - timedelta(days=3)
+            user_id=user.id,
+            article_id=liked_old.id or 0,
+            created_at=now - timedelta(days=3),
         )
     )
     db.add(
         ArticleLike(
             user_id=user.id,
-            article_id=liked_recent.id,
+            article_id=liked_recent.id or 0,
             created_at=now - timedelta(days=1),
         )
     )
     # same instant for both, so the id tiebreak decides
-    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_a.id, created_at=now))
-    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_b.id, created_at=now))
+    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_a.id or 0, created_at=now))
+    db.add(ArticleLike(user_id=user.id, article_id=liked_tie_b.id or 0, created_at=now))
     db.commit()
 
     r = client.get(
         f"{ARTICLES_URL}/",
         params={"sort": "liked-desc", "limit": 50, "since": RECENT_SINCE},
     )
-    data = r.json()["data"]
-    ids = [a["id"] for a in data]
+    all_ids = [a["id"] for a in r.json()["data"]]
+    # other tests leave likes in the shared db, so look only at this test's articles
+    mine = {liked_recent.id, liked_old.id, liked_tie_a.id, liked_tie_b.id}
+    ids = [i for i in all_ids if i in mine]
 
     # most recently liked first, ties broken by id desc
     assert ids == [
@@ -640,7 +644,7 @@ def test_read_articles_sort_liked_desc(client: TestClient, db: Session) -> None:
         liked_old.id,
     ]
     # never-liked articles are excluded entirely
-    assert never_liked.id not in ids
+    assert never_liked.id not in all_ids
 
 
 def test_search_articles_has_like_count_and_liked_by_me(

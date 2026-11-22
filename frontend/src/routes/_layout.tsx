@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router"
 import { PageColumn } from "@/shared/ui/page-column"
 import { Footer } from "@/widgets/footer"
 import { SiteHeader } from "@/widgets/header"
+import { RailToggles } from "@/widgets/rails"
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -23,7 +24,7 @@ function Layout() {
   })
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader toggles={<RailToggles />} />
       <main className="w-full flex-1 pt-7 pb-12">
         {wide ? (
           <Outlet />

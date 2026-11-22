@@ -14,7 +14,12 @@ from app.core.db.factories import (
     random_lower_string,
 )
 from app.core.db.ledger import Reject, RejectStage
-from app.core.db.publisher import Publisher, PublisherKind, PublisherType
+from app.core.db.publisher import (
+    LinkPlatform,
+    Publisher,
+    PublisherKind,
+    PublisherType,
+)
 from app.features.curation import sources
 from app.features.curation.model import SourceError
 
@@ -99,7 +104,7 @@ def test_the_pool_takes_proven_reopened_sites_and_culls_dead_feeds(
         fresh.id: (0, 0),
     }
 
-    found = sources.review_publishers(db, counts, 1000, NOW)  # type: ignore[arg-type]
+    found = sources.review_publishers(db, counts, 1000, NOW)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     probe = [r["slug"] for r in found["probe"] if r["slug"].startswith(TAG)]
     assert probe == [strong.slug, back.slug, weak.slug]
@@ -141,7 +146,7 @@ def test_find_feed_marks_what_agentique_already_decided(
 
     assert found is not None
     assert found["feed_url"] == f"{site}x.xml"
-    assert [(e["link"], e["judged"]) for e in found["entries"]] == [  # type: ignore[attr-defined]
+    assert [(e["link"], e["judged"]) for e in found["entries"]] == [  # type: ignore[attr-defined]  # ty: ignore[not-iterable]
         (fresh, ""),
         (turned_down, "below_threshold"),
         (seen.url, "approved"),
@@ -179,7 +184,7 @@ def test_activate_checks_the_feed_and_deactivate_records_why(
         PublisherType.substack,
         None,
     )
-    assert p.links["substack"] == feed_url  # type: ignore[index]
+    assert p.links[LinkPlatform.substack] == feed_url
     with pytest.raises(SourceError, match="already active"):
         sources.activate_publisher(db, p.slug, feed_url, None, "3/4", NOW)
 
@@ -196,9 +201,9 @@ def test_search_is_only_for_a_lab_or_company_on_its_own_site(
         sources.activate_publisher(db, person.slug, None, "x.dev", "r", NOW)
 
     lab = _publisher(db, made, kind=PublisherKind.lab)
-    site = lab.links["website"].removeprefix("https://")  # type: ignore[index]
+    site = lab.links[LinkPlatform.website].removeprefix("https://")
     with pytest.raises(SourceError, match="not"):
         sources.activate_publisher(db, lab.slug, None, "other.dev", "r", NOW)
     sources.activate_publisher(db, lab.slug, None, site, "3/3 prior", NOW)
     db.refresh(lab)
-    assert (lab.type, lab.links["search"]) == (PublisherType.search, site)  # type: ignore[index]
+    assert (lab.type, lab.links[LinkPlatform.search]) == (PublisherType.search, site)
