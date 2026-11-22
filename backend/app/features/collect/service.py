@@ -23,6 +23,7 @@ from app.core.email import send_mail
 from app.core.logging import log, short_error
 from app.features.collect.fetch import build_sources, fetch_source, resolve_publishers
 from app.features.collect.filter import filter_known_urls as filter_known_urls
+from app.features.collect.filter import filter_thin_repos
 from app.features.collect.model import Candidate, RunStats
 from app.features.collect.publishers import PublisherResolver as PublisherResolver
 from app.features.collect.queue import queue_candidates as queue_candidates
@@ -52,13 +53,14 @@ def run(stats: RunStats) -> None:
                 fetched_ok = True
                 s.fetched = len(fetched)
 
-                # The only gate: a URL already judged, or already waiting, is
-                # not queued twice. Topic, reach and duplicates are the agent's
-                # call (ADR 11). Ahead of resolving publishers, so a link seen
-                # before never costs a lookup or creates one.
+                # A URL already judged, or already waiting, is not queued
+                # twice. Ahead of resolving publishers, so a link seen before
+                # never costs a lookup or creates one.
                 fresh = filter_known_urls(session, fetched, source.label)
 
                 candidates = resolve_publishers(fresh, resolver)
+                # After resolving, so lab and company repos can skip it.
+                candidates = filter_thin_repos(session, candidates, source.label)
 
                 # The end of the funnel: the agent is the judge, so the run
                 # stops at a pending row.

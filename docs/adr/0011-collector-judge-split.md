@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted.
+Accepted. Amended 2026-11-22: the stars gate is back (see the end).
 
 ## Context
 
@@ -82,3 +82,11 @@ regression set, with its new coverage cases, clears the same bar as before.
 
 Every migration is additive (`scored_url.links`, three publisher columns), so
 any single commit reverts cleanly.
+
+## Amendment, 2026-11-22: the stars gate returns
+
+The agent approved a 13-star solo repo (agent-mcts, score 74) on a strong
+README. Stars are the one fact a pitch cannot fake, so `filter_thin_repos`
+rejects GitHub repos under `GITHUB_MIN_STARS` (default 50) as `thin_repo`,
+with the count in `detail`, before the agent sees them. Lab and company
+publishers skip it, and a failed lookup keeps the candidate.

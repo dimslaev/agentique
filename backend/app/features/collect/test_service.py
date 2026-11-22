@@ -98,6 +98,7 @@ def _stub_run(
     monkeypatch.setattr(run_module, "build_sources", lambda session: sources)
     monkeypatch.setattr(run_module, "resolve_publishers", resolve)
     monkeypatch.setattr(run_module, "filter_known_urls", keep)
+    monkeypatch.setattr(run_module, "filter_thin_repos", lambda s, items, label: items)
     monkeypatch.setattr(run_module, "queue_candidates", passthrough)
     monkeypatch.setattr(run_module, "fetch_source", lambda source: source.fetcher())
     monkeypatch.setattr(run_module, "record_polled", record_polled)
