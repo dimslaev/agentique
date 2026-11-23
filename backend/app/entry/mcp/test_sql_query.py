@@ -14,7 +14,7 @@ from app.core.db.engine import engine
 from app.core.db.factories import create_random_article
 from app.core.settings import settings
 from app.entry.mcp import sql_query as tool
-from app.entry.mcp.auth import USER_SCOPE
+from app.entry.mcp.auth import USER_SCOPE, WRITE_SCOPE
 
 
 @pytest.fixture(autouse=True)
@@ -255,4 +255,19 @@ def test_a_shared_token_does_not_use_the_public_role(
         lambda: AccessToken(token="t", client_id="c", scopes=[]),
     )
     result = tool.sql_query("SELECT count(*) AS n FROM article")
+    assert result["columns"] == ["n"]
+
+
+def test_the_write_token_reads_the_internal_tables(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The business routines read `scored_url` and `publisher` through the write
+    token, which must log in as the shared role, not the public one."""
+    monkeypatch.setattr(tool, "PUBLIC_DSN", "postgresql://nobody@nowhere.invalid/x")
+    monkeypatch.setattr(
+        tool,
+        "get_access_token",
+        lambda: AccessToken(token="t", client_id="c", scopes=[WRITE_SCOPE]),
+    )
+    result = tool.sql_query("SELECT count(*) AS n FROM scored_url")
     assert result["columns"] == ["n"]
