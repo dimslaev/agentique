@@ -6,6 +6,7 @@
 - `docs/style.md` - coding conventions a linter can't enforce
 - `README.md` - what agentique is and how its parts work, for anyone picking up work here
 - `deploy/README.md` - how it runs in production
+- `docs/reports.md` - the `reports` branch the business routines write their proposals to
 - `.ignored/plans/` - proposed work in progress, deleted once shipped (gitignored)
 - When asked for a plan, save it to `.ignored/plans/<kebab-topic>.md`. Don't repeat it in chat.
 - Minimal markdown formatting, plain concise language, short bullet points.
