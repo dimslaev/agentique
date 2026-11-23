@@ -6,7 +6,7 @@ A curated feed of articles for people building with AI. A nightly pipeline colle
 
 Runs daily at 04:00. Collects, judges nothing.
 
-- Fetch new items from feeds, newsletters, Hacker News and lab sites
+- Fetch new items from feeds, newsletters, Hacker News, the Bluesky accounts agentique follows and lab sites
 - Follow tweets and redirect links to the real page
 - Drop event, glossary and docs pages
 - Fill in the full text; drop items with too little to read

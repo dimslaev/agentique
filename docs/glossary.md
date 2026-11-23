@@ -8,7 +8,7 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
   - `kind` (`PublisherKind`) - what the publisher is: `lab` (makes models, writing on its own site), `company`, `individual`, `media`, `community` (an aggregator, credited only for its own pages), or `unknown` (a site the pipeline just made a publisher for; the curation agent names it on its first approval, and a kind once set stays). Shown to readers.
   - `type` (`PublisherType`) - how the pipeline finds its articles: `rss`, `substack`, `search`, `hn`, `reddit`, `email`, `ainews`, `other`. Internal ingestion detail, not on the public API.
 
-- **Source** - one of the pipeline's fetch adapters (`hn.py`, `feeds.py`, `lab_watch.py` and `newsletters.py` in `app/features/collect/`): Hacker News, the RSS/Substack feeds, a lab-watch crawler, email newsletters. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
+- **Source** - one of the pipeline's fetch adapters (`hn.py`, `bluesky.py`, `feeds.py`, `lab_watch.py` and `newsletters.py` in `app/features/collect/`): Hacker News, the links posted by the Bluesky accounts agentique follows, the RSS/Substack feeds, a lab-watch crawler, email newsletters. A source yields raw items for one or more publishers. Pipeline concept, not a database column.
 
 - **Trust** (`Publisher.trust`, `TrustLevel`) - `low` / `medium` / `high`, hand-set per publisher. No longer read (ADR 11): the curation agent sees each publisher's approval rate instead (`approved` in `list_candidates`: approvals / decisions over 90 days, or "new"). The column stays. Not on the public API.
 

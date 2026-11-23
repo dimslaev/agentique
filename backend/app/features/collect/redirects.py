@@ -15,7 +15,17 @@ from app.core.http import BROWSER_HEADERS, fetch_with_timeout
 from app.core.logging import log, short_error
 from app.features.collect.model import RawItem
 
-REDIRECT_PREFIXES = ("https://console.dev/out/",)
+# Console's tracked links, and the link shorteners social posts use: left
+# short, an article is stored under a URL that names neither its site nor its
+# slug, and a repeat of a known article slips past the known-URL check.
+REDIRECT_PREFIXES = (
+    "https://console.dev/out/",
+    "https://buff.ly/",
+    "https://bit.ly/",
+    "https://nyti.ms/",
+    "https://lnkd.in/",
+    "https://ow.ly/",
+)
 # The marker the redirect appends to say where the click came from.
 _REF_PARAMS = {"ref"}
 CONCURRENCY = 5

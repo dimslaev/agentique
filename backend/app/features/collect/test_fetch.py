@@ -144,6 +144,7 @@ def test_every_channel_is_polled(monkeypatch: pytest.MonkeyPatch) -> None:
     assert labels == [
         "Feeds",
         "Hacker News",
+        "Bluesky",
         "Newsletter",
         "Lab Watch",
     ]
