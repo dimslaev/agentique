@@ -12,7 +12,7 @@ from app.core.db.factories import create_random_article, random_lower_string
 from app.core.db.ledger import Reject, RejectStage
 from app.core.db.publisher import Publisher
 from app.features.collect.filter import filter_known_urls
-from app.features.collect.model import RawItem
+from app.features.collect.model import Candidate, RawItem
 
 TAG = random_lower_string()[:8]
 
@@ -85,14 +85,15 @@ def test_thin_repos_are_rejected_unless_unknown_or_from_a_lab(
     solo = create_random_publisher(db, kind=PublisherKind.individual)
     lab = create_random_publisher(db, kind=PublisherKind.lab)
 
-    def cand(repo: str, pub: Publisher) -> f.Candidate:
+    def cand(repo: str, pub: Publisher) -> Candidate:
+        assert pub.id is not None
         return {
             "title": repo,
             "url": f"https://github.com/{TAG}/{repo}",
             "content": "",
             "published_date": None,
             "source": "Hacker News",
-            "publisher_id": pub.id,  # ty: ignore[invalid-assignment]
+            "publisher_id": pub.id,
         }
 
     try:
