@@ -86,6 +86,9 @@ class LinkPlatform(StrEnum):
     youtube = "youtube"
     linkedin = "linkedin"
     mastodon = "mastodon"
+    # The publisher's own Bluesky handle, set by the posting routine once it
+    # has confirmed the account is theirs. A tag in a post resolves it.
+    bluesky = "bluesky"
     discord = "discord"
     email = "email"
 

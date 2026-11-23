@@ -179,7 +179,8 @@ Read as raw `os.environ` beside each consumer (ADR 7), so they belong in
 | `PIPELINE_ALERT_EMAIL` | `app/core/email.py` | Where the daily mail goes (liveness, failing sources and feeds, what landed); falls back to `EMAILS_FROM_EMAIL`. |
 | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `IMAP_PORT` | `app/features/collect/newsletters.py` | The inbox the newsletter source reads. The first three are required by that source; the port defaults to 993. |
 | `HN_MIN_POINTS`, `HN_MIN_COMMENTS`, `HN_GRACE_HOURS` | `app/features/collect/hn.py` | The HN traction gate: 10 points or 5 comments. A story under 6 hours old is held back for the next run. A URL from the creator skips the gate, and `HN_MIN_POINTS=0` turns it off. |
-| `BLUESKY_HANDLE` | `app/features/collect/bluesky.py` | Optional. The Bluesky account whose follows the Bluesky source reads. Defaults to `agentique.ch`. |
+| `BLUESKY_HANDLE` | `app/features/collect/bluesky.py`, `app/features/social/bluesky.py` | Optional. The Bluesky account whose follows the Bluesky source reads, and that `post_bluesky` posts as. Defaults to `agentique.ch`. |
+| `BLUESKY_APP_PASSWORD` | `app/features/social/bluesky.py` | An app password for that account, made in Bluesky's settings. Without it `post_bluesky` and `link_bluesky_account` refuse. |
 | `TAVILY_API_KEY` | `app/core/web_search.py` | Search for the lab-watch source, the newsletter source and the `web_search` tool. |
 | `GITHUB_TOKEN` | `app/core/github.py` | Optional. Raises the GitHub API rate limit for repo lookups. |
 | `RESIDENTIAL_PROXY_URL` | `app/core/http.py` | Optional. A metered proxy, tried when a feed fetch or a page extraction is blocked direct. |

@@ -11,13 +11,16 @@ from app.entry.mcp.check_repo import check_repo
 from app.entry.mcp.close_story import close_story
 from app.entry.mcp.deactivate_publisher import deactivate_publisher
 from app.entry.mcp.draft_newsletter import draft_newsletter
+from app.entry.mcp.find_bluesky_account import find_bluesky_account
 from app.entry.mcp.find_duplicates import find_duplicates
 from app.entry.mcp.find_feed import find_feed
 from app.entry.mcp.find_similar import find_similar
 from app.entry.mcp.get_last_week_articles import get_last_week_articles
+from app.entry.mcp.link_bluesky_account import link_bluesky_account
 from app.entry.mcp.list_candidates import list_candidates
 from app.entry.mcp.list_labels import list_labels
 from app.entry.mcp.list_tags import list_tags
+from app.entry.mcp.post_bluesky import post_bluesky
 from app.entry.mcp.rate_limit import UserRateLimit
 from app.entry.mcp.read_article import read_article
 from app.entry.mcp.reject_articles import reject_articles
@@ -64,6 +67,9 @@ mcp = FastMCP(
         find_feed,
         activate_publisher,
         deactivate_publisher,
+        find_bluesky_account,
+        link_bluesky_account,
+        post_bluesky,
     ],
 )
 
