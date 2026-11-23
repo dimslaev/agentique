@@ -154,6 +154,29 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Chief of staff
+
+The week's proposals are ranked by a routine that runs an hour after the Tuesday
+scouts (`mine-rejections`, `scout-archive`, `scout-revenue`, `draft-distribution`,
+all 16:00): a scheduled task on claude.ai/code against this repo, invoking
+`/chief-of-staff` (`.claude/skills/chief-of-staff/SKILL.md`, ADR 23). It runs
+Tuesdays at 17:00 Europe/Zurich (`CRON_TZ=Europe/Zurich 0 17 * * 2`).
+
+- It reads the `reports` branch: the ledger, this week's reports and the latest
+  Friday `watch-competitors` report (`docs/reports.md`).
+- It writes nothing to prod. It writes `reports/<date>/chief-of-staff.md` and
+  `reports/ledger.md` on the `reports` branch, and opens a GitHub issue with the
+  memo, so GitHub emails it.
+- The session needs push access to this repo and the GitHub issue tool or
+  `gh`. If it has neither, the memo file on the branch is the only copy.
+- A scout that did not run is named in the memo; the rest is ranked anyway.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `chief-of-staff` skill (`.claude/skills/chief-of-staff/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that

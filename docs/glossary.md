@@ -48,3 +48,13 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 - **MCP token** (`McpToken` in `app/core/db/mcp_token.py`) - a signed-in reader's own bearer token for `/mcp`, made on the MCP page (`/connect-mcp`) and shown once. One per account, stored as a hash. It carries the `user` scope, which reaches `search_articles`, `list_tags` and `sql_query` and no other tool (ADR 20). Not `MCP_TOKEN` or `MCP_WRITE_TOKEN`, the two shared tokens in `.env` that our own agents use.
 
 - **`public_api`** - the Postgres schema of views a reader's `sql_query` reads: `article`, `publisher`, `tag`, `article_tag`, with the columns the site already shows and no article text. The role `mcp_public` (`deploy/sql-roles-public.sql`) has SELECT on it and on nothing else.
+
+- **Report** - one markdown file a business routine writes per run: `reports/<YYYY-MM-DD>/<skill>.md` on the `reports` branch, a title, at most 5 bullets each ending in a proposal or a number, and `Ledger:` lines for new proposals. Format in `docs/reports.md`, decision in ADR 23. Not the daily mail (`app/features/collect/report.py`), which is the pipeline's liveness email.
+
+- **Scout** - a routine that looks outside the feed for something to propose and writes a report: `mine-rejections`, `scout-archive`, `scout-revenue`, `watch-competitors`. `draft-distribution` writes drafts, not proposals. Scouts read the ledger before proposing and never write it.
+
+- **Proposal** - one idea a scout puts forward, with an `<id>` (a kebab slug), one line and a number or source behind it. Never built automatically: a person decides.
+
+- **Ledger** (`reports/ledger.md` on the `reports` branch) - one line per proposal ever made, `<id> | <one line> | <status> <date>`, status `proposed`, `picked`, `dropped` or `done`. Only the chief of staff writes it, a person marks `done`.
+
+- **Chief of staff** - the Tuesday routine (`.claude/skills/chief-of-staff/SKILL.md`) that ranks the week's proposals by evidence and reach, writes a one-screen memo with the top 3 and an argument against each, updates the ledger and opens a GitHub issue with the memo.

@@ -43,7 +43,11 @@ One line per proposal, newest last:
 - Status is `proposed`, `picked`, `dropped` or `done`. The date is when it
   last changed.
 - `chief-of-staff` adds each week's new lines as `proposed`, then marks the
-  top 3 `picked` and the rest it ruled out `dropped`. A person marks `done`.
+  top 3 `picked` and the rest it ruled out `dropped`. A proposal it neither
+  picks nor drops stays `proposed` and is ranked again next week. A person
+  marks `done`, or changes any status by editing the line.
+- `chief-of-staff` also writes `reports/<date>/chief-of-staff.md`, the memo.
+  It is not a scout report and has no `Ledger:` lines.
 
 ## Publishing
 
@@ -64,10 +68,14 @@ git -C "$R" commit -m "docs: <skill> report $D"
 for i in 1 2 3 4; do
   git -C "$R" push origin HEAD:reports && break
   sleep $((i * 5))
-  git -C "$R" pull --rebase origin reports
+  git -C "$R" fetch origin reports
+  git -C "$R" rebase FETCH_HEAD
 done
+git worktree remove --force "$R"
 ```
 
+- The worktree is detached, so the retry fetches and rebases onto
+  `FETCH_HEAD`; `git pull --rebase` needs a branch.
 - Routines that run at the same time write different files, so a rebase never
   conflicts.
 - A push that still fails: put the whole report in the session's final message
@@ -75,12 +83,16 @@ done
 
 ## Creating the branch
 
-Once, by hand, before the first routine runs:
+Once, before the first routine runs. Skip it if `git ls-remote origin reports`
+prints a ref. Use a temporary worktree so your checkout stays as it is:
 
 ```bash
+T=$(mktemp -d)
+git worktree add --detach "$T" master
+cd "$T"
 git switch --orphan reports
 mkdir -p reports && printf '# Ledger\n' > reports/ledger.md
 git add reports && git commit -m "docs: start reports ledger"
 git push -u origin reports
-git switch master
+cd - && git worktree remove --force "$T"
 ```

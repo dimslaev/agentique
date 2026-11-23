@@ -122,3 +122,7 @@ flowchart TD
 - [Frontend](./docs/frontend.md)
 - [Glossary](./docs/glossary.md)
 - [Deployment](./deploy/README.md)
+
+## Business routines
+
+Weekly Claude Code sessions that look for what to build next: `watch-competitors` (Fridays), `mine-rejections`, `scout-archive`, `scout-revenue` and `draft-distribution` (Tuesdays), and `chief-of-staff`, which ranks their proposals into a memo and a GitHub issue. They write reports to the `reports` branch and propose; a person decides. Only `watch-competitors` writes to prod (publishers and pending candidates). See `docs/reports.md`.
