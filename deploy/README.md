@@ -154,6 +154,41 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Revenue scout
+
+A fifth off-box routine looks for revenue: a scheduled task on claude.ai/code
+against this repo, with the write token, invoking `/scout-revenue`
+(`.claude/skills/scout-revenue/SKILL.md`). It runs Tuesdays at 16:00
+Europe/Zurich (`CRON_TZ=Europe/Zurich 0 16 * * 2`).
+
+- It reads `sql_query` (sponsor candidates, subscribers, traffic) and the web.
+- It writes one report to the `reports` branch (`docs/reports.md`) and nothing
+  to prod.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `scout-revenue` skill (`.claude/skills/scout-revenue/SKILL.md`).
+```
+
+## Distribution
+
+A sixth off-box routine drafts posts: a scheduled task on claude.ai/code
+against this repo, with the write token, invoking `/draft-distribution`
+(`.claude/skills/draft-distribution/SKILL.md`). It runs Tuesdays at 16:00
+Europe/Zurich (`CRON_TZ=Europe/Zurich 0 16 * * 2`).
+
+- It reads last week's liked articles through `sql_query` and the latest
+  `watch-competitors` report.
+- It writes 2-3 Bluesky drafts and one HN submission to the `reports` branch
+  and nothing to prod. A person posts them.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `draft-distribution` skill (`.claude/skills/draft-distribution/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that
