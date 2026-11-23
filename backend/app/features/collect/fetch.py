@@ -11,6 +11,7 @@ from sqlmodel import Session
 from app.core.extract import fetch_full_content
 from app.core.logging import log
 from app.core.urls import hostname
+from app.features.collect.bluesky import bluesky_handle, fetch_bluesky
 from app.features.collect.feeds import fetch_feeds
 from app.features.collect.hn import fetch_hn
 from app.features.collect.lab_watch import fetch_lab_watch
@@ -100,6 +101,9 @@ def build_sources(session: Session) -> list[Source]:
     product linked off its maker's site, to a first-party URL by search). It
     arrives with no content and leans on the re-fetch path like the other thin
     sources.
+
+    "Bluesky" reads the links posted by the accounts agentique's own Bluesky
+    account follows (``BLUESKY_HANDLE``), title-gated like Hacker News.
     """
     feed_sources = feed_sources_from_db(session)
     lab_watch_targets = lab_watch_targets_from_db(session)
@@ -111,6 +115,7 @@ def build_sources(session: Session) -> list[Source]:
             publisher_names=tuple(s["name"] for s in feed_sources),
         ),
         Source("Hacker News", lambda: (fetch_hn(), {})),
+        Source("Bluesky", lambda: (fetch_bluesky(bluesky_handle()), {})),
         Source("Newsletter", lambda: (fetch_newsletter(newsletter_senders), {})),
         Source(
             "Lab Watch",

@@ -50,13 +50,20 @@ class PublisherType(StrEnum):
     reddit = "reddit"
     email = "email"
     ainews = "ainews"
+    bluesky = "bluesky"
     other = "other"
 
 
 # Publishers whose items link to other people's posts. An item one of them
 # found is credited to the site it links to, never to them.
 AGGREGATOR_TYPES = frozenset(
-    {PublisherType.hn, PublisherType.email, PublisherType.ainews, PublisherType.reddit}
+    {
+        PublisherType.hn,
+        PublisherType.email,
+        PublisherType.ainews,
+        PublisherType.reddit,
+        PublisherType.bluesky,
+    }
 )
 
 
