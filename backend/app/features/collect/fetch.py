@@ -138,14 +138,14 @@ def _without_noise(articles: list[RawItem], label: str) -> list[RawItem]:
     """Drop the two shapes the agent has never once approved: event sign-up
     pages and reference-section pages. Both are judged on the URL alone, before
     anything is spent fetching their text."""
-    kept = [
-        a
-        for a in articles
-        if not _is_event_page(a["url"]) and not _is_reference_page(a["url"])
-    ]
+    kept = [a for a in articles if not is_noise_page(a["url"])]
     if dropped := len(articles) - len(kept):
         log(f"  {label}: dropped {dropped} event/reference page(s)")
     return kept
+
+
+def is_noise_page(url: str) -> bool:
+    return _is_event_page(url) or _is_reference_page(url)
 
 
 def _is_event_page(url: str) -> bool:

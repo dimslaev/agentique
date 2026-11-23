@@ -55,6 +55,10 @@ class Page(NamedTuple):
 
     text: str
     links: dict[str, list[str]]
+    # Only read when a caller asks (`fetch_page(meta=True)`): the pipeline's
+    # items already come with a title and a date.
+    title: str = ""
+    published: str | None = None
 
 
 EMPTY_PAGE = Page("", {})
@@ -107,12 +111,19 @@ def extract_text(html: str, max_length: int | None = None) -> str:
     return text[:max_length] if max_length else text
 
 
-def _page(html: str, url: str, max_length: int | None) -> Page:
+def _page(html: str, url: str, max_length: int | None, meta: bool = False) -> Page:
     text = extract_text(html, max_length)
-    return Page(text, outbound_links(html, url)) if text else EMPTY_PAGE
+    if not text:
+        return EMPTY_PAGE
+    links = outbound_links(html, url)
+    if not meta:
+        return Page(text, links)
+    found = trafilatura.extract_metadata(html)
+    title = (found.title or "").strip() if found else ""
+    return Page(text, links, title, found.date if found else None)
 
 
-def fetch_page(url: str, max_length: int | None = None) -> Page:
+def fetch_page(url: str, max_length: int | None = None, meta: bool = False) -> Page:
     """Fetch a URL directly, falling back to the residential proxy.
 
     An empty result from the direct attempt covers every failure mode we care
@@ -123,11 +134,11 @@ def fetch_page(url: str, max_length: int | None = None) -> Page:
     if _should_skip(url):
         return EMPTY_PAGE
 
-    page = _page(_fetch_html(url), url, max_length)
+    page = _page(_fetch_html(url), url, max_length, meta)
     if page.text or not RESIDENTIAL_PROXY_URL:
         return page
 
-    page = _page(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), url, max_length)
+    page = _page(_fetch_html(url, proxy=RESIDENTIAL_PROXY_URL), url, max_length, meta)
     if page.text:
         log(f"    Proxy recovered: {url}")
     return page
