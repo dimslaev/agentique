@@ -154,6 +154,20 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Competitors
+
+An off-box routine compares agentique with three competitors (AINews, Aligned News, AI/TLDR), the same way as the others: a scheduled task on claude.ai/code against this repo, with the same write token, invoking `/watch-competitors` (`.claude/skills/watch-competitors/SKILL.md`). It runs on Fridays at 16:00 Europe/Zurich (`CRON_TZ=Europe/Zurich 0 16 * * 5`).
+
+- It reads each competitor's last-week top stories and matches them to `article` and `scored_url` through `sql_query`. It notes how far ahead or behind we were and why we rejected what we did.
+- It writes `pending` candidates through `queue_candidate` (at most 10 a run) and inactive `publisher` rows through `add_publisher`. It switches a publisher on with `activate_publisher` only when the `discover-publishers` bar passes. Curation judges the candidates the next morning.
+- It publishes its report and feature proposals to the `reports` branch (`docs/reports.md`) and nothing else.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `watch-competitors` skill (`.claude/skills/watch-competitors/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that
