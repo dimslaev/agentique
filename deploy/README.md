@@ -154,6 +154,24 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Archive scouting
+
+A fifth off-box routine looks for product ideas the archive's data supports,
+as a scheduled task on claude.ai/code against this repo with the write token,
+invoking `/scout-archive` (`.claude/skills/scout-archive/SKILL.md`). It runs
+Tuesdays at 16:00 Europe/Zurich (`CRON_TZ=Europe/Zurich 0 16 * * 2`).
+
+- It reads the archive through `sql_query` as `agentique_ro` and runs at most
+  one `web_search` per idea.
+- It writes nothing to prod. Its report goes to `reports/<date>/scout-archive.md`
+  on the `reports` branch (`docs/reports.md`).
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `scout-archive` skill (`.claude/skills/scout-archive/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that
