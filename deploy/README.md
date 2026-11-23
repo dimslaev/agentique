@@ -154,6 +154,26 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Mine rejections
+
+Which rejects the rubric should have kept is checked by a fifth off-box routine,
+the same way as the others: a scheduled task on claude.ai/code against this
+repo, with the same write token, invoking `/mine-rejections`
+(`.claude/skills/mine-rejections/SKILL.md`). It runs Tuesdays at 16:00
+Europe/Zurich (`CRON_TZ=Europe/Zurich 0 16 * * 2`).
+
+- It reads the last 30 days of `scored_url` through `sql_query`. The write token
+  logs in as `agentique_ro`, which reads every table but `user`.
+- It writes nothing to prod and commits nothing to master. It pushes one report
+  to the `reports` branch (`docs/reports.md`), with proposed diffs for the
+  `curate-articles` rubric. A person applies them and re-runs the regression set.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `mine-rejections` skill (`.claude/skills/mine-rejections/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that
