@@ -17,6 +17,7 @@ from app.core.settings import settings
 
 REPORT = f"{settings.API_V1_STR}/analytics/report"
 BROWSER = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15"
+LINUX = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
 PHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148"
 
 
@@ -168,6 +169,10 @@ def test_report_counts_outside_readers_only(
     _event(db, path="/", visitor_id="crawler", user_agent="Googlebot/2.1")
     _event(db, path="/", visitor_id="scanner", user_agent="Scanory/1.0")
     _event(db, path="/", visitor_id="no-agent", user_agent=None)
+    # a fresh visitor id on every hit is a scraper; one that comes back is a reader
+    _event(db, path="/", visitor_id="scraper", user_agent=LINUX)
+    _event(db, path="/", visitor_id="linux-reader", user_agent=LINUX)
+    _event(db, path="/blog/x/", visitor_id="linux-reader", user_agent=LINUX)
     # the admin's device stays the admin's after signing out
     _event(db, path="/", visitor_id="admin-laptop", user_id=_superuser(db).id)
     _event(db, path="/", visitor_id="admin-laptop")
@@ -178,19 +183,19 @@ def test_report_counts_outside_readers_only(
     # other tests leave users behind; they're covered on their own below
     del report["totals"]["users"], report["totals"]["signups"]
     assert report["totals"] == {
-        "visitors": 2,
-        "pageviews": 3,
+        "visitors": 3,
+        "pageviews": 5,
         "returning_visitors": 0,
         "article_clicks": 0,
         "admin_pageviews": 2,
-        "bot_pageviews": 3,
+        "bot_pageviews": 4,
     }
-    assert report["pages"][0] == {"label": "/", "count": 2, "visitors": 2}
+    assert report["pages"][0] == {"label": "/", "count": 3, "visitors": 3}
     assert report["referrers"] == [
         {"label": "www.google.com", "count": 1, "visitors": 1}
     ]
     devices = {row["label"]: row["count"] for row in report["devices"]}
-    assert devices == {"desktop": 2, "mobile": 1}
+    assert devices == {"desktop": 4, "mobile": 1}
 
 
 def test_report_window_and_returning_visitors(

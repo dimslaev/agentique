@@ -32,6 +32,11 @@ from app.features.analytics.model import (
 # Loose on purpose: a human caught here costs one visitor, a bot let through
 # inflates every number.
 BOT_AGENT = r"bot|crawl|spider|slurp|scan|headless|python|curl|wget|preview|lighthouse"
+# Scrapers that run JS but keep no storage: a plain desktop Chrome on Linux or
+# Windows whose visitor id is never seen twice. Costs the odd one-page real reader.
+SCRAPER_AGENT = (
+    r"(X11; Linux x86_64|Windows NT 10\.0).*Chrome/\d+\.0\.0\.0 Safari/537\.36$"
+)
 MOBILE_AGENT = r"iphone|ipad|android|mobile"
 TOP = 10
 
@@ -89,6 +94,11 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
         col(AnalyticsEvent.visitor_id).is_not(None),
     )
     agent = col(AnalyticsEvent.user_agent)
+    one_hit_visitors = (
+        select(AnalyticsEvent.visitor_id)
+        .group_by(col(AnalyticsEvent.visitor_id))
+        .having(func.count() == 1)
+    )
     # CASE, not NOT IN: a NULL visitor_id would make NOT IN drop the row.
     audience = case(
         (
@@ -98,7 +108,15 @@ def build_report(session: Session, days: int | None) -> AnalyticsReport:
             ),
             "admin",
         ),
-        (or_(agent.is_(None), agent.regexp_match(BOT_AGENT, flags="i")), "bot"),
+        (
+            or_(
+                agent.is_(None),
+                agent.regexp_match(BOT_AGENT, flags="i"),
+                agent.regexp_match(SCRAPER_AGENT)
+                & col(AnalyticsEvent.visitor_id).in_(one_hit_visitors),
+            ),
+            "bot",
+        ),
         else_="human",
     )
     in_window = col(AnalyticsEvent.created_at) >= since if since is not None else true()
