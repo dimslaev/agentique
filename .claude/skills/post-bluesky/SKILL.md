@@ -35,9 +35,11 @@ Link a candidate with `link_bluesky_account(slug, handle)` only when one of thes
 
 Never link an account with 0 posts, a mirror or bot account, or an employee for a company. If nothing passes, skip it. `link_bluesky_account` follows the account too, and followed accounts feed the Bluesky source, so a wrong link costs twice.
 
-## 3. Top 5
+## 3. Pick up to 5
 
-Pick 5 from step 1: highest score first, at most one per publisher, and only articles where a builder could do something after reading. Fewer than 5 is fine on a thin day. Post nothing on a day with none.
+From step 1, only articles where a builder could do something after reading, at most one per publisher. Tagged picks first: articles whose publisher has a linked account (step 2 or already linked), highest score first. Then fill with untagged ones, at most 2 untagged in the day. If no pick has an account, post at most 2.
+
+Fewer is fine on a thin day. Post nothing on a day with none.
 
 ## 4. Post each one
 
@@ -64,7 +66,7 @@ If `web_fetch` gets the page (it goes live when the issue's PR merges), post it:
 
 - accounts linked and followed, with the reason each passed
 - candidates rejected, and why
-- each post's link and who it tagged
+- each post's link and who it tagged, and how many picks went untagged
 - the weekly issue: posted, already posted, or not live yet
 
 If a tool is missing or says "Authorization failed", stop and say so.

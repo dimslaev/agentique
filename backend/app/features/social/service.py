@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 from sqlmodel import Session, select
 
@@ -49,13 +50,18 @@ def find_account(session: Session, slug: str) -> list[Account]:
     if linked:
         return [_account(bluesky.profile(linked))]
     dids: list[str] = []
-    site = hostname(p.links.get(LinkPlatform.website, "")).removeprefix("www.")
-    if site:
+    website = p.links.get(LinkPlatform.website, "")
+    site = hostname(website).removeprefix("www.")
+    # A path (github.com/x, huggingface.co/x) means a shared host, whose handle
+    # is the platform's account, not the publisher's.
+    if site and not urlparse(website).path.strip("/"):
         try:
             dids.append(bluesky.resolve(site))
         except SocialError:
             pass
-    dids += [a["did"] for a in bluesky.search(p.name, SEARCH_LIMIT)]
+    # "Hugging Face Blog" finds nothing; "Hugging Face" finds hf.co.
+    name = re.sub(r"\s+blog$", "", p.name, flags=re.I)
+    dids += [a["did"] for a in bluesky.search(name, SEARCH_LIMIT)]
     if not dids:
         return []
     return [_account(pr) for pr in bluesky.profiles(list(dict.fromkeys(dids)))]

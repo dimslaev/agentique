@@ -102,3 +102,39 @@ def test_link_saves_handle_and_follows_once(
     follows = [c for c, _ in stub.created]
     assert follows == ([] if following else ["app.bsky.graph.follow"])
     assert msg.endswith("already followed" if following else ", followed")
+
+
+@pytest.mark.parametrize(
+    ("name", "website", "resolved", "searched"),
+    [
+        ("Eugene Yan Blog", "https://eugeneyan.com", ["eugeneyan.com"], "Eugene Yan"),
+        ("someone", "https://github.com/someone", [], "someone"),
+    ],
+)
+def test_find_account_asks_for_the_publishers_own_handle_only(
+    db: Session,
+    stub: Stub,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    website: str,
+    resolved: list[str],
+    searched: str,
+) -> None:
+    asked: list[str] = []
+    queries: list[str] = []
+
+    def resolve(handle: str) -> str:
+        asked.append(handle)
+        return stub.resolve(handle)
+
+    monkeypatch.setattr(bluesky, "resolve", resolve)
+
+    def search(q: str, _limit: int) -> list[Profile]:
+        queries.append(q)
+        return []
+
+    monkeypatch.setattr(bluesky, "search", search)
+    monkeypatch.setattr(bluesky, "profiles", lambda dids: [])
+    p = create_random_publisher(db, name=name, links={LinkPlatform.website: website})
+    service.find_account(db, p.slug)
+    assert (asked, queries) == (resolved, [searched])
