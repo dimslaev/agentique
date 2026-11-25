@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.core.extract import _is_blocker
+from app.core.extract import _is_blocker, _page
 
 _REAL_ARTICLE = (
     "Anthropic shipped a new model today with a longer context window and "
@@ -79,3 +79,26 @@ def test_wording_close_to_but_not_matching_a_pattern_is_not_flagged() -> None:
         "than any real paywall message would ever use in production today."
     )
     assert _is_blocker(text) is False
+
+
+ARTICLE_HTML = (
+    "<html><head><title>Harnesses, measured | Example</title>"
+    '<meta property="og:title" content="Harnesses, measured">'
+    '<meta property="article:published_time" content="2026-11-19T08:00:00Z">'
+    "</head><body><article><h1>Harnesses, measured</h1>"
+    + "<p>A measured look at agent harnesses and what they cost to run.</p>" * 10
+    + "</article></body></html>"
+)
+
+
+def test_a_page_read_for_its_metadata_carries_title_and_date() -> None:
+    page = _page(ARTICLE_HTML, "https://example.com/p", None, meta=True)
+    assert page.title == "Harnesses, measured"
+    assert page.published == "2026-11-19"
+    assert "agent harnesses" in page.text
+
+
+def test_a_page_read_without_metadata_leaves_title_and_date_empty() -> None:
+    page = _page(ARTICLE_HTML, "https://example.com/p", None)
+    assert page.title == ""
+    assert page.published is None

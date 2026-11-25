@@ -23,6 +23,10 @@ from datetime import UTC, datetime
 from typing import NotRequired, TypedDict
 
 
+class QueueError(Exception):
+    """A URL that cannot be queued or credited by hand, with the reason."""
+
+
 class RawItem(TypedDict):
     """One item as a source adapter emits it, before anything is known about it.
 

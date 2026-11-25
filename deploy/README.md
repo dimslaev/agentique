@@ -154,6 +154,41 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Business routines
+
+Five more off-box routines read prod, the repo and the web, and write
+proposals for a person to act on (ADR 24). Each is a scheduled task on
+claude.ai/code against this repo, invoking its skill, with a shared MCP
+token (below). They write their reports to the `reports` branch (`docs/reports.md`),
+never to master. Only `watch-competitors` writes to prod.
+
+| Skill | When (Europe/Zurich) | Reads | Writes |
+| --- | --- | --- | --- |
+| `watch-competitors` | Fri 16:00, `CRON_TZ=Europe/Zurich 0 16 * * 5` | AINews, Aligned News and AI/TLDR's last-week top stories, matched to `article` and `scored_url` | `pending` candidates (`queue_candidate`, at most 10 a run), inactive publishers (`add_publisher`), a publisher switched on only when it passes the `discover-publishers` bar |
+| `mine-rejections` | Tue 16:00, `CRON_TZ=Europe/Zurich 0 16 * * 2` | the last 30 days of `scored_url` | proposed `curate-articles` rubric diffs with their regression cases. A person applies them and re-runs the regression set |
+| `scout-archive` | Tue 16:00, same cron | tags, likes, traffic, signups | up to 3 product ideas, each with a number |
+| `scout-revenue` | Tue 16:00, same cron | approved company and lab publishers, subscribers, traffic, the web | a sponsor list and one experiment with its cost and metric |
+| `chief-of-staff` | Tue 17:00, `CRON_TZ=Europe/Zurich 0 17 * * 2` | the ledger and every report since its last run | a memo with the top 3, the ledger, and a GitHub issue with the memo |
+
+- `sql_query` on either shared token logs in as `agentique_ro`, which reads
+  every table but `user`.
+- Only `watch-competitors` needs the write token. The other four call only
+  `sql_query`, `web_fetch` and `web_search`, so they can run on the read token,
+  which keeps a page they fetch from steering them into a prod write.
+- Every session needs push access to this repo for the `reports` branch, and
+  `chief-of-staff` also the GitHub issue tool or `gh`. Without them, the report
+  is only in the session's final message. They publish with
+  `scripts/publish-report.sh`.
+- A scout that did not run is named in the memo; the rest is ranked anyway.
+- Curation judges `watch-competitors`' candidates the next morning.
+
+Each routine's prompt, to paste there when it changes, with `<skill>` from the
+table:
+
+```text
+Run the `<skill>` skill (`.claude/skills/<skill>/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that

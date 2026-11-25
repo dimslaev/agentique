@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from app.entry.mcp.activate_publisher import activate_publisher
+from app.entry.mcp.add_publisher import add_publisher
 from app.entry.mcp.approve_article import approve_article
 from app.entry.mcp.auth import SharedSecret, scope_gate
 from app.entry.mcp.check_repo import check_repo
@@ -21,6 +22,7 @@ from app.entry.mcp.list_candidates import list_candidates
 from app.entry.mcp.list_labels import list_labels
 from app.entry.mcp.list_tags import list_tags
 from app.entry.mcp.post_bluesky import post_bluesky
+from app.entry.mcp.queue_candidate import queue_candidate
 from app.entry.mcp.rate_limit import UserRateLimit
 from app.entry.mcp.read_article import read_article
 from app.entry.mcp.reject_articles import reject_articles
@@ -70,6 +72,8 @@ mcp = FastMCP(
         find_bluesky_account,
         link_bluesky_account,
         post_bluesky,
+        add_publisher,
+        queue_candidate,
     ],
 )
 

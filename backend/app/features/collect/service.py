@@ -29,6 +29,8 @@ from app.features.collect.publishers import PublisherResolver as PublisherResolv
 from app.features.collect.queue import queue_candidates as queue_candidates
 from app.features.collect.report import format_night, read_night, subject
 from app.features.collect.runs import record_new, record_polled, record_run
+from app.features.collect.submit import add_publisher as add_publisher
+from app.features.collect.submit import queue_link as queue_link
 
 
 def run(stats: RunStats) -> None:

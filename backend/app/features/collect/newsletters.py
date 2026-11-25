@@ -26,14 +26,14 @@ from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from html import unescape
 from typing import TypedDict
-from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit
 
 from imap_tools import AND, MailBox
 
 from app.core import jev
 from app.core.http import BROWSER_HEADERS, fetch_with_timeout
 from app.core.logging import log, short_error
-from app.core.urls import hostname
+from app.core.urls import canonical_url, hostname
 from app.core.web_search import tavily_search
 from app.features.collect.model import RawItem
 
@@ -96,19 +96,6 @@ DENY_DOMAINS = [
     "medium.com",
     "news.ycombinator.com",
 ]
-
-# Campaign junk that survives a redirect. Stripped so the same post linked from
-# two issues is one URL by the time dedup sees it.
-TRACKING_PARAMS = (
-    "utm_",
-    "_bhlid",
-    "aid",  # beehiiv's per-subscriber id
-    "fbclid",
-    "gclid",
-    "mc_cid",
-    "mc_eid",
-    "ref_src",
-)
 
 # Hosts that only ever redirect. Resolving to one of these means the redirect
 # did not actually resolve — the tracker answered with a JS bounce page instead
@@ -309,7 +296,7 @@ def prefilter(
     for link in links:
         reason = _drop_reason(link, own_host)
         if reason is None:
-            key = _canonical_url(_destination(link.href))
+            key = canonical_url(_destination(link.href))
             if key in seen:
                 reason = "duplicate"
             else:
@@ -483,41 +470,6 @@ def _is_denied(url: str) -> bool:
     return any(host == d or host.endswith(f".{d}") for d in DENY_DOMAINS)
 
 
-def _drop_tracking_params(query: str) -> str:
-    kept = [
-        (k, v)
-        for k, v in parse_qsl(query, keep_blank_values=True)
-        if not any(k.lower().startswith(t) for t in TRACKING_PARAMS)
-    ]
-    return urlencode(kept)
-
-
-def _canonical_url(url: str) -> str:
-    """One URL per destination: campaign params dropped, trailing slash gone.
-
-    Params are removed by name rather than whitelisted — a whitelist would
-    break every link that needs an id or a page number. The fragment gets the
-    same treatment because newsletters append their params after it
-    ("#section?utm_source=..."), and the trailing slash goes because the same
-    post arrives with and without one and would otherwise dedup as two.
-    """
-    parts = urlsplit(url)
-    fragment = parts.fragment
-    if "?" in fragment:
-        anchor, _, frag_query = fragment.partition("?")
-        stripped = _drop_tracking_params(frag_query)
-        fragment = f"{anchor}?{stripped}" if stripped else anchor
-    path = parts.path.rstrip("/") or "/"
-    return urlunsplit(
-        parts._replace(
-            netloc=parts.netloc.lower(),
-            path=path,
-            query=_drop_tracking_params(parts.query),
-            fragment=fragment,
-        )
-    )
-
-
 def _unwrap_tracking_url(url: str) -> str | None:
     """The destination a tracker embedded in its own path, or None if it hides
     it behind an opaque token."""
@@ -559,7 +511,7 @@ def _resolve_article(item: Item) -> RawItem | None:
             # whether it is reachable, and drops it if not.
             log(f'    "{name}": {resp.status_code} from {hostname(final)}, kept')
 
-    final = _canonical_url(final)
+    final = canonical_url(final)
     if hostname(final) in REDIRECTOR_HOSTS:
         log(f'    Dropped "{name}": still a redirect ({hostname(final)})')
         return None
@@ -621,7 +573,7 @@ def _resolve_product(product: Item) -> RawItem | None:
 
     return {
         "title": name,
-        "url": _canonical_url(candidates[int(answer) - 1][0]),
+        "url": canonical_url(candidates[int(answer) - 1][0]),
         "content": "",
         "published_date": product["email_date"],
         "source": product["newsletter_name"],

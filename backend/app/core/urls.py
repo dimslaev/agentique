@@ -1,9 +1,22 @@
-"""URL normalisation: feed endpoints, comparable hostnames, and first-party lab
-domains."""
+"""URL normalisation: feed endpoints, comparable hostnames, canonical article
+URLs, and first-party lab domains."""
 
 from __future__ import annotations
 
-from urllib.parse import urlparse
+from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit, urlunsplit
+
+# Campaign junk that survives a redirect. Stripped so the same post linked from
+# two issues is one URL by the time dedup sees it.
+TRACKING_PARAMS = (
+    "utm_",
+    "_bhlid",
+    "aid",  # beehiiv's per-subscriber id
+    "fbclid",
+    "gclid",
+    "mc_cid",
+    "mc_eid",
+    "ref_src",
+)
 
 
 def feed_url(url: str, is_substack: bool = False) -> str:
@@ -115,4 +128,39 @@ def is_shared_host(host: str) -> bool:
         host == shared
         or (host.endswith(f".{shared}") and shared not in PERSONAL_SUBDOMAIN_HOSTS)
         for shared in SHARED_HOSTS
+    )
+
+
+def _drop_tracking_params(query: str) -> str:
+    kept = [
+        (k, v)
+        for k, v in parse_qsl(query, keep_blank_values=True)
+        if not any(k.lower().startswith(t) for t in TRACKING_PARAMS)
+    ]
+    return urlencode(kept)
+
+
+def canonical_url(url: str) -> str:
+    """One URL per destination: campaign params dropped, trailing slash gone.
+
+    Params are removed by name rather than whitelisted — a whitelist would
+    break every link that needs an id or a page number. The fragment gets the
+    same treatment because newsletters append their params after it
+    ("#section?utm_source=..."), and the trailing slash goes because the same
+    post arrives with and without one and would otherwise dedup as two.
+    """
+    parts = urlsplit(url)
+    fragment = parts.fragment
+    if "?" in fragment:
+        anchor, _, frag_query = fragment.partition("?")
+        stripped = _drop_tracking_params(frag_query)
+        fragment = f"{anchor}?{stripped}" if stripped else anchor
+    path = parts.path.rstrip("/") or "/"
+    return urlunsplit(
+        parts._replace(
+            netloc=parts.netloc.lower(),
+            path=path,
+            query=_drop_tracking_params(parts.query),
+            fragment=fragment,
+        )
     )

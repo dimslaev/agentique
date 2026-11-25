@@ -6,6 +6,7 @@
 - `docs/style.md` - coding conventions a linter can't enforce
 - `README.md` - what agentique is and how its parts work, for anyone picking up work here
 - `deploy/README.md` - how it runs in production
+- `docs/reports.md` - the `reports` branch the business routines write their proposals to
 - `.ignored/plans/` - proposed work in progress, deleted once shipped (gitignored)
 - When asked for a plan, save it to `.ignored/plans/<kebab-topic>.md`. Don't repeat it in chat.
 - Minimal markdown formatting, plain concise language, short bullet points.
@@ -38,7 +39,7 @@
 
 ## MCP tools
 - `.mcp.json` connects to the `agentique-admin` MCP server (`backend/app/entry/mcp/`), named apart from the `agentique` entry the /connect page has users add, so a user-scope one isn't shadowed here. With the read token it exposes `search_articles`, `list_tags`, `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
-- Every other tool needs the write token, and many write to prod: they publish articles, draft the newsletter in Resend, edit the right rail, post and follow on Bluesky, or switch which publishers prod polls. The skills that use them: `curate-articles`, `draft-newsletter`, `update-stories`, `discover-publishers`, `post-bluesky` in `.claude/skills/`.
+- Every other tool needs the write token, and many write to prod: they publish articles, draft the newsletter in Resend, edit the right rail, post and follow on Bluesky, or switch which publishers prod polls. The skills that use them: `curate-articles`, `draft-newsletter`, `update-stories`, `discover-publishers`, `post-bluesky`, `watch-competitors` in `.claude/skills/`.
 - Don't use any of these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
 
 ## Curation

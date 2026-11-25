@@ -177,6 +177,13 @@ def test_the_server_has_tools_to_refuse() -> None:
     assert auth.READ_TOOLS | {"approve_article"} <= set(REGISTERED_TOOLS)
 
 
+@pytest.mark.parametrize("name", ["add_publisher", "queue_candidate"])
+def test_the_competitor_tools_are_write_only(name: str) -> None:
+    assert name in REGISTERED_TOOLS
+    assert name not in auth.READ_TOOLS
+    assert name not in auth.USER_TOOLS
+
+
 @pytest.mark.usefixtures("both_tokens")
 def test_a_user_token_lists_only_its_own_tools(
     client: TestClient, user_token: str
