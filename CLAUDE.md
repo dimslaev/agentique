@@ -39,7 +39,7 @@
 
 ## MCP tools
 - `.mcp.json` connects to the `agentique-admin` MCP server (`backend/app/entry/mcp/`), named apart from the `agentique` entry the /connect page has users add, so a user-scope one isn't shadowed here. With the read token it exposes `search_articles`, `list_tags`, `sql_query` (read-only prod Postgres), `web_fetch`, `web_search`.
-- Every other tool needs the write token, and many write to prod: they publish articles, draft the newsletter in Resend, edit the right rail, post and follow on Bluesky, or switch which publishers prod polls. The skills that use them: `curate-articles`, `draft-newsletter`, `update-stories`, `discover-publishers`, `post-bluesky` in `.claude/skills/`.
+- Every other tool needs the write token, and many write to prod: they publish articles, draft the newsletter in Resend, edit the right rail, post on Bluesky, or switch which publishers prod polls. The skills that use them: `curate-articles`, `draft-newsletter`, `update-stories`, `discover-publishers`, `post-bluesky` in `.claude/skills/`.
 - Don't use any of these unless the user specifically asks for them. Prefer local tools (Read, Grep, the local db) for everything else.
 
 ## Curation

@@ -18,7 +18,6 @@ DIDS = {"eugeneyan.com": "did:plc:eugene", "hamel.bsky.social": "did:plc:hamel"}
 
 class Stub:
     def __init__(self) -> None:
-        self.following = False
         self.posted: set[str] = set()
         self.created: list[tuple[str, Mapping[str, object]]] = []
 
@@ -43,7 +42,6 @@ def stub(monkeypatch: pytest.MonkeyPatch) -> Stub:
     monkeypatch.setattr(bluesky, "resolve", s.resolve)
     monkeypatch.setattr(bluesky, "profile", s.profile)
     monkeypatch.setattr(bluesky, "create", s.create)
-    monkeypatch.setattr(bluesky, "is_following", lambda me, did: s.following)
     monkeypatch.setattr(bluesky, "card_urls", lambda actor, limit: s.posted)
     monkeypatch.setattr(bluesky, "login", lambda: ("tok", "did:plc:me"))
     return s
@@ -102,18 +100,13 @@ def test_too_long_or_already_posted_is_refused(stub: Stub) -> None:
     assert stub.created == []
 
 
-@pytest.mark.parametrize("following", [False, True])
-def test_link_saves_handle_and_follows_once(
-    db: Session, stub: Stub, following: bool
-) -> None:
-    stub.following = following
+def test_link_saves_handle_and_follows_no_one(db: Session, stub: Stub) -> None:
     p = create_random_publisher(db)
     msg = service.link_account(db, p.slug, "eugeneyan.com")
     db.refresh(p)
     assert p.links[LinkPlatform.bluesky] == "eugeneyan.com"
-    follows = [c for c, _ in stub.created]
-    assert follows == ([] if following else ["app.bsky.graph.follow"])
-    assert msg.endswith("already followed" if following else ", followed")
+    assert stub.created == []
+    assert msg == f"Linked {p.slug} to @eugeneyan.com"
 
 
 @pytest.mark.parametrize(

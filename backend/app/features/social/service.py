@@ -1,5 +1,5 @@
-"""What the posting routine does on Bluesky: find a publisher's account, link and
-follow it, and post an article with its author tagged."""
+"""What the posting routine does on Bluesky: find a publisher's account, link it,
+and post an article with its author tagged."""
 
 from __future__ import annotations
 
@@ -69,26 +69,14 @@ def find_account(session: Session, slug: str) -> list[Account]:
 
 
 def link_account(session: Session, slug: str, handle: str) -> str:
-    """Save `handle` as the publisher's account and follow it if we don't yet."""
+    """Save `handle` as the publisher's account, so posts can tag it. Follows
+    nothing: who agentique.ch follows is what the Bluesky source reads."""
     p = _publisher(session, slug)
     account = _account(bluesky.profile(handle))
     p.links = {**p.links, LinkPlatform.bluesky: account["handle"]}
     session.add(p)
     session.commit()
-    token, me = bluesky.login()
-    if bluesky.is_following(me, account["did"]):
-        return f"Linked {slug} to @{account['handle']}, already followed"
-    bluesky.create(
-        token,
-        me,
-        "app.bsky.graph.follow",
-        {
-            "$type": "app.bsky.graph.follow",
-            "subject": account["did"],
-            "createdAt": datetime.now(UTC).isoformat(),
-        },
-    )
-    return f"Linked {slug} to @{account['handle']}, followed"
+    return f"Linked {slug} to @{account['handle']}"
 
 
 def mention_facets(text: str) -> list[Facet]:

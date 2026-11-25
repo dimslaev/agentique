@@ -82,11 +82,6 @@ def search(query: str, limit: int) -> list[Profile]:
     return found
 
 
-def is_following(me: str, did: str) -> bool:
-    rels = _get("app.bsky.graph.getRelationships", actor=me, others=[did]).json()
-    return bool(rels["relationships"][0].get("following"))
-
-
 def card_urls(actor: str, limit: int) -> set[str]:
     """The link-card URLs of the actor's latest posts."""
     feed = _get("app.bsky.feed.getAuthorFeed", actor=actor, limit=limit).json()
