@@ -19,6 +19,7 @@ from app.core.logging import log
 from app.core.urls import feed_url, hostname
 from app.features.collect.freshness import is_within_window
 from app.features.collect.model import FeedSource, RawItem
+from app.features.collect.newsletters import issue_links
 from app.features.collect.titles import clean_title
 
 _PROXY_URL = RESIDENTIAL_PROXY_URL
@@ -123,6 +124,24 @@ def linked_items(post: RawItem) -> list[RawItem]:
     ]
 
 
+# Feed items that are whole newsletter issues, by title prefix, and the
+# aggregator publisher their links are credited through. The issue page itself
+# is never queued: curation rejected it as a digest every time.
+ISSUE_PREFIXES = {"[AINews]": "AI News"}
+
+
+def _issue_name(entry: Entry) -> str | None:
+    title = _text(entry, "title")
+    return next((n for p, n in ISSUE_PREFIXES.items() if title.startswith(p)), None)
+
+
+def _issue_items(entry: Entry, name: str) -> list[RawItem]:
+    link = _text(entry, "link")
+    log(f"  Reading issue {link}")
+    date = _text(entry, "published", "updated")
+    return issue_links(_entry_html(entry), name, date, hostname(link))
+
+
 def _fetch_feed_xml(url: str, retries: int = 2, backoff: float = 2.0) -> str:
     for attempt in range(retries + 1):
         use_proxy = attempt > 0 and bool(_PROXY_URL)
@@ -164,10 +183,16 @@ def _fetch_source(source: FeedSource) -> tuple[list[RawItem], str | None]:
             if is_within_window(_text(it, "published", "updated") or None)
         ]
         log(f"  {name}: {len(within)} in window")
-        posts = [_entry_item(it, name) for it in within]
+        posts = [_entry_item(it, name) for it in within if not _issue_name(it)]
+        stories = [
+            item
+            for it in within
+            if (issue := _issue_name(it))
+            for item in _issue_items(it, issue)
+        ]
         if source["aggregator"]:
-            return [link for post in posts for link in linked_items(post)], None
-        return posts, None
+            posts = [link for post in posts for link in linked_items(post)]
+        return posts + stories, None
     except Exception as e:
         log(f"  FAILED {name}: {e}")
         return [], f"{type(e).__name__}: {e}"

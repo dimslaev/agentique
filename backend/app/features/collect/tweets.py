@@ -79,6 +79,25 @@ def _outbound_link(tweet: Tweet) -> str | None:
     return None
 
 
+def tweet_links(urls: list[str]) -> list[tuple[str, str] | None]:
+    """Per URL, the page a tweet links to and the tweet's text, or None for a
+    URL that is not a tweet, a tweet that links nowhere, or one fxtwitter
+    could not read."""
+    ids = [tweet_id(u) for u in urls]
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        tweets = list(pool.map(lambda t: _fetch_tweet(t) if t else None, ids))
+    found = [
+        (link, tweet.get("text") or "")
+        if tweet and (link := _outbound_link(tweet))
+        else None
+        for tweet in tweets
+    ]
+    log(
+        f"  tweets: {sum(1 for f in found if f)} of {sum(1 for i in ids if i)} point at a page"
+    )
+    return found
+
+
 def unwrap_tweets(articles: list[RawItem]) -> list[RawItem]:
     """Point each tweet item at the page it links to, in place."""
     ids = {a["url"]: tid for a in articles if (tid := tweet_id(a["url"]))}

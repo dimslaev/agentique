@@ -11,10 +11,14 @@ still contentless before it can cost an LLM call.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.utils import format_datetime
+
 import pytest
 
 from app.core.extract import Page
 from app.core.urls import feed_url
+from app.features.collect import feeds
 from app.features.collect import fetch as fetch_step
 from app.features.collect.feeds import Entry, _entry_item, linked_items
 from app.features.collect.fetch import MIN_CONTENT_CHARS, MIN_SUMMARIZABLE_CHARS
@@ -235,3 +239,47 @@ def test_an_aggregator_post_becomes_its_first_outside_link() -> None:
     assert item["url"] == "https://qwen.ai/blog"
     assert item["content"] == "" and item["source"] == "MarkTechPost"
     assert linked_items({**post, "links": {}}) == []
+
+
+def test_an_issue_in_a_feed_becomes_its_stories_and_a_post_stays_a_post(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Latent Space's feed mixes essays with AINews issues: the essay is queued,
+    the issue page is not, and its links go through the newsletter reader."""
+    now = format_datetime(datetime.now(UTC))
+    xml = f"""<rss><channel>
+      <item><title>An essay</title><link>https://latent.space/p/essay</link>
+        <pubDate>{now}</pubDate><description>essay</description></item>
+      <item><title>[AINews] A big day</title><link>https://latent.space/p/ainews-day</link>
+        <pubDate>{now}</pubDate><description>issue body</description></item>
+    </channel></rss>"""
+    asked: list[tuple[str, str, str]] = []
+
+    def issue_links(html: str, name: str, date: str, own_host: str) -> list[RawItem]:
+        asked.append((name, own_host, html))
+        return [
+            {
+                "title": "Story",
+                "url": "https://lab.example/post",
+                "content": "",
+                "published_date": date,
+                "source": name,
+            }
+        ]
+
+    monkeypatch.setattr(feeds, "_fetch_feed_xml", lambda _url: xml)
+    monkeypatch.setattr(feeds, "issue_links", issue_links)
+    items, error = feeds._fetch_source(
+        {
+            "name": "Latent Space",
+            "rssUrl": "https://www.latent.space/feed",
+            "aggregator": False,
+        }
+    )
+
+    assert error is None
+    assert asked == [("AI News", "latent.space", "issue body")]
+    assert [(i["url"], i["source"]) for i in items] == [
+        ("https://latent.space/p/essay", "Latent Space"),
+        ("https://lab.example/post", "AI News"),
+    ]

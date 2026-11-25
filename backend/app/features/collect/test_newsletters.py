@@ -509,3 +509,33 @@ def test_own_host_ignores_shared_sending_platforms(sender: str, own: str) -> Non
     """A Substack sender's own host would otherwise drop every post on every
     other Substack."""
     assert newsletters._own_host(sender) == own
+
+
+def test_a_tweet_link_becomes_the_page_it_links_to_and_a_bare_tweet_stays(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tweets = {
+        "1": {
+            "text": "We shipped a new model",
+            "raw_text": {
+                "facets": [{"type": "url", "replacement": "https://lab.example/post"}]
+            }
+        },
+        "2": {"text": "just a hot take"},
+    }
+    monkeypatch.setattr(
+        "app.features.collect.tweets._fetch_tweet", lambda tid: tweets.get(tid)
+    )
+    links = [
+        Link("https://x.com/a/status/1", "launch", ""),
+        Link("https://x.com/b/status/2", "take", ""),
+        Link("https://site.example/p", "post", ""),
+    ]
+
+    unwrapped = [(x.href, x.anchor) for x in newsletters._unwrap_tweet_links(links)]
+
+    assert unwrapped == [
+        ("https://lab.example/post", "We shipped a new model"),
+        ("https://x.com/b/status/2", "take"),
+        ("https://site.example/p", "post"),
+    ]

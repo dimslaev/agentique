@@ -21,7 +21,7 @@ import os
 import re
 from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from html import unescape
@@ -36,6 +36,7 @@ from app.core.logging import log, short_error
 from app.core.urls import hostname
 from app.core.web_search import tavily_search
 from app.features.collect.model import RawItem
+from app.features.collect.tweets import tweet_links
 
 IMAP_FOLDER = "sub"
 
@@ -446,10 +447,27 @@ def _item(link: Link, answers: Answers, newsletter_name: str, email_date: str) -
     }
 
 
+def _unwrap_tweet_links(links: list[Link]) -> list[Link]:
+    """Each tweet link as the page the tweet links to, named by the tweet's
+    text: its anchor is a handle like "@OpenAI", which Jev reads as plumbing.
+    A tweet with no outside link stays a tweet, and the deny list drops it."""
+    return [
+        replace(link, href=found[0], anchor=found[1][:BLURB_CHARS] or link.anchor)
+        if found
+        else link
+        for link, found in zip(links, tweet_links([x.href for x in links]), strict=True)
+    ]
+
+
 def _extract_items(
-    html: str, newsletter_name: str, email_date: str, own_host: str
+    html: str,
+    newsletter_name: str,
+    email_date: str,
+    own_host: str,
+    unwrap: bool = False,
 ) -> list[Item]:
-    kept, dropped = prefilter(extract(html), own_host)
+    links = extract(html)
+    kept, dropped = prefilter(_unwrap_tweet_links(links) if unwrap else links, own_host)
     reasons = {r: len(links) for r, links in dropped.items()}
     log(f"    {len(kept)} link(s) to classify, prefilter dropped {reasons}")
 
@@ -676,6 +694,16 @@ def _resolve_items(raw: list[Item]) -> list[RawItem]:
 
     log(f"  Resolved {len(articles)}/{len(items)} items to URLs")
     return articles
+
+
+def issue_links(html: str, name: str, date: str, own_host: str) -> list[RawItem]:
+    """The stories an issue published on the web links to, found the way a
+    mailed issue's are. ``name`` is the publisher they are credited through.
+
+    Tweets are unwrapped first: AINews tells most stories as tweets, where a
+    mailed issue's tweet is a share button.
+    """
+    return _resolve_items(_extract_items(html, name, date, own_host, unwrap=True))
 
 
 def _run_imap_fetch(
