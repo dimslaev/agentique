@@ -1,0 +1,11 @@
+# scout-growth 2026-11-25
+
+- RSS feed of approved articles, a site-wide one plus one per tag (`/feed.xml`, `/feed/<tag>.xml`). There's no RSS today, and the newsletter is the only way to subscribe: 7 subscribers, 1 new in 30d, 0 of them picked a topic. Only 4 of 50 human visitors came back in 30d. There's enough to fill a feed: 120 coding-assistants articles in 30d, 92 evaluation, 63 security. Who has it: AI news RSS feeds are free everywhere (arXiv, Towards Data Science, readers like Feedly and Folo), so this is for reach, not money. Next step: add a backend route that writes RSS 2.0 for the top N approved articles, with an optional `tag` filter, and link it in the page `<head>`.
+- Public per-tag best-of pages, prerendered like `/blog` (`/topics/<slug>`), each listing that tag's articles scored 85 or higher. Search brought 13 visitors in 30d (google.com 4, google.ch 4, google.fr 2, duckduckgo 2, yahoo 1) and every one landed on `/`, because nothing else can be indexed. There's enough for real pages: model-releases has 63 articles at 85+, inference-optimization 47, coding-assistants 43, open-weights 42. Readers already filter by topic: open-weights 7 clicks, small-models 6, anthropic 4 in 30d. Who has it: free archives such as Decoding AI's archive and GitHub awesome-lists; I found no paid version. Next step: prerender the top 10 tags at build time and add them to `sitemap.xml`.
+- Sponsor leads, 90d approvals / likes: Hugging Face Blog 63/1, NVIDIA Developer 50/1, Anthropic 34/1, OpenAI Blog 26/1, JetBrains 22/1. I found no evidence of any of the five sponsoring a named AI newsletter. I'm not proposing a revenue experiment this week: with 7 subscribers and 50 human visitors a month, a sponsor slot or a paid API would have no audience to sell. The archive is ready for a dataset or API (2652 of 2653 articles embedded). The audience is not: /connect-mcp had 3 visitors in 30d.
+- Traffic, 30d, humans only: 50 visitors, 4 returning. `/` had 258 views from 41 visitors, all of `/blog/` 50 views from 5 visitors, /connect-mcp 34 views from 3. Likes: 79 total from 3 likers, 43 in 30d. That's too few for feeds built from likes.
+- Tool errors: none.
+
+Ledger:
+- rss-feeds | RSS feed of approved articles, site-wide and per tag | proposed
+- public-tag-pages | Prerendered, indexable per-tag best-of pages (score 85+) in the sitemap | proposed
