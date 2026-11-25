@@ -48,3 +48,11 @@ Glossary for words the code uses. If a term below and the code disagree, the cod
 - **MCP token** (`McpToken` in `app/core/db/mcp_token.py`) - a signed-in reader's own bearer token for `/mcp`, made on the MCP page (`/connect-mcp`) and shown once. One per account, stored as a hash. It carries the `user` scope, which reaches `search_articles`, `list_tags` and `sql_query` and no other tool (ADR 20). Not `MCP_TOKEN` or `MCP_WRITE_TOKEN`, the two shared tokens in `.env` that our own agents use.
 
 - **`public_api`** - the Postgres schema of views a reader's `sql_query` reads: `article`, `publisher`, `tag`, `article_tag`, with the columns the site already shows and no article text. The role `mcp_public` (`deploy/sql-roles-public.sql`) has SELECT on it and on nothing else.
+
+- **Scout** - a read-only weekly skill that looks outside the feed for something to propose: `scout-competitors`, `scout-rejects`, `scout-growth`. `rank-proposals` starts them and ranks what they return (ADR 24, `docs/proposals.md`).
+
+- **Proposal** - one idea a scout puts forward, with an `<id>` (a kebab slug), one line and a number or source behind it. Never built automatically: a person decides.
+
+- **Ledger** (`proposals/ledger.md` on the `proposals` branch) - one line per proposal ever made, `<id> | <one line> | <status> <date>`, status `proposed`, `picked`, `dropped` or `done`. `rank-proposals` writes it; a person marks `done`.
+
+- **Memo** (`proposals/<date>/memo.md`) - the weekly top 3 proposals, each with its evidence and one line against it, also opened as a GitHub issue.

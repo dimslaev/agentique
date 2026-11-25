@@ -122,3 +122,7 @@ flowchart TD
 - [Frontend](./docs/frontend.md)
 - [Glossary](./docs/glossary.md)
 - [Deployment](./deploy/README.md)
+
+## Weekly scouts
+
+A Tuesday Claude Code session, `rank-proposals`, runs three read-only scouts (`scout-competitors`, `scout-rejects`, `scout-growth`) and ranks their ideas into a one-screen memo and a GitHub issue. A person decides. See [docs/proposals.md](./docs/proposals.md).

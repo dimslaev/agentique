@@ -14,7 +14,7 @@ from app.core.db.engine import engine
 from app.core.db.factories import create_random_article
 from app.core.settings import settings
 from app.entry.mcp import sql_query as tool
-from app.entry.mcp.auth import USER_SCOPE
+from app.entry.mcp.auth import USER_SCOPE, WRITE_SCOPE
 
 
 @pytest.fixture(autouse=True)
@@ -245,14 +245,17 @@ def test_a_reader_is_refused_when_the_public_role_can_read_tables(
         tool.sql_query("SELECT 1")
 
 
-def test_a_shared_token_does_not_use_the_public_role(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("scopes", [[], [WRITE_SCOPE]], ids=["read", "write"])
+def test_a_shared_token_reads_the_tables_not_the_public_views(
+    monkeypatch: pytest.MonkeyPatch, scopes: list[str]
 ) -> None:
+    """The scouts read `scored_url` and `publisher` through a shared
+    token, which logs in as the shared role, not the public one."""
     monkeypatch.setattr(tool, "PUBLIC_DSN", "postgresql://nobody@nowhere.invalid/x")
     monkeypatch.setattr(
         tool,
         "get_access_token",
-        lambda: AccessToken(token="t", client_id="c", scopes=[]),
+        lambda: AccessToken(token="t", client_id="c", scopes=scopes),
     )
-    result = tool.sql_query("SELECT count(*) AS n FROM article")
+    result = tool.sql_query("SELECT count(*) AS n FROM scored_url")
     assert result["columns"] == ["n"]
