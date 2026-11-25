@@ -154,6 +154,25 @@ The routine's prompt, to paste there when it changes:
 Run the `discover-publishers` skill (`.claude/skills/discover-publishers/SKILL.md`).
 ```
 
+## Weekly scouts
+
+One more off-box routine reads prod, the repo and the web, and writes proposals
+for a person to act on (ADR 24). It is a scheduled task on claude.ai/code
+against this repo, Tuesdays at 16:00, `CRON_TZ=Europe/Zurich 0 16 * * 2`,
+invoking `rank-proposals`, which starts the three scouts as subagents.
+
+- It runs on the read token: the scouts call only `sql_query`, `web_fetch`,
+  `web_search` and `list_tags`. `sql_query` on a shared token logs in as
+  `agentique_ro`, which reads every table but `user`.
+- It needs push access to this repo for the `proposals` branch
+  (`docs/proposals.md`), and the GitHub issue tool or `gh`.
+
+The routine's prompt, to paste there when it changes:
+
+```text
+Run the `rank-proposals` skill (`.claude/skills/rank-proposals/SKILL.md`).
+```
+
 ## Newsletter environment
 
 Read by the backend through `app/core/settings.py`, with two exceptions that
