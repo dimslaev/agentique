@@ -17,7 +17,9 @@ The routine runs at lunch, after the night's curation. Post what was approved to
 
 ```sql
 select a.id, a.title, a.url, a.score, a.summary, p.slug, p.name as publisher, p.kind,
-  p.links->>'bluesky' as bluesky, p.links->>'website' as website
+  p.links->>'bluesky' as bluesky, p.links->>'website' as website,
+  array(select t.slug from article_tag at join tag t on t.id = at.tag_id
+    where at.article_id = a.id) as tags
 from article a join publisher p on p.id = a.publisher_id
 where a.created_at >= current_date and a.marked_for_deletion_at is null
 order by a.score desc
@@ -45,11 +47,11 @@ Fewer is fine on a thin day. Post nothing on a day with none.
 
 One `post_bluesky` call per pick:
 
-- `text`: one plain sentence with the article's main point, written with `.claude/skills/write-summary/SKILL.md`. Then ` by @handle` if the publisher has a linked account.
+- `text`: one plain sentence with the article's main point, written with `.claude/skills/write-summary/SKILL.md`. Then ` by @handle` if the publisher has a linked account. Then a new line with 1-3 hashtags from the article's `tags`, lowercase with dashes removed: `context-engineering` is `#contextengineering`. No tags, no hashtag line.
 - `url`: the article URL. `title`: the article title. `description`: the stored summary's first sentence.
-- No hashtags, no emoji, no "must read", no first person.
+- No hashtags beyond the article's tags, no emoji, no "must read", no first person.
 
-`post_bluesky` refuses a URL already posted, an unknown handle and text over 300 characters. Fix and call again; skip an already-posted URL.
+`post_bluesky` turns each `#tag` into a clickable hashtag. It refuses a URL already posted, an unknown handle and text over 300 characters. Fix and call again; skip an already-posted URL.
 
 ## 5. The weekly issue
 
