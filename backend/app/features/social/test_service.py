@@ -64,6 +64,18 @@ def test_an_email_is_not_a_mention() -> None:
     assert service.mention_facets("write to me@eugeneyan.com") == []
 
 
+def test_hashtags_get_tag_facets() -> None:
+    text = "• sandboxes by @a.dev #sandboxing #ai_agents, not a#b"
+    facets = service.tag_facets(text)
+    raw = text.encode()
+    spans = [raw[f["index"]["byteStart"] : f["index"]["byteEnd"]] for f in facets]
+    assert spans == [b"#sandboxing", b"#ai_agents"]
+    assert facets[0]["features"][0] == {
+        "$type": "app.bsky.richtext.facet#tag",
+        "tag": "sandboxing",
+    }
+
+
 def test_unknown_mention_is_refused(stub: Stub) -> None:
     with pytest.raises(SocialError):
         service.post("by @nobody.example", "https://a.dev/x", "T", "D")

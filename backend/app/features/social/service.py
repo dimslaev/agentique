@@ -22,6 +22,7 @@ SEARCH_LIMIT = 5
 # How far back a URL counts as already posted.
 OWN_FEED_LIMIT = 100
 MENTION = re.compile(r"(?<![\w@])@([a-z0-9-]+(?:\.[a-z0-9-]+)+)", re.I)
+HASHTAG = re.compile(r"(?<!\S)#(\w+)")
 
 
 def _account(p: Profile) -> Account:
@@ -110,6 +111,23 @@ def mention_facets(text: str) -> list[Facet]:
     return facets
 
 
+def tag_facets(text: str) -> list[Facet]:
+    """A hashtag facet per #tag, at UTF-8 byte offsets, so Bluesky links it."""
+    facets: list[Facet] = []
+    for m in HASHTAG.finditer(text):
+        start = len(text[: m.start()].encode())
+        end = start + len(m.group(0).encode())
+        facets.append(
+            {
+                "index": {"byteStart": start, "byteEnd": end},
+                "features": [
+                    {"$type": "app.bsky.richtext.facet#tag", "tag": m.group(1)}
+                ],
+            }
+        )
+    return facets
+
+
 def post(text: str, url: str, title: str, description: str) -> str:
     """Post `text` with a link card for `url`. Refuses a URL we already posted."""
     if not text.strip():
@@ -118,7 +136,7 @@ def post(text: str, url: str, title: str, description: str) -> str:
         raise SocialError(f"Text is {len(text)} characters, the limit is {MAX_CHARS}")
     if not url.startswith("https://"):
         raise SocialError("url must be an https link")
-    facets = mention_facets(text)
+    facets = mention_facets(text) + tag_facets(text)
     token, me = bluesky.login()
     if url in bluesky.card_urls(me, OWN_FEED_LIMIT):
         raise SocialError(f"Already posted {url}")

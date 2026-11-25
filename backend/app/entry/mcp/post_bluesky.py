@@ -13,6 +13,7 @@ def post_bluesky(text: str, url: str, title: str, description: str) -> str:
 
     `text` is at most 300 characters, card excluded. Each `@handle` in it
     becomes a tag that notifies that account; an unknown handle is refused.
+    Each `#tag` becomes a clickable hashtag.
     `title` and `description` show on the card. A URL already posted from
     the account is refused. Returns the post's link.
     """

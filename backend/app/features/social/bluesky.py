@@ -33,7 +33,8 @@ class ByteSlice(TypedDict):
     byteEnd: int
 
 
-Feature = TypedDict("Feature", {"$type": str, "did": str})
+# A mention carries `did`, a hashtag `tag`.
+Feature = TypedDict("Feature", {"$type": str, "did": str, "tag": str}, total=False)
 
 
 class Facet(TypedDict):
