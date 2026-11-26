@@ -713,10 +713,14 @@ def _run_imap_fetch(
     matches in the window (avoids downloading full bodies of unrelated mail),
     then full source for matched UIDs only.
 
+    Jev runs after logout: a slow classify with the mailbox open got the
+    connection dropped for inactivity, losing every issue of the run.
+
     Nothing is flagged: the window is the selection, so leaving read state
     alone keeps the mailbox usable by a human and a failed run repeatable.
     """
     raw: list[Item] = []
+    issues: list[tuple[str, str, str, str]] = []
     since = date.today() - timedelta(days=lookback_days)
 
     with MailBox(config.host, port=config.port).login(
@@ -739,18 +743,20 @@ def _run_imap_fetch(
             if not name:
                 continue
 
-            subject = msg.subject or "(no subject)"
-            log(f"  Processing: {name} ({subject})")
-
             html = msg.html or msg.text or ""
             if not html:
-                log("    No HTML content, skipping")
+                log(f"  {name} ({msg.subject}): no HTML content, skipping")
                 continue
 
             email_date = (msg.date or datetime.now(UTC)).isoformat()
-            items = _extract_items(html, name, email_date, _own_host(msg.from_ or ""))
-            log(f"    Found {len(items)} items")
-            raw.extend(items)
+            issues.append((html, name, email_date, _own_host(msg.from_ or "")))
+            log(f"  Fetched: {name} ({msg.subject or '(no subject)'})")
+
+    for html, name, email_date, own_host in issues:
+        log(f"  Processing: {name}")
+        items = _extract_items(html, name, email_date, own_host)
+        log(f"    Found {len(items)} items")
+        raw.extend(items)
 
     return raw
 

@@ -14,6 +14,8 @@ the verdict table is their specification.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.core import jev
@@ -539,3 +541,48 @@ def test_a_tweet_link_becomes_the_page_it_links_to_and_a_bare_tweet_stays(
         ("https://x.com/b/status/2", "take"),
         ("https://site.example/p", "post"),
     ]
+
+
+def test_classifies_after_the_mailbox_is_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[str] = []
+    msg = SimpleNamespace(
+        uid="1",
+        from_="news@bensbites.com",
+        subject="Issue",
+        html="<p>x</p>",
+        text="",
+        date=None,
+    )
+
+    class FakeMailBox:
+        def __init__(self, *_args: object, **_kwargs: object) -> None:
+            pass
+
+        def login(self, *_args: object, **_kwargs: object) -> FakeMailBox:
+            return self
+
+        def __enter__(self) -> FakeMailBox:
+            return self
+
+        def __exit__(self, *_args: object) -> None:
+            events.append("logout")
+
+        def fetch(self, *_args: object, **_kwargs: object) -> list[SimpleNamespace]:
+            return [msg]
+
+    def extract_items(*_args: object, **_kwargs: object) -> list[Item]:
+        events.append("classify")
+        return []
+
+    monkeypatch.setattr(newsletters, "MailBox", FakeMailBox)
+    monkeypatch.setattr(newsletters, "_extract_items", extract_items)
+
+    newsletters._run_imap_fetch(
+        newsletters.ImapConfig(host="h", port=993, user="u", password="p"),
+        SOURCES,
+        7,
+    )
+
+    assert events == ["logout", "classify"]
